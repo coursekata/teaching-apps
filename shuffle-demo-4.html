@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>R Shuffle Function: Understanding Randomization - Updated</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666666;
+      --accent: #2563eb;
+      /* Row tints - solid colors */
+      --a-row: #e3f2fd;
+      --b-row: #fff3e0;
+      /* Darker strokes for text accents */
+      --a-card-stroke: #1e88e5;
+      --b-card-stroke: #ef6c00;
+      --lift-shadow: 0 10px 18px rgba(0,0,0,.18);
+
+      /* Neutral palette for Difference + histogram */
+      --neutral-bg: #f3f4f6;
+      --neutral-border: #9ca3af;
+      --axis: #9ca3af;
+      --dot: #3b82f6;           /* blue dots */
+      --dot-recent: #f59e0b;    /* amber for most recent */
+      --original-dot: #dc2626;  /* red dot for original diff */
+      
+      /* Group colors for scatter plot dots */
+      --group-a-dot: #3b82f6;   /* blue for first group */
+      --group-b-dot: #f59e0b;   /* yellow/amber for second group */
+    }
+
+    html, body { height: 100%; }
+    body { 
+      margin: 0; padding: 24px; background: var(--bg); color: var(--fg);
+      font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
+    }
+
+    .wrap { max-width: 900px; margin: 0 auto; }
+    
+    /* 3 REGIONS: top-section (left: table, right: code+graph), bottom: stats */
+    .main-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    
+    .top-section {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    
+    .table-section {
+      /* Left side of top section */
+    }
+    
+    .right-column {
+      /* Right side of top section - contains tabs and content */
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    
+    .tabs-container {
+      display: flex;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 16px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 8px 16px;
+      text-align: center;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-bottom: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #6b7280;
+      transition: all 0.2s ease;
+    }
+    
+    .tab:first-child {
+      border-radius: 8px 0 0 0;
+    }
+    
+    .tab:last-child {
+      border-radius: 0 8px 0 0;
+    }
+    
+    .tab.active {
+      background: white;
+      color: #000000;
+      border-bottom: 2px solid white;
+      margin-bottom: -2px;
+    }
+    
+    .tab:hover:not(.active) {
+      background: #f1f5f9;
+      color: #374151;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Tab title styling */
+    .tab-title {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 16px;
+      margin: 0 20px 20px 20px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      text-align: center;
+    }
+    
+    .tab-title .math {
+      font-family: 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 20px;
+      color: #000000;
+    }
+    
+    /* EQUATION STYLING - NEW APPROACH */
+    .equation-section {
+      margin: 12px 0 12px 20px;
+    }
+    
+    .equation-label {
+      font-weight: 600;
+      font-size: 16px;
+      color: #000000;
+      text-decoration: underline;
+      display: block;
+      margin-bottom: 8px;
+      font-family: system-ui, sans-serif;
+    }
+    
+    .equation-formula {
+      font-size: 28px;
+      font-family: 'Times New Roman', serif;
+      color: #000000;
+      display: block;
+      margin-left: 24px;
+      line-height: 1.4;
+    }
+    
+    .equation-formula.specific {
+      color: #000000;
+      font-weight: 500;
+    }
+    
+    /* SECTION HEADERS */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    /* DISCUSSION QUESTION STYLING */
+    .discussion-box {
+      background: #f0f9ff;
+      border: 2px solid #0ea5e9;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0 12px 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .discussion-label {
+      font-weight: 700;
+      font-size: 14px;
+      color: #0369a1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    
+    .discussion-question {
+      font-size: 16px;
+      color: #1e293b;
+      line-height: 1.4;
+      margin: 0;
+      font-weight: 500;
+    }
+    
+    .section-header:hover {
+      color: #1f2937;
+    }
+    
+    .caret {
+      font-size: 12px;
+      transition: transform 0.2s ease;
+      color: #6b7280;
+    }
+    
+    .caret.expanded {
+      transform: rotate(90deg);
+    }
+    
+    .section-content {
+      display: block;
+    }
+    
+    .section-content.collapsed {
+      display: none;
+    }
+    
+    /* R COMMAND STYLING - DARKER TEXT */
+    .r-command-section {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .r-prompt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .r-prompt-symbol {
+      color: #2563eb;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    
+    .r-input {
+      flex: 1;
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #111827;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      outline: none;
+      font-weight: 600;
+    }
+    
+    .r-input::placeholder {
+      color: #374151;
+    }
+    
+    .r-input:focus {
+      border-color: #2563eb;
+    }
+    
+    .r-output {
+      background: white;
+      border: 1px solid #cbd5e1;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #111827;
+      font-weight: 600;
+      white-space: pre-wrap;
+      border-left: 3px solid #2563eb;
+    }
+    
+    button:disabled, button.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    button:disabled:hover, button.disabled:hover {
+      background: var(--accent);
+    }
+    
+    .animation-canvas {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; z-index: 10;
+    }
+
+    h1 { font-size: 1.3rem; margin: 0 0 8px; }
+    .subtitle { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+
+    .controls { 
+      display: flex; gap: 12px; align-items: flex-start; margin: 16px 0; 
+      flex-direction: row;
+    }
+    
+    .controls .code-line {
+      flex: 1;
+    }
+    
+    .controls .secondary-buttons {
+      display: flex; gap: 8px; flex-direction: column; align-self: flex-start;
+      min-width: 100px; height: 100%;
+      justify-content: space-around;
+    }
+    
+    .controls .secondary-buttons button {
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      flex: 1;
+      min-height: 0;
+    }
+    
+    .button-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-self: flex-start;
+      min-width: 70px;
+    }
+    
+    .button-stack button {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      min-height: 0;
+      margin: 0;
+    }
+    
+    button.clear {
+      background: white;
+      color: var(--accent);
+      border-color: var(--accent);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      min-height: 0;
+      margin: 0;
+    }
+    
+    button.clear:hover {
+      background: #f8fafc;
+      border-color: #1d4ed8;
+    }
+    
+    button { 
+      appearance: none; border: 1px solid #d1d5db; background: #fff; color: #111; 
+      cursor: pointer; padding: 10px 16px; border-radius: 10px; font-weight: 600;
+      font-size: 0.95rem; transition: all 0.2s ease;
+    }
+    button:hover { background: #f9fafb; border-color: #9ca3af; }
+    button:active { transform: translateY(1px); }
+    button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    button.primary:hover { background: #1d4ed8; }
+
+    .code { 
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+      background: #f3f4f6; padding: 2px 6px; border-radius: 6px; 
+    }
+
+    .code-line {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 8px;
+    }
+    
+    .code-block {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px; color: #1e293b; font-weight: 500;
+      background: white; padding: 12px 16px; border-radius: 6px;
+      border: 1px solid #cbd5e1; flex-grow: 1;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+    
+    .run-btn {
+      white-space: nowrap; min-width: 80px; align-self: flex-start;
+    }
+
+    .table-container {
+      background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+      overflow: hidden; margin: 16px 0;
+    }
+    .table-wrap { position: relative; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead th { 
+      text-align: center; background: #f8fafc; color: #111; font-weight: 700; 
+      padding: 10px 4px; border-bottom: 2px solid #e5e7eb; font-size: 0.9rem;
+    }
+    tbody td { 
+      padding: 0; border-bottom: 2px solid white; border-right: 2px solid white;
+      position: relative; height: 32px;
+    }
+    tbody tr:last-child td { border-bottom: 2px solid white; }
+    tbody td:last-child { border-right: none; }
+    tbody tr.a { background: var(--a-row); }
+    tbody tr.b { background: var(--b-row); }
+
+    .cell-content {
+      display: flex; align-items: center; padding: 4px;
+      height: 100%; box-sizing: border-box; font-size: 0.9rem;
+    }
+    .cell-content.center { justify-content: center; }
+
+    .cards-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+    .card { 
+      position: absolute; pointer-events: none; user-select: none;
+      border-radius: 6px; color: #111; font-weight: 600; 
+      text-align: center; 
+      transition: all .8s cubic-bezier(.2,.8,.2,1);
+      border: 1px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .card.jiggle { animation: jiggle 0.3s ease-in-out infinite alternate; }
+    @keyframes jiggle {
+      0% { transform: translate(0, 0) rotate(-1deg); }
+      25% { transform: translate(-1px, -1px) rotate(1deg); }
+      50% { transform: translate(1px, 0) rotate(-1deg); }
+      75% { transform: translate(0, 1px) rotate(1deg); }
+      100% { transform: translate(1px, -1px) rotate(-1deg); }
+    }
+    .card.hover { 
+      transform: translateZ(50px) scale(1.05); 
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      z-index: 100;
+    }
+    .card.a { background: var(--a-row); }
+    .card.b { background: var(--b-row); }
+    .card.show-border { 
+      border-style: dashed; border-color: #6b7280; border-width: 2px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .card.show-border.hover { box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+
+    /* Histogram panel */
+    .graph-section {
+      position: relative;
+      padding: 0;
+    }
+    .dist-panel {
+      margin-top: 4px;
+    }
+    .dist-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px; font-weight: 600;
+    }
+    .dist-meta { font-size: .9rem; color: var(--muted); }
+    #histSvg {
+      width: 100%;
+      height: 260px;
+      display: block;
+      background: white;
+    }
+
+    @media (max-width: 600px) {
+      .top-section {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .right-column {
+        gap: 0;
+      }
+      .tabs-container {
+        margin-bottom: 12px;
+      }
+      .tab {
+        font-size: 0.8rem;
+        padding: 6px 8px;
+      }
+      .controls { 
+        flex-direction: column; 
+        align-items: stretch; 
+      }
+      .controls .code-line { 
+        flex-direction: column; 
+        align-items: stretch; 
+      }
+      .controls .secondary-buttons { 
+        flex-direction: row; 
+        justify-content: stretch;
+        height: auto;
+      }
+      .controls .secondary-buttons > * { 
+        flex: 1;
+        min-height: 32px;
+      }
+      thead th { padding: 8px 4px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Understanding R's <span class="code">shuffle()</span> Function</h1>
+    <p class="subtitle">
+      Pass custom data and variables via URL: <span class="code">?data=72,68,75,71,74,58,62,55,60,59&groupA=Treatment&groupB=Control&outcome=Score&group=Condition</span>
+    </p>
+
+    <div class="main-layout">
+      <div class="top-section">
+        <div class="table-section">
+          <div class="table-container">
+            <div class="table-wrap" id="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 33.33%;" id="groupHeader">Group</th>
+                    <th style="width: 33.33%;" id="outcomeHeader">Outcome</th>
+                    <th style="width: 33.33%;" id="shuffledHeader">Score_shuf</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+              </table>
+              <div class="cards-layer" id="cardsLayer" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div id="initialDifference" style="font-weight: bold; margin-top: 12px; font-size: 15px; color: #1f2937; text-align: center;">
+            Initial b<sub>1</sub> (group difference) = –
+          </div>
+        </div>
+
+        <div class="right-column">
+          <div class="tabs-container">
+            <div class="tab active" data-tab="model">Model</div>
+            <div class="tab" data-tab="shuffle">Shuffle</div>
+            <div class="tab" data-tab="sampling">Dist of b<sub>1</sub></div>
+          </div>
+
+          <div class="tab-content active" id="model-content">
+            <div class="tab-title">
+              A Two-Group Model: <span class="math">Y<sub>i</sub> = b<sub>0</sub> + b<sub>1</sub>X<sub>i</sub> + e<sub>i</sub></span>
+            </div>
+            <div style="padding: 8px 20px;">
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="graph-content">
+                  <span class="caret">▶</span>
+                  <span>Graph the data</span>
+                </div>
+                <div class="section-content collapsed" id="graph-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="plotCodeBlock">gf_point(Score ~ Condition, data=df)</div>
+                        <div class="button-stack">
+                          <button id="runPlotBtn" class="primary run-btn">Run</button>
+                          <button id="clearPlotBtn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="plotOutput" style="display: none; margin-top: 8px;">
+                      <svg id="scatterSvg" width="100%" height="240" style="background: transparent; display: block;"></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="specify-content">
+                  <span class="caret">▶</span>
+                  <span>Fit the model</span>
+                </div>
+                <div class="section-content collapsed" id="specify-content">
+                  <div style="margin: 12px 0;">
+                    <div class="equation-formula" style="margin-left: 0; font-size: 24px;">
+                      <em>Y</em><sub>i</sub> = <em>b</em><sub>0</sub> + <em>b</em><sub>1</sub><em>X</em><sub>i</sub> + <em>e</em><sub>i</sub>
+                    </div>
+                  </div>
+                  
+                  <div class="code-section" style="margin-top: 20px;">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="modelCodeBlock">lm(outcome ~ group, data=df)</div>
+                        <div class="button-stack">
+                          <button id="runModelBtn" class="primary run-btn">Run</button>
+                          <button id="clearModelBtn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="rOutput" class="r-output" style="display: none; margin-top: 16px;"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="fit-content">
+                  <span class="caret">▶</span>
+                  <span>Generate b<sub>1</sub></span>
+                </div>
+                <div class="section-content collapsed" id="fit-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="b1CodeBlock">b1(outcome ~ group, data=df)</div>
+                        <div class="button-stack">
+                          <button id="runB1Btn" class="primary run-btn">Run</button>
+                          <button id="clearB1Btn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="b1Output" class="r-output" style="display: none; margin-top: 16px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="shuffle-content">
+            <div class="tab-title">
+              Simulating a World Where <span class="math">β<sub>1</sub></span> is 0
+            </div>
+            <div style="padding: 8px 20px;">
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="shuffle-data-content">
+                  <span class="caret">▶</span>
+                  <span>Shuffle the data</span>
+                </div>
+                <div class="section-content collapsed" id="shuffle-data-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="codeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+b1(Score_shuf~Condition, data=df)</div>
+                        <div class="button-stack">
+                          <button id="shuffleBtn" class="primary run-btn">Run</button>
+                          <button id="clearShuffleBtn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div id="shuffleOutput" class="r-output" style="display: none; margin-top: 16px;">
+                      Waiting for shuffle...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="graph-shuffles-content">
+                  <span class="caret">▶</span>
+                  <span>Graph the shuffles</span>
+                </div>
+                <div class="section-content collapsed" id="graph-shuffles-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="shufflePlotCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+gf_point(Score_shuf ~ Condition, data=df)</div>
+                        <div class="button-stack">
+                          <button id="runShufflePlotBtn" class="primary run-btn">Run</button>
+                          <button id="clearShufflePlotBtn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="shufflePlotOutput" style="display: none; margin-top: 8px;">
+                      <svg id="shuffleScatterSvg" width="100%" height="240" style="background: transparent; display: block;"></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="sampling-content">
+            <div class="tab-title">
+              A Sampling Distribution of <span class="math">b<sub>1</sub></span> Assuming <span class="math">β<sub>1</sub></span>=0
+            </div>
+            <div style="padding: 8px 20px;">
+              <div class="code-section">
+                <div class="controls">
+                  <div class="code-line">
+                    <div class="code-block" id="samplingCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+b1(Score_shuf~Condition, data=df)</div>
+                    <div class="button-stack">
+                      <button id="samplingShuffleBtn" class="primary run-btn">Run</button>
+                      <button id="clearSamplingBtn" class="clear">Clear</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="graph-section" id="graphSection">
+              <div class="animation-canvas" id="animationCanvas"></div>
+              
+              <div class="dist-panel">
+                <div style="margin-left: 30px; margin-right: 40px;">
+                  <div style="font-size: 20px; font-weight: bold; color: #333; text-align: center; margin-left: 18px;">Sampling Distribution of b<sub>1</sub></div>
+                </div>
+                <div style="margin-left: 30px; margin-right: 40px; position: relative;">
+                  <svg id="histSvg" viewBox="0 0 500 280" preserveAspectRatio="none" style="width: 100%; height: 260px; display: block; background: white;"></svg>
+                  <!-- Run 5x button positioned to align with code widget Run buttons -->
+                  <button id="run5xBtn" class="primary" style="position: absolute; top: 20px; right: 0px; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 10px; z-index: 10; min-height: 0; margin: 0;">Run 5x</button>
+                  <!-- Shuffle count positioned under the button, right-aligned -->
+                  <div class="dist-meta" style="position: absolute; top: 60px; right: 0px; font-size: 0.8rem; text-align: right;"><span id="distCount">0</span> shuffles</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 6px; flex-wrap: wrap; margin-left: 30px; margin-right: 40px;">
+                  <div class="dist-meta" style="line-height: 1.4;">
+                    <div style="margin-bottom: 4px;">
+                      <span style="display:inline-block;width:8px;height:8px;background:var(--original-dot);border-radius:50%;margin-right:6px;"></span>
+                      Original difference
+                      <span style="display:inline-block;width:8px;height:8px;background:var(--dot);border-radius:50%;margin-left:12px;margin-right:6px;"></span>
+                      Shuffles
+                      <span style="display:inline-block;width:8px;height:8px;background:var(--dot-recent);border-radius:50%;margin-left:8px;margin-right:6px;"></span>
+                      Most recent
+                    </div>
+                    <div>
+                      <span style="display:inline-block;width:12px;height:2px;background:#2563eb;margin-right:6px;border-top:2px dashed #2563eb;background:none;"></span>
+                      Mean of Sampling Distribution
+                    </div>
+                  </div>
+                  <div class="dist-meta" id="distSummary" style="text-align: right; font-weight: bold; color: #1f2937;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="secondary-buttons">
+          <button id="resetBtn">Reset to Original</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // ====== CONFIGURATION - Edit these values to customize ======
+      const CONFIG = {
+        // Data values - first half go to group A, second half to group B
+        data: [72, 68, 75, 71, 74, 58, 62, 55, 60, 59],
+        
+        // Variable names
+        groupAName: 'Treatment',
+        groupBName: 'Control', 
+        outcomeName: 'Score',
+        groupName: 'Condition'
+      };
+
+      // ====== URL Parameter Override ======
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Override data if provided
+      const dataParam = urlParams.get('data');
+      if (dataParam) {
+        const dataValues = dataParam.split(',').map(val => parseInt(val.trim())).filter(val => !isNaN(val));
+        if (dataValues.length >= 4) { // Need at least 4 values (2 per group minimum)
+          CONFIG.data = dataValues;
+        }
+      }
+      
+      // Override variable names if provided
+      if (urlParams.get('groupA')) CONFIG.groupAName = urlParams.get('groupA');
+      if (urlParams.get('groupB')) CONFIG.groupBName = urlParams.get('groupB');
+      if (urlParams.get('outcome')) CONFIG.outcomeName = urlParams.get('outcome');
+      if (urlParams.get('group')) CONFIG.groupName = urlParams.get('group');
+
+      // ====== Tunables ======
+      const HIST_BINS = 12;                      // fixed number of bins (labels will show ranges)
+      const Y_STEPS = [12, 20, 40, 60, 100];     // staged y-axis ceilings - starts at 12 for larger dots
+
+      // ===== Data setup =====
+      const initialData = [];
+      const outcomeOrigins = new Map(); // Maps outcome value to original group
+
+      const half = Math.floor(CONFIG.data.length / 2);
+      for (let i = 0; i < CONFIG.data.length; i++) {
+        const group = i < half ? CONFIG.groupAName : CONFIG.groupBName;
+        const outcome = CONFIG.data[i];
+        initialData.push({ group, outcome, originalIndex: i });
+        outcomeOrigins.set(outcome, group); // original group colors the card
+      }
+
+      let currentData = JSON.parse(JSON.stringify(initialData)); // Original data - never changes
+      let shuffledOutcomes = []; // Holds the shuffled values for third column
+      let diffHistory = [];   // sample diffs (A - B) with order tracking
+      let originalDiff = null;
+      let histConfig = null;  // {xMin, xMax, bins, yMax, binW, yStepIdx}
+
+      // ===== DOM refs =====
+      let tbody, cardsLayer, tableWrap;
+      function getDOMRefs() {
+        tbody = document.getElementById('tbody');
+        cardsLayer = document.getElementById('cardsLayer');
+        tableWrap = document.getElementById('tableWrap');
+      }
+
+      // ===== Helpers =====
+      function formatNumber(n) {
+        return Number(n).toFixed(1).replace(/\.0$/, '');
+      }
+      function formatInt(n) { return String(Math.round(n)); } // for bin labels
+      function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+      function shuffleArray(arr) {
+        const result = [...arr];
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+      }
+
+      // ===== Fixed histogram x-axis computation - ensures 0 is a bin center =====
+      function computeFixedXAxis(values, nA, nB) {
+        const sorted = [...values].sort((a,b)=>a-b);
+        const smallestA = sorted.slice(0, nA);
+        const largestA  = sorted.slice(sorted.length - nA);
+        const smallestB = sorted.slice(0, nB);
+        const largestB  = sorted.slice(sorted.length - nB);
+
+        const minDiff = mean(smallestA) - mean(largestB); // A gets smallest, B gets largest
+        const maxDiff = mean(largestA)  - mean(smallestB); // A gets largest, B gets smallest
+
+        // Calculate initial range
+        const range = maxDiff - minDiff;
+        const pad = range * 0.1 || 1; // 10% padding
+        
+        // Calculate bin width that ensures 0 is a bin center
+        const bins = HIST_BINS;
+        let prelimBinW = (range + 2 * pad) / bins;
+        
+        // Adjust to make 0 a bin center
+        // Find which "half-bin" 0 would fall into, then adjust the range
+        const halfBins = Math.floor(bins / 2);
+        const binW = prelimBinW;
+        
+        // Center the range around 0, ensuring 0 is at a bin center
+        const xMin = -halfBins * binW - binW/2;
+        const xMax = xMin + bins * binW;
+        
+        return { xMin, xMax, bins, yMax: Y_STEPS[0], binW, yStepIdx: 0 };
+      }
+
+      // ===== Stats & panels =====
+      function calculateStats() {
+        // Use shuffled data for calculation if available, otherwise use original
+        const dataToUse = shuffledOutcomes.length > 0 ? shuffledOutcomes : currentData.map(r => r.outcome);
+        const groupData = [];
+        
+        // Reconstruct group assignments with current outcomes
+        currentData.forEach((row, index) => {
+          groupData.push({
+            group: row.group,
+            outcome: dataToUse[index]
+          });
+        });
+        
+        const groupA = groupData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+        const groupB = groupData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+        
+        const meanA = mean(groupA);
+        const meanB = mean(groupB);
+        
+        // Sort group names alphabetically to match R's behavior
+        const sortedGroups = [
+          { name: CONFIG.groupAName, mean: meanA },
+          { name: CONFIG.groupBName, mean: meanB }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Calculate difference as (second alphabetical) - (first alphabetical)
+        // This matches R's coefficient calculation
+        const diff = sortedGroups[1].mean - sortedGroups[0].mean;
+        
+        // Update initial difference display
+        if (originalDiff === null) {
+          originalDiff = diff;
+          const initialDiffElement = document.getElementById('initialDifference');
+          if (initialDiffElement) {
+            initialDiffElement.innerHTML = 
+              `Initial b<sub>1</sub> (${sortedGroups[1].name} - ${sortedGroups[0].name}) = ${formatNumber(originalDiff)}`;
+          }
+        }
+        return { meanA, meanB, diff };
+      }
+
+      // ===== Table & Cards =====
+      function drawTable() {
+        if (!tbody) getDOMRefs();
+        tbody.innerHTML = '';
+        
+        currentData.forEach((row, index) => {
+          const tr = document.createElement('tr');
+          tr.className = row.group === CONFIG.groupAName ? 'a' : 'b';
+          
+          // Column 1: Group
+          const tdGroup = document.createElement('td');
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'cell-content center';
+          groupDiv.textContent = row.group;
+          tdGroup.appendChild(groupDiv);
+          
+          // Column 2: Original Outcome (never changes)
+          const tdOutcome = document.createElement('td');
+          const outcomeDiv = document.createElement('div');
+          outcomeDiv.className = 'cell-content center';
+          outcomeDiv.textContent = row.outcome; // Always show original
+          tdOutcome.appendChild(outcomeDiv);
+          
+          // Column 3: Empty (only cards will show here)
+          const tdShuffled = document.createElement('td');
+          const shuffledDiv = document.createElement('div');
+          shuffledDiv.className = 'cell-content center';
+          shuffledDiv.textContent = ''; // Always empty - only cards show here
+          tdShuffled.appendChild(shuffledDiv);
+          
+          tr.appendChild(tdGroup);
+          tr.appendChild(tdOutcome);
+          tr.appendChild(tdShuffled);
+          tbody.appendChild(tr);
+        });
+      }
+
+      function createCards() {
+        const outcomeCells = document.querySelectorAll('tbody td:nth-child(2)');
+        const layerRect = cardsLayer.getBoundingClientRect();
+        cardsLayer.innerHTML = '';
+        
+        currentData.forEach((data, i) => {
+          const cell = outcomeCells[i];
+          const cellRect = cell.getBoundingClientRect();
+          const card = document.createElement('div');
+          
+          const originalGroup = outcomeOrigins.get(data.outcome);
+          card.className = 'card ' + (originalGroup === CONFIG.groupAName ? 'a' : 'b');
+          card.textContent = data.outcome;
+          card.dataset.outcomeValue = data.outcome;
+          
+          const cardWidth = 50, cardHeight = 20;
+          const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+          const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+          
+          card.style.left = centerX + 'px';
+          card.style.top = centerY + 'px';
+          card.style.width = cardWidth + 'px';
+          card.style.height = cardHeight + 'px';
+          
+          cardsLayer.appendChild(card);
+        });
+      }
+
+      function repositionCards() {
+        const cards = cardsLayer.querySelectorAll('.card');
+        
+        // If we have shuffled data, position cards in the third column
+        if (shuffledOutcomes.length > 0) {
+          const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
+          const layerRect = cardsLayer.getBoundingClientRect();
+          
+          const shuffledPositions = [];
+          shuffledOutcomes.forEach((outcome, index) => {
+            shuffledPositions.push({ outcome: outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < shuffledPositions.length; i++) {
+              if (shuffledPositions[i].outcome === outcomeValue) {
+                targetIdx = shuffledPositions[i].position;
+                shuffledPositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = shuffledColumnCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              card.style.transition = 'none';
+              card.style.transform = 'translate(0,0)';
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+              
+              requestAnimationFrame(() => {
+                card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+              });
+            }
+          });
+        } else {
+          // Original position in second column (for initial state)
+          const outcomeCells = document.querySelectorAll('tbody td:nth-child(2)');
+          const layerRect = cardsLayer.getBoundingClientRect();
+          
+          const availablePositions = [];
+          currentData.forEach((data, index) => {
+            availablePositions.push({ outcome: data.outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < availablePositions.length; i++) {
+              if (availablePositions[i].outcome === outcomeValue) {
+                targetIdx = availablePositions[i].position;
+                availablePositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = outcomeCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              card.style.transition = 'none';
+              card.style.transform = 'translate(0,0)';
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+              
+              requestAnimationFrame(() => {
+                card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+              });
+            }
+          });
+        }
+      }
+
+      // ===== Histogram (fixed X, staged Y) =====
+      function renderHistogram() {
+        const svg = document.getElementById('histSvg');
+        const countEl = document.getElementById('distCount');
+        const summaryEl = document.getElementById('distSummary');
+        
+        if (!svg || !countEl || !summaryEl || !histConfig) {
+          return;
+        }
+        
+        countEl.textContent = diffHistory.length;
+
+        // Update distribution summary stats
+        if (diffHistory.length >= 3) {
+          const distMean = mean(diffHistory);
+          const distSD = Math.sqrt(diffHistory.reduce((s, x) => s + (x - distMean) * (x - distMean), 0) / (diffHistory.length - 1));
+          // The SD of the sampling distribution IS the SE of b₁
+          summaryEl.innerHTML = `Mean: ${formatNumber(distMean)} | SE: ${formatNumber(distSD)}`;
+        } else {
+          summaryEl.innerHTML = '';
+        }
+
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const W = 500, H = 280;
+        const pad = { l: 48, r: 12, t: 16, b: 40 }; // reduced bottom padding
+        const chartW = W - pad.l - pad.r;
+        const chartH = H - pad.t - pad.b;
+
+        const g = (tag, attrs={}, parent=svg) => {
+          const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+          for (const k in attrs) el.setAttribute(k, attrs[k]);
+          parent.appendChild(el);
+          return el;
+        };
+
+        // Pre-compute dot positions for each bin
+        const { xMin, xMax, bins, binW } = histConfig;
+        const binDots = Array.from({ length: bins }, () => []); // array of arrays for each bin
+        
+        diffHistory.forEach((v, historyIndex) => {
+          let binIdx = Math.floor((v - xMin) / binW);
+          if (binIdx < 0) binIdx = 0;
+          if (binIdx >= bins) binIdx = bins - 1;
+          binDots[binIdx].push(historyIndex); // store the history index for color coding
+        });
+        
+        // Find max dots in any bin for y-axis staging
+        let maxCount = Math.max(0, ...binDots.map(bin => bin.length));
+        // staged y: bump up as needed
+        while (histConfig.yStepIdx < Y_STEPS.length - 1 && maxCount > Y_STEPS[histConfig.yStepIdx]) {
+          histConfig.yStepIdx++;
+          histConfig.yMax = Y_STEPS[histConfig.yStepIdx];
+        }
+        const yMax = histConfig.yMax;
+
+        // Baseline
+        g('line', { x1: pad.l, x2: pad.l + chartW, y1: pad.t + chartH, y2: pad.t + chartH, stroke: 'var(--axis)' });
+
+        // Y-axis ticks (0, mid, max) - staged but fixed between bumps
+        const yTicks = [0, yMax/2, yMax];
+        yTicks.forEach(v => {
+          const y = pad.t + chartH - (v / yMax) * chartH;
+          g('line', { x1: pad.l - 4, x2: pad.l, y1: y, y2: y, stroke: 'var(--axis)' });
+          const t = g('text', { x: pad.l - 8, y: y + 4, 'text-anchor':'end', 'font-size':'14', fill:'#333' });
+          t.textContent = Math.round(v);
+        });
+
+        // Draw rectangles that span full bin width - stacked histogram with individual shuffle rectangles
+        const rectHeight = (chartH / yMax); // Exactly one y-axis unit per rectangle
+        const binWidthPixels = chartW / bins;
+        const rectWidth = binWidthPixels - 1; // Leave 1px gap between bins
+        
+        let mostRecentBinX = null;
+        let mostRecentValue = null;
+        let mostRecentY = null;
+        
+        binDots.forEach((dots, binIdx) => {
+          const binLeftX = pad.l + (binIdx * chartW) / bins;
+          
+          dots.forEach((historyIndex, dotIdx) => {
+            const y = pad.t + chartH - (dotIdx + 1) * rectHeight;
+            const isRecent = historyIndex === diffHistory.length - 1; // most recent
+            
+            // Track the most recent sample for labeling
+            if (isRecent) {
+              mostRecentBinX = binLeftX + rectWidth / 2; // Center of the bin
+              mostRecentValue = diffHistory[historyIndex];
+              mostRecentY = y;
+            }
+            
+            // Draw rectangle spanning full bin width
+            g('rect', { 
+              x: binLeftX + 0.5, // Small offset to create gap between bins
+              y: y, 
+              width: rectWidth, 
+              height: rectHeight,
+              fill: isRecent ? 'var(--dot-recent)' : 'var(--dot)', 
+              stroke: 'white', 
+              'stroke-width': 1
+            });
+          });
+        });
+        
+        // Add label above the most recent sample
+        if (mostRecentBinX !== null && mostRecentValue !== null) {
+          const labelText = g('text', { 
+            x: mostRecentBinX, 
+            y: mostRecentY - 8, 
+            'text-anchor': 'middle', 
+            'font-size': '12', 
+            'font-weight': 'bold',
+            fill: '#d97706' // Darker amber for better readability
+          });
+          labelText.textContent = formatNumber(mostRecentValue);
+        }
+
+        // X-axis labels: show all bin centers, guaranteed to have one at 0
+        for (let i = 0; i < bins; i++) {
+          const binCenter = xMin + (i + 0.5) * binW;
+          const x = pad.l + ((i + 0.5) * chartW) / bins;
+          
+          // Tick mark
+          g('line', { x1: x, x2: x, y1: pad.t + chartH, y2: pad.t + chartH + 4, stroke: 'var(--axis)' });
+          
+          // Label every bin center, with 12px font
+          const t = g('text', { x, y: pad.t + chartH + 20, 'text-anchor':'middle', 'font-size':'12', fill:'#333' });
+          
+          // Since we constructed the axis to have 0 as a bin center, check for the actual 0 bin
+          if (Math.abs(binCenter) < 0.0001) {
+            t.textContent = "0";
+          } else {
+            t.textContent = formatNumber(binCenter);
+          }
+        }
+
+        // Original difference marker: big red dot on x-axis
+        if (originalDiff !== null && isFinite(originalDiff)) {
+          const span = xMax - xMin;
+          const x0 = pad.l + ((originalDiff - xMin) / span) * chartW;
+          const y0 = pad.t + chartH;
+          g('circle', { cx: x0, cy: y0, r: 6, fill: 'var(--original-dot)', stroke: 'white', 'stroke-width': 1.5 });
+        }
+
+        // Sampling distribution mean: blue vertical line (if we have enough data)
+        if (diffHistory.length >= 3) {
+          const distMean = mean(diffHistory);
+          const span = xMax - xMin;
+          const x0 = pad.l + ((distMean - xMin) / span) * chartW;
+          
+          // Blue vertical line from bottom to top of chart
+          g('line', { 
+            x1: x0, x2: x0, 
+            y1: pad.t, y2: pad.t + chartH, 
+            stroke: '#2563eb', 
+            'stroke-width': 2,
+            'stroke-dasharray': '4,2'
+          });
+        }
+
+        // Add Y-axis label
+        const yLabel = g('text', { 
+          x: 15, 
+          y: pad.t + chartH / 2, 
+          'text-anchor': 'middle', 
+          'font-size': '18', 
+          'font-weight': 'bold', 
+          fill: '#666',
+          transform: `rotate(-90, 15, ${pad.t + chartH / 2})`
+        });
+        yLabel.textContent = 'Number of b₁s';
+      }
+
+      function addSampleToHistogram(diff) {
+        diffHistory.push(diff);
+        renderHistogram(); // redraw with new dot
+      }
+
+      // ===== R Command Validation & Output =====
+      function validateRCommand(command) {
+        const outcome = CONFIG.outcomeName;
+        const group = CONFIG.groupName;
+        
+        // Remove extra whitespace for validation
+        const cleanCmd = command.replace(/\s+/g, '');
+        
+        // Check both possible commands (case-insensitive)
+        const expected1 = `lm(${outcome}~${group})`;
+        const expected2 = `b1(${outcome}~${group})`;
+        const expected1Lower = expected1.toLowerCase();
+        const expected2Lower = expected2.toLowerCase();
+        const cleanCmdLower = cleanCmd.toLowerCase();
+        
+        return cleanCmdLower === expected1Lower || cleanCmdLower === expected2Lower;
+      }
+      
+      function showROutput(command) {
+        const output = document.getElementById('rOutput');
+        
+        // Calculate the actual model results using ORIGINAL data
+        const groupA = currentData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+        const groupB = currentData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+        const meanA = mean(groupA);
+        const meanB = mean(groupB);
+        
+        // Sort groups alphabetically to match R's behavior
+        const sortedGroups = [
+          { name: CONFIG.groupAName, mean: meanA },
+          { name: CONFIG.groupBName, mean: meanB }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        const b0 = sortedGroups[0].mean; // Intercept is mean of reference group
+        const b1 = sortedGroups[1].mean - sortedGroups[0].mean; // Coefficient
+        
+        let outputText;
+        if (command.toLowerCase().startsWith('lm(')) {
+          outputText = `Call:
+lm(formula = ${CONFIG.outcomeName} ~ ${CONFIG.groupName})
+
+Coefficients:
+            Estimate
+(Intercept)   ${formatNumber(b0)}
+${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
+        } else {
+          outputText = `${formatNumber(b1)}`;
+        }
+        
+        output.textContent = outputText;
+        output.style.display = 'block';
+      }
+
+      // ===== Shuffle animation for graph only (no text output) =====
+      function performShuffleForGraph(callback = null) {
+        const n = currentData.length;
+        const outcomes = currentData.map(r => r.outcome);
+        const newShuffledOutcomes = shuffleArray(outcomes);
+        
+        const cards = cardsLayer.querySelectorAll('.card');
+        const layerRect = cardsLayer.getBoundingClientRect();
+        
+        // Check if this is a subsequent shuffle (cards are in column 3)
+        const isSubsequentShuffle = shuffledOutcomes.length > 0;
+        
+        if (isSubsequentShuffle) {
+          // Step 1: Return cards to original positions (column 2) first
+          const originalCells = document.querySelectorAll('tbody td:nth-child(2)');
+          const availablePositions = [];
+          currentData.forEach((data, index) => {
+            availablePositions.push({ outcome: data.outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < availablePositions.length; i++) {
+              if (availablePositions[i].outcome === outcomeValue) {
+                targetIdx = availablePositions[i].position;
+                availablePositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = originalCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.transition = 'all 0.6s cubic-bezier(.25,.46,.45,.94)';
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+            }
+          });
+          
+          setTimeout(() => {
+            startGraphShuffle();
+          }, 700);
+        } else {
+          startGraphShuffle();
+        }
+        
+        function startGraphShuffle() {
+          // Stage 1: dashed borders + jiggle
+          cards.forEach(card => { card.classList.add('show-border', 'jiggle'); });
+
+          setTimeout(() => {
+            // Stage 2: bunch to tight circle
+            cards.forEach(card => card.classList.remove('jiggle'));
+            const tableCenter = { x: layerRect.width / 2, y: layerRect.height / 2 };
+            
+            setTimeout(() => {
+              cards.forEach((card, i) => {
+                card.classList.add('hover');
+                const angle = (i / cards.length) * 2 * Math.PI;
+                const r = 25;
+                card.style.left = (tableCenter.x + Math.cos(angle) * r - 25) + 'px';
+                card.style.top  = (tableCenter.y + Math.sin(angle) * r - 10) + 'px';
+                card.style.transform = `translateZ(50px) scale(1.05) rotate(${Math.random() * 360}deg)`;
+              });
+            }, 50);
+
+            setTimeout(() => {
+              // Stage 3: Store shuffled outcomes
+              shuffledOutcomes = newShuffledOutcomes;
+              
+              // Send cards to the THIRD column (shuffled column)
+              const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
+              const layerRect = cardsLayer.getBoundingClientRect();
+              
+              const shuffledPositions = [];
+              shuffledOutcomes.forEach((outcome, index) => {
+                shuffledPositions.push({ outcome: outcome, position: index });
+              });
+              
+              cards.forEach((card, cardIndex) => {
+                setTimeout(() => {
+                  const outcomeValue = parseInt(card.dataset.outcomeValue);
+                  let targetIdx = -1;
+                  
+                  for (let i = 0; i < shuffledPositions.length; i++) {
+                    if (shuffledPositions[i].outcome === outcomeValue) {
+                      targetIdx = shuffledPositions[i].position;
+                      shuffledPositions.splice(i, 1);
+                      break;
+                    }
+                  }
+                  
+                  if (targetIdx >= 0) {
+                    const targetCell = shuffledColumnCells[targetIdx];
+                    const cellRect = targetCell.getBoundingClientRect();
+                    
+                    const cardWidth = 50, cardHeight = 20;
+                    const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+                    const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+                    
+                    card.style.transition = 'all 2.4s cubic-bezier(.25,.46,.45,.94)';
+                    card.style.transform = 'none';
+                    card.classList.remove('hover');
+                    card.style.left = centerX + 'px';
+                    card.style.top = centerY + 'px';
+                    card.style.width = cardWidth + 'px';
+                    card.style.height = cardHeight + 'px';
+                  }
+                }, cardIndex * 100);
+              });
+              
+              setTimeout(() => {
+                cards.forEach(card => { 
+                  card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+                  card.classList.remove('jiggle', 'hover');
+                });
+                
+                // Only call the callback (no text output update)
+                if (callback) callback();
+              }, cards.length * 100 + 2600);
+            }, 300);
+          }, 800);
+        }
+      }
+
+      // ===== Shuffle animation =====
+      function performShuffle(callback = null) {
+        const n = currentData.length;
+        const outcomes = currentData.map(r => r.outcome);
+        const newShuffledOutcomes = shuffleArray(outcomes); // Create shuffled version
+        
+        const cards = cardsLayer.querySelectorAll('.card');
+        const layerRect = cardsLayer.getBoundingClientRect();
+        
+        // Check if this is a subsequent shuffle (cards are in column 3)
+        const isSubsequentShuffle = shuffledOutcomes.length > 0;
+        
+        if (isSubsequentShuffle) {
+          // Step 1: Return cards to original positions (column 2) first
+          const originalCells = document.querySelectorAll('tbody td:nth-child(2)');
+          const availablePositions = [];
+          currentData.forEach((data, index) => {
+            availablePositions.push({ outcome: data.outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < availablePositions.length; i++) {
+              if (availablePositions[i].outcome === outcomeValue) {
+                targetIdx = availablePositions[i].position;
+                availablePositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = originalCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.transition = 'all 0.6s cubic-bezier(.25,.46,.45,.94)';
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+            }
+          });
+          
+          // Wait for cards to return to column 2, then start normal shuffle
+          setTimeout(() => {
+            startNormalShuffle();
+          }, 700);
+        } else {
+          // First shuffle - start immediately
+          startNormalShuffle();
+        }
+        
+        function startNormalShuffle() {
+          // Stage 1: dashed borders + jiggle
+          cards.forEach(card => { card.classList.add('show-border', 'jiggle'); });
+
+          setTimeout(() => {
+            // Stage 2: bunch to tight circle
+            cards.forEach(card => card.classList.remove('jiggle'));
+            const tableCenter = { x: layerRect.width / 2, y: layerRect.height / 2 };
+            
+            setTimeout(() => {
+              cards.forEach((card, i) => {
+                card.classList.add('hover');
+                const angle = (i / cards.length) * 2 * Math.PI;
+                const r = 25;
+                card.style.left = (tableCenter.x + Math.cos(angle) * r - 25) + 'px';
+                card.style.top  = (tableCenter.y + Math.sin(angle) * r - 10) + 'px';
+                card.style.transform = `translateZ(50px) scale(1.05) rotate(${Math.random() * 360}deg)`;
+              });
+            }, 50);
+
+            setTimeout(() => {
+              // Stage 3: Store shuffled outcomes but DON'T modify currentData
+              shuffledOutcomes = newShuffledOutcomes;
+              
+              // Don't update third column text - only cards will show there
+              
+              // Now send cards to the THIRD column (shuffled column)
+              const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
+              const layerRect = cardsLayer.getBoundingClientRect();
+              
+              // Create mapping of outcomes to their new positions in shuffled order
+              const shuffledPositions = [];
+              shuffledOutcomes.forEach((outcome, index) => {
+                shuffledPositions.push({ outcome: outcome, position: index });
+              });
+              
+              cards.forEach((card, cardIndex) => {
+                setTimeout(() => {
+                  const outcomeValue = parseInt(card.dataset.outcomeValue);
+                  let targetIdx = -1;
+                  
+                  // Find where this outcome should go in the shuffled column
+                  for (let i = 0; i < shuffledPositions.length; i++) {
+                    if (shuffledPositions[i].outcome === outcomeValue) {
+                      targetIdx = shuffledPositions[i].position;
+                      shuffledPositions.splice(i, 1); // Remove so we don't reuse
+                      break;
+                    }
+                  }
+                  
+                  if (targetIdx >= 0) {
+                    const targetCell = shuffledColumnCells[targetIdx];
+                    const cellRect = targetCell.getBoundingClientRect();
+                    
+                    const cardWidth = 50, cardHeight = 20;
+                    const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+                    const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+                    
+                    // Set slow transition BEFORE moving
+                    card.style.transition = 'all 2.4s cubic-bezier(.25,.46,.45,.94)';
+                    card.style.transform = 'none';
+                    card.classList.remove('hover');
+                    card.style.left = centerX + 'px';
+                    card.style.top = centerY + 'px';
+                    card.style.width = cardWidth + 'px';
+                    card.style.height = cardHeight + 'px';
+                  }
+                }, cardIndex * 100);
+              });
+              
+              setTimeout(() => {
+                cards.forEach(card => { 
+                  card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+                  card.classList.remove('jiggle', 'hover'); // Keep show-border!
+                });
+                finishShuffle(callback);
+              }, cards.length * 100 + 2600); // Increased to account for 2.4s flying animation
+            }, 300);
+          }, 800);
+        }
+      }
+
+      let shuffleResults = []; // Track all shuffle results
+
+      function finishShuffle(callback) {
+        const stats = calculateStats();
+        addSampleToHistogram(stats.diff);
+        
+        // Add result to cumulative list
+        shuffleResults.push(stats.diff);
+        
+        // Show the cumulative shuffle output with decimal-aligned formatting
+        const shuffleOutput = document.getElementById('shuffleOutput');
+        const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+        
+        if (shuffleOutput || samplingShuffleOutput) {
+          // Find the maximum number of digits before decimal point
+          const maxIntegerDigits = Math.max(...shuffleResults.map(result => {
+            const formatted = formatNumber(result);
+            const beforeDecimal = formatted.split('.')[0];
+            return beforeDecimal.replace('-', '').length; // Don't count the minus sign in width
+          }));
+          
+          // Create cumulative display with decimal point alignment
+          let outputText = shuffleResults.map((result, index) => {
+            const isRecent = index === shuffleResults.length - 1;
+            const pointer = isRecent ? '► ' : '  ';
+            const formatted = formatNumber(result);
+            const beforeDecimal = formatted.split('.')[0];
+            const afterDecimal = formatted.split('.')[1] || '0';
+            
+            // Calculate padding needed (account for minus sign)
+            const integerPart = beforeDecimal.replace('-', '');
+            const paddingNeeded = maxIntegerDigits - integerPart.length;
+            const sign = beforeDecimal.startsWith('-') ? '-' : ' ';
+            const padding = ' '.repeat(paddingNeeded);
+            
+            return `${pointer}${sign}${padding}${integerPart}.${afterDecimal}`;
+          }).join('\n');
+          
+          // Update both output areas if they exist
+          if (shuffleOutput) {
+            shuffleOutput.textContent = outputText;
+            shuffleOutput.style.display = 'block';
+          }
+          if (samplingShuffleOutput) {
+            samplingShuffleOutput.textContent = outputText;
+            samplingShuffleOutput.style.display = 'block';
+          }
+        }
+        
+        if (callback) callback();
+      }
+
+      function doMultipleShuffle() {
+        let count = 0;
+        const maxCount = 5;
+        
+        const cards = cardsLayer.querySelectorAll('.card');
+        cards.forEach(card => {
+          card.classList.add('show-border');
+          card.classList.remove('jiggle', 'hover');
+        });
+        
+        function next() {
+          if (count >= maxCount) {
+            // Clean up after all shuffles are done - keep borders visible
+            cards.forEach(card => {
+              card.classList.remove('jiggle', 'hover'); // Keep show-border!
+              card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+            });
+            return;
+          }
+          count++;
+          
+          // Create new shuffled outcomes but keep original data intact
+          const outcomes = currentData.map(r => r.outcome);
+          shuffledOutcomes = shuffleArray(outcomes);
+          
+          // Don't update third column text - only cards will show there
+          
+          repositionCards();
+          const stats = calculateStats();
+          addSampleToHistogram(stats.diff);
+          setTimeout(next, 300);
+        }
+        next();
+      }
+
+      function setupEventHandlers() {
+        // Collapsible sections functionality
+        const sectionHeaders = document.querySelectorAll('.section-header');
+        sectionHeaders.forEach(header => {
+          header.addEventListener('click', () => {
+            const targetId = header.dataset.target;
+            const content = document.getElementById(targetId);
+            const caret = header.querySelector('.caret');
+            
+            if (content.classList.contains('collapsed')) {
+              content.classList.remove('collapsed');
+              caret.classList.add('expanded');
+            } else {
+              content.classList.add('collapsed');
+              caret.classList.remove('expanded');
+            }
+          });
+        });
+
+        // Tab switching functionality
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Show corresponding content
+            const tabName = tab.dataset.tab;
+            const content = document.getElementById(tabName + '-content');
+            if (content) {
+              content.classList.add('active');
+            }
+          });
+        });
+
+        document.getElementById('shuffleBtn').addEventListener('click', () => {
+          performShuffle();
+        });
+
+        // Add handler for the sampling tab shuffle button
+        document.getElementById('samplingShuffleBtn').addEventListener('click', () => {
+          performShuffle();
+        });
+
+        // Clear button event handlers
+        document.getElementById('clearPlotBtn').addEventListener('click', () => {
+          const output = document.getElementById('plotOutput');
+          if (output) output.style.display = 'none';
+        });
+
+        document.getElementById('clearModelBtn').addEventListener('click', () => {
+          const output = document.getElementById('rOutput');
+          if (output) output.style.display = 'none';
+        });
+
+        document.getElementById('clearB1Btn').addEventListener('click', () => {
+          const output = document.getElementById('b1Output');
+          if (output) output.style.display = 'none';
+        });
+
+        document.getElementById('clearShuffleBtn').addEventListener('click', () => {
+          clearShuffleData();
+        });
+
+        document.getElementById('clearShufflePlotBtn').addEventListener('click', () => {
+          const output = document.getElementById('shufflePlotOutput');
+          if (output) output.style.display = 'none';
+          
+          // Also clear shuffle data and return cards to original column
+          clearShuffleData();
+        });
+
+        document.getElementById('clearSamplingBtn').addEventListener('click', () => {
+          clearShuffleData();
+        });
+
+        // Add handler for multiple run button
+        document.getElementById('run5xBtn').addEventListener('click', () => {
+          runMultipleShuffles(5);
+        });
+
+        function runMultipleShuffles(count) {
+          // Disable button during execution
+          const run5xBtn = document.getElementById('run5xBtn');
+          run5xBtn.disabled = true;
+          run5xBtn.textContent = 'Running...';
+          
+          let completed = 0;
+          
+          function runBatch() {
+            const batchSize = Math.min(10, count - completed); // Process in batches of 10
+            
+            for (let i = 0; i < batchSize; i++) {
+              // Create shuffled outcomes
+              const outcomes = currentData.map(r => r.outcome);
+              const newShuffledOutcomes = shuffleArray(outcomes);
+              
+              // Calculate stats for this shuffle
+              const tempGroupData = [];
+              currentData.forEach((row, index) => {
+                tempGroupData.push({
+                  group: row.group,
+                  outcome: newShuffledOutcomes[index]
+                });
+              });
+              
+              const groupA = tempGroupData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+              const groupB = tempGroupData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+              const meanA = mean(groupA);
+              const meanB = mean(groupB);
+              
+              // Sort group names alphabetically to match R's behavior
+              const sortedGroups = [
+                { name: CONFIG.groupAName, mean: meanA },
+                { name: CONFIG.groupBName, mean: meanB }
+              ].sort((a, b) => a.name.localeCompare(b.name));
+              
+              const diff = sortedGroups[1].mean - sortedGroups[0].mean;
+              
+              // Add to histogram
+              addSampleToHistogram(diff);
+              shuffleResults.push(diff);
+            }
+            
+            completed += batchSize;
+            
+            if (completed < count) {
+              // Continue with next batch after a short delay
+              setTimeout(runBatch, 10);
+            } else {
+              // Re-enable button
+              run5xBtn.disabled = false;
+              run5xBtn.textContent = 'Run 5x';
+              
+              // Update shuffle output if visible
+              updateShuffleOutput();
+            }
+          }
+          
+          runBatch();
+        }
+        
+        function updateShuffleOutput() {
+          const shuffleOutput = document.getElementById('shuffleOutput');
+          const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+          
+          if ((shuffleOutput && shuffleOutput.style.display !== 'none') || 
+              (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none')) {
+            
+            // Find the maximum number of digits before decimal point
+            const maxIntegerDigits = Math.max(...shuffleResults.map(result => {
+              const formatted = formatNumber(result);
+              const beforeDecimal = formatted.split('.')[0];
+              return beforeDecimal.replace('-', '').length;
+            }));
+            
+            // Show only the last 10 results to keep output manageable
+            const recentResults = shuffleResults.slice(-10);
+            let outputText = recentResults.map((result, index) => {
+              const globalIndex = shuffleResults.length - recentResults.length + index;
+              const isRecent = globalIndex === shuffleResults.length - 1;
+              const pointer = isRecent ? '► ' : '  ';
+              const formatted = formatNumber(result);
+              const beforeDecimal = formatted.split('.')[0];
+              const afterDecimal = formatted.split('.')[1] || '0';
+              
+              const integerPart = beforeDecimal.replace('-', '');
+              const paddingNeeded = maxIntegerDigits - integerPart.length;
+              const sign = beforeDecimal.startsWith('-') ? '-' : ' ';
+              const padding = ' '.repeat(paddingNeeded);
+              
+              return `${pointer}${sign}${padding}${integerPart}.${afterDecimal}`;
+            }).join('\n');
+            
+            if (shuffleResults.length > 10) {
+              outputText = `... (showing last 10 of ${shuffleResults.length} results)\n` + outputText;
+            }
+            
+            if (shuffleOutput && shuffleOutput.style.display !== 'none') {
+              shuffleOutput.textContent = outputText;
+            }
+            if (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none') {
+              samplingShuffleOutput.textContent = outputText;
+            }
+          }
+        }
+
+        function clearShuffleData() {
+          // Clear shuffle outputs
+          const shuffleOutput = document.getElementById('shuffleOutput');
+          const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+          if (shuffleOutput) shuffleOutput.style.display = 'none';
+          if (samplingShuffleOutput) samplingShuffleOutput.style.display = 'none';
+          
+          // Reset shuffle-related data
+          shuffleResults = [];
+          diffHistory = [];
+          shuffledOutcomes = []; // Clear shuffled outcomes to return cards to original positions
+          
+          // Remove card styling and return to original positions
+          const cards = cardsLayer.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('show-border', 'jiggle', 'hover');
+            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+          });
+          
+          // Reposition cards back to original column
+          repositionCards();
+          
+          // Re-render histogram without the shuffle data
+          renderHistogram();
+        }
+
+        const runShufflePlotBtn = document.getElementById('runShufflePlotBtn');
+        if (runShufflePlotBtn) {
+          runShufflePlotBtn.addEventListener('click', () => {
+            // Use the full animation but don't update text output
+            performShuffleForGraph(() => {
+              generateShuffleScatterPlot();
+            });
+          });
+        }
+        
+        function generateShuffleScatterPlot() {
+          const output = document.getElementById('shufflePlotOutput');
+          const svg = document.getElementById('shuffleScatterSvg');
+          
+          // Clear previous plot
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+          
+          // Use shuffled data if available, otherwise create a new shuffle
+          let dataToPlot;
+          if (shuffledOutcomes.length > 0) {
+            // Use existing shuffled data
+            dataToPlot = currentData.map((row, index) => ({
+              group: row.group,
+              outcome: shuffledOutcomes[index]
+            }));
+          } else {
+            // Create a new shuffle for plotting
+            const outcomes = currentData.map(r => r.outcome);
+            const newShuffledOutcomes = shuffleArray(outcomes);
+            dataToPlot = currentData.map((row, index) => ({
+              group: row.group,
+              outcome: newShuffledOutcomes[index]
+            }));
+          }
+          
+          // Get data for plotting by group
+          const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
+          const groupB = dataToPlot.filter(r => r.group === CONFIG.groupBName);
+          
+          // SVG dimensions and margins 
+          const svgWidth = 245;
+          const svgHeight = 240;
+          const margin = { top: 30, right: 30, bottom: 40, left: -65 };
+          const plotWidth = svgWidth - margin.left - margin.right;
+          const plotHeight = svgHeight - margin.top - margin.bottom;
+          
+          // Set SVG viewBox
+          svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+          
+          // Create SVG groups
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+          svg.appendChild(g);
+          
+          // Calculate scales with padding
+          const allOutcomes = dataToPlot.map(d => d.outcome);
+          const dataMin = Math.min(...allOutcomes);
+          const dataMax = Math.max(...allOutcomes);
+          const range = dataMax - dataMin;
+          const padding = range * 0.15;
+          const minY = dataMin - padding;
+          const maxY = dataMax + padding;
+          const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+          
+          // Draw axes
+          const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          yAxis.setAttribute('x1', 0);
+          yAxis.setAttribute('y1', 0);
+          yAxis.setAttribute('x2', 0);
+          yAxis.setAttribute('y2', plotHeight);
+          yAxis.setAttribute('stroke', '#666');
+          yAxis.setAttribute('stroke-width', 2);
+          g.appendChild(yAxis);
+          
+          const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          xAxis.setAttribute('x1', 0);
+          xAxis.setAttribute('y1', plotHeight);
+          xAxis.setAttribute('x2', plotWidth);
+          xAxis.setAttribute('y2', plotHeight);
+          xAxis.setAttribute('stroke', '#666');
+          xAxis.setAttribute('stroke-width', 2);
+          g.appendChild(xAxis);
+          
+          // Y-axis labels
+          const yRange = maxY - minY;
+          const yStep = Math.ceil(yRange / 4);
+          const yTicks = [];
+          const startTick = Math.ceil(minY / yStep) * yStep;
+          for (let i = startTick; i <= maxY; i += yStep) {
+            yTicks.push(i);
+          }
+          
+          yTicks.forEach(tick => {
+            const y = yScale(tick);
+            const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tickLine.setAttribute('x1', -5);
+            tickLine.setAttribute('y1', y);
+            tickLine.setAttribute('x2', 0);
+            tickLine.setAttribute('y2', y);
+            tickLine.setAttribute('stroke', '#666');
+            g.appendChild(tickLine);
+            
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', -10);
+            label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end');
+            label.setAttribute('font-size', '14');
+            label.setAttribute('font-weight', 'normal');
+            label.setAttribute('fill', '#333');
+            label.textContent = tick;
+            g.appendChild(label);
+          });
+          
+          // X-axis group labels
+          const groupAX = plotWidth * 0.25;
+          const groupBX = plotWidth * 0.75;
+          
+          const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelA.setAttribute('x', groupAX);
+          labelA.setAttribute('y', plotHeight + 25);
+          labelA.setAttribute('text-anchor', 'middle');
+          labelA.setAttribute('font-size', '18');
+          labelA.setAttribute('font-weight', 'bold');
+          labelA.setAttribute('fill', '#333');
+          labelA.textContent = CONFIG.groupAName;
+          g.appendChild(labelA);
+          
+          const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelB.setAttribute('x', groupBX);
+          labelB.setAttribute('y', plotHeight + 25);
+          labelB.setAttribute('text-anchor', 'middle');
+          labelB.setAttribute('font-size', '18');
+          labelB.setAttribute('font-weight', 'bold');
+          labelB.setAttribute('fill', '#333');
+          labelB.textContent = CONFIG.groupBName;
+          g.appendChild(labelB);
+          
+          // Plot data points
+          groupA.forEach((point) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupAX);
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            
+            // Color based on original group membership
+            const originalGroup = outcomeOrigins.get(point.outcome);
+            const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+            circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+            circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          groupB.forEach((point) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupBX);
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            
+            // Color based on original group membership
+            const originalGroup = outcomeOrigins.get(point.outcome);
+            const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+            circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+            circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          // Add group means if showing
+          if (showShuffleMeans) {
+            const meanA = mean(groupA.map(d => d.outcome));
+            const meanB = mean(groupB.map(d => d.outcome));
+            
+            // Mean line for Group A
+            const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineA.setAttribute('x1', groupAX - 30);
+            meanLineA.setAttribute('y1', yScale(meanA));
+            meanLineA.setAttribute('x2', groupAX + 30);
+            meanLineA.setAttribute('y2', yScale(meanA));
+            meanLineA.setAttribute('stroke', '#000');
+            meanLineA.setAttribute('stroke-width', 3);
+            g.appendChild(meanLineA);
+            
+            // Mean line for Group B
+            const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineB.setAttribute('x1', groupBX - 30);
+            meanLineB.setAttribute('y1', yScale(meanB));
+            meanLineB.setAttribute('x2', groupBX + 30);
+            meanLineB.setAttribute('y2', yScale(meanB));
+            meanLineB.setAttribute('stroke', '#000');
+            meanLineB.setAttribute('stroke-width', 3);
+            g.appendChild(meanLineB);
+          }
+          
+          // Add title
+          const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          title.setAttribute('x', plotWidth / 2);
+          title.setAttribute('y', -10);
+          title.setAttribute('text-anchor', 'middle');
+          title.setAttribute('font-size', '20');
+          title.setAttribute('font-weight', 'bold');
+          title.setAttribute('fill', '#333');
+          title.textContent = `${CONFIG.outcomeName}_shuf by ${CONFIG.groupName}`;
+          g.appendChild(title);
+          
+          // Add Y-axis label
+          const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          yLabel.setAttribute('x', -35);
+          yLabel.setAttribute('y', plotHeight / 2);
+          yLabel.setAttribute('text-anchor', 'middle');
+          yLabel.setAttribute('font-size', '18');
+          yLabel.setAttribute('font-weight', 'bold');
+          yLabel.setAttribute('fill', '#666');
+          yLabel.setAttribute('transform', `rotate(-90, -35, ${plotHeight / 2})`);
+          yLabel.textContent = CONFIG.outcomeName + '_shuf';
+          g.appendChild(yLabel);
+          
+          // Add toggle button to the right of plot area
+          const buttonGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          buttonGroup.style.cursor = 'pointer';
+          
+          // Button background - positioned to the right of the plot
+          const buttonRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          buttonRect.setAttribute('x', plotWidth + 10);
+          buttonRect.setAttribute('y', 5);
+          buttonRect.setAttribute('width', 85);
+          buttonRect.setAttribute('height', 25);
+          buttonRect.setAttribute('fill', showShuffleMeans ? '#dbeafe' : '#f8fafc');
+          buttonRect.setAttribute('stroke', '#2563eb');
+          buttonRect.setAttribute('stroke-width', showShuffleMeans ? 2 : 1.5);
+          buttonRect.setAttribute('rx', 4);
+          buttonGroup.appendChild(buttonRect);
+          
+          // Button text
+          const buttonText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          buttonText.setAttribute('x', plotWidth + 52.5);
+          buttonText.setAttribute('y', 20);
+          buttonText.setAttribute('text-anchor', 'middle');
+          buttonText.setAttribute('font-size', '12');
+          buttonText.setAttribute('font-weight', '600');
+          buttonText.setAttribute('fill', showShuffleMeans ? '#2563eb' : '#374151');
+          buttonText.textContent = showShuffleMeans ? 'Hide Means' : 'Show Means';
+          buttonGroup.appendChild(buttonText);
+          
+          // Add click handler
+          buttonGroup.addEventListener('click', () => {
+            showShuffleMeans = !showShuffleMeans;
+            generateShuffleScatterPlot(); // Regenerate plot with/without means
+          });
+          
+          g.appendChild(buttonGroup);
+          
+          output.style.display = 'block';
+        }
+
+        // R command buttons - with debugging
+        const runModelBtn = document.getElementById('runModelBtn');
+        const runB1Btn = document.getElementById('runB1Btn');
+        const runPlotBtn = document.getElementById('runPlotBtn');
+        
+        let showMeans = false;
+        let showShuffleMeans = false;
+        let currentPlotData = null;
+        
+        if (runModelBtn) {
+          runModelBtn.addEventListener('click', () => {
+            showROutput(`lm(${CONFIG.outcomeName}~${CONFIG.groupName}, data=df)`);
+          });
+        }
+        
+        if (runB1Btn) {
+          runB1Btn.addEventListener('click', () => {
+            const output = document.getElementById('b1Output');
+            
+            // Calculate the actual model results using ORIGINAL data
+            const groupA = currentData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+            const groupB = currentData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+            const meanA = mean(groupA);
+            const meanB = mean(groupB);
+            
+            // Sort groups alphabetically to match R's behavior
+            const sortedGroups = [
+              { name: CONFIG.groupAName, mean: meanA },
+              { name: CONFIG.groupBName, mean: meanB }
+            ].sort((a, b) => a.name.localeCompare(b.name));
+            
+            const b1 = sortedGroups[1].mean - sortedGroups[0].mean; // Coefficient
+            
+            if (output) {
+              output.textContent = formatNumber(b1);
+              output.style.display = 'block';
+            }
+          });
+        }
+        
+        if (runPlotBtn) {
+          runPlotBtn.addEventListener('click', () => {
+            generateScatterPlot();
+          });
+        }
+        
+        function generateScatterPlot() {
+          const output = document.getElementById('plotOutput');
+          const svg = document.getElementById('scatterSvg');
+          
+          // Clear previous plot
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+          
+          // Get data for plotting
+          const groupA = currentData.filter(r => r.group === CONFIG.groupAName);
+          const groupB = currentData.filter(r => r.group === CONFIG.groupBName);
+          
+          // Store data for means toggle
+          currentPlotData = { groupA, groupB };
+          
+          // SVG dimensions and margins - proper spacing for all elements
+          const svgWidth = 245;
+          const svgHeight = 240;
+          const margin = { top: 30, right: 30, bottom: 40, left: -65 };
+          const plotWidth = svgWidth - margin.left - margin.right;
+          const plotHeight = svgHeight - margin.top - margin.bottom;
+          
+          // Set SVG viewBox
+          svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+          
+          // Create SVG groups
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+          svg.appendChild(g);
+          
+          // Calculate scales with more padding
+          const allOutcomes = currentData.map(d => d.outcome);
+          const dataMin = Math.min(...allOutcomes);
+          const dataMax = Math.max(...allOutcomes);
+          const range = dataMax - dataMin;
+          const padding = range * 0.15; // Add 15% padding on each side
+          const minY = dataMin - padding;
+          const maxY = dataMax + padding;
+          const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+          
+          // Draw axes
+          // Y-axis line
+          const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          yAxis.setAttribute('x1', 0);
+          yAxis.setAttribute('y1', 0);
+          yAxis.setAttribute('x2', 0);
+          yAxis.setAttribute('y2', plotHeight);
+          yAxis.setAttribute('stroke', '#666');
+          yAxis.setAttribute('stroke-width', 2);
+          g.appendChild(yAxis);
+          
+          // X-axis line
+          const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          xAxis.setAttribute('x1', 0);
+          xAxis.setAttribute('y1', plotHeight);
+          xAxis.setAttribute('x2', plotWidth);
+          xAxis.setAttribute('y2', plotHeight);
+          xAxis.setAttribute('stroke', '#666');
+          xAxis.setAttribute('stroke-width', 2);
+          g.appendChild(xAxis);
+          
+          // Y-axis labels and ticks - simplified to 4-5 clean labels
+          const yRange = maxY - minY;
+          const yStep = Math.ceil(yRange / 4); // Create about 4-5 labels
+          const yTicks = [];
+          
+          // Create clean, rounded tick values
+          const startTick = Math.ceil(minY / yStep) * yStep;
+          for (let i = startTick; i <= maxY; i += yStep) {
+            yTicks.push(i);
+          }
+          
+          yTicks.forEach(tick => {
+            const y = yScale(tick);
+            
+            // Tick mark
+            const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tickLine.setAttribute('x1', -5);
+            tickLine.setAttribute('y1', y);
+            tickLine.setAttribute('x2', 0);
+            tickLine.setAttribute('y2', y);
+            tickLine.setAttribute('stroke', '#666');
+            g.appendChild(tickLine);
+            
+            // Label
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', -10);
+            label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end');
+            label.setAttribute('font-size', '14');
+            label.setAttribute('font-weight', 'normal');
+            label.setAttribute('fill', '#333');
+            label.textContent = tick;
+            g.appendChild(label);
+          });
+          
+          // X-axis group labels
+          const groupAX = plotWidth * 0.25;
+          const groupBX = plotWidth * 0.75;
+          
+          // Group A label
+          const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelA.setAttribute('x', groupAX);
+          labelA.setAttribute('y', plotHeight + 25);
+          labelA.setAttribute('text-anchor', 'middle');
+          labelA.setAttribute('font-size', '18');
+          labelA.setAttribute('font-weight', 'bold');
+          labelA.setAttribute('fill', '#333');
+          labelA.textContent = CONFIG.groupAName;
+          g.appendChild(labelA);
+          
+          // Group B label
+          const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelB.setAttribute('x', groupBX);
+          labelB.setAttribute('y', plotHeight + 25);
+          labelB.setAttribute('text-anchor', 'middle');
+          labelB.setAttribute('font-size', '18');
+          labelB.setAttribute('font-weight', 'bold');
+          labelB.setAttribute('fill', '#333');
+          labelB.textContent = CONFIG.groupBName;
+          g.appendChild(labelB);
+          
+          // Plot data points for Group A
+          groupA.forEach((point, index) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupAX); // No jitter - straight vertical line
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            circle.setAttribute('fill', 'var(--group-a-dot)');
+            circle.setAttribute('stroke', '#1e40af');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          // Plot data points for Group B
+          groupB.forEach((point, index) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupBX); // No jitter - straight vertical line
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            circle.setAttribute('fill', 'var(--group-b-dot)');
+            circle.setAttribute('stroke', '#d97706');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          // Add group means if showing
+          if (showMeans && currentPlotData) {
+            const meanA = mean(groupA.map(d => d.outcome));
+            const meanB = mean(groupB.map(d => d.outcome));
+            
+            // Mean line for Group A
+            const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineA.setAttribute('x1', groupAX - 30);
+            meanLineA.setAttribute('y1', yScale(meanA));
+            meanLineA.setAttribute('x2', groupAX + 30);
+            meanLineA.setAttribute('y2', yScale(meanA));
+            meanLineA.setAttribute('stroke', '#000');
+            meanLineA.setAttribute('stroke-width', 3);
+            meanLineA.setAttribute('class', 'mean-line');
+            g.appendChild(meanLineA);
+            
+            // Mean line for Group B
+            const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineB.setAttribute('x1', groupBX - 30);
+            meanLineB.setAttribute('y1', yScale(meanB));
+            meanLineB.setAttribute('x2', groupBX + 30);
+            meanLineB.setAttribute('y2', yScale(meanB));
+            meanLineB.setAttribute('stroke', '#000');
+            meanLineB.setAttribute('stroke-width', 3);
+            meanLineB.setAttribute('class', 'mean-line');
+            g.appendChild(meanLineB);
+          }
+          
+          // Add title
+          const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          title.setAttribute('x', plotWidth / 2);
+          title.setAttribute('y', -10);
+          title.setAttribute('text-anchor', 'middle');
+          title.setAttribute('font-size', '20');
+          title.setAttribute('font-weight', 'bold');
+          title.setAttribute('fill', '#333');
+          title.textContent = `${CONFIG.outcomeName} by ${CONFIG.groupName}`;
+          g.appendChild(title);
+          
+          // Add Y-axis label
+          const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          yLabel.setAttribute('x', -35);
+          yLabel.setAttribute('y', plotHeight / 2);
+          yLabel.setAttribute('text-anchor', 'middle');
+          yLabel.setAttribute('font-size', '18');
+          yLabel.setAttribute('font-weight', 'bold');
+          yLabel.setAttribute('fill', '#666');
+          yLabel.setAttribute('transform', `rotate(-90, -35, ${plotHeight / 2})`);
+          yLabel.textContent = CONFIG.outcomeName;
+          g.appendChild(yLabel);
+          
+          // Add small toggle button to the right of plot area
+          const buttonGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          buttonGroup.setAttribute('id', 'toggleMeansBtn');
+          buttonGroup.style.cursor = 'pointer';
+          
+          // Button background - positioned to the right of the plot
+          const buttonRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          buttonRect.setAttribute('x', plotWidth + 10);
+          buttonRect.setAttribute('y', 5);
+          buttonRect.setAttribute('width', 85);
+          buttonRect.setAttribute('height', 25);
+          buttonRect.setAttribute('fill', showMeans ? '#dbeafe' : '#f8fafc');
+          buttonRect.setAttribute('stroke', '#2563eb');
+          buttonRect.setAttribute('stroke-width', showMeans ? 2 : 1.5);
+          buttonRect.setAttribute('rx', 4);
+          buttonGroup.appendChild(buttonRect);
+          
+          // Button text
+          const buttonText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          buttonText.setAttribute('x', plotWidth + 52.5);
+          buttonText.setAttribute('y', 20);
+          buttonText.setAttribute('text-anchor', 'middle');
+          buttonText.setAttribute('font-size', '12');
+          buttonText.setAttribute('font-weight', '600');
+          buttonText.setAttribute('fill', showMeans ? '#2563eb' : '#374151');
+          buttonText.textContent = showMeans ? 'Hide Means' : 'Show Means';
+          buttonGroup.appendChild(buttonText);
+          
+          // Add click handler
+          buttonGroup.addEventListener('click', () => {
+            showMeans = !showMeans;
+            generateScatterPlot(); // Regenerate plot with/without means
+          });
+          
+          g.appendChild(buttonGroup);
+          
+          output.style.display = 'block';
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+          // Reset shuffled data - currentData stays as original
+          shuffledOutcomes = []; // Clear shuffled outcomes
+          shuffleResults = []; // Clear cumulative shuffle results
+          diffHistory = [];
+          originalDiff = null;
+
+          drawTable(); // This will now show empty third column
+          calculateStats(); // recompute originalDiff text and display using original data
+          createCards();
+
+          // Hide shuffle output
+          const shuffleOutput = document.getElementById('shuffleOutput');
+          const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+          if (shuffleOutput) {
+            shuffleOutput.style.display = 'none';
+          }
+          if (samplingShuffleOutput) {
+            samplingShuffleOutput.style.display = 'none';
+          }
+
+          // clean card classes
+          const cards = cardsLayer.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('show-border', 'jiggle', 'hover');
+            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+          });
+
+          // reset histogram with same fixed X and reset staged Y
+          histConfig.yStepIdx = 0;
+          histConfig.yMax = Y_STEPS[0];
+          renderHistogram();
+        });
+
+        window.addEventListener('resize', () => {
+          if (cardsLayer && cardsLayer.childElementCount > 0) repositionCards();
+        });
+      }
+
+      function initialize() {
+        getDOMRefs();
+        
+        // Update table headers and code with custom variable names
+        document.getElementById('groupHeader').textContent = CONFIG.groupName;
+        document.getElementById('outcomeHeader').textContent = CONFIG.outcomeName;
+        // Auto-generate shuffled column header  
+        document.getElementById('shuffledHeader').textContent = CONFIG.outcomeName + '_shuf';
+        document.getElementById('codeBlock').innerHTML =
+          `df$${CONFIG.outcomeName}_shuf &lt;- shuffle(df$${CONFIG.outcomeName})\n` +
+          `b1(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('samplingCodeBlock').innerHTML =
+          `df$${CONFIG.outcomeName}_shuf &lt;- shuffle(df$${CONFIG.outcomeName})\n` +
+          `b1(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('modelCodeBlock').innerHTML = 
+          `lm(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('shufflePlotCodeBlock').innerHTML =
+          `df$${CONFIG.outcomeName}_shuf &lt;- shuffle(df$${CONFIG.outcomeName})\n` +
+          `gf_point(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('b1CodeBlock').innerHTML = 
+          `b1(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('plotCodeBlock').innerHTML = 
+          `gf_point(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
+        
+        drawTable();
+        calculateStats();
+        createCards();
+        setupEventHandlers();
+
+        // Compute fixed histogram X BEFORE any shuffles
+        const nA = currentData.filter(r=>r.group===CONFIG.groupAName).length;
+        const nB = currentData.filter(r=>r.group===CONFIG.groupBName).length;
+        const allVals = currentData.map(r=>r.outcome);
+        histConfig = computeFixedXAxis(allVals, nA, nB);
+
+        // Draw the blank plot
+        renderHistogram();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+      } else {
+        initialize();
+      }
+    })();
+  </script>
+</body>
+</html>
