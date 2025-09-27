@@ -10,3 +10,5 @@ Then add the custom settings right afterwards starting with ?data...
 Here's an example:
 
 > ...html?data=72,68,75,71,74,58,62,55,60,59&groupA=Treatment&groupB=Control&outcome=Score&group=Condition
+
+You also can configure which of the three tabs to show by adding at the end, for example, `&tabs=1,2`. This would show only the first two tabs. If not specified, all tabs appear by default.
