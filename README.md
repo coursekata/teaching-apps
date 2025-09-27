@@ -9,4 +9,4 @@ This is an app to support students' understanding of the `shuffle()` function in
 Then add the custom settings right afterwards starting with ?data...
 Here's an example:
 
-> Pass custom data and variables via URL: ?data=72,68,75,71,74,58,62,55,60,59&groupA=Treatment&groupB=Control&outcome=Score&group=Condition
+> ...html?data=72,68,75,71,74,58,62,55,60,59&groupA=Treatment&groupB=Control&outcome=Score&group=Condition
