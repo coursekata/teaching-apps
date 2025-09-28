@@ -68,11 +68,12 @@
       display: flex;
       border-bottom: 2px solid #e5e7eb;
       margin-bottom: 16px;
+      margin-top: 16px;
     }
     
     .tab {
       flex: 1;
-      padding: 8px 16px;
+      padding: 6px 16px;
       text-align: center;
       background: #f8fafc;
       border: 1px solid #e5e7eb;
@@ -2420,9 +2421,9 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
         
         // Configure tab visibility based on URL parameter
         const tabMapping = {
-          1: { tab: 'model', content: 'model-content' },
-          2: { tab: 'shuffle', content: 'shuffle-content' },
-          3: { tab: 'sampling', content: 'sampling-content' }
+          1: { tab: 'model', content: 'model-content', title: 'A Two-Group Model: <span class="math">Y<sub>i</sub> = b<sub>0</sub> + b<sub>1</sub>X<sub>i</sub> + e<sub>i</sub></span>' },
+          2: { tab: 'shuffle', content: 'shuffle-content', title: 'Simulating a World Where <span class="math">β<sub>1</sub></span> is 0' },
+          3: { tab: 'sampling', content: 'sampling-content', title: 'A Sampling Distribution of <span class="math">b<sub>1</sub></span> Assuming <span class="math">β<sub>1</sub></span>=0' }
         };
         
         // Hide tabs that aren't in visibleTabs array
@@ -2444,11 +2445,43 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
           }
         });
         
+        // Handle single tab display
+        if (visibleTabs.length === 1) {
+          // Hide the tabs container
+          const tabsContainer = document.querySelector('.tabs-container');
+          if (tabsContainer) tabsContainer.style.display = 'none';
+          
+          // Create and show the single tab title at the top level
+          const singleTabNumber = visibleTabs[0];
+          const singleTabInfo = tabMapping[singleTabNumber];
+          
+          if (singleTabInfo) {
+            // Find the tab content and hide its internal title
+            const contentElement = document.getElementById(singleTabInfo.content);
+            if (contentElement) {
+              const internalTitle = contentElement.querySelector('.tab-title');
+              if (internalTitle) internalTitle.style.display = 'none';
+              
+              // Create top-level title
+              const topTitle = document.createElement('div');
+              topTitle.className = 'tab-title';
+              topTitle.style.margin = '16px 0 20px 0'; // Add top margin to align with table
+              topTitle.innerHTML = singleTabInfo.title;
+              
+              // Insert before the right-column content
+              const rightColumn = document.querySelector('.right-column');
+              if (rightColumn) {
+                rightColumn.insertBefore(topTitle, rightColumn.firstChild);
+              }
+            }
+          }
+        }
+        
         // Set the first visible tab as active
         const firstVisibleTab = Math.min(...visibleTabs);
         const firstTabInfo = tabMapping[firstVisibleTab];
         
-        if (firstTabInfo) {
+        if (firstTabInfo && visibleTabs.length > 1) { // Only set active if multiple tabs
           // Remove active class from all tabs
           document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
           document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -2459,6 +2492,14 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
           
           if (firstTabElement) firstTabElement.classList.add('active');
           if (firstContentElement) firstContentElement.classList.add('active');
+        } else if (visibleTabs.length === 1) {
+          // For single tab, just show the content
+          const singleTabInfo = tabMapping[visibleTabs[0]];
+          const singleContentElement = document.getElementById(singleTabInfo.content);
+          if (singleContentElement) {
+            singleContentElement.classList.add('active');
+            singleContentElement.style.display = 'block';
+          }
         }
         
         // Update table headers and code with custom variable names
