@@ -498,9 +498,6 @@
 <body>
   <div class="wrap">
     <h1>Understanding R's <span class="code">shuffle()</span> Function</h1>
-    <p class="subtitle">
-      Pass custom data and variables via URL: <span class="code">?data=72,68,75,71,74,58,62,55,60,59&groupA=Treatment&groupB=Control&outcome=Score&group=Condition</span>
-    </p>
 
     <div class="main-layout">
       <div class="top-section">
@@ -721,12 +718,6 @@ b1(Score_shuf~Condition, data=df)</div>
           </div>
         </div>
       </div>
-
-      <div class="controls">
-        <div class="secondary-buttons">
-          <button id="resetBtn">Reset to Original</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -761,6 +752,17 @@ b1(Score_shuf~Condition, data=df)</div>
       if (urlParams.get('groupB')) CONFIG.groupBName = urlParams.get('groupB');
       if (urlParams.get('outcome')) CONFIG.outcomeName = urlParams.get('outcome');
       if (urlParams.get('group')) CONFIG.groupName = urlParams.get('group');
+
+      // ====== Tab Visibility Configuration ======
+      const tabsParam = urlParams.get('tabs');
+      let visibleTabs = [1, 2, 3]; // Default: show all tabs
+      
+      if (tabsParam) {
+        const tabNumbers = tabsParam.split(',').map(num => parseInt(num.trim())).filter(num => [1, 2, 3].includes(num));
+        if (tabNumbers.length > 0) {
+          visibleTabs = tabNumbers;
+        }
+      }
 
       // ====== Tunables ======
       const HIST_BINS = 12;                      // fixed number of bins (labels will show ranges)
@@ -2097,6 +2099,31 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
           
           g.appendChild(buttonGroup);
           
+          // Show current b₁ value when means are displayed
+          if (showShuffleMeans) {
+            const meanA = mean(groupA.map(d => d.outcome));
+            const meanB = mean(groupB.map(d => d.outcome));
+            
+            // Sort groups alphabetically to match R's behavior
+            const sortedGroups = [
+              { name: CONFIG.groupAName, mean: meanA },
+              { name: CONFIG.groupBName, mean: meanB }
+            ].sort((a, b) => a.name.localeCompare(b.name));
+            
+            const currentB1 = sortedGroups[1].mean - sortedGroups[0].mean;
+            
+            // Display b₁ value below the button
+            const b1Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            b1Label.setAttribute('x', plotWidth + 52.5);
+            b1Label.setAttribute('y', 45);
+            b1Label.setAttribute('text-anchor', 'middle');
+            b1Label.setAttribute('font-size', '12');
+            b1Label.setAttribute('font-weight', 'bold');
+            b1Label.setAttribute('fill', '#333');
+            b1Label.textContent = `b₁ = ${formatNumber(currentB1)}`;
+            g.appendChild(b1Label);
+          }
+          
           output.style.display = 'block';
         }
 
@@ -2383,40 +2410,6 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
           output.style.display = 'block';
         }
 
-        document.getElementById('resetBtn').addEventListener('click', () => {
-          // Reset shuffled data - currentData stays as original
-          shuffledOutcomes = []; // Clear shuffled outcomes
-          shuffleResults = []; // Clear cumulative shuffle results
-          diffHistory = [];
-          originalDiff = null;
-
-          drawTable(); // This will now show empty third column
-          calculateStats(); // recompute originalDiff text and display using original data
-          createCards();
-
-          // Hide shuffle output
-          const shuffleOutput = document.getElementById('shuffleOutput');
-          const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
-          if (shuffleOutput) {
-            shuffleOutput.style.display = 'none';
-          }
-          if (samplingShuffleOutput) {
-            samplingShuffleOutput.style.display = 'none';
-          }
-
-          // clean card classes
-          const cards = cardsLayer.querySelectorAll('.card');
-          cards.forEach(card => {
-            card.classList.remove('show-border', 'jiggle', 'hover');
-            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
-          });
-
-          // reset histogram with same fixed X and reset staged Y
-          histConfig.yStepIdx = 0;
-          histConfig.yMax = Y_STEPS[0];
-          renderHistogram();
-        });
-
         window.addEventListener('resize', () => {
           if (cardsLayer && cardsLayer.childElementCount > 0) repositionCards();
         });
@@ -2424,6 +2417,49 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
 
       function initialize() {
         getDOMRefs();
+        
+        // Configure tab visibility based on URL parameter
+        const tabMapping = {
+          1: { tab: 'model', content: 'model-content' },
+          2: { tab: 'shuffle', content: 'shuffle-content' },
+          3: { tab: 'sampling', content: 'sampling-content' }
+        };
+        
+        // Hide tabs that aren't in visibleTabs array
+        Object.keys(tabMapping).forEach(tabNum => {
+          const tabNumber = parseInt(tabNum);
+          const { tab, content } = tabMapping[tabNum];
+          
+          const tabElement = document.querySelector(`[data-tab="${tab}"]`);
+          const contentElement = document.getElementById(content);
+          
+          if (!visibleTabs.includes(tabNumber)) {
+            // Hide this tab and its content
+            if (tabElement) tabElement.style.display = 'none';
+            if (contentElement) contentElement.style.display = 'none';
+          } else {
+            // Ensure visible tabs are shown
+            if (tabElement) tabElement.style.display = '';
+            if (contentElement) contentElement.style.display = '';
+          }
+        });
+        
+        // Set the first visible tab as active
+        const firstVisibleTab = Math.min(...visibleTabs);
+        const firstTabInfo = tabMapping[firstVisibleTab];
+        
+        if (firstTabInfo) {
+          // Remove active class from all tabs
+          document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+          
+          // Set first visible tab as active
+          const firstTabElement = document.querySelector(`[data-tab="${firstTabInfo.tab}"]`);
+          const firstContentElement = document.getElementById(firstTabInfo.content);
+          
+          if (firstTabElement) firstTabElement.classList.add('active');
+          if (firstContentElement) firstContentElement.classList.add('active');
+        }
         
         // Update table headers and code with custom variable names
         document.getElementById('groupHeader').textContent = CONFIG.groupName;
