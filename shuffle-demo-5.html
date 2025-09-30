@@ -639,16 +639,16 @@ b1(Score_shuf~Condition, data=df)</div>
       const HIST_BINS = 12;
       const Y_STEPS = [12, 20, 40, 60, 100];
 
-      const initialData = [];
-      const outcomeOrigins = new Map();
+	  const initialData = [];
+	  const outcomeOrigins = new Map();
 
-      const half = Math.floor(CONFIG.data.length / 2);
-      for (let i = 0; i < CONFIG.data.length; i++) {
-        const group = i < half ? CONFIG.groupAName : CONFIG.groupBName;
-        const outcome = CONFIG.data[i];
-        initialData.push({ group, outcome, originalIndex: i });
-        outcomeOrigins.set(outcome, group);
-      }
+	  const half = Math.floor(CONFIG.data.length / 2);
+	  for (let i = 0; i < CONFIG.data.length; i++) {
+		 const group = i < half ? CONFIG.groupAName : CONFIG.groupBName;
+		 const outcome = CONFIG.data[i];
+ 	 	 initialData.push({ group, outcome, originalIndex: i });
+	  	 outcomeOrigins.set(i, group); // Store by index, not by value
+}
 
       let currentData = JSON.parse(JSON.stringify(initialData));
       let shuffledOutcomes = [];
@@ -703,7 +703,7 @@ b1(Score_shuf~Condition, data=df)</div>
       }
 
       function calculateStats() {
-        const dataToUse = shuffledOutcomes.length > 0 ? shuffledOutcomes : currentData.map(r => r.outcome);
+        const dataToUse = shuffledOutcomes.length > 0 ? shuffledOutcomes.map(obj => obj.outcome) : currentData.map(r => r.outcome);
         const groupData = [];
         
         currentData.forEach((row, index) => {
@@ -780,7 +780,7 @@ b1(Score_shuf~Condition, data=df)</div>
           const cellRect = cell.getBoundingClientRect();
           const card = document.createElement('div');
           
-          const originalGroup = outcomeOrigins.get(data.outcome);
+          const originalGroup = outcomeOrigins.get(data.originalIndex);
           card.className = 'card ' + (originalGroup === CONFIG.groupAName ? 'a' : 'b');
           card.textContent = data.outcome;
           card.dataset.outcomeValue = data.outcome;
@@ -805,10 +805,10 @@ b1(Score_shuf~Condition, data=df)</div>
           const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
           const layerRect = cardsLayer.getBoundingClientRect();
           
-          const shuffledPositions = [];
-          shuffledOutcomes.forEach((outcome, index) => {
-            shuffledPositions.push({ outcome: outcome, position: index });
-          });
+		  const shuffledPositions = [];
+  	      shuffledOutcomes.forEach((obj, index) => {
+ 		  shuffledPositions.push({ outcome: obj.outcome, position: index });
+		});
           
           cards.forEach((card) => {
             const outcomeValue = parseFloat(card.dataset.outcomeValue);
@@ -1045,9 +1045,9 @@ b1(Score_shuf~Condition, data=df)</div>
       }
 
       function performShuffleForGraph(callback = null) {
-        const n = currentData.length;
-        const outcomes = currentData.map(r => r.outcome);
-        const newShuffledOutcomes = shuffleArray(outcomes);
+	  const n = currentData.length;
+	  const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+	  const newShuffledOutcomes = shuffleArray(outcomeObjects);
         
         const cards = cardsLayer.querySelectorAll('.card');
         const layerRect = cardsLayer.getBoundingClientRect();
@@ -1119,10 +1119,10 @@ b1(Score_shuf~Condition, data=df)</div>
               const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
               const layerRect = cardsLayer.getBoundingClientRect();
               
-              const shuffledPositions = [];
-              shuffledOutcomes.forEach((outcome, index) => {
-                shuffledPositions.push({ outcome: outcome, position: index });
-              });
+			  const shuffledPositions = [];
+			  shuffledOutcomes.forEach((obj, index) => {
+			    shuffledPositions.push({ outcome: obj.outcome, position: index });
+			});
               
               cards.forEach((card, cardIndex) => {
                 setTimeout(() => {
@@ -1170,9 +1170,9 @@ b1(Score_shuf~Condition, data=df)</div>
       }
 
       function performShuffle(callback = null) {
-        const n = currentData.length;
-        const outcomes = currentData.map(r => r.outcome);
-        const newShuffledOutcomes = shuffleArray(outcomes);
+		const n = currentData.length;
+		const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+		const newShuffledOutcomes = shuffleArray(outcomeObjects);
         
         const cards = cardsLayer.querySelectorAll('.card');
         const layerRect = cardsLayer.getBoundingClientRect();
@@ -1244,10 +1244,10 @@ b1(Score_shuf~Condition, data=df)</div>
               const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
               const layerRect = cardsLayer.getBoundingClientRect();
               
-              const shuffledPositions = [];
-              shuffledOutcomes.forEach((outcome, index) => {
-                shuffledPositions.push({ outcome: outcome, position: index });
-              });
+			  const shuffledPositions = [];
+			  shuffledOutcomes.forEach((obj, index) => {
+			    shuffledPositions.push({ outcome: obj.outcome, position: index });
+			});
               
               cards.forEach((card, cardIndex) => {
                 setTimeout(() => {
@@ -1524,19 +1524,21 @@ b1(Score_shuf~Condition, data=df)</div>
         }
         
         let dataToPlot;
-        if (shuffledOutcomes.length > 0) {
-          dataToPlot = currentData.map((row, index) => ({
-            group: row.group,
-            outcome: shuffledOutcomes[index]
-          }));
-        } else {
-          const outcomes = currentData.map(r => r.outcome);
-          const newShuffledOutcomes = shuffleArray(outcomes);
-          dataToPlot = currentData.map((row, index) => ({
-            group: row.group,
-            outcome: newShuffledOutcomes[index]
-          }));
-        }
+		if (shuffledOutcomes.length > 0) {
+		  dataToPlot = currentData.map((row, index) => ({
+		    group: row.group,
+ 		   outcome: shuffledOutcomes[index].outcome,
+ 		   originalIndex: shuffledOutcomes[index].originalIndex
+	  }));
+} else {
+  const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+  const newShuffledOutcomes = shuffleArray(outcomeObjects);
+  dataToPlot = currentData.map((row, index) => ({
+    group: row.group,
+    outcome: newShuffledOutcomes[index].outcome,
+    originalIndex: newShuffledOutcomes[index].originalIndex
+  }));
+}
         
         const container = document.getElementById('smallGraphsContainer');
         const graphDiv = document.createElement('div');
@@ -1620,7 +1622,7 @@ b1(Score_shuf~Condition, data=df)</div>
           circle.setAttribute('cy', yScale(point.outcome));
           circle.setAttribute('r', 3);
           
-          const originalGroup = outcomeOrigins.get(point.outcome);
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
           const isOriginalGroupA = originalGroup === CONFIG.groupAName;
           circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
           circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
@@ -1635,7 +1637,7 @@ b1(Score_shuf~Condition, data=df)</div>
           circle.setAttribute('cy', yScale(point.outcome));
           circle.setAttribute('r', 3);
           
-          const originalGroup = outcomeOrigins.get(point.outcome);
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
           const isOriginalGroupA = originalGroup === CONFIG.groupAName;
           circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
           circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
@@ -1788,7 +1790,7 @@ b1(Score_shuf~Condition, data=df)</div>
           circle.setAttribute('cy', yScale(point.outcome));
           circle.setAttribute('r', 3);
           
-          const originalGroup = outcomeOrigins.get(point.outcome);
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
           const isOriginalGroupA = originalGroup === CONFIG.groupAName;
           circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
           circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
@@ -1803,7 +1805,7 @@ b1(Score_shuf~Condition, data=df)</div>
           circle.setAttribute('cy', yScale(point.outcome));
           circle.setAttribute('r', 3);
           
-          const originalGroup = outcomeOrigins.get(point.outcome);
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
           const isOriginalGroupA = originalGroup === CONFIG.groupAName;
           circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
           circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
@@ -2026,17 +2028,17 @@ b1(Score_shuf~Condition, data=df)</div>
           function runBatch() {
             const batchSize = Math.min(10, count - completed);
             
-            for (let i = 0; i < batchSize; i++) {
-              const outcomes = currentData.map(r => r.outcome);
-              const newShuffledOutcomes = shuffleArray(outcomes);
-              
-              const tempGroupData = [];
-              currentData.forEach((row, index) => {
-                tempGroupData.push({
-                  group: row.group,
-                  outcome: newShuffledOutcomes[index]
-                });
-              });
+			for (let i = 0; i < batchSize; i++) {
+ 			 const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+ 			 const newShuffledOutcomes = shuffleArray(outcomeObjects);
+  
+ 			 const tempGroupData = [];
+			  currentData.forEach((row, index) => {
+			    tempGroupData.push({
+ 			     group: row.group,
+ 			     outcome: newShuffledOutcomes[index].outcome
+ 			   });
+			  });
               
               const groupA = tempGroupData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
               const groupB = tempGroupData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
@@ -2148,20 +2150,22 @@ b1(Score_shuf~Condition, data=df)</div>
           
           while (svg.firstChild) svg.removeChild(svg.firstChild);
           
-          let dataToPlot;
-          if (shuffledOutcomes.length > 0) {
-            dataToPlot = currentData.map((row, index) => ({
-              group: row.group,
-              outcome: shuffledOutcomes[index]
-            }));
-          } else {
-            const outcomes = currentData.map(r => r.outcome);
-            const newShuffledOutcomes = shuffleArray(outcomes);
-            dataToPlot = currentData.map((row, index) => ({
-              group: row.group,
-              outcome: newShuffledOutcomes[index]
-            }));
-          }
+		let dataToPlot;
+		if (shuffledOutcomes.length > 0) {
+		  dataToPlot = currentData.map((row, index) => ({
+ 		   group: row.group,
+ 		   outcome: shuffledOutcomes[index].outcome,
+		    originalIndex: shuffledOutcomes[index].originalIndex
+		  }));
+		} else {
+		  const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+  		const newShuffledOutcomes = shuffleArray(outcomeObjects);
+ 		 dataToPlot = currentData.map((row, index) => ({
+		    group: row.group,
+		    outcome: newShuffledOutcomes[index].outcome,
+ 		   originalIndex: newShuffledOutcomes[index].originalIndex
+		  }));
+		}
           
           const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
           const groupB = dataToPlot.filter(r => r.group === CONFIG.groupBName);
@@ -2263,7 +2267,7 @@ b1(Score_shuf~Condition, data=df)</div>
             circle.setAttribute('cy', yScale(point.outcome));
             circle.setAttribute('r', 5);
             
-            const originalGroup = outcomeOrigins.get(point.outcome);
+            const originalGroup = outcomeOrigins.get(point.originalIndex);
             const isOriginalGroupA = originalGroup === CONFIG.groupAName;
             circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
             circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
@@ -2278,7 +2282,7 @@ b1(Score_shuf~Condition, data=df)</div>
             circle.setAttribute('cy', yScale(point.outcome));
             circle.setAttribute('r', 5);
             
-            const originalGroup = outcomeOrigins.get(point.outcome);
+            const originalGroup = outcomeOrigins.get(point.originalIndex);
             const isOriginalGroupA = originalGroup === CONFIG.groupAName;
             circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
             circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
