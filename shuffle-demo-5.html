@@ -615,7 +615,7 @@ b1(Score_shuf~Condition, data=df)</div>
       
       const dataParam = urlParams.get('data');
       if (dataParam) {
-        const dataValues = dataParam.split(',').map(val => parseInt(val.trim())).filter(val => !isNaN(val));
+        const dataValues = dataParam.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val));
         if (dataValues.length >= 4) {
           CONFIG.data = dataValues;
         }
