@@ -1959,10 +1959,11 @@ b1(Score_shuf~Condition, data=df)</div>
             return;
           }
           
-          performShuffleForGraph(() => {
+			performShuffleForGraph(() => {
             const dataToPlot = currentData.map((row, index) => ({
               group: row.group,
-              outcome: shuffledOutcomes[index]
+              outcome: shuffledOutcomes[index].outcome,
+              originalIndex: shuffledOutcomes[index].originalIndex
             }));
             
             const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
