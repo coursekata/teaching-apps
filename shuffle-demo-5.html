@@ -627,10 +627,10 @@ b1(Score_shuf~Condition, data=df)</div>
       if (urlParams.get('group')) CONFIG.groupName = urlParams.get('group');
 
       const tabsParam = urlParams.get('tabs');
-      let visibleTabs = [0, 1, 2, 3];
+      let visibleTabs = [1, 2, 3, 4];
       
       if (tabsParam) {
-        const tabNumbers = tabsParam.split(',').map(num => parseInt(num.trim())).filter(num => [0, 1, 2, 3].includes(num));
+        const tabNumbers = tabsParam.split(',').map(num => parseInt(num.trim())).filter(num => [1, 2, 3, 4].includes(num));
         if (tabNumbers.length > 0) {
           visibleTabs = tabNumbers;
         }
@@ -2659,11 +2659,12 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
       function initialize() {
         getDOMRefs();
         
-        const tabMapping = {
-          1: { tab: 'model', content: 'model-content', title: 'A Two-Group Model: <span class="math">Y<sub>i</sub> = b<sub>0</sub> + b<sub>1</sub>X<sub>i</sub> + e<sub>i</sub></span>' },
-          2: { tab: 'shuffle', content: 'shuffle-content', title: 'Simulating a World Where <span class="math">β<sub>1</sub></span> is 0' },
-          3: { tab: 'sampling', content: 'sampling-content', title: 'A Sampling Distribution of <span class="math">b<sub>1</sub></span> Assuming <span class="math">β<sub>1</sub></span>=0' }
-        };
+const tabMapping = {
+  1: { tab: 'graphing', content: 'graphing-content', title: 'Graphing Shuffles' },
+  2: { tab: 'model', content: 'model-content', title: 'A Two-Group Model: <span class="math">Y<sub>i</sub> = b<sub>0</sub> + b<sub>1</sub>X<sub>i</sub> + e<sub>i</sub></span>' },
+  3: { tab: 'shuffle', content: 'shuffle-content', title: 'Simulating a World Where <span class="math">β<sub>1</sub></span> is 0' },
+  4: { tab: 'sampling', content: 'sampling-content', title: 'A Sampling Distribution of <span class="math">b<sub>1</sub></span> Assuming <span class="math">β<sub>1</sub></span>=0' }
+};
         
         Object.keys(tabMapping).forEach(tabNum => {
           const tabNumber = parseInt(tabNum);
