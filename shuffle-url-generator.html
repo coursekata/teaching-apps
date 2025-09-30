@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shuffle Demo URL Generator</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState } = React;
+    
+    // Lucide icons as inline SVG components
+    const Copy = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+    );
+
+    const Check = ({ size = 24 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    );
+
+    function ShuffleURLGenerator() {
+      const [outcomeVar, setOutcomeVar] = useState('time');
+      const [groupVar, setGroupVar] = useState('bucket');
+      const [groupAName, setGroupAName] = useState('empty');
+      const [groupAData, setGroupAData] = useState('10, 12, 15, 48, 70');
+      const [groupBName, setGroupBName] = useState('ice');
+      const [groupBData, setGroupBData] = useState('35, 45, 50, 55, 60');
+      const [selectedTabs, setSelectedTabs] = useState([3]);
+      const [width, setWidth] = useState('100%');
+      const [height, setHeight] = useState('600px');
+      const [baseUrl, setBaseUrl] = useState('https://coursekata.github.io/teaching-apps/shuffle-demo-5.html');
+      const [copied, setCopied] = useState(null);
+
+      const parseData = (dataString) => {
+        return dataString.split(',').map(v => v.trim()).filter(v => v !== '');
+      };
+
+      const validateData = (dataString) => {
+        const values = parseData(dataString);
+        return values.length === 5 && values.every(v => !isNaN(parseFloat(v)));
+      };
+
+      const groupAValid = validateData(groupAData);
+      const groupBValid = validateData(groupBData);
+      const isValid = groupAValid && groupBValid && selectedTabs.length > 0;
+
+      const generateURL = () => {
+        if (!isValid) return '';
+        
+        const groupAValues = parseData(groupAData);
+        const groupBValues = parseData(groupBData);
+        const allData = [...groupAValues, ...groupBValues];
+        const dataString = allData.join(',');
+        const tabsString = selectedTabs.sort((a, b) => a - b).join(',');
+        
+        return `${baseUrl}?data=${encodeURIComponent(dataString)}&groupA=${encodeURIComponent(groupAName)}&groupB=${encodeURIComponent(groupBName)}&outcome=${encodeURIComponent(outcomeVar)}&group=${encodeURIComponent(groupVar)}&tabs=${tabsString}`;
+      };
+
+      const generateIframeCode = () => {
+        const url = generateURL();
+        return `IRdisplay::display_html(sprintf(
+  '<iframe src="%s" width="%s" height="%s" frameborder="0"></iframe>',
+  "${url}",
+  width = "${width}",
+  height = "${height}"
+))`;
+      };
+
+      const handleTabToggle = (tab) => {
+        setSelectedTabs(prev => 
+          prev.includes(tab) 
+            ? prev.filter(t => t !== tab)
+            : [...prev, tab]
+        );
+      };
+
+      const copyToClipboard = (text, type) => {
+        navigator.clipboard.writeText(text);
+        setCopied(type);
+        setTimeout(() => setCopied(null), 2000);
+      };
+
+      return (
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>Shuffle Demo URL Generator</h1>
+          <p style={{ color: '#666', marginBottom: '32px' }}>Fill in the form below to generate a URL for your shuffle demonstration.</p>
+
+          <div style={{ display: 'grid', gap: '24px' }}>
+            {/* Variable Names */}
+            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Variable Names</h2>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Outcome Variable Name
+                  </label>
+                  <input
+                    type="text"
+                    value={outcomeVar}
+                    onChange={(e) => setOutcomeVar(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                    placeholder="e.g., time, score, weight"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Grouping Variable Name
+                  </label>
+                  <input
+                    type="text"
+                    value={groupVar}
+                    onChange={(e) => setGroupVar(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                    placeholder="e.g., condition, treatment, group"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Group A */}
+            <div style={{ background: '#e3f2fd', padding: '20px', borderRadius: '8px', border: '1px solid #90caf9' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Group A</h2>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Group A Name
+                  </label>
+                  <input
+                    type="text"
+                    value={groupAName}
+                    onChange={(e) => setGroupAName(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #64b5f6', borderRadius: '6px', fontSize: '14px' }}
+                    placeholder="e.g., treatment, control, empty"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Group A Data (5 values, comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={groupAData}
+                    onChange={(e) => setGroupAData(e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px 12px', 
+                      border: `1px solid ${groupAValid ? '#64b5f6' : '#f87171'}`, 
+                      borderRadius: '6px', 
+                      fontSize: '14px' 
+                    }}
+                    placeholder="e.g., 10, 12, 15, 48, 70"
+                  />
+                  {!groupAValid && (
+                    <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
+                      Must be exactly 5 numeric values
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Group B */}
+            <div style={{ background: '#fff3e0', padding: '20px', borderRadius: '8px', border: '1px solid #ffb74d' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Group B</h2>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Group B Name
+                  </label>
+                  <input
+                    type="text"
+                    value={groupBName}
+                    onChange={(e) => setGroupBName(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #ffb74d', borderRadius: '6px', fontSize: '14px' }}
+                    placeholder="e.g., treatment, control, ice"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Group B Data (5 values, comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={groupBData}
+                    onChange={(e) => setGroupBData(e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px 12px', 
+                      border: `1px solid ${groupBValid ? '#ffb74d' : '#f87171'}`, 
+                      borderRadius: '6px', 
+                      fontSize: '14px' 
+                    }}
+                    placeholder="e.g., 35, 45, 50, 55, 60"
+                  />
+                  {!groupBValid && (
+                    <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
+                      Must be exactly 5 numeric values
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs Selection */}
+            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Tabs to Display</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                {[
+                  { num: 1, label: 'Tab 1: Shuffle 1' },
+                  { num: 2, label: 'Tab 2: Model' },
+                  { num: 3, label: 'Tab 3: Shuffle 2' },
+                  { num: 4, label: 'Tab 4: Dist of b₁' }
+                ].map(({ num, label }) => (
+                  <label key={num} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '8px', background: selectedTabs.includes(num) ? '#dbeafe' : 'white', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedTabs.includes(num)}
+                      onChange={() => handleTabToggle(num)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '14px' }}>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Display Settings */}
+            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Display Settings</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Width
+                  </label>
+                  <input
+                    type="text"
+                    value={width}
+                    onChange={(e) => setWidth(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    Height
+                  </label>
+                  <input
+                    type="text"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                  Base URL (optional - change if using different version)
+                </label>
+                <input
+                  type="text"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                />
+              </div>
+            </div>
+
+            {/* Generated Output */}
+            {isValid && (
+              <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '8px', border: '2px solid #22c55e' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#166534' }}>Generated Code</h2>
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '14px', fontWeight: '600' }}>Direct URL</label>
+                    <button
+                      onClick={() => copyToClipboard(generateURL(), 'url')}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        padding: '6px 12px', 
+                        background: 'white', 
+                        border: '1px solid #22c55e', 
+                        borderRadius: '6px', 
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#166534'
+                      }}
+                    >
+                      {copied === 'url' ? <Check size={16} /> : <Copy size={16} />}
+                      {copied === 'url' ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <div style={{ 
+                    background: 'white', 
+                    padding: '12px', 
+                    borderRadius: '6px', 
+                    fontSize: '13px', 
+                    fontFamily: 'monospace',
+                    overflowX: 'auto',
+                    border: '1px solid #86efac',
+                    wordBreak: 'break-all'
+                  }}>
+                    {generateURL()}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '14px', fontWeight: '600' }}>R Code (IRdisplay)</label>
+                    <button
+                      onClick={() => copyToClipboard(generateIframeCode(), 'iframe')}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        padding: '6px 12px', 
+                        background: 'white', 
+                        border: '1px solid #22c55e', 
+                        borderRadius: '6px', 
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#166534'
+                      }}
+                    >
+                      {copied === 'iframe' ? <Check size={16} /> : <Copy size={16} />}
+                      {copied === 'iframe' ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <div style={{ 
+                    background: 'white', 
+                    padding: '12px', 
+                    borderRadius: '6px', 
+                    fontSize: '13px', 
+                    fontFamily: 'monospace',
+                    overflowX: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    border: '1px solid #86efac'
+                  }}>
+                    {generateIframeCode()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!isValid && (
+              <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '8px', border: '1px solid #fca5a5', color: '#991b1b' }}>
+                <strong>Please fix the following:</strong>
+                <ul style={{ marginTop: '8px', marginLeft: '20px' }}>
+                  {!groupAValid && <li>Group A data must contain exactly 5 numeric values</li>}
+                  {!groupBValid && <li>Group B data must contain exactly 5 numeric values</li>}
+                  {selectedTabs.length === 0 && <li>Select at least one tab to display</li>}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ShuffleURLGenerator />);
+  </script>
+</body>
+</html>
