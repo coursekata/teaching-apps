@@ -393,20 +393,18 @@
                   <div class="code-line">
                     <div class="code-block" id="graphingPlotCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
 gf_point(Score_shuf ~ Condition, data=df)</div>
-                    <div class="button-stack">
-                      <button id="runGraphingPlotBtn" class="primary run-btn">Run</button>
-                      <button id="clearGraphingPlotsBtn" class="clear">Clear</button>
-                    </div>
+<button id="runGraphingPlotBtn" class="primary run-btn">Run</button>
                   </div>
                 </div>
               </div>
               
               <div id="smallGraphsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;"></div>
               
-              <div style="text-align: center; margin-top: 20px;">
-                <button id="toggleGraphingMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; background: #f8fafc; color: #374151; border: 1.5px solid #2563eb; cursor: pointer; transition: all 0.2s ease;">
+			  <div style="text-align: center; margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+                <button id="toggleGraphingMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; font-weight: 600; border-radius: 10px; cursor: pointer;">
                   Show Means
                 </button>
+                <button id="clearGraphingPlotsBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
               </div>
             </div>
           </div>
@@ -426,14 +424,17 @@ gf_point(Score_shuf ~ Condition, data=df)</div>
                     <div class="controls">
                       <div class="code-line">
                         <div class="code-block" id="plotCodeBlock">gf_point(Score ~ Condition, data=df)</div>
-                        <div class="button-stack">
-                          <button id="runPlotBtn" class="primary run-btn">Run</button>
-                          <button id="clearPlotBtn" class="clear">Clear</button>
-                        </div>
+                        <button id="runPlotBtn" class="primary run-btn">Run</button>
                       </div>
                     </div>
-                    <div id="plotOutput" style="display: none; margin-top: 8px;">
+<div id="plotOutput" style="display: none; margin-top: 8px;">
                       <svg id="scatterSvg" width="100%" height="240" style="background: transparent; display: block;"></svg>
+                      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 12px; margin-left: -65px;">
+                        <button id="toggleMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; font-weight: 600; border-radius: 10px; cursor: pointer;">
+                          Show Means
+                        </button>
+                        <button id="clearPlotBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -505,14 +506,17 @@ gf_point(Score_shuf ~ Condition, data=df)</div>
                       <div class="code-line">
                         <div class="code-block" id="shufflePlotCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
 gf_point(Score_shuf ~ Condition, data=df)</div>
-                        <div class="button-stack">
-                          <button id="runShufflePlotBtn" class="primary run-btn">Run</button>
-                          <button id="clearShufflePlotBtn" class="clear">Clear</button>
-                        </div>
+                        <button id="runShufflePlotBtn" class="primary run-btn">Run</button>
                       </div>
                     </div>
                     <div id="shufflePlotOutput" style="display: none; margin-top: 8px;">
                       <svg id="shuffleScatterSvg" width="100%" height="240" style="background: transparent; display: block;"></svg>
+                      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 12px; margin-left: -65px;">
+                        <button id="toggleShuffleMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; font-weight: 600; border-radius: 10px; cursor: pointer;">
+                          Show Means
+                        </button>
+                        <button id="clearShufflePlotBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -557,7 +561,7 @@ b1(Score_shuf~Condition, data=df)</div>
 b1(Score_shuf~Condition, data=df)</div>
                     <div class="button-stack">
                       <button id="samplingShuffleBtn" class="primary run-btn">Run</button>
-                      <button id="clearSamplingBtn" class="clear">Clear</button>
+                      <button id="run5xBtn" class="clear">Run 5x</button>
                     </div>
                   </div>
                 </div>
@@ -573,8 +577,7 @@ b1(Score_shuf~Condition, data=df)</div>
                 </div>
                 <div style="margin-left: 30px; margin-right: 40px; position: relative;">
                   <svg id="histSvg" viewBox="0 0 500 280" preserveAspectRatio="none" style="width: 100%; height: 260px; display: block; background: white;"></svg>
-                  <button id="run5xBtn" class="primary" style="position: absolute; top: 20px; right: 0px; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 10px; z-index: 10; min-height: 0; margin: 0;">Run 5x</button>
-                  <div class="dist-meta" style="position: absolute; top: 60px; right: 0px; font-size: 0.8rem; text-align: right;"><span id="distCount">0</span> shuffles</div>
+                  <div class="dist-meta" style="position: absolute; top: 20px; right: 0px; font-size: 0.8rem; text-align: right;"><span id="distCount">0</span> shuffles</div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 6px; flex-wrap: wrap; margin-left: 30px; margin-right: 40px;">
                   <div class="dist-meta" style="line-height: 1.4;">
@@ -592,6 +595,9 @@ b1(Score_shuf~Condition, data=df)</div>
                     </div>
                   </div>
                   <div class="dist-meta" id="distSummary" style="text-align: right; font-weight: bold; color: #1f2937;"></div>
+                </div>
+                <div style="display: flex; justify-content: center; margin-top: 12px; margin-left: 30px; margin-right: 40px;">
+                  <button id="clearSamplingBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
                 </div>
               </div>
             </div>
@@ -959,7 +965,7 @@ b1(Score_shuf~Condition, data=df)</div>
           
           dots.forEach((historyIndex, dotIdx) => {
             const y = pad.t + chartH - (dotIdx + 1) * rectHeight;
-            const isRecent = historyIndex === diffHistory.length - 1;
+            const isRecent = lastBatchSize === 1 && historyIndex === diffHistory.length - 1;
             
             if (isRecent) {
               mostRecentBinX = binLeftX + rectWidth / 2;
@@ -1300,6 +1306,7 @@ b1(Score_shuf~Condition, data=df)</div>
 
       function finishShuffle(callback) {
         const stats = calculateStats();
+        lastBatchSize = 1;
         addSampleToHistogram(stats.diff);
         
         shuffleResults.push(stats.diff);
@@ -1929,12 +1936,24 @@ b1(Score_shuf~Condition, data=df)</div>
           clearShuffleData();
         });
 
-        document.getElementById('clearShufflePlotBtn').addEventListener('click', () => {
-          const output = document.getElementById('shufflePlotOutput');
-          if (output) output.style.display = 'none';
-          
-          clearShuffleData();
-        });
+        const clearShufflePlotBtn = document.getElementById('clearShufflePlotBtn');
+        if (clearShufflePlotBtn) {
+          clearShufflePlotBtn.addEventListener('click', () => {
+            const output = document.getElementById('shufflePlotOutput');
+            if (output) output.style.display = 'none';
+            
+            clearShuffleData();
+          });
+        }
+        
+        const toggleShuffleMeansBtn = document.getElementById('toggleShuffleMeansBtn');
+        if (toggleShuffleMeansBtn) {
+          toggleShuffleMeansBtn.addEventListener('click', () => {
+            showShuffleMeans = !showShuffleMeans;
+            toggleShuffleMeansBtn.textContent = showShuffleMeans ? 'Hide Means' : 'Show Means';
+            generateShuffleScatterPlot();
+          });
+        }
 
         document.getElementById('clearSamplingBtn').addEventListener('click', () => {
           clearShuffleData();
@@ -2012,9 +2031,6 @@ b1(Score_shuf~Condition, data=df)</div>
           showGraphingMeans = !showGraphingMeans;
           const btn = document.getElementById('toggleGraphingMeansBtn');
           btn.textContent = showGraphingMeans ? 'Hide Means' : 'Show Means';
-          btn.style.background = showGraphingMeans ? '#dbeafe' : '#f8fafc';
-          btn.style.color = showGraphingMeans ? '#2563eb' : '#374151';
-          btn.style.borderWidth = showGraphingMeans ? '2px' : '1.5px';
           
           regenerateAllGraphingGraphs();
         });
@@ -2023,6 +2039,7 @@ b1(Score_shuf~Condition, data=df)</div>
           const run5xBtn = document.getElementById('run5xBtn');
           run5xBtn.disabled = true;
           run5xBtn.textContent = 'Running...';
+          lastBatchSize = 0;
           
           let completed = 0;
           
@@ -2336,38 +2353,6 @@ b1(Score_shuf~Condition, data=df)</div>
           yLabel.textContent = CONFIG.outcomeName;
           g.appendChild(yLabel);
           
-          const buttonGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          buttonGroup.setAttribute('id', 'toggleShuffleMeansBtn');
-          buttonGroup.style.cursor = 'pointer';
-          
-          const buttonRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          buttonRect.setAttribute('x', plotWidth + 10);
-          buttonRect.setAttribute('y', 5);
-          buttonRect.setAttribute('width', 85);
-          buttonRect.setAttribute('height', 25);
-          buttonRect.setAttribute('fill', showShuffleMeans ? '#dbeafe' : '#f8fafc');
-          buttonRect.setAttribute('stroke', '#2563eb');
-          buttonRect.setAttribute('stroke-width', showShuffleMeans ? 2 : 1.5);
-          buttonRect.setAttribute('rx', 4);
-          buttonGroup.appendChild(buttonRect);
-          
-          const buttonText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          buttonText.setAttribute('x', plotWidth + 52.5);
-          buttonText.setAttribute('y', 20);
-          buttonText.setAttribute('text-anchor', 'middle');
-          buttonText.setAttribute('font-size', '12');
-          buttonText.setAttribute('font-weight', '600');
-          buttonText.setAttribute('fill', showShuffleMeans ? '#2563eb' : '#374151');
-          buttonText.textContent = showShuffleMeans ? 'Hide Means' : 'Show Means';
-          buttonGroup.appendChild(buttonText);
-          
-          buttonGroup.addEventListener('click', () => {
-            showShuffleMeans = !showShuffleMeans;
-            generateShuffleScatterPlot();
-          });
-          
-          g.appendChild(buttonGroup);
-          
           output.style.display = 'block';
         }
 
@@ -2410,6 +2395,15 @@ b1(Score_shuf~Condition, data=df)</div>
         
         if (runPlotBtn) {
           runPlotBtn.addEventListener('click', () => {
+            generateScatterPlot();
+          });
+        }
+        
+        const toggleMeansBtn = document.getElementById('toggleMeansBtn');
+        if (toggleMeansBtn) {
+          toggleMeansBtn.addEventListener('click', () => {
+            showMeans = !showMeans;
+            toggleMeansBtn.textContent = showMeans ? 'Hide Means' : 'Show Means';
             generateScatterPlot();
           });
         }
@@ -2620,38 +2614,6 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
           yLabel.setAttribute('transform', `rotate(-90, -35, ${plotHeight / 2})`);
           yLabel.textContent = CONFIG.outcomeName;
           g.appendChild(yLabel);
-          
-          const buttonGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          buttonGroup.setAttribute('id', 'toggleMeansBtn');
-          buttonGroup.style.cursor = 'pointer';
-          
-          const buttonRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          buttonRect.setAttribute('x', plotWidth + 10);
-          buttonRect.setAttribute('y', 5);
-          buttonRect.setAttribute('width', 85);
-          buttonRect.setAttribute('height', 25);
-          buttonRect.setAttribute('fill', showMeans ? '#dbeafe' : '#f8fafc');
-          buttonRect.setAttribute('stroke', '#2563eb');
-          buttonRect.setAttribute('stroke-width', showMeans ? 2 : 1.5);
-          buttonRect.setAttribute('rx', 4);
-          buttonGroup.appendChild(buttonRect);
-          
-          const buttonText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          buttonText.setAttribute('x', plotWidth + 52.5);
-          buttonText.setAttribute('y', 20);
-          buttonText.setAttribute('text-anchor', 'middle');
-          buttonText.setAttribute('font-size', '12');
-          buttonText.setAttribute('font-weight', '600');
-          buttonText.setAttribute('fill', showMeans ? '#2563eb' : '#374151');
-          buttonText.textContent = showMeans ? 'Hide Means' : 'Show Means';
-          buttonGroup.appendChild(buttonText);
-          
-          buttonGroup.addEventListener('click', () => {
-            showMeans = !showMeans;
-            generateScatterPlot();
-          });
-          
-          g.appendChild(buttonGroup);
           
           output.style.display = 'block';
         }
