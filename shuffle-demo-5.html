@@ -811,7 +811,7 @@ b1(Score_shuf~Condition, data=df)</div>
           });
           
           cards.forEach((card) => {
-            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
             let targetIdx = -1;
             for (let i = 0; i < shuffledPositions.length; i++) {
               if (shuffledPositions[i].outcome === outcomeValue) {
@@ -852,7 +852,7 @@ b1(Score_shuf~Condition, data=df)</div>
           });
           
           cards.forEach((card) => {
-            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
             let targetIdx = -1;
             for (let i = 0; i < availablePositions.length; i++) {
               if (availablePositions[i].outcome === outcomeValue) {
@@ -1062,7 +1062,7 @@ b1(Score_shuf~Condition, data=df)</div>
           });
           
           cards.forEach((card) => {
-            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
             let targetIdx = -1;
             for (let i = 0; i < availablePositions.length; i++) {
               if (availablePositions[i].outcome === outcomeValue) {
@@ -1126,7 +1126,7 @@ b1(Score_shuf~Condition, data=df)</div>
               
               cards.forEach((card, cardIndex) => {
                 setTimeout(() => {
-                  const outcomeValue = parseInt(card.dataset.outcomeValue);
+                  const outcomeValue = parseFloat(card.dataset.outcomeValue);
                   let targetIdx = -1;
                   
                   for (let i = 0; i < shuffledPositions.length; i++) {
@@ -1187,7 +1187,7 @@ b1(Score_shuf~Condition, data=df)</div>
           });
           
           cards.forEach((card) => {
-            const outcomeValue = parseInt(card.dataset.outcomeValue);
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
             let targetIdx = -1;
             for (let i = 0; i < availablePositions.length; i++) {
               if (availablePositions[i].outcome === outcomeValue) {
@@ -1251,7 +1251,7 @@ b1(Score_shuf~Condition, data=df)</div>
               
               cards.forEach((card, cardIndex) => {
                 setTimeout(() => {
-                  const outcomeValue = parseInt(card.dataset.outcomeValue);
+                  const outcomeValue = parseFloat(card.dataset.outcomeValue);
                   let targetIdx = -1;
                   
                   for (let i = 0; i < shuffledPositions.length; i++) {
