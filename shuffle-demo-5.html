@@ -346,7 +346,9 @@
       }
       thead th { padding: 8px 4px; font-size: 0.8rem; }
     }
-  </style>
+  
+.lit-dollar{font-family:inherit}
+</style>
 </head>
 <body>
   <div class="wrap">
@@ -2730,18 +2732,18 @@ ${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
         document.getElementById('outcomeHeader').textContent = CONFIG.outcomeName;
         document.getElementById('shuffledHeader').textContent = CONFIG.outcomeName + '_shuf';
         document.getElementById('graphingPlotCodeBlock').innerHTML =
-          `df${CONFIG.outcomeName}_shuf &lt;- shuffle(df${CONFIG.outcomeName})\n` +
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
           `gf_point(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
         document.getElementById('codeBlock').innerHTML =
-          `df${CONFIG.outcomeName}_shuf &lt;- shuffle(df${CONFIG.outcomeName})\n` +
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
           `b1(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
         document.getElementById('samplingCodeBlock').innerHTML =
-          `df${CONFIG.outcomeName}_shuf &lt;- shuffle(df${CONFIG.outcomeName})\n` +
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
           `b1(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
         document.getElementById('modelCodeBlock').innerHTML = 
           `lm(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
         document.getElementById('shufflePlotCodeBlock').innerHTML =
-          `df${CONFIG.outcomeName}_shuf &lt;- shuffle(df${CONFIG.outcomeName})\n` +
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
           `gf_point(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
         document.getElementById('b1CodeBlock').innerHTML = 
           `b1(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
