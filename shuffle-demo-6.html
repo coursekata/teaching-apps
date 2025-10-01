@@ -1062,7 +1062,7 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
           cards.forEach(card => card.classList.remove('jiggle'));
           const tableCenter = { x: layerRect.width / 2, y: layerRect.height / 2 };
           
-         // Gather cards to center in a loose pile
+          // Gather cards to center in a loose pile
           setTimeout(() => {
             cards.forEach((card, i) => {
               card.classList.add('hover');
@@ -1074,39 +1074,14 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
             });
           }, 50);
 
-          // Create hand elements
-          const hand1 = document.createElement('div');
-          hand1.innerHTML = '🖐️';
-          hand1.style.position = 'absolute';
-          hand1.style.fontSize = '55px';
-          hand1.style.pointerEvents = 'none';
-          hand1.style.zIndex = '1000';
-          hand1.style.transition = 'all 0.4s ease';
-          hand1.style.opacity = '0';
-          cardsLayer.appendChild(hand1);
-          
-          const hand2 = document.createElement('div');
-          hand2.innerHTML = '🖐️';
-          hand2.style.position = 'absolute';
-          hand2.style.fontSize = '55px';
-          hand2.style.pointerEvents = 'none';
-          hand2.style.zIndex = '1000';
-          hand2.style.transition = 'all 0.4s ease';
-          hand2.style.opacity = '0';
-          cardsLayer.appendChild(hand2);
-
-          // Perform visible swaps with hands
+          // Perform visible swaps
           setTimeout(() => {
             let swapCount = 0;
             const totalSwaps = 8;
             
             function performSwap() {
               if (swapCount >= totalSwaps) {
-                // Keep hands visible for dealing
-                hand1.style.opacity = '1.0';
-                hand2.style.opacity = '1.0';
-                
-                // Proceed to dealing with hands
+                // Proceed to dealing
                 setTimeout(() => {
                   shuffledOutcomes = newShuffledOutcomes;
                   
@@ -1118,22 +1093,10 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                     shuffledPositions.push({ outcome: obj.outcome, position: index });
                   });
                   
-                  // Show hands again for dealing
-                  hand1.style.opacity = '0.7';
-                  hand2.style.opacity = '0.7';
-                  
                   let dealIndex = 0;
                   
                   function dealNextCard() {
                     if (dealIndex >= cards.length) {
-                      // Hide and remove hands after ALL dealing is complete
-                      hand1.style.opacity = '0';
-                      hand2.style.opacity = '0';
-                      setTimeout(() => {
-                        if (hand1.parentNode) cardsLayer.removeChild(hand1);
-                        if (hand2.parentNode) cardsLayer.removeChild(hand2);
-                      }, 400);
-                      
                       setTimeout(() => {
                         cards.forEach(card => { 
                           card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
@@ -1146,7 +1109,6 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                     }
                     
                     const card = cards[dealIndex];
-                    const hand = dealIndex % 2 === 0 ? hand1 : hand2;
                     
                     const outcomeValue = parseFloat(card.dataset.outcomeValue);
                     let targetIdx = -1;
@@ -1167,18 +1129,8 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                       const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
                       const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
                       
-                      // Position hand on top of card
-                      const currentCardLeft = parseFloat(card.style.left);
-                      const currentCardTop = parseFloat(card.style.top);
-                      
-                      // Put hand directly on top of card
-                      hand.style.left = (currentCardLeft + 5) + 'px';
-                      hand.style.top = (currentCardTop - 30) + 'px';
-                      
                       setTimeout(() => {
-                        // Push card and hand together rapidly
                         card.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
-                        hand.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
                         
                         card.style.transform = 'none';
                         card.classList.remove('hover');
@@ -1186,10 +1138,6 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                         card.style.top = centerY + 'px';
                         card.style.width = cardWidth + 'px';
                         card.style.height = cardHeight + 'px';
-                        
-                        // Hand stays on top of card as it moves
-                        hand.style.left = (centerX + 5) + 'px';
-                        hand.style.top = (centerY - 30) + 'px';
                         
                         dealIndex++;
                         setTimeout(dealNextCard, 120);
@@ -1205,7 +1153,7 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                 return;
               }
               
-              // Pick two random cards
+              // Pick two random cards to swap
               const idx1 = Math.floor(Math.random() * cards.length);
               let idx2 = Math.floor(Math.random() * cards.length);
               while (idx2 === idx1) {
@@ -1217,14 +1165,6 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
               
               const pos1 = { left: parseFloat(card1.style.left), top: parseFloat(card1.style.top) };
               const pos2 = { left: parseFloat(card2.style.left), top: parseFloat(card2.style.top) };
-              
-              // Show hands moving to cards
-              hand1.style.opacity = '1.0';
-              hand2.style.opacity = '1.0';
-              hand1.style.left = (pos1.left + 10) + 'px';
-              hand1.style.top = (pos1.top - 35) + 'px';
-              hand2.style.left = (pos2.left + 10) + 'px';
-              hand2.style.top = (pos2.top - 35) + 'px';
               
               setTimeout(() => {
                 // Lift cards slightly
@@ -1238,26 +1178,16 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                   card2.style.left = pos1.left + 'px';
                   card2.style.top = pos1.top + 'px';
                   
-                  // Move hands with cards
-                  hand1.style.left = (pos2.left + 10) + 'px';
-                  hand1.style.top = (pos2.top - 35) + 'px';
-                  hand2.style.left = (pos1.left + 10) + 'px';
-                  hand2.style.top = (pos1.top - 35) + 'px';
-                  
                   setTimeout(() => {
                     // Set cards back down
                     card1.style.transform = `translateZ(50px) scale(1.05) rotate(${(Math.random() - 0.5) * 30}deg)`;
                     card2.style.transform = `translateZ(50px) scale(1.05) rotate(${(Math.random() - 0.5) * 30}deg)`;
                     
-                    // Hide hands briefly
-                    hand1.style.opacity = '0';
-                    hand2.style.opacity = '0';
-                    
                     swapCount++;
-                    setTimeout(performSwap, 300);
-                  }, 400);
-                }, 200);
-              }, 400);
+                    setTimeout(performSwap, 150);
+                  }, 200);
+                }, 100);
+              }, 200);
             }
             
             performSwap();
