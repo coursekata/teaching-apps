@@ -1,0 +1,2683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>R Shuffle Function: Understanding Randomization - Updated</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666666;
+      --accent: #2563eb;
+      --a-row: #e3f2fd;
+      --b-row: #fff3e0;
+      --a-card-stroke: #1e88e5;
+      --b-card-stroke: #ef6c00;
+      --lift-shadow: 0 10px 18px rgba(0,0,0,.18);
+      --neutral-bg: #f3f4f6;
+      --neutral-border: #9ca3af;
+      --axis: #9ca3af;
+      --dot: #3b82f6;
+      --dot-recent: #f59e0b;
+      --original-dot: #dc2626;
+      --group-a-dot: #3b82f6;
+      --group-b-dot: #f59e0b;
+    }
+
+    html, body { height: 100%; }
+    body { 
+      margin: 0; padding: 24px; background: var(--bg); color: var(--fg);
+      font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
+    }
+
+    .wrap { max-width: 900px; margin: 0 auto; }
+    
+    .main-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    
+    .top-section {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    
+    .tabs-container {
+      display: flex;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 16px;
+      margin-top: 16px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 6px 16px;
+      text-align: center;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-bottom: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #6b7280;
+      transition: all 0.2s ease;
+    }
+    
+    .tab:first-child {
+      border-radius: 8px 0 0 0;
+    }
+    
+    .tab:last-child {
+      border-radius: 0 8px 0 0;
+    }
+    
+    .tab.active {
+      background: white;
+      color: #000000;
+      border-bottom: 2px solid white;
+      margin-bottom: -2px;
+    }
+    
+    .tab:hover:not(.active) {
+      background: #f1f5f9;
+      color: #374151;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .tab-title {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 16px;
+      margin: 0 20px 8px 20px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      text-align: center;
+    }
+    
+    .tab-title .math {
+      font-family: 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 20px;
+      color: #000000;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .section-header:hover {
+      color: #1f2937;
+    }
+    
+    .caret {
+      font-size: 12px;
+      transition: transform 0.2s ease;
+      color: #6b7280;
+    }
+    
+    .caret.expanded {
+      transform: rotate(90deg);
+    }
+    
+    .section-content {
+      display: block;
+    }
+    
+    .section-content.collapsed {
+      display: none;
+    }
+    
+    .r-command-section {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .r-output {
+      background: white;
+      border: 1px solid #cbd5e1;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #111827;
+      font-weight: 600;
+      white-space: pre-wrap;
+      border-left: 3px solid #2563eb;
+    }
+    
+    button:disabled, button.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    button:disabled:hover, button.disabled:hover {
+      background: var(--accent);
+    }
+    
+    .animation-canvas {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; z-index: 10;
+    }
+
+    h1 { font-size: 1.3rem; margin: 0 0 8px; }
+    .subtitle { color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+
+    .controls { 
+      display: flex; gap: 12px; align-items: flex-start; margin: 16px 0; 
+      flex-direction: row;
+    }
+    
+    .controls .code-line {
+      flex: 1;
+    }
+    
+    .button-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-self: flex-start;
+      min-width: 70px;
+    }
+    
+    .button-stack button {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      min-height: 0;
+      margin: 0;
+    }
+    
+    button.clear {
+      background: white;
+      color: var(--accent);
+      border-color: var(--accent);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      min-height: 0;
+      margin: 0;
+    }
+    
+    button.clear:hover {
+      background: #f8fafc;
+      border-color: #1d4ed8;
+    }
+    
+    button { 
+      appearance: none; border: 1px solid #d1d5db; background: #fff; color: #111; 
+      cursor: pointer; padding: 10px 16px; border-radius: 10px; font-weight: 600;
+      font-size: 0.95rem; transition: all 0.2s ease;
+    }
+    button:hover { background: #f9fafb; border-color: #9ca3af; }
+    button:active { transform: translateY(1px); }
+    button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    button.primary:hover { background: #1d4ed8; }
+
+    .code-line {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 8px;
+    }
+    
+    .code-block {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px; color: #1e293b; font-weight: 500;
+      background: white; padding: 12px 16px; border-radius: 6px;
+      border: 1px solid #cbd5e1; flex-grow: 1;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+    
+    .run-btn {
+      white-space: nowrap; min-width: 80px; align-self: flex-start;
+    }
+
+    .table-container {
+      background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+      overflow: hidden; margin: 16px 0;
+    }
+    .table-wrap { position: relative; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead th { 
+      text-align: center; background: #f8fafc; color: #111; font-weight: 700; 
+      padding: 10px 4px; border-bottom: 2px solid #e5e7eb; font-size: 0.9rem;
+    }
+    tbody td { 
+      padding: 0; border-bottom: 2px solid white; border-right: 2px solid white;
+      position: relative; height: 32px;
+    }
+    tbody tr:last-child td { border-bottom: 2px solid white; }
+    tbody td:last-child { border-right: none; }
+    tbody tr.a { background: var(--a-row); }
+    tbody tr.b { background: var(--b-row); }
+
+    .cell-content {
+      display: flex; align-items: center; padding: 4px;
+      height: 100%; box-sizing: border-box; font-size: 0.9rem;
+    }
+    .cell-content.center { justify-content: center; }
+
+    .cards-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+    .card { 
+      position: absolute; pointer-events: none; user-select: none;
+      border-radius: 6px; color: #111; font-weight: 600; 
+      text-align: center; 
+      transition: all .8s cubic-bezier(.2,.8,.2,1);
+      border: 1px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .card.jiggle { animation: jiggle 0.3s ease-in-out infinite alternate; }
+    @keyframes jiggle {
+      0% { transform: translate(0, 0) rotate(-1deg); }
+      25% { transform: translate(-1px, -1px) rotate(1deg); }
+      50% { transform: translate(1px, 0) rotate(-1deg); }
+      75% { transform: translate(0, 1px) rotate(1deg); }
+      100% { transform: translate(1px, -1px) rotate(-1deg); }
+    }
+    .card.hover { 
+      transform: translateZ(50px) scale(1.05); 
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      z-index: 100;
+    }
+    .card.a { background: var(--a-row); }
+    .card.b { background: var(--b-row); }
+    .card.show-border { 
+      border-style: dashed; border-color: #6b7280; border-width: 2px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .card.show-border.hover { box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+
+    .graph-section {
+      position: relative;
+      padding: 0;
+    }
+    .dist-panel {
+      margin-top: 4px;
+    }
+    .dist-meta { font-size: .9rem; color: var(--muted); }
+    #histSvg {
+      width: 100%;
+      height: 260px;
+      display: block;
+      background: white;
+    }
+
+    @media (max-width: 600px) {
+      .top-section {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .tab {
+        font-size: 0.8rem;
+        padding: 6px 8px;
+      }
+      .controls { 
+        flex-direction: column; 
+        align-items: stretch; 
+      }
+      thead th { padding: 8px 4px; font-size: 0.8rem; }
+    }
+  
+.lit-dollar{font-family:inherit}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Understanding R's <span class="code">shuffle()</span> Function</h1>
+
+    <div class="main-layout">
+      <div class="top-section">
+        <div class="table-section">
+          <div class="table-container">
+            <div class="table-wrap" id="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 33.33%;" id="groupHeader">Group</th>
+                    <th style="width: 33.33%;" id="outcomeHeader">Outcome</th>
+                    <th style="width: 33.33%;" id="shuffledHeader">Score_shuf</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+              </table>
+              <div class="cards-layer" id="cardsLayer" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div id="initialDifference" style="font-weight: bold; margin-top: 12px; font-size: 15px; color: #1f2937; text-align: center;">
+            Initial b<sub>1</sub> (group difference) = —
+          </div>
+        </div>
+
+        <div class="right-column">
+          <div class="tabs-container">
+            <div class="tab active" data-tab="graphing">Shuffle 1</div>
+            <div class="tab" data-tab="model">Model</div>
+            <div class="tab" data-tab="shuffle">Shuffle 2</div>
+            <div class="tab" data-tab="sampling">Dist of b<sub>1</sub></div>
+          </div>
+
+          <div class="tab-content active" id="graphing-content">
+            <div class="tab-title">Graphing Shuffles</div>
+            <div style="padding: 8px 20px;">
+              <div class="code-section">
+                <div class="controls">
+                  <div class="code-line">
+                    <div class="code-block" id="graphingPlotCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+gf_point(Score_shuf ~ Condition, data=df)</div>
+<button id="runGraphingPlotBtn" class="primary run-btn">Run</button>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="smallGraphsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;"></div>
+              
+			  <div style="text-align: center; margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+                <button id="toggleGraphingMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; font-weight: 600; border-radius: 10px; cursor: pointer;">
+                  Show Means
+                </button>
+                <button id="clearGraphingPlotsBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="model-content">
+            <div class="tab-title">
+              A Two-Group Model: <span class="math">Y<sub>i</sub> = b<sub>0</sub> + b<sub>1</sub>X<sub>i</sub> + e<sub>i</sub></span>
+            </div>
+            <div style="padding: 8px 20px;">
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="graph-content">
+                  <span class="caret">▶</span>
+                  <span>Graph the data</span>
+                </div>
+                <div class="section-content collapsed" id="graph-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="plotCodeBlock">gf_point(Score ~ Condition, data=df)</div>
+                        <button id="runPlotBtn" class="primary run-btn">Run</button>
+                      </div>
+                    </div>
+<div id="plotOutput" style="display: none; margin-top: 8px;">
+                      <svg id="scatterSvg" width="100%" height="240" style="background: transparent; display: block;"></svg>
+                      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 12px; margin-left: -65px;">
+                        <button id="toggleMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; font-weight: 600; border-radius: 10px; cursor: pointer;">
+                          Show Means
+                        </button>
+                        <button id="clearPlotBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="specify-content">
+                  <span class="caret">▶</span>
+                  <span>Fit the model</span>
+                </div>
+                <div class="section-content collapsed" id="specify-content">
+                  <div style="margin: 12px 0;">
+                    <div class="equation-formula" style="margin-left: 0; font-size: 24px;">
+                      <em>Y</em><sub>i</sub> = <em>b</em><sub>0</sub> + <em>b</em><sub>1</sub><em>X</em><sub>i</sub> + <em>e</em><sub>i</sub>
+                    </div>
+                  </div>
+                  
+                  <div class="code-section" style="margin-top: 20px;">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="modelCodeBlock">lm(outcome ~ group, data=df)</div>
+                        <div class="button-stack">
+                          <button id="runModelBtn" class="primary run-btn">Run</button>
+                          <button id="clearModelBtn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="rOutput" class="r-output" style="display: none; margin-top: 16px;"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="fit-content">
+                  <span class="caret">▶</span>
+                  <span>Generate b<sub>1</sub></span>
+                </div>
+                <div class="section-content collapsed" id="fit-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="b1CodeBlock">b1(outcome ~ group, data=df)</div>
+                        <div class="button-stack">
+                          <button id="runB1Btn" class="primary run-btn">Run</button>
+                          <button id="clearB1Btn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="b1Output" class="r-output" style="display: none; margin-top: 16px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="shuffle-content">
+            <div class="tab-title">
+              Simulating a World Where <span class="math">β<sub>1</sub></span> is 0
+            </div>
+            <div style="padding: 8px 20px;">
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="graph-shuffles-content">
+                  <span class="caret">▶</span>
+                  <span>Graph shuffles</span>
+                </div>
+                <div class="section-content collapsed" id="graph-shuffles-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="shufflePlotCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+gf_point(Score_shuf ~ Condition, data=df)</div>
+                        <button id="runShufflePlotBtn" class="primary run-btn">Run</button>
+                      </div>
+                    </div>
+                    <div id="shufflePlotOutput" style="display: none; margin-top: 8px;">
+                      <svg id="shuffleScatterSvg" width="100%" height="240" style="background: transparent; display: block;"></svg>
+                      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 12px; margin-left: -65px;">
+                        <button id="toggleShuffleMeansBtn" style="padding: 8px 16px; font-size: 0.9rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; font-weight: 600; border-radius: 10px; cursor: pointer;">
+                          Show Means
+                        </button>
+                        <button id="clearShufflePlotBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <div class="section-header" data-target="shuffle-data-content">
+                  <span class="caret">▶</span>
+                  <span>Model shuffles</span>
+                </div>
+                <div class="section-content collapsed" id="shuffle-data-content">
+                  <div class="code-section">
+                    <div class="controls">
+                      <div class="code-line">
+                        <div class="code-block" id="codeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+b1(Score_shuf~Condition, data=df)</div>
+                        <div class="button-stack">
+                          <button id="shuffleBtn" class="primary run-btn">Run</button>
+                          <button id="clearShuffleBtn" class="clear">Clear</button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div id="shuffleOutput" class="r-output" style="display: none; margin-top: 16px;">
+                      Waiting for shuffle...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="sampling-content">
+            <div class="tab-title">
+              A Sampling Distribution of <span class="math">b<sub>1</sub></span> Assuming <span class="math">β<sub>1</sub></span>=0
+            </div>
+            <div style="padding: 8px 20px;">
+              <div class="code-section">
+                <div class="controls">
+                  <div class="code-line">
+                    <div class="code-block" id="samplingCodeBlock">df$Score_shuf &lt;- shuffle(df$Score)
+b1(Score_shuf~Condition, data=df)</div>
+                    <div class="button-stack">
+                      <button id="samplingShuffleBtn" class="primary run-btn">Run</button>
+                      <button id="run5xBtn" class="clear">Run 5x</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="graph-section" id="graphSection">
+              <div class="animation-canvas" id="animationCanvas"></div>
+              
+              <div class="dist-panel">
+                <div style="margin-left: 30px; margin-right: 40px;">
+                  <div style="font-size: 20px; font-weight: bold; color: #333; text-align: center; margin-left: 18px;">Sampling Distribution of b<sub>1</sub></div>
+                </div>
+                <div style="margin-left: 30px; margin-right: 40px; position: relative;">
+                  <svg id="histSvg" viewBox="0 0 500 280" preserveAspectRatio="none" style="width: 100%; height: 260px; display: block; background: white;"></svg>
+                  <div class="dist-meta" style="position: absolute; top: 20px; right: 0px; font-size: 0.8rem; text-align: right;"><span id="distCount">0</span> shuffles</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 6px; flex-wrap: wrap; margin-left: 30px; margin-right: 40px;">
+                  <div class="dist-meta" style="line-height: 1.4;">
+                    <div style="margin-bottom: 4px;">
+                      <span style="display:inline-block;width:8px;height:8px;background:var(--original-dot);border-radius:50%;margin-right:6px;"></span>
+                      Original difference
+                      <span style="display:inline-block;width:8px;height:8px;background:var(--dot);border-radius:50%;margin-left:12px;margin-right:6px;"></span>
+                      Shuffles
+                      <span style="display:inline-block;width:8px;height:8px;background:var(--dot-recent);border-radius:50%;margin-left:8px;margin-right:6px;"></span>
+                      Most recent
+                    </div>
+                    <div>
+                      <span style="display:inline-block;width:12px;height:2px;background:#2563eb;margin-right:6px;border-top:2px dashed #2563eb;background:none;"></span>
+                      Mean of Sampling Distribution
+                    </div>
+                  </div>
+                  <div class="dist-meta" id="distSummary" style="text-align: right; font-weight: bold; color: #1f2937;"></div>
+                </div>
+                <div style="display: flex; justify-content: center; margin-top: 12px; margin-left: 30px; margin-right: 40px;">
+                  <button id="clearSamplingBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const CONFIG = {
+        data: [72, 68, 75, 71, 74, 58, 62, 55, 60, 59],
+        groupAName: 'Treatment',
+        groupBName: 'Control', 
+        outcomeName: 'Score',
+        groupName: 'Condition'
+      };
+
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      const dataParam = urlParams.get('data');
+      if (dataParam) {
+        const dataValues = dataParam.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val));
+        if (dataValues.length >= 4) {
+          CONFIG.data = dataValues;
+        }
+      }
+      
+      if (urlParams.get('groupA')) CONFIG.groupAName = urlParams.get('groupA');
+      if (urlParams.get('groupB')) CONFIG.groupBName = urlParams.get('groupB');
+      if (urlParams.get('outcome')) CONFIG.outcomeName = urlParams.get('outcome');
+      if (urlParams.get('group')) CONFIG.groupName = urlParams.get('group');
+
+      const tabsParam = urlParams.get('tabs');
+      let visibleTabs = [1, 2, 3, 4];
+      
+      if (tabsParam) {
+        const tabNumbers = tabsParam.split(',').map(num => parseInt(num.trim())).filter(num => [1, 2, 3, 4].includes(num));
+        if (tabNumbers.length > 0) {
+          visibleTabs = tabNumbers;
+        }
+      }
+
+      const HIST_BINS = 12;
+      const Y_STEPS = [12, 20, 40, 60, 100];
+
+	  const initialData = [];
+	  const outcomeOrigins = new Map();
+
+	  const half = Math.floor(CONFIG.data.length / 2);
+	  for (let i = 0; i < CONFIG.data.length; i++) {
+		 const group = i < half ? CONFIG.groupAName : CONFIG.groupBName;
+		 const outcome = CONFIG.data[i];
+ 	 	 initialData.push({ group, outcome, originalIndex: i });
+	  	 outcomeOrigins.set(i, group);
+      }
+
+      let currentData = JSON.parse(JSON.stringify(initialData));
+      let shuffledOutcomes = [];
+      let diffHistory = [];
+      let originalDiff = null;
+      let histConfig = null;
+      let lastBatchSize = 1;
+
+      let tbody, cardsLayer, tableWrap;
+      function getDOMRefs() {
+        tbody = document.getElementById('tbody');
+        cardsLayer = document.getElementById('cardsLayer');
+        tableWrap = document.getElementById('tableWrap');
+      }
+
+      function formatNumber(n) {
+        return Number(n).toFixed(1).replace(/\.0$/, '');
+      }
+      function formatInt(n) { return String(Math.round(n)); }
+      function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+      function shuffleArray(arr) {
+        const result = [...arr];
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+      }
+
+      function computeFixedXAxis(values, nA, nB) {
+        const sorted = [...values].sort((a,b)=>a-b);
+        const smallestA = sorted.slice(0, nA);
+        const largestA  = sorted.slice(sorted.length - nA);
+        const smallestB = sorted.slice(0, nB);
+        const largestB  = sorted.slice(sorted.length - nB);
+
+        const minDiff = mean(smallestA) - mean(largestB);
+        const maxDiff = mean(largestA)  - mean(smallestB);
+
+        const range = maxDiff - minDiff;
+        const pad = range * 0.1 || 1;
+        
+        const bins = HIST_BINS;
+        let prelimBinW = (range + 2 * pad) / bins;
+        
+        const halfBins = Math.floor(bins / 2);
+        const binW = prelimBinW;
+        
+        const xMin = -halfBins * binW - binW/2;
+        const xMax = xMin + bins * binW;
+        
+        return { xMin, xMax, bins, yMax: Y_STEPS[0], binW, yStepIdx: 0 };
+      }
+
+      function calculateStats() {
+        const dataToUse = shuffledOutcomes.length > 0 ? shuffledOutcomes.map(obj => obj.outcome) : currentData.map(r => r.outcome);
+        const groupData = [];
+        
+        currentData.forEach((row, index) => {
+          groupData.push({
+            group: row.group,
+            outcome: dataToUse[index]
+          });
+        });
+        
+        const groupA = groupData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+        const groupB = groupData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+        
+        const meanA = mean(groupA);
+        const meanB = mean(groupB);
+        
+        const sortedGroups = [
+          { name: CONFIG.groupAName, mean: meanA },
+          { name: CONFIG.groupBName, mean: meanB }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        const diff = sortedGroups[1].mean - sortedGroups[0].mean;
+        
+        if (originalDiff === null) {
+          originalDiff = diff;
+          const initialDiffElement = document.getElementById('initialDifference');
+          if (initialDiffElement) {
+            initialDiffElement.innerHTML = 
+              `Initial b<sub>1</sub> (${sortedGroups[1].name} - ${sortedGroups[0].name}) = ${formatNumber(originalDiff)}`;
+          }
+        }
+        return { meanA, meanB, diff };
+      }
+
+      function drawTable() {
+        if (!tbody) getDOMRefs();
+        tbody.innerHTML = '';
+        
+        currentData.forEach((row, index) => {
+          const tr = document.createElement('tr');
+          tr.className = row.group === CONFIG.groupAName ? 'a' : 'b';
+          
+          const tdGroup = document.createElement('td');
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'cell-content center';
+          groupDiv.textContent = row.group;
+          tdGroup.appendChild(groupDiv);
+          
+          const tdOutcome = document.createElement('td');
+          const outcomeDiv = document.createElement('div');
+          outcomeDiv.className = 'cell-content center';
+          outcomeDiv.textContent = row.outcome;
+          tdOutcome.appendChild(outcomeDiv);
+          
+          const tdShuffled = document.createElement('td');
+          const shuffledDiv = document.createElement('div');
+          shuffledDiv.className = 'cell-content center';
+          shuffledDiv.textContent = '';
+          tdShuffled.appendChild(shuffledDiv);
+          
+          tr.appendChild(tdGroup);
+          tr.appendChild(tdOutcome);
+          tr.appendChild(tdShuffled);
+          tbody.appendChild(tr);
+        });
+      }
+
+      function createCards() {
+        const outcomeCells = document.querySelectorAll('tbody td:nth-child(2)');
+        const layerRect = cardsLayer.getBoundingClientRect();
+        cardsLayer.innerHTML = '';
+        
+        currentData.forEach((data, i) => {
+          const cell = outcomeCells[i];
+          const cellRect = cell.getBoundingClientRect();
+          const card = document.createElement('div');
+          
+          const originalGroup = outcomeOrigins.get(data.originalIndex);
+          card.className = 'card ' + (originalGroup === CONFIG.groupAName ? 'a' : 'b');
+          card.textContent = data.outcome;
+          card.dataset.outcomeValue = data.outcome;
+          
+          const cardWidth = 50, cardHeight = 20;
+          const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+          const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+          
+          card.style.left = centerX + 'px';
+          card.style.top = centerY + 'px';
+          card.style.width = cardWidth + 'px';
+          card.style.height = cardHeight + 'px';
+          
+          cardsLayer.appendChild(card);
+        });
+      }
+
+      function repositionCards() {
+        const cards = cardsLayer.querySelectorAll('.card');
+        
+        if (shuffledOutcomes.length > 0) {
+          const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
+          const layerRect = cardsLayer.getBoundingClientRect();
+          
+		  const shuffledPositions = [];
+  	      shuffledOutcomes.forEach((obj, index) => {
+ 		    shuffledPositions.push({ outcome: obj.outcome, position: index });
+		  });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < shuffledPositions.length; i++) {
+              if (shuffledPositions[i].outcome === outcomeValue) {
+                targetIdx = shuffledPositions[i].position;
+                shuffledPositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = shuffledColumnCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              card.style.transition = 'none';
+              card.style.transform = 'translate(0,0)';
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+              
+              requestAnimationFrame(() => {
+                card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+              });
+            }
+          });
+        } else {
+          const outcomeCells = document.querySelectorAll('tbody td:nth-child(2)');
+          const layerRect = cardsLayer.getBoundingClientRect();
+          
+          const availablePositions = [];
+          currentData.forEach((data, index) => {
+            availablePositions.push({ outcome: data.outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < availablePositions.length; i++) {
+              if (availablePositions[i].outcome === outcomeValue) {
+                targetIdx = availablePositions[i].position;
+                availablePositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = outcomeCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              card.style.transition = 'none';
+              card.style.transform = 'translate(0,0)';
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+              
+              requestAnimationFrame(() => {
+                card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+              });
+            }
+          });
+        }
+      }
+
+      function renderHistogram() {
+        const svg = document.getElementById('histSvg');
+        const countEl = document.getElementById('distCount');
+        const summaryEl = document.getElementById('distSummary');
+        
+        if (!svg || !countEl || !summaryEl || !histConfig) {
+          return;
+        }
+        
+        countEl.textContent = diffHistory.length;
+
+        if (diffHistory.length >= 3) {
+          const distMean = mean(diffHistory);
+          const distSD = Math.sqrt(diffHistory.reduce((s, x) => s + (x - distMean) * (x - distMean), 0) / (diffHistory.length - 1));
+          summaryEl.innerHTML = `Mean: ${formatNumber(distMean)} | SE: ${formatNumber(distSD)}`;
+        } else {
+          summaryEl.innerHTML = '';
+        }
+
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const W = 500, H = 280;
+        const pad = { l: 48, r: 12, t: 16, b: 40 };
+        const chartW = W - pad.l - pad.r;
+        const chartH = H - pad.t - pad.b;
+
+        const g = (tag, attrs={}, parent=svg) => {
+          const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+          for (const k in attrs) el.setAttribute(k, attrs[k]);
+          parent.appendChild(el);
+          return el;
+        };
+
+        const { xMin, xMax, bins, binW } = histConfig;
+        const binDots = Array.from({ length: bins }, () => []);
+        
+        diffHistory.forEach((v, historyIndex) => {
+          let binIdx = Math.floor((v - xMin) / binW);
+          if (binIdx < 0) binIdx = 0;
+          if (binIdx >= bins) binIdx = bins - 1;
+          binDots[binIdx].push(historyIndex);
+        });
+        
+        let maxCount = Math.max(0, ...binDots.map(bin => bin.length));
+        while (histConfig.yStepIdx < Y_STEPS.length - 1 && maxCount > Y_STEPS[histConfig.yStepIdx]) {
+          histConfig.yStepIdx++;
+          histConfig.yMax = Y_STEPS[histConfig.yStepIdx];
+        }
+        const yMax = histConfig.yMax;
+
+        g('line', { x1: pad.l, x2: pad.l + chartW, y1: pad.t + chartH, y2: pad.t + chartH, stroke: 'var(--axis)' });
+
+        const yTicks = [0, yMax/2, yMax];
+        yTicks.forEach(v => {
+          const y = pad.t + chartH - (v / yMax) * chartH;
+          g('line', { x1: pad.l - 4, x2: pad.l, y1: y, y2: y, stroke: 'var(--axis)' });
+          const t = g('text', { x: pad.l - 8, y: y + 4, 'text-anchor':'end', 'font-size':'14', fill:'#333' });
+          t.textContent = Math.round(v);
+        });
+
+        const rectHeight = (chartH / yMax);
+        const binWidthPixels = chartW / bins;
+        const rectWidth = binWidthPixels - 1;
+        
+        let mostRecentBinX = null;
+        let mostRecentValue = null;
+        let mostRecentY = null;
+        
+        binDots.forEach((dots, binIdx) => {
+          const binLeftX = pad.l + (binIdx * chartW) / bins;
+          
+          dots.forEach((historyIndex, dotIdx) => {
+            const y = pad.t + chartH - (dotIdx + 1) * rectHeight;
+            const isRecent = lastBatchSize === 1 && historyIndex === diffHistory.length - 1;
+            
+            if (isRecent) {
+              mostRecentBinX = binLeftX + rectWidth / 2;
+              mostRecentValue = diffHistory[historyIndex];
+              mostRecentY = y;
+            }
+            
+            g('rect', { 
+              x: binLeftX + 0.5,
+              y: y, 
+              width: rectWidth, 
+              height: rectHeight,
+              fill: isRecent ? 'var(--dot-recent)' : 'var(--dot)', 
+              stroke: 'white', 
+              'stroke-width': 1
+            });
+          });
+        });
+        
+        if (mostRecentBinX !== null && mostRecentValue !== null) {
+          const labelText = g('text', { 
+            x: mostRecentBinX, 
+            y: mostRecentY - 8, 
+            'text-anchor': 'middle', 
+            'font-size': '12', 
+            'font-weight': 'bold',
+            fill: '#d97706'
+          });
+          labelText.textContent = formatNumber(mostRecentValue);
+        }
+
+        for (let i = 0; i < bins; i++) {
+          const binCenter = xMin + (i + 0.5) * binW;
+          const x = pad.l + ((i + 0.5) * chartW) / bins;
+          
+          g('line', { x1: x, x2: x, y1: pad.t + chartH, y2: pad.t + chartH + 4, stroke: 'var(--axis)' });
+          
+          const t = g('text', { x, y: pad.t + chartH + 20, 'text-anchor':'middle', 'font-size':'12', fill:'#333' });
+          
+          if (Math.abs(binCenter) < 0.0001) {
+            t.textContent = "0";
+          } else {
+            t.textContent = formatNumber(binCenter);
+          }
+        }
+
+        if (originalDiff !== null && isFinite(originalDiff)) {
+          const span = xMax - xMin;
+          const x0 = pad.l + ((originalDiff - xMin) / span) * chartW;
+          const y0 = pad.t + chartH;
+          g('circle', { cx: x0, cy: y0, r: 6, fill: 'var(--original-dot)', stroke: 'white', 'stroke-width': 1.5 });
+        }
+
+        if (diffHistory.length >= 3) {
+          const distMean = mean(diffHistory);
+          const span = xMax - xMin;
+          const x0 = pad.l + ((distMean - xMin) / span) * chartW;
+          
+          g('line', { 
+            x1: x0, x2: x0, 
+            y1: pad.t, y2: pad.t + chartH, 
+            stroke: '#2563eb', 
+            'stroke-width': 2,
+            'stroke-dasharray': '4,2'
+          });
+        }
+
+        const yLabel = g('text', { 
+          x: 15, 
+          y: pad.t + chartH / 2, 
+          'text-anchor': 'middle', 
+          'font-size': '18', 
+          'font-weight': 'bold', 
+          fill: '#666',
+          transform: `rotate(-90, 15, ${pad.t + chartH / 2})`
+        });
+        yLabel.textContent = 'Number of b₁s';
+      }
+
+      function addSampleToHistogram(diff) {
+        diffHistory.push(diff);
+        renderHistogram();
+      }
+
+      function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
+        cards.forEach(card => { card.classList.add('show-border', 'jiggle'); });
+
+        setTimeout(() => {
+          cards.forEach(card => card.classList.remove('jiggle'));
+          const tableCenter = { x: layerRect.width / 2, y: layerRect.height / 2 };
+          
+          setTimeout(() => {
+            cards.forEach((card, i) => {
+              card.classList.add('hover');
+              const angle = (i / cards.length) * 2 * Math.PI;
+              const r = 25;
+              card.style.left = (tableCenter.x + Math.cos(angle) * r - 25) + 'px';
+              card.style.top  = (tableCenter.y + Math.sin(angle) * r - 10) + 'px';
+              card.style.transform = `translateZ(50px) scale(1.05) rotate(${Math.random() * 360}deg)`;
+            });
+          }, 50);
+
+          setTimeout(() => {
+            shuffledOutcomes = newShuffledOutcomes;
+            
+            const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
+            const layerRect = cardsLayer.getBoundingClientRect();
+            
+            const shuffledPositions = [];
+            shuffledOutcomes.forEach((obj, index) => {
+              shuffledPositions.push({ outcome: obj.outcome, position: index });
+            });
+            
+            cards.forEach((card, cardIndex) => {
+              setTimeout(() => {
+                const outcomeValue = parseFloat(card.dataset.outcomeValue);
+                let targetIdx = -1;
+                
+                for (let i = 0; i < shuffledPositions.length; i++) {
+                  if (shuffledPositions[i].outcome === outcomeValue) {
+                    targetIdx = shuffledPositions[i].position;
+                    shuffledPositions.splice(i, 1);
+                    break;
+                  }
+                }
+                
+                if (targetIdx >= 0) {
+                  const targetCell = shuffledColumnCells[targetIdx];
+                  const cellRect = targetCell.getBoundingClientRect();
+                  
+                  const cardWidth = 50, cardHeight = 20;
+                  const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+                  const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+                  
+                  card.style.transition = 'all 2.4s cubic-bezier(.25,.46,.45,.94)';
+                  card.style.transform = 'none';
+                  card.classList.remove('hover');
+                  card.style.left = centerX + 'px';
+                  card.style.top = centerY + 'px';
+                  card.style.width = cardWidth + 'px';
+                  card.style.height = cardHeight + 'px';
+                }
+              }, cardIndex * 100);
+            });
+            
+            setTimeout(() => {
+              cards.forEach(card => { 
+                card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+                card.classList.remove('jiggle', 'hover');
+              });
+              
+              if (callback) callback();
+            }, cards.length * 100 + 2600);
+          }, 300);
+        }, 800);
+      }
+
+      function performShuffleForGraph(callback = null) {
+	    const n = currentData.length;
+	    const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+	    const newShuffledOutcomes = shuffleArray(outcomeObjects);
+        
+        const cards = cardsLayer.querySelectorAll('.card');
+        const layerRect = cardsLayer.getBoundingClientRect();
+        
+        const isSubsequentShuffle = shuffledOutcomes.length > 0;
+        
+        if (isSubsequentShuffle) {
+          const originalCells = document.querySelectorAll('tbody td:nth-child(2)');
+          const availablePositions = [];
+          currentData.forEach((data, index) => {
+            availablePositions.push({ outcome: data.outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < availablePositions.length; i++) {
+              if (availablePositions[i].outcome === outcomeValue) {
+                targetIdx = availablePositions[i].position;
+                availablePositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = originalCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.transition = 'all 0.6s cubic-bezier(.25,.46,.45,.94)';
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+            }
+          });
+          
+          setTimeout(() => {
+            startGraphShuffle();
+          }, 700);
+        } else {
+          startGraphShuffle();
+        }
+        
+        function startGraphShuffle() {
+          doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback);
+        }
+      }
+
+      function performShuffle(callback = null) {
+		const n = currentData.length;
+		const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+		const newShuffledOutcomes = shuffleArray(outcomeObjects);
+        
+        const cards = cardsLayer.querySelectorAll('.card');
+        const layerRect = cardsLayer.getBoundingClientRect();
+        
+        const isSubsequentShuffle = shuffledOutcomes.length > 0;
+        
+        if (isSubsequentShuffle) {
+          const originalCells = document.querySelectorAll('tbody td:nth-child(2)');
+          const availablePositions = [];
+          currentData.forEach((data, index) => {
+            availablePositions.push({ outcome: data.outcome, position: index });
+          });
+          
+          cards.forEach((card) => {
+            const outcomeValue = parseFloat(card.dataset.outcomeValue);
+            let targetIdx = -1;
+            for (let i = 0; i < availablePositions.length; i++) {
+              if (availablePositions[i].outcome === outcomeValue) {
+                targetIdx = availablePositions[i].position;
+                availablePositions.splice(i, 1);
+                break;
+              }
+            }
+            
+            if (targetIdx >= 0) {
+              const targetCell = originalCells[targetIdx];
+              const cellRect = targetCell.getBoundingClientRect();
+              
+              const cardWidth = 50, cardHeight = 20;
+              const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+              const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+              
+              card.style.transition = 'all 0.6s cubic-bezier(.25,.46,.45,.94)';
+              card.style.left = centerX + 'px';
+              card.style.top = centerY + 'px';
+              card.style.width = cardWidth + 'px';
+              card.style.height = cardHeight + 'px';
+            }
+          });
+          
+          setTimeout(() => {
+            startNormalShuffle();
+          }, 700);
+        } else {
+          startNormalShuffle();
+        }
+        
+        function startNormalShuffle() {
+          doShuffleAnimation(cards, layerRect, newShuffledOutcomes, () => {
+            finishShuffle(callback);
+          });
+        }
+      }
+
+      let shuffleResults = [];
+      let smallGraphCount = 0;
+      let showGraphingMeans = false;
+      let graphingShuffleHistory = [];
+
+      function finishShuffle(callback) {
+        const stats = calculateStats();
+        lastBatchSize = 1;
+        addSampleToHistogram(stats.diff);
+        
+        shuffleResults.push(stats.diff);
+        
+        const shuffleOutput = document.getElementById('shuffleOutput');
+        const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+        
+        if (shuffleOutput || samplingShuffleOutput) {
+          const maxIntegerDigits = Math.max(...shuffleResults.map(result => {
+            const formatted = formatNumber(result);
+            const beforeDecimal = formatted.split('.')[0];
+            return beforeDecimal.replace('-', '').length;
+          }));
+          
+          let outputText = shuffleResults.map((result, index) => {
+            const isRecent = index === shuffleResults.length - 1;
+            const pointer = isRecent ? '► ' : '  ';
+            const formatted = formatNumber(result);
+            const beforeDecimal = formatted.split('.')[0];
+            const afterDecimal = formatted.split('.')[1] || '0';
+            
+            const integerPart = beforeDecimal.replace('-', '');
+            const paddingNeeded = maxIntegerDigits - integerPart.length;
+            const sign = beforeDecimal.startsWith('-') ? '-' : ' ';
+            const padding = ' '.repeat(paddingNeeded);
+            
+            return `${pointer}${sign}${padding}${integerPart}.${afterDecimal}`;
+          }).join('\n');
+          
+          if (shuffleOutput) {
+            shuffleOutput.textContent = outputText;
+            shuffleOutput.style.display = 'block';
+          }
+          if (samplingShuffleOutput) {
+            samplingShuffleOutput.textContent = outputText;
+            samplingShuffleOutput.style.display = 'block';
+          }
+        }
+        
+        if (callback) callback();
+      }
+
+      function regenerateAllGraphingGraphs() {
+        const container = document.getElementById('smallGraphsContainer');
+        container.innerHTML = '';
+        
+        generateOriginalDataGraph();
+        
+        graphingShuffleHistory.forEach((graphInfo) => {
+          generateSmallShuffleGraphWithStoredData(graphInfo);
+        });
+      }
+
+      function generateOriginalDataGraph() {
+        const container = document.getElementById('smallGraphsContainer');
+        
+        const graphDiv = document.createElement('div');
+        graphDiv.style.border = '1px solid #e5e7eb';
+        graphDiv.style.borderRadius = '8px';
+        graphDiv.style.padding = '8px';
+        graphDiv.style.background = 'white';
+        graphDiv.id = 'originalDataGraph';
+        
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '180');
+        svg.setAttribute('viewBox', '0 0 180 150');
+        svg.style.display = 'block';
+        
+        const groupA = currentData.filter(r => r.group === CONFIG.groupAName);
+        const groupB = currentData.filter(r => r.group === CONFIG.groupBName);
+        
+        const svgWidth = 180;
+        const svgHeight = 150;
+        const margin = { top: 20, right: 10, bottom: 25, left: 25 };
+        const plotWidth = svgWidth - margin.left - margin.right;
+        const plotHeight = svgHeight - margin.top - margin.bottom;
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+        svg.appendChild(g);
+        
+        const allOutcomes = currentData.map(d => d.outcome);
+        const dataMin = Math.min(...allOutcomes);
+        const dataMax = Math.max(...allOutcomes);
+        const range = dataMax - dataMin;
+        const padding = range * 0.15;
+        const minY = dataMin - padding;
+        const maxY = dataMax + padding;
+        const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+        
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        yAxis.setAttribute('x1', 0);
+        yAxis.setAttribute('y1', 0);
+        yAxis.setAttribute('x2', 0);
+        yAxis.setAttribute('y2', plotHeight);
+        yAxis.setAttribute('stroke', '#666');
+        yAxis.setAttribute('stroke-width', 1);
+        g.appendChild(yAxis);
+        
+        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        xAxis.setAttribute('x1', 0);
+        xAxis.setAttribute('y1', plotHeight);
+        xAxis.setAttribute('x2', plotWidth);
+        xAxis.setAttribute('y2', plotHeight);
+        xAxis.setAttribute('stroke', '#666');
+        xAxis.setAttribute('stroke-width', 1);
+        g.appendChild(xAxis);
+        
+        const groupAX = plotWidth * 0.25;
+        const groupBX = plotWidth * 0.75;
+        
+        const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelA.setAttribute('x', groupAX);
+        labelA.setAttribute('y', plotHeight + 15);
+        labelA.setAttribute('text-anchor', 'middle');
+        labelA.setAttribute('font-size', '10');
+        labelA.setAttribute('font-weight', 'bold');
+        labelA.setAttribute('fill', '#333');
+        labelA.textContent = CONFIG.groupAName;
+        g.appendChild(labelA);
+        
+        const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelB.setAttribute('x', groupBX);
+        labelB.setAttribute('y', plotHeight + 15);
+        labelB.setAttribute('text-anchor', 'middle');
+        labelB.setAttribute('font-size', '10');
+        labelB.setAttribute('font-weight', 'bold');
+        labelB.setAttribute('fill', '#333');
+        labelB.textContent = CONFIG.groupBName;
+        g.appendChild(labelB);
+        
+        groupA.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', groupAX);
+          circle.setAttribute('cy', yScale(point.outcome));
+          circle.setAttribute('r', 3);
+          circle.setAttribute('fill', 'var(--group-a-dot)');
+          circle.setAttribute('stroke', '#1e40af');
+          circle.setAttribute('stroke-width', 1);
+          circle.setAttribute('opacity', 0.8);
+          g.appendChild(circle);
+        });
+        
+        groupB.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', groupBX);
+          circle.setAttribute('cy', yScale(point.outcome));
+          circle.setAttribute('r', 3);
+          circle.setAttribute('fill', 'var(--group-b-dot)');
+          circle.setAttribute('stroke', '#d97706');
+          circle.setAttribute('stroke-width', 1);
+          circle.setAttribute('opacity', 0.8);
+          g.appendChild(circle);
+        });
+        
+        if (showGraphingMeans) {
+          const meanA = mean(groupA.map(d => d.outcome));
+          const meanB = mean(groupB.map(d => d.outcome));
+          
+          const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          meanLineA.setAttribute('x1', groupAX - 20);
+          meanLineA.setAttribute('y1', yScale(meanA));
+          meanLineA.setAttribute('x2', groupAX + 20);
+          meanLineA.setAttribute('y2', yScale(meanA));
+          meanLineA.setAttribute('stroke', '#000');
+          meanLineA.setAttribute('stroke-width', 2);
+          g.appendChild(meanLineA);
+          
+          const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          meanLineB.setAttribute('x1', groupBX - 20);
+          meanLineB.setAttribute('y1', yScale(meanB));
+          meanLineB.setAttribute('x2', groupBX + 20);
+          meanLineB.setAttribute('y2', yScale(meanB));
+          meanLineB.setAttribute('stroke', '#000');
+          meanLineB.setAttribute('stroke-width', 2);
+          g.appendChild(meanLineB);
+        }
+        
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        title.setAttribute('x', plotWidth / 2);
+        title.setAttribute('y', -5);
+        title.setAttribute('text-anchor', 'middle');
+        title.setAttribute('font-size', '12');
+        title.setAttribute('font-weight', 'bold');
+        title.setAttribute('fill', '#333');
+        title.textContent = 'Data';
+        g.appendChild(title);
+        
+        const meanA = mean(groupA.map(d => d.outcome));
+        const meanB = mean(groupB.map(d => d.outcome));
+        
+        const sortedGroups = [
+          { name: CONFIG.groupAName, mean: meanA },
+          { name: CONFIG.groupBName, mean: meanB }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        const currentB1 = sortedGroups[1].mean - sortedGroups[0].mean;
+        
+        const b1Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        b1Label.setAttribute('x', plotWidth / 2);
+        b1Label.setAttribute('y', plotHeight + 22);
+        b1Label.setAttribute('text-anchor', 'middle');
+        b1Label.setAttribute('font-size', '10');
+        b1Label.setAttribute('font-weight', 'bold');
+        b1Label.setAttribute('fill', '#666');
+        b1Label.textContent = `b₁ = ${formatNumber(currentB1)}`;
+        g.appendChild(b1Label);
+        
+        graphDiv.appendChild(svg);
+        container.appendChild(graphDiv);
+      }
+
+      function generateSmallShuffleGraph() {
+        if (smallGraphCount >= 8) {
+          const container = document.getElementById('smallGraphsContainer');
+          container.innerHTML = '';
+          smallGraphCount = 0;
+          graphingShuffleHistory = [];
+          
+          generateOriginalDataGraph();
+        }
+        
+        let dataToPlot;
+		if (shuffledOutcomes.length > 0) {
+		  dataToPlot = currentData.map((row, index) => ({
+		    group: row.group,
+ 		    outcome: shuffledOutcomes[index].outcome,
+ 		    originalIndex: shuffledOutcomes[index].originalIndex
+	      }));
+        } else {
+          const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+          const newShuffledOutcomes = shuffleArray(outcomeObjects);
+          dataToPlot = currentData.map((row, index) => ({
+            group: row.group,
+            outcome: newShuffledOutcomes[index].outcome,
+            originalIndex: newShuffledOutcomes[index].originalIndex
+          }));
+        }
+        
+        const container = document.getElementById('smallGraphsContainer');
+        const graphDiv = document.createElement('div');
+        graphDiv.style.border = '1px solid #e5e7eb';
+        graphDiv.style.borderRadius = '8px';
+        graphDiv.style.padding = '8px';
+        graphDiv.style.background = 'white';
+        
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '180');
+        svg.setAttribute('viewBox', '0 0 180 150');
+        svg.style.display = 'block';
+        
+        const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
+        const groupB = dataToPlot.filter(r => r.group === CONFIG.groupBName);
+        
+        const svgWidth = 180;
+        const svgHeight = 150;
+        const margin = { top: 20, right: 10, bottom: 25, left: 25 };
+        const plotWidth = svgWidth - margin.left - margin.right;
+        const plotHeight = svgHeight - margin.top - margin.bottom;
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+        svg.appendChild(g);
+        
+        const allOutcomes = dataToPlot.map(d => d.outcome);
+        const dataMin = Math.min(...allOutcomes);
+        const dataMax = Math.max(...allOutcomes);
+        const range = dataMax - dataMin;
+        const padding = range * 0.15;
+        const minY = dataMin - padding;
+        const maxY = dataMax + padding;
+        const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+        
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        yAxis.setAttribute('x1', 0);
+        yAxis.setAttribute('y1', 0);
+        yAxis.setAttribute('x2', 0);
+        yAxis.setAttribute('y2', plotHeight);
+        yAxis.setAttribute('stroke', '#666');
+        yAxis.setAttribute('stroke-width', 1);
+        g.appendChild(yAxis);
+        
+        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        xAxis.setAttribute('x1', 0);
+        xAxis.setAttribute('y1', plotHeight);
+        xAxis.setAttribute('x2', plotWidth);
+        xAxis.setAttribute('y2', plotHeight);
+        xAxis.setAttribute('stroke', '#666');
+        xAxis.setAttribute('stroke-width', 1);
+        g.appendChild(xAxis);
+        
+        const groupAX = plotWidth * 0.25;
+        const groupBX = plotWidth * 0.75;
+        
+        const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelA.setAttribute('x', groupAX);
+        labelA.setAttribute('y', plotHeight + 15);
+        labelA.setAttribute('text-anchor', 'middle');
+        labelA.setAttribute('font-size', '10');
+        labelA.setAttribute('font-weight', 'bold');
+        labelA.setAttribute('fill', '#333');
+        labelA.textContent = CONFIG.groupAName;
+        g.appendChild(labelA);
+        
+        const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelB.setAttribute('x', groupBX);
+        labelB.setAttribute('y', plotHeight + 15);
+        labelB.setAttribute('text-anchor', 'middle');
+        labelB.setAttribute('font-size', '10');
+        labelB.setAttribute('font-weight', 'bold');
+        labelB.setAttribute('fill', '#333');
+        labelB.textContent = CONFIG.groupBName;
+        g.appendChild(labelB);
+        
+        groupA.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', groupAX);
+          circle.setAttribute('cy', yScale(point.outcome));
+          circle.setAttribute('r', 3);
+          
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
+          const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+          circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+          circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+          circle.setAttribute('stroke-width', 1);
+          circle.setAttribute('opacity', 0.8);
+          g.appendChild(circle);
+        });
+        
+        groupB.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', groupBX);
+          circle.setAttribute('cy', yScale(point.outcome));
+          circle.setAttribute('r', 3);
+          
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
+          const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+          circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+          circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+          circle.setAttribute('stroke-width', 1);
+          circle.setAttribute('opacity', 0.8);
+          g.appendChild(circle);
+        });
+        
+        if (showGraphingMeans) {
+          const meanA = mean(groupA.map(d => d.outcome));
+          const meanB = mean(groupB.map(d => d.outcome));
+          
+          const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          meanLineA.setAttribute('x1', groupAX - 20);
+          meanLineA.setAttribute('y1', yScale(meanA));
+          meanLineA.setAttribute('x2', groupAX + 20);
+          meanLineA.setAttribute('y2', yScale(meanA));
+          meanLineA.setAttribute('stroke', '#000');
+          meanLineA.setAttribute('stroke-width', 2);
+          g.appendChild(meanLineA);
+          
+          const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          meanLineB.setAttribute('x1', groupBX - 20);
+          meanLineB.setAttribute('y1', yScale(meanB));
+          meanLineB.setAttribute('x2', groupBX + 20);
+          meanLineB.setAttribute('y2', yScale(meanB));
+          meanLineB.setAttribute('stroke', '#000');
+          meanLineB.setAttribute('stroke-width', 2);
+          g.appendChild(meanLineB);
+        }
+        
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        title.setAttribute('x', plotWidth / 2);
+        title.setAttribute('y', -5);
+        title.setAttribute('text-anchor', 'middle');
+        title.setAttribute('font-size', '12');
+        title.setAttribute('font-weight', 'bold');
+        title.setAttribute('fill', '#333');
+        title.textContent = `Shuffle ${graphingShuffleHistory.length}`;
+        g.appendChild(title);
+        
+        const meanA = mean(groupA.map(d => d.outcome));
+        const meanB = mean(groupB.map(d => d.outcome));
+        
+        const sortedGroups = [
+          { name: CONFIG.groupAName, mean: meanA },
+          { name: CONFIG.groupBName, mean: meanB }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        const currentB1 = sortedGroups[1].mean - sortedGroups[0].mean;
+        
+        const b1Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        b1Label.setAttribute('x', plotWidth / 2);
+        b1Label.setAttribute('y', plotHeight + 22);
+        b1Label.setAttribute('text-anchor', 'middle');
+        b1Label.setAttribute('font-size', '10');
+        b1Label.setAttribute('font-weight', 'bold');
+        b1Label.setAttribute('fill', '#666');
+        b1Label.textContent = `b₁ = ${formatNumber(currentB1)}`;
+        g.appendChild(b1Label);
+        
+        graphDiv.appendChild(svg);
+        container.appendChild(graphDiv);
+      }
+
+      function generateSmallShuffleGraphWithStoredData(graphInfo) {
+        const dataToPlot = graphInfo.data;
+        const storedMeanA = graphInfo.meanA;
+        const storedMeanB = graphInfo.meanB;
+        
+        const container = document.getElementById('smallGraphsContainer');
+        const graphDiv = document.createElement('div');
+        graphDiv.style.border = '1px solid #e5e7eb';
+        graphDiv.style.borderRadius = '8px';
+        graphDiv.style.padding = '8px';
+        graphDiv.style.background = 'white';
+        
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '180');
+        svg.setAttribute('viewBox', '0 0 180 150');
+        svg.style.display = 'block';
+        
+        const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
+        const groupB = dataToPlot.filter(r => r.group === CONFIG.groupBName);
+        
+        const svgWidth = 180;
+        const svgHeight = 150;
+        const margin = { top: 20, right: 10, bottom: 25, left: 25 };
+        const plotWidth = svgWidth - margin.left - margin.right;
+        const plotHeight = svgHeight - margin.top - margin.bottom;
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+        svg.appendChild(g);
+        
+        const allOutcomes = dataToPlot.map(d => d.outcome);
+        const dataMin = Math.min(...allOutcomes);
+        const dataMax = Math.max(...allOutcomes);
+        const range = dataMax - dataMin;
+        const padding = range * 0.15;
+        const minY = dataMin - padding;
+        const maxY = dataMax + padding;
+        const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+        
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        yAxis.setAttribute('x1', 0);
+        yAxis.setAttribute('y1', 0);
+        yAxis.setAttribute('x2', 0);
+        yAxis.setAttribute('y2', plotHeight);
+        yAxis.setAttribute('stroke', '#666');
+        yAxis.setAttribute('stroke-width', 1);
+        g.appendChild(yAxis);
+        
+        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        xAxis.setAttribute('x1', 0);
+        xAxis.setAttribute('y1', plotHeight);
+        xAxis.setAttribute('x2', plotWidth);
+        xAxis.setAttribute('y2', plotHeight);
+        xAxis.setAttribute('stroke', '#666');
+        xAxis.setAttribute('stroke-width', 1);
+        g.appendChild(xAxis);
+        
+        const groupAX = plotWidth * 0.25;
+        const groupBX = plotWidth * 0.75;
+        
+        const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelA.setAttribute('x', groupAX);
+        labelA.setAttribute('y', plotHeight + 15);
+        labelA.setAttribute('text-anchor', 'middle');
+        labelA.setAttribute('font-size', '10');
+        labelA.setAttribute('font-weight', 'bold');
+        labelA.setAttribute('fill', '#333');
+        labelA.textContent = CONFIG.groupAName;
+        g.appendChild(labelA);
+        
+        const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelB.setAttribute('x', groupBX);
+        labelB.setAttribute('y', plotHeight + 15);
+        labelB.setAttribute('text-anchor', 'middle');
+        labelB.setAttribute('font-size', '10');
+        labelB.setAttribute('font-weight', 'bold');
+        labelB.setAttribute('fill', '#333');
+        labelB.textContent = CONFIG.groupBName;
+        g.appendChild(labelB);
+        
+        groupA.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', groupAX);
+          circle.setAttribute('cy', yScale(point.outcome));
+          circle.setAttribute('r', 3);
+          
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
+          const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+          circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+          circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+          circle.setAttribute('stroke-width', 1);
+          circle.setAttribute('opacity', 0.8);
+          g.appendChild(circle);
+        });
+        
+        groupB.forEach((point) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', groupBX);
+          circle.setAttribute('cy', yScale(point.outcome));
+          circle.setAttribute('r', 3);
+          
+          const originalGroup = outcomeOrigins.get(point.originalIndex);
+          const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+          circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+          circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+          circle.setAttribute('stroke-width', 1);
+          circle.setAttribute('opacity', 0.8);
+          g.appendChild(circle);
+        });
+        
+        if (showGraphingMeans) {
+          const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          meanLineA.setAttribute('x1', groupAX - 20);
+          meanLineA.setAttribute('y1', yScale(storedMeanA));
+          meanLineA.setAttribute('x2', groupAX + 20);
+          meanLineA.setAttribute('y2', yScale(storedMeanA));
+          meanLineA.setAttribute('stroke', '#000');
+          meanLineA.setAttribute('stroke-width', 2);
+          g.appendChild(meanLineA);
+          
+          const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          meanLineB.setAttribute('x1', groupBX - 20);
+          meanLineB.setAttribute('y1', yScale(storedMeanB));
+          meanLineB.setAttribute('x2', groupBX + 20);
+          meanLineB.setAttribute('y2', yScale(storedMeanB));
+          meanLineB.setAttribute('stroke', '#000');
+          meanLineB.setAttribute('stroke-width', 2);
+          g.appendChild(meanLineB);
+        }
+        
+        const shuffleNumber = graphInfo.shuffleNumber;
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        title.setAttribute('x', plotWidth / 2);
+        title.setAttribute('y', -5);
+        title.setAttribute('text-anchor', 'middle');
+        title.setAttribute('font-size', '12');
+        title.setAttribute('font-weight', 'bold');
+        title.setAttribute('fill', '#333');
+        title.textContent = `Shuffle ${shuffleNumber}`;
+        g.appendChild(title);
+        
+        const sortedGroups = [
+          { name: CONFIG.groupAName, mean: storedMeanA },
+          { name: CONFIG.groupBName, mean: storedMeanB }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        const currentB1 = sortedGroups[1].mean - sortedGroups[0].mean;
+        
+        const b1Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        b1Label.setAttribute('x', plotWidth / 2);
+        b1Label.setAttribute('y', plotHeight + 22);
+        b1Label.setAttribute('text-anchor', 'middle');
+        b1Label.setAttribute('font-size', '10');
+        b1Label.setAttribute('font-weight', 'bold');
+        b1Label.setAttribute('fill', '#666');
+        b1Label.textContent = `b₁ = ${formatNumber(currentB1)}`;
+        g.appendChild(b1Label);
+        
+        graphDiv.appendChild(svg);
+        container.appendChild(graphDiv);
+      }
+
+      function setupEventHandlers() {
+        const sectionHeaders = document.querySelectorAll('.section-header');
+        sectionHeaders.forEach(header => {
+          header.addEventListener('click', () => {
+            const targetId = header.dataset.target;
+            const content = document.getElementById(targetId);
+            const caret = header.querySelector('.caret');
+            
+            if (content.classList.contains('collapsed')) {
+              content.classList.remove('collapsed');
+              caret.classList.add('expanded');
+            } else {
+              content.classList.add('collapsed');
+              caret.classList.remove('expanded');
+            }
+          });
+        });
+
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            tab.classList.add('active');
+            
+            const tabName = tab.dataset.tab;
+            const content = document.getElementById(tabName + '-content');
+            if (content) {
+              content.classList.add('active');
+            }
+          });
+        });
+
+        document.getElementById('shuffleBtn').addEventListener('click', () => {
+          performShuffle();
+        });
+
+        document.getElementById('samplingShuffleBtn').addEventListener('click', () => {
+          performShuffle();
+        });
+
+        document.getElementById('clearPlotBtn').addEventListener('click', () => {
+          const output = document.getElementById('plotOutput');
+          if (output) output.style.display = 'none';
+        });
+
+        document.getElementById('clearModelBtn').addEventListener('click', () => {
+          const output = document.getElementById('rOutput');
+          if (output) output.style.display = 'none';
+        });
+
+        document.getElementById('clearB1Btn').addEventListener('click', () => {
+          const output = document.getElementById('b1Output');
+          if (output) output.style.display = 'none';
+        });
+
+        document.getElementById('clearShuffleBtn').addEventListener('click', () => {
+          clearShuffleData();
+        });
+
+        const clearShufflePlotBtn = document.getElementById('clearShufflePlotBtn');
+        if (clearShufflePlotBtn) {
+          clearShufflePlotBtn.addEventListener('click', () => {
+            const output = document.getElementById('shufflePlotOutput');
+            if (output) output.style.display = 'none';
+            
+            clearShuffleData();
+          });
+        }
+        
+        const toggleShuffleMeansBtn = document.getElementById('toggleShuffleMeansBtn');
+        if (toggleShuffleMeansBtn) {
+          toggleShuffleMeansBtn.addEventListener('click', () => {
+            showShuffleMeans = !showShuffleMeans;
+            toggleShuffleMeansBtn.textContent = showShuffleMeans ? 'Hide Means' : 'Show Means';
+            generateShuffleScatterPlot();
+          });
+        }
+
+        document.getElementById('clearSamplingBtn').addEventListener('click', () => {
+          clearShuffleData();
+        });
+
+        document.getElementById('runGraphingPlotBtn').addEventListener('click', () => {
+          if (graphingShuffleHistory.length >= 7) {
+            const container = document.getElementById('smallGraphsContainer');
+            container.innerHTML = '';
+            graphingShuffleHistory.length = 0;
+            
+            shuffledOutcomes = [];
+            const cards = cardsLayer.querySelectorAll('.card');
+            cards.forEach(card => {
+              card.classList.remove('show-border', 'jiggle', 'hover');
+              card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+            });
+            repositionCards();
+            
+            generateOriginalDataGraph();
+            
+            return;
+          }
+          
+		  performShuffleForGraph(() => {
+            const dataToPlot = currentData.map((row, index) => ({
+              group: row.group,
+              outcome: shuffledOutcomes[index].outcome,
+              originalIndex: shuffledOutcomes[index].originalIndex
+            }));
+            
+            const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
+            const groupB = dataToPlot.filter(r => r.group === CONFIG.groupBName);
+            const meanA = mean(groupA.map(d => d.outcome));
+            const meanB = mean(groupB.map(d => d.outcome));
+            
+            const shuffleNumber = graphingShuffleHistory.length + 1;
+            
+            graphingShuffleHistory.push({
+              data: dataToPlot,
+              meanA: meanA,
+              meanB: meanB,
+              shuffleNumber: shuffleNumber
+            });
+            
+            generateSmallShuffleGraph();
+          });
+        });
+
+        document.getElementById('clearGraphingPlotsBtn').addEventListener('click', () => {
+          const container = document.getElementById('smallGraphsContainer');
+          container.innerHTML = '';
+          graphingShuffleHistory.length = 0;
+          
+          shuffledOutcomes = [];
+          
+          const cards = cardsLayer.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('show-border', 'jiggle', 'hover');
+            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+          });
+          
+          setTimeout(() => {
+            repositionCards();
+          }, 50);
+          
+          generateOriginalDataGraph();
+        });
+
+        document.getElementById('run5xBtn').addEventListener('click', () => {
+          runMultipleShuffles(5);
+        });
+        
+        document.getElementById('toggleGraphingMeansBtn').addEventListener('click', () => {
+          showGraphingMeans = !showGraphingMeans;
+          const btn = document.getElementById('toggleGraphingMeansBtn');
+          btn.textContent = showGraphingMeans ? 'Hide Means' : 'Show Means';
+          
+          regenerateAllGraphingGraphs();
+        });
+
+        function runMultipleShuffles(count) {
+          const run5xBtn = document.getElementById('run5xBtn');
+          run5xBtn.disabled = true;
+          run5xBtn.textContent = 'Running...';
+          lastBatchSize = 0;
+          
+          let completed = 0;
+          
+          function runBatch() {
+            const batchSize = Math.min(10, count - completed);
+            
+			for (let i = 0; i < batchSize; i++) {
+ 			  const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+ 			  const newShuffledOutcomes = shuffleArray(outcomeObjects);
+  
+ 			  const tempGroupData = [];
+			  currentData.forEach((row, index) => {
+			    tempGroupData.push({
+ 			      group: row.group,
+ 			      outcome: newShuffledOutcomes[index].outcome
+ 			    });
+			  });
+              
+              const groupA = tempGroupData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+              const groupB = tempGroupData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+              const meanA = mean(groupA);
+              const meanB = mean(groupB);
+              
+              const sortedGroups = [
+                { name: CONFIG.groupAName, mean: meanA },
+                { name: CONFIG.groupBName, mean: meanB }
+              ].sort((a, b) => a.name.localeCompare(b.name));
+              
+              const diff = sortedGroups[1].mean - sortedGroups[0].mean;
+              
+              addSampleToHistogram(diff);
+              shuffleResults.push(diff);
+            }
+            
+            completed += batchSize;
+            
+            if (completed < count) {
+              setTimeout(runBatch, 10);
+            } else {
+              run5xBtn.disabled = false;
+              run5xBtn.textContent = 'Run 5x';
+              
+              updateShuffleOutput();
+            }
+          }
+          
+          runBatch();
+        }
+        
+        function updateShuffleOutput() {
+          const shuffleOutput = document.getElementById('shuffleOutput');
+          const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+          
+          if ((shuffleOutput && shuffleOutput.style.display !== 'none') || 
+              (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none')) {
+            
+            const maxIntegerDigits = Math.max(...shuffleResults.map(result => {
+              const formatted = formatNumber(result);
+              const beforeDecimal = formatted.split('.')[0];
+              return beforeDecimal.replace('-', '').length;
+            }));
+            
+            const recentResults = shuffleResults.slice(-10);
+            let outputText = recentResults.map((result, index) => {
+              const globalIndex = shuffleResults.length - recentResults.length + index;
+              const isRecent = globalIndex === shuffleResults.length - 1;
+              const pointer = isRecent ? '► ' : '  ';
+              const formatted = formatNumber(result);
+              const beforeDecimal = formatted.split('.')[0];
+              const afterDecimal = formatted.split('.')[1] || '0';
+              
+              const integerPart = beforeDecimal.replace('-', '');
+              const paddingNeeded = maxIntegerDigits - integerPart.length;
+              const sign = beforeDecimal.startsWith('-') ? '-' : ' ';
+              const padding = ' '.repeat(paddingNeeded);
+              
+              return `${pointer}${sign}${padding}${integerPart}.${afterDecimal}`;
+            }).join('\n');
+            
+            if (shuffleResults.length > 10) {
+              outputText = `... (showing last 10 of ${shuffleResults.length} results)\n` + outputText;
+            }
+            
+            if (shuffleOutput && shuffleOutput.style.display !== 'none') {
+              shuffleOutput.textContent = outputText;
+            }
+            if (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none') {
+              samplingShuffleOutput.textContent = outputText;
+            }
+          }
+        }
+
+        function clearShuffleData() {
+          const shuffleOutput = document.getElementById('shuffleOutput');
+          const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
+          if (shuffleOutput) shuffleOutput.style.display = 'none';
+          if (samplingShuffleOutput) samplingShuffleOutput.style.display = 'none';
+          
+          shuffleResults = [];
+          diffHistory = [];
+          shuffledOutcomes = [];
+          
+          const cards = cardsLayer.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('show-border', 'jiggle', 'hover');
+            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+          });
+          
+          repositionCards();
+          
+          renderHistogram();
+        }
+
+        const runShufflePlotBtn = document.getElementById('runShufflePlotBtn');
+        if (runShufflePlotBtn) {
+          runShufflePlotBtn.addEventListener('click', () => {
+            performShuffleForGraph(() => {
+              generateShuffleScatterPlot();
+            });
+          });
+        }
+        
+        function generateShuffleScatterPlot() {
+          const output = document.getElementById('shufflePlotOutput');
+          const svg = document.getElementById('shuffleScatterSvg');
+          
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+          
+		  let dataToPlot;
+		  if (shuffledOutcomes.length > 0) {
+		    dataToPlot = currentData.map((row, index) => ({
+ 		      group: row.group,
+ 		      outcome: shuffledOutcomes[index].outcome,
+		      originalIndex: shuffledOutcomes[index].originalIndex
+		    }));
+		  } else {
+		    const outcomeObjects = currentData.map(r => ({ outcome: r.outcome, originalIndex: r.originalIndex }));
+  		    const newShuffledOutcomes = shuffleArray(outcomeObjects);
+ 		    dataToPlot = currentData.map((row, index) => ({
+		      group: row.group,
+		      outcome: newShuffledOutcomes[index].outcome,
+ 		      originalIndex: newShuffledOutcomes[index].originalIndex
+		    }));
+		  }
+          
+          const groupA = dataToPlot.filter(r => r.group === CONFIG.groupAName);
+          const groupB = dataToPlot.filter(r => r.group === CONFIG.groupBName);
+          
+          const svgWidth = 245;
+          const svgHeight = 240;
+          const margin = { top: 30, right: 30, bottom: 40, left: -65 };
+          const plotWidth = svgWidth - margin.left - margin.right;
+          const plotHeight = svgHeight - margin.top - margin.bottom;
+          
+          svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+          
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+          svg.appendChild(g);
+          
+          const allOutcomes = dataToPlot.map(d => d.outcome);
+          const dataMin = Math.min(...allOutcomes);
+          const dataMax = Math.max(...allOutcomes);
+          const range = dataMax - dataMin;
+          const padding = range * 0.15;
+          const minY = dataMin - padding;
+          const maxY = dataMax + padding;
+          const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+          
+          const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          yAxis.setAttribute('x1', 0);
+          yAxis.setAttribute('y1', 0);
+          yAxis.setAttribute('x2', 0);
+          yAxis.setAttribute('y2', plotHeight);
+          yAxis.setAttribute('stroke', '#666');
+          yAxis.setAttribute('stroke-width', 2);
+          g.appendChild(yAxis);
+          
+          const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          xAxis.setAttribute('x1', 0);
+          xAxis.setAttribute('y1', plotHeight);
+          xAxis.setAttribute('x2', plotWidth);
+          xAxis.setAttribute('y2', plotHeight);
+          xAxis.setAttribute('stroke', '#666');
+          xAxis.setAttribute('stroke-width', 2);
+          g.appendChild(xAxis);
+          
+          const yRange = maxY - minY;
+          const yStep = Math.ceil(yRange / 4);
+          const yTicks = [];
+          const startTick = Math.ceil(minY / yStep) * yStep;
+          for (let i = startTick; i <= maxY; i += yStep) {
+            yTicks.push(i);
+          }
+          
+          yTicks.forEach(tick => {
+            const y = yScale(tick);
+            const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tickLine.setAttribute('x1', -5);
+            tickLine.setAttribute('y1', y);
+            tickLine.setAttribute('x2', 0);
+            tickLine.setAttribute('y2', y);
+            tickLine.setAttribute('stroke', '#666');
+            g.appendChild(tickLine);
+            
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', -10);
+            label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end');
+            label.setAttribute('font-size', '14');
+            label.setAttribute('font-weight', 'normal');
+            label.setAttribute('fill', '#333');
+            label.textContent = tick;
+            g.appendChild(label);
+          });
+          
+          const groupAX = plotWidth * 0.25;
+          const groupBX = plotWidth * 0.75;
+          
+          const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelA.setAttribute('x', groupAX);
+          labelA.setAttribute('y', plotHeight + 25);
+          labelA.setAttribute('text-anchor', 'middle');
+          labelA.setAttribute('font-size', '18');
+          labelA.setAttribute('font-weight', 'bold');
+          labelA.setAttribute('fill', '#333');
+          labelA.textContent = CONFIG.groupAName;
+          g.appendChild(labelA);
+          
+          const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelB.setAttribute('x', groupBX);
+          labelB.setAttribute('y', plotHeight + 25);
+          labelB.setAttribute('text-anchor', 'middle');
+          labelB.setAttribute('font-size', '18');
+          labelB.setAttribute('font-weight', 'bold');
+          labelB.setAttribute('fill', '#333');
+          labelB.textContent = CONFIG.groupBName;
+          g.appendChild(labelB);
+          
+          groupA.forEach((point) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupAX);
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            
+            const originalGroup = outcomeOrigins.get(point.originalIndex);
+            const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+            circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+            circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          groupB.forEach((point) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupBX);
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            
+            const originalGroup = outcomeOrigins.get(point.originalIndex);
+            const isOriginalGroupA = originalGroup === CONFIG.groupAName;
+            circle.setAttribute('fill', isOriginalGroupA ? 'var(--group-a-dot)' : 'var(--group-b-dot)');
+            circle.setAttribute('stroke', isOriginalGroupA ? '#1e40af' : '#d97706');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          if (showShuffleMeans) {
+            const meanA = mean(groupA.map(d => d.outcome));
+            const meanB = mean(groupB.map(d => d.outcome));
+            
+            const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineA.setAttribute('x1', groupAX - 30);
+            meanLineA.setAttribute('y1', yScale(meanA));
+            meanLineA.setAttribute('x2', groupAX + 30);
+            meanLineA.setAttribute('y2', yScale(meanA));
+            meanLineA.setAttribute('stroke', '#000');
+            meanLineA.setAttribute('stroke-width', 3);
+            g.appendChild(meanLineA);
+            
+            const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineB.setAttribute('x1', groupBX - 30);
+            meanLineB.setAttribute('y1', yScale(meanB));
+            meanLineB.setAttribute('x2', groupBX + 30);
+            meanLineB.setAttribute('y2', yScale(meanB));
+            meanLineB.setAttribute('stroke', '#000');
+            meanLineB.setAttribute('stroke-width', 3);
+            g.appendChild(meanLineB);
+          }
+          
+          const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          title.setAttribute('x', plotWidth / 2);
+          title.setAttribute('y', -10);
+          title.setAttribute('text-anchor', 'middle');
+          title.setAttribute('font-size', '20');
+          title.setAttribute('font-weight', 'bold');
+          title.setAttribute('fill', '#333');
+          title.textContent = `${CONFIG.outcomeName}_shuf by ${CONFIG.groupName}`;
+          g.appendChild(title);
+          
+          const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          yLabel.setAttribute('x', -35);
+          yLabel.setAttribute('y', plotHeight / 2);
+          yLabel.setAttribute('text-anchor', 'middle');
+          yLabel.setAttribute('font-size', '18');
+          yLabel.setAttribute('font-weight', 'bold');
+          yLabel.setAttribute('fill', '#666');
+          yLabel.setAttribute('transform', `rotate(-90, -35, ${plotHeight / 2})`);
+          yLabel.textContent = CONFIG.outcomeName;
+          g.appendChild(yLabel);
+          
+          output.style.display = 'block';
+        }
+
+        const runModelBtn = document.getElementById('runModelBtn');
+        const runB1Btn = document.getElementById('runB1Btn');
+        const runPlotBtn = document.getElementById('runPlotBtn');
+        
+        let showMeans = false;
+        let showShuffleMeans = false;
+        let currentPlotData = null;
+        
+        if (runModelBtn) {
+          runModelBtn.addEventListener('click', () => {
+            showROutput(`lm(${CONFIG.outcomeName}~${CONFIG.groupName}, data=df)`);
+          });
+        }
+        
+        if (runB1Btn) {
+          runB1Btn.addEventListener('click', () => {
+            const output = document.getElementById('b1Output');
+            
+            const groupA = currentData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+            const groupB = currentData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+            const meanA = mean(groupA);
+            const meanB = mean(groupB);
+            
+            const sortedGroups = [
+              { name: CONFIG.groupAName, mean: meanA },
+              { name: CONFIG.groupBName, mean: meanB }
+            ].sort((a, b) => a.name.localeCompare(b.name));
+            
+            const b1 = sortedGroups[1].mean - sortedGroups[0].mean;
+            
+            if (output) {
+              output.textContent = formatNumber(b1);
+              output.style.display = 'block';
+            }
+          });
+        }
+        
+        if (runPlotBtn) {
+          runPlotBtn.addEventListener('click', () => {
+            generateScatterPlot();
+          });
+        }
+        
+        const toggleMeansBtn = document.getElementById('toggleMeansBtn');
+        if (toggleMeansBtn) {
+          toggleMeansBtn.addEventListener('click', () => {
+            showMeans = !showMeans;
+            toggleMeansBtn.textContent = showMeans ? 'Hide Means' : 'Show Means';
+            generateScatterPlot();
+          });
+        }
+        
+        function showROutput(command) {
+          const output = document.getElementById('rOutput');
+          
+          const groupA = currentData.filter(r => r.group === CONFIG.groupAName).map(r => r.outcome);
+          const groupB = currentData.filter(r => r.group === CONFIG.groupBName).map(r => r.outcome);
+          const meanA = mean(groupA);
+          const meanB = mean(groupB);
+          
+          const sortedGroups = [
+            { name: CONFIG.groupAName, mean: meanA },
+            { name: CONFIG.groupBName, mean: meanB }
+          ].sort((a, b) => a.name.localeCompare(b.name));
+          
+          const b0 = sortedGroups[0].mean;
+          const b1 = sortedGroups[1].mean - sortedGroups[0].mean;
+          
+          let outputText;
+          if (command.toLowerCase().startsWith('lm(')) {
+            outputText = `Call:
+lm(formula = ${CONFIG.outcomeName} ~ ${CONFIG.groupName})
+
+Coefficients:
+            Estimate
+(Intercept)   ${formatNumber(b0)}
+${sortedGroups[1].name.padEnd(11)} ${formatNumber(b1)}`;
+          } else {
+            outputText = `${formatNumber(b1)}`;
+          }
+          
+          output.textContent = outputText;
+          output.style.display = 'block';
+        }
+        
+        function generateScatterPlot() {
+          const output = document.getElementById('plotOutput');
+          const svg = document.getElementById('scatterSvg');
+          
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+          
+          const groupA = currentData.filter(r => r.group === CONFIG.groupAName);
+          const groupB = currentData.filter(r => r.group === CONFIG.groupBName);
+          
+          currentPlotData = { groupA, groupB };
+          
+          const svgWidth = 245;
+          const svgHeight = 240;
+          const margin = { top: 30, right: 30, bottom: 40, left: -65 };
+          const plotWidth = svgWidth - margin.left - margin.right;
+          const plotHeight = svgHeight - margin.top - margin.bottom;
+          
+          svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+          
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${margin.left},${margin.top})`);
+          svg.appendChild(g);
+          
+          const allOutcomes = currentData.map(d => d.outcome);
+          const dataMin = Math.min(...allOutcomes);
+          const dataMax = Math.max(...allOutcomes);
+          const range = dataMax - dataMin;
+          const padding = range * 0.15;
+          const minY = dataMin - padding;
+          const maxY = dataMax + padding;
+          const yScale = (value) => plotHeight - ((value - minY) / (maxY - minY)) * plotHeight;
+          
+          const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          yAxis.setAttribute('x1', 0);
+          yAxis.setAttribute('y1', 0);
+          yAxis.setAttribute('x2', 0);
+          yAxis.setAttribute('y2', plotHeight);
+          yAxis.setAttribute('stroke', '#666');
+          yAxis.setAttribute('stroke-width', 2);
+          g.appendChild(yAxis);
+          
+          const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          xAxis.setAttribute('x1', 0);
+          xAxis.setAttribute('y1', plotHeight);
+          xAxis.setAttribute('x2', plotWidth);
+          xAxis.setAttribute('y2', plotHeight);
+          xAxis.setAttribute('stroke', '#666');
+          xAxis.setAttribute('stroke-width', 2);
+          g.appendChild(xAxis);
+          
+          const yRange = maxY - minY;
+          const yStep = Math.ceil(yRange / 4);
+          const yTicks = [];
+          
+          const startTick = Math.ceil(minY / yStep) * yStep;
+          for (let i = startTick; i <= maxY; i += yStep) {
+            yTicks.push(i);
+          }
+          
+          yTicks.forEach(tick => {
+            const y = yScale(tick);
+            
+            const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tickLine.setAttribute('x1', -5);
+            tickLine.setAttribute('y1', y);
+            tickLine.setAttribute('x2', 0);
+            tickLine.setAttribute('y2', y);
+            tickLine.setAttribute('stroke', '#666');
+            g.appendChild(tickLine);
+            
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', -10);
+            label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end');
+            label.setAttribute('font-size', '14');
+            label.setAttribute('font-weight', 'normal');
+            label.setAttribute('fill', '#333');
+            label.textContent = tick;
+            g.appendChild(label);
+          });
+          
+          const groupAX = plotWidth * 0.25;
+          const groupBX = plotWidth * 0.75;
+          
+          const labelA = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelA.setAttribute('x', groupAX);
+          labelA.setAttribute('y', plotHeight + 25);
+          labelA.setAttribute('text-anchor', 'middle');
+          labelA.setAttribute('font-size', '18');
+          labelA.setAttribute('font-weight', 'bold');
+          labelA.setAttribute('fill', '#333');
+          labelA.textContent = CONFIG.groupAName;
+          g.appendChild(labelA);
+          
+          const labelB = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelB.setAttribute('x', groupBX);
+          labelB.setAttribute('y', plotHeight + 25);
+          labelB.setAttribute('text-anchor', 'middle');
+          labelB.setAttribute('font-size', '18');
+          labelB.setAttribute('font-weight', 'bold');
+          labelB.setAttribute('fill', '#333');
+          labelB.textContent = CONFIG.groupBName;
+          g.appendChild(labelB);
+          
+          groupA.forEach((point, index) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupAX);
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            circle.setAttribute('fill', 'var(--group-a-dot)');
+            circle.setAttribute('stroke', '#1e40af');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          groupB.forEach((point, index) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', groupBX);
+            circle.setAttribute('cy', yScale(point.outcome));
+            circle.setAttribute('r', 5);
+            circle.setAttribute('fill', 'var(--group-b-dot)');
+            circle.setAttribute('stroke', '#d97706');
+            circle.setAttribute('stroke-width', 1);
+            circle.setAttribute('opacity', 0.8);
+            g.appendChild(circle);
+          });
+          
+          if (showMeans && currentPlotData) {
+            const meanA = mean(groupA.map(d => d.outcome));
+            const meanB = mean(groupB.map(d => d.outcome));
+            
+            const meanLineA = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineA.setAttribute('x1', groupAX - 30);
+            meanLineA.setAttribute('y1', yScale(meanA));
+            meanLineA.setAttribute('x2', groupAX + 30);
+            meanLineA.setAttribute('y2', yScale(meanA));
+            meanLineA.setAttribute('stroke', '#000');
+            meanLineA.setAttribute('stroke-width', 3);
+            meanLineA.setAttribute('class', 'mean-line');
+            g.appendChild(meanLineA);
+            
+            const meanLineB = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLineB.setAttribute('x1', groupBX - 30);
+            meanLineB.setAttribute('y1', yScale(meanB));
+            meanLineB.setAttribute('x2', groupBX + 30);
+            meanLineB.setAttribute('y2', yScale(meanB));
+            meanLineB.setAttribute('stroke', '#000');
+            meanLineB.setAttribute('stroke-width', 3);
+            meanLineB.setAttribute('class', 'mean-line');
+            g.appendChild(meanLineB);
+          }
+          
+          const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          title.setAttribute('x', plotWidth / 2);
+          title.setAttribute('y', -10);
+          title.setAttribute('text-anchor', 'middle');
+          title.setAttribute('font-size', '20');
+          title.setAttribute('font-weight', 'bold');
+          title.setAttribute('fill', '#333');
+          title.textContent = `${CONFIG.outcomeName} by ${CONFIG.groupName}`;
+          g.appendChild(title);
+          
+          const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          yLabel.setAttribute('x', -35);
+          yLabel.setAttribute('y', plotHeight / 2);
+          yLabel.setAttribute('text-anchor', 'middle');
+          yLabel.setAttribute('font-size', '18');
+          yLabel.setAttribute('font-weight', 'bold');
+          yLabel.setAttribute('fill', '#666');
+          yLabel.setAttribute('transform', `rotate(-90, -35, ${plotHeight / 2})`);
+          yLabel.textContent = CONFIG.outcomeName;
+          g.appendChild(yLabel);
+          
+          output.style.display = 'block';
+        }
+
+        window.addEventListener('resize', () => {
+          if (cardsLayer && cardsLayer.childElementCount > 0) repositionCards();
+        });
+      }
+
+      function initialize() {
+        getDOMRefs();
+        
+        const tabMapping = {
+          1: { tab: 'graphing', content: 'graphing-content', title: 'Graphing Shuffles' },
+          2: { tab: 'model', content: 'model-content', title: 'A Two-Group Model: <span class="math">Y<sub>i</sub> = b<sub>0</sub> + b<sub>1</sub>X<sub>i</sub> + e<sub>i</sub></span>' },
+          3: { tab: 'shuffle', content: 'shuffle-content', title: 'Simulating a World Where <span class="math">β<sub>1</sub></span> is 0' },
+          4: { tab: 'sampling', content: 'sampling-content', title: 'A Sampling Distribution of <span class="math">b<sub>1</sub></span> Assuming <span class="math">β<sub>1</sub></span>=0' }
+        };
+        
+        Object.keys(tabMapping).forEach(tabNum => {
+          const tabNumber = parseInt(tabNum);
+          const { tab, content } = tabMapping[tabNum];
+          
+          const tabElement = document.querySelector(`[data-tab="${tab}"]`);
+          const contentElement = document.getElementById(content);
+          
+          if (!visibleTabs.includes(tabNumber)) {
+            if (tabElement) tabElement.style.display = 'none';
+            if (contentElement) contentElement.style.display = 'none';
+          } else {
+            if (tabElement) tabElement.style.display = '';
+            if (contentElement) contentElement.style.display = '';
+          }
+        });
+        
+        if (visibleTabs.length === 1) {
+          const tabsContainer = document.querySelector('.tabs-container');
+          if (tabsContainer) tabsContainer.style.display = 'none';
+          
+          const singleTabNumber = visibleTabs[0];
+          const singleTabInfo = tabMapping[singleTabNumber];
+          
+          if (singleTabInfo) {
+            const contentElement = document.getElementById(singleTabInfo.content);
+            if (contentElement) {
+              const internalTitle = contentElement.querySelector('.tab-title');
+              if (internalTitle) internalTitle.style.display = 'none';
+              
+              const topTitle = document.createElement('div');
+              topTitle.className = 'tab-title';
+              topTitle.style.margin = '16px 0 20px 0';
+              topTitle.innerHTML = singleTabInfo.title;
+              
+              const rightColumn = document.querySelector('.right-column');
+              if (rightColumn) {
+                rightColumn.insertBefore(topTitle, rightColumn.firstChild);
+              }
+            }
+          }
+        }
+        
+        const firstVisibleTab = Math.min(...visibleTabs);
+        const firstTabInfo = tabMapping[firstVisibleTab];
+        
+        if (firstTabInfo && visibleTabs.length > 1) {
+          document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+          
+          const firstTabElement = document.querySelector(`[data-tab="${firstTabInfo.tab}"]`);
+          const firstContentElement = document.getElementById(firstTabInfo.content);
+          
+          if (firstTabElement) firstTabElement.classList.add('active');
+          if (firstContentElement) firstContentElement.classList.add('active');
+        } else if (visibleTabs.length === 1) {
+          const singleTabInfo = tabMapping[visibleTabs[0]];
+          const singleContentElement = document.getElementById(singleTabInfo.content);
+          if (singleContentElement) {
+            singleContentElement.classList.add('active');
+            singleContentElement.style.display = 'block';
+          }
+        }
+        
+        document.getElementById('groupHeader').textContent = CONFIG.groupName;
+        document.getElementById('outcomeHeader').textContent = CONFIG.outcomeName;
+        document.getElementById('shuffledHeader').textContent = CONFIG.outcomeName + '_shuf';
+        document.getElementById('graphingPlotCodeBlock').innerHTML =
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
+          `gf_point(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('codeBlock').innerHTML =
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
+          `b1(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('samplingCodeBlock').innerHTML =
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
+          `b1(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('modelCodeBlock').innerHTML = 
+          `lm(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('shufflePlotCodeBlock').innerHTML =
+          `df<span class="lit-dollar">$</span>${CONFIG.outcomeName}_shuf &lt;- shuffle(df<span class="lit-dollar">$</span>${CONFIG.outcomeName})\n` +
+          `gf_point(${CONFIG.outcomeName}_shuf ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('b1CodeBlock').innerHTML = 
+          `b1(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
+        document.getElementById('plotCodeBlock').innerHTML = 
+          `gf_point(${CONFIG.outcomeName} ~ ${CONFIG.groupName}, data=df)`;
+        
+        drawTable();
+        calculateStats();
+        createCards();
+        setupEventHandlers();
+
+        generateOriginalDataGraph();
+
+        const nA = currentData.filter(r=>r.group===CONFIG.groupAName).length;
+        const nB = currentData.filter(r=>r.group===CONFIG.groupBName).length;
+        const allVals = currentData.map(r=>r.outcome);
+        histConfig = computeFixedXAxis(allVals, nA, nB);
+
+        renderHistogram();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+      } else {
+        initialize();
+      }
+    })();
+  </script>
+</body>
+</html>
