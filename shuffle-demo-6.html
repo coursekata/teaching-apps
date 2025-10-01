@@ -535,13 +535,17 @@ gf_point(Score_shuf ~ Condition, data=df)</div>
 b1(Score_shuf~Condition, data=df)</div>
                         <div class="button-stack">
                           <button id="shuffleBtn" class="primary run-btn">Run</button>
-                          <button id="clearShuffleBtn" class="clear">Clear</button>
+                          <button id="shuffleRun5xBtn" class="clear">Run 5x</button>
                         </div>
                       </div>
                     </div>
                     
                     <div id="shuffleOutput" class="r-output" style="display: none; margin-top: 16px;">
                       Waiting for shuffle...
+                    </div>
+                    
+                    <div style="display: flex; justify-content: center; margin-top: 12px;">
+                      <button id="clearShuffleBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
                     </div>
                   </div>
                 </div>
@@ -1051,76 +1055,213 @@ b1(Score_shuf~Condition, data=df)</div>
         renderHistogram();
       }
 
-      function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
+function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
         cards.forEach(card => { card.classList.add('show-border', 'jiggle'); });
 
         setTimeout(() => {
           cards.forEach(card => card.classList.remove('jiggle'));
           const tableCenter = { x: layerRect.width / 2, y: layerRect.height / 2 };
           
+         // Gather cards to center in a loose pile
           setTimeout(() => {
             cards.forEach((card, i) => {
               card.classList.add('hover');
-              const angle = (i / cards.length) * 2 * Math.PI;
-              const r = 25;
-              card.style.left = (tableCenter.x + Math.cos(angle) * r - 25) + 'px';
-              card.style.top  = (tableCenter.y + Math.sin(angle) * r - 10) + 'px';
-              card.style.transform = `translateZ(50px) scale(1.05) rotate(${Math.random() * 360}deg)`;
+              const wobbleX = (Math.random() - 0.5) * 100;
+              const wobbleY = (Math.random() - 0.5) * 100;
+              card.style.left = (tableCenter.x - 25 + wobbleX) + 'px';
+              card.style.top  = (tableCenter.y - 10 + wobbleY) + 'px';
+              card.style.transform = `translateZ(50px) scale(1.05) rotate(${(Math.random() - 0.5) * 30}deg)`;
             });
           }, 50);
 
+          // Create hand elements
+          const hand1 = document.createElement('div');
+          hand1.innerHTML = '🖐️';
+          hand1.style.position = 'absolute';
+          hand1.style.fontSize = '55px';
+          hand1.style.pointerEvents = 'none';
+          hand1.style.zIndex = '1000';
+          hand1.style.transition = 'all 0.4s ease';
+          hand1.style.opacity = '0';
+          cardsLayer.appendChild(hand1);
+          
+          const hand2 = document.createElement('div');
+          hand2.innerHTML = '🖐️';
+          hand2.style.position = 'absolute';
+          hand2.style.fontSize = '55px';
+          hand2.style.pointerEvents = 'none';
+          hand2.style.zIndex = '1000';
+          hand2.style.transition = 'all 0.4s ease';
+          hand2.style.opacity = '0';
+          cardsLayer.appendChild(hand2);
+
+          // Perform visible swaps with hands
           setTimeout(() => {
-            shuffledOutcomes = newShuffledOutcomes;
+            let swapCount = 0;
+            const totalSwaps = 8;
             
-            const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
-            const layerRect = cardsLayer.getBoundingClientRect();
-            
-            const shuffledPositions = [];
-            shuffledOutcomes.forEach((obj, index) => {
-              shuffledPositions.push({ outcome: obj.outcome, position: index });
-            });
-            
-            cards.forEach((card, cardIndex) => {
-              setTimeout(() => {
-                const outcomeValue = parseFloat(card.dataset.outcomeValue);
-                let targetIdx = -1;
+            function performSwap() {
+              if (swapCount >= totalSwaps) {
+                // Keep hands visible for dealing
+                hand1.style.opacity = '1.0';
+                hand2.style.opacity = '1.0';
                 
-                for (let i = 0; i < shuffledPositions.length; i++) {
-                  if (shuffledPositions[i].outcome === outcomeValue) {
-                    targetIdx = shuffledPositions[i].position;
-                    shuffledPositions.splice(i, 1);
-                    break;
+                // Proceed to dealing with hands
+                setTimeout(() => {
+                  shuffledOutcomes = newShuffledOutcomes;
+                  
+                  const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
+                  const layerRect = cardsLayer.getBoundingClientRect();
+                  
+                  const shuffledPositions = [];
+                  shuffledOutcomes.forEach((obj, index) => {
+                    shuffledPositions.push({ outcome: obj.outcome, position: index });
+                  });
+                  
+                  // Show hands again for dealing
+                  hand1.style.opacity = '0.7';
+                  hand2.style.opacity = '0.7';
+                  
+                  let dealIndex = 0;
+                  
+                  function dealNextCard() {
+                    if (dealIndex >= cards.length) {
+                      // Hide and remove hands after ALL dealing is complete
+                      hand1.style.opacity = '0';
+                      hand2.style.opacity = '0';
+                      setTimeout(() => {
+                        if (hand1.parentNode) cardsLayer.removeChild(hand1);
+                        if (hand2.parentNode) cardsLayer.removeChild(hand2);
+                      }, 400);
+                      
+                      setTimeout(() => {
+                        cards.forEach(card => { 
+                          card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+                          card.classList.remove('jiggle', 'hover');
+                        });
+                        
+                        if (callback) callback();
+                      }, 800);
+                      return;
+                    }
+                    
+                    const card = cards[dealIndex];
+                    const hand = dealIndex % 2 === 0 ? hand1 : hand2;
+                    
+                    const outcomeValue = parseFloat(card.dataset.outcomeValue);
+                    let targetIdx = -1;
+                    
+                    for (let i = 0; i < shuffledPositions.length; i++) {
+                      if (shuffledPositions[i].outcome === outcomeValue) {
+                        targetIdx = shuffledPositions[i].position;
+                        shuffledPositions.splice(i, 1);
+                        break;
+                      }
+                    }
+                    
+                    if (targetIdx >= 0) {
+                      const targetCell = shuffledColumnCells[targetIdx];
+                      const cellRect = targetCell.getBoundingClientRect();
+                      
+                      const cardWidth = 50, cardHeight = 20;
+                      const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
+                      const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
+                      
+                      // Position hand on top of card
+                      const currentCardLeft = parseFloat(card.style.left);
+                      const currentCardTop = parseFloat(card.style.top);
+                      
+                      // Put hand directly on top of card
+                      hand.style.left = (currentCardLeft + 5) + 'px';
+                      hand.style.top = (currentCardTop - 30) + 'px';
+                      
+                      setTimeout(() => {
+                        // Push card and hand together rapidly
+                        card.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
+                        hand.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
+                        
+                        card.style.transform = 'none';
+                        card.classList.remove('hover');
+                        card.style.left = centerX + 'px';
+                        card.style.top = centerY + 'px';
+                        card.style.width = cardWidth + 'px';
+                        card.style.height = cardHeight + 'px';
+                        
+                        // Hand stays on top of card as it moves
+                        hand.style.left = (centerX + 5) + 'px';
+                        hand.style.top = (centerY - 30) + 'px';
+                        
+                        dealIndex++;
+                        setTimeout(dealNextCard, 120);
+                      }, 100);
+                    } else {
+                      dealIndex++;
+                      dealNextCard();
+                    }
                   }
-                }
-                
-                if (targetIdx >= 0) {
-                  const targetCell = shuffledColumnCells[targetIdx];
-                  const cellRect = targetCell.getBoundingClientRect();
                   
-                  const cardWidth = 50, cardHeight = 20;
-                  const centerX = cellRect.left - layerRect.left + (cellRect.width - cardWidth) / 2;
-                  const centerY = cellRect.top - layerRect.top + (cellRect.height - cardHeight) / 2;
-                  
-                  card.style.transition = 'all 2.4s cubic-bezier(.25,.46,.45,.94)';
-                  card.style.transform = 'none';
-                  card.classList.remove('hover');
-                  card.style.left = centerX + 'px';
-                  card.style.top = centerY + 'px';
-                  card.style.width = cardWidth + 'px';
-                  card.style.height = cardHeight + 'px';
-                }
-              }, cardIndex * 100);
-            });
-            
-            setTimeout(() => {
-              cards.forEach(card => { 
-                card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
-                card.classList.remove('jiggle', 'hover');
-              });
+                  dealNextCard();
+                }, 500);
+                return;
+              }
               
-              if (callback) callback();
-            }, cards.length * 100 + 2600);
-          }, 300);
+              // Pick two random cards
+              const idx1 = Math.floor(Math.random() * cards.length);
+              let idx2 = Math.floor(Math.random() * cards.length);
+              while (idx2 === idx1) {
+                idx2 = Math.floor(Math.random() * cards.length);
+              }
+              
+              const card1 = cards[idx1];
+              const card2 = cards[idx2];
+              
+              const pos1 = { left: parseFloat(card1.style.left), top: parseFloat(card1.style.top) };
+              const pos2 = { left: parseFloat(card2.style.left), top: parseFloat(card2.style.top) };
+              
+              // Show hands moving to cards
+              hand1.style.opacity = '1.0';
+              hand2.style.opacity = '1.0';
+              hand1.style.left = (pos1.left + 10) + 'px';
+              hand1.style.top = (pos1.top - 35) + 'px';
+              hand2.style.left = (pos2.left + 10) + 'px';
+              hand2.style.top = (pos2.top - 35) + 'px';
+              
+              setTimeout(() => {
+                // Lift cards slightly
+                card1.style.transform = `translateZ(80px) scale(1.15) rotate(${(Math.random() - 0.5) * 40}deg)`;
+                card2.style.transform = `translateZ(80px) scale(1.15) rotate(${(Math.random() - 0.5) * 40}deg)`;
+                
+                setTimeout(() => {
+                  // Swap positions
+                  card1.style.left = pos2.left + 'px';
+                  card1.style.top = pos2.top + 'px';
+                  card2.style.left = pos1.left + 'px';
+                  card2.style.top = pos1.top + 'px';
+                  
+                  // Move hands with cards
+                  hand1.style.left = (pos2.left + 10) + 'px';
+                  hand1.style.top = (pos2.top - 35) + 'px';
+                  hand2.style.left = (pos1.left + 10) + 'px';
+                  hand2.style.top = (pos1.top - 35) + 'px';
+                  
+                  setTimeout(() => {
+                    // Set cards back down
+                    card1.style.transform = `translateZ(50px) scale(1.05) rotate(${(Math.random() - 0.5) * 30}deg)`;
+                    card2.style.transform = `translateZ(50px) scale(1.05) rotate(${(Math.random() - 0.5) * 30}deg)`;
+                    
+                    // Hide hands briefly
+                    hand1.style.opacity = '0';
+                    hand2.style.opacity = '0';
+                    
+                    swapCount++;
+                    setTimeout(performSwap, 300);
+                  }, 400);
+                }, 200);
+              }, 400);
+            }
+            
+            performSwap();
+          }, 800);
         }, 800);
       }
 
@@ -1859,6 +2000,22 @@ b1(Score_shuf~Condition, data=df)</div>
         document.getElementById('clearPlotBtn').addEventListener('click', () => {
           const output = document.getElementById('plotOutput');
           if (output) output.style.display = 'none';
+          
+          // Clear shuffled data and cards
+          shuffledOutcomes = [];
+          
+          const shuffledCells = document.querySelectorAll('tbody td:nth-child(3) .cell-content');
+          shuffledCells.forEach(cell => {
+            cell.textContent = '';
+          });
+          
+          const cards = cardsLayer.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('show-border', 'jiggle', 'hover');
+            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+          });
+          
+          repositionCards();
         });
 
         document.getElementById('clearModelBtn').addEventListener('click', () => {
@@ -1966,6 +2123,10 @@ b1(Score_shuf~Condition, data=df)</div>
           runMultipleShuffles(5);
         });
         
+        document.getElementById('shuffleRun5xBtn').addEventListener('click', () => {
+          runMultipleShuffles(5);
+        });
+        
         document.getElementById('toggleGraphingMeansBtn').addEventListener('click', () => {
           showGraphingMeans = !showGraphingMeans;
           const btn = document.getElementById('toggleGraphingMeansBtn');
@@ -2032,8 +2193,7 @@ b1(Score_shuf~Condition, data=df)</div>
           const shuffleOutput = document.getElementById('shuffleOutput');
           const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
           
-          if ((shuffleOutput && shuffleOutput.style.display !== 'none') || 
-              (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none')) {
+          if (shuffleOutput || samplingShuffleOutput) {
             
             const maxIntegerDigits = Math.max(...shuffleResults.map(result => {
               const formatted = formatNumber(result);
@@ -2062,11 +2222,13 @@ b1(Score_shuf~Condition, data=df)</div>
               outputText = `... (showing last 10 of ${shuffleResults.length} results)\n` + outputText;
             }
             
-            if (shuffleOutput && shuffleOutput.style.display !== 'none') {
+            if (shuffleOutput) {
               shuffleOutput.textContent = outputText;
+              shuffleOutput.style.display = 'block';
             }
-            if (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none') {
+            if (samplingShuffleOutput) {
               samplingShuffleOutput.textContent = outputText;
+              samplingShuffleOutput.style.display = 'block';
             }
           }
         }
