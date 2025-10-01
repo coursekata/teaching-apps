@@ -1197,15 +1197,6 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                   }
                   
                   dealNextCard();
-                  
-                  setTimeout(() => {
-                    cards.forEach(card => { 
-                      card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
-                      card.classList.remove('jiggle', 'hover');
-                    });
-                    
-                    if (callback) callback();
-                  }, cards.length * 100 + 2600);
                 }, 500);
                 return;
               }
@@ -1259,10 +1250,10 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                     hand2.style.opacity = '0';
                     
                     swapCount++;
-                    setTimeout(performSwap, 150);
-                  }, 200);
-                }, 100);
-              }, 200);
+                    setTimeout(performSwap, 300);
+                  }, 400);
+                }, 200);
+              }, 400);
             }
             
             performSwap();
@@ -2005,6 +1996,22 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
         document.getElementById('clearPlotBtn').addEventListener('click', () => {
           const output = document.getElementById('plotOutput');
           if (output) output.style.display = 'none';
+          
+          // Clear shuffled data and cards
+          shuffledOutcomes = [];
+          
+          const shuffledCells = document.querySelectorAll('tbody td:nth-child(3) .cell-content');
+          shuffledCells.forEach(cell => {
+            cell.textContent = '';
+          });
+          
+          const cards = cardsLayer.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('show-border', 'jiggle', 'hover');
+            card.style.transition = 'all .8s cubic-bezier(.2,.8,.2,1)';
+          });
+          
+          repositionCards();
         });
 
         document.getElementById('clearModelBtn').addEventListener('click', () => {
