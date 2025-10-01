@@ -535,13 +535,17 @@ gf_point(Score_shuf ~ Condition, data=df)</div>
 b1(Score_shuf~Condition, data=df)</div>
                         <div class="button-stack">
                           <button id="shuffleBtn" class="primary run-btn">Run</button>
-                          <button id="clearShuffleBtn" class="clear">Clear</button>
+                          <button id="shuffleRun5xBtn" class="clear">Run 5x</button>
                         </div>
                       </div>
                     </div>
                     
                     <div id="shuffleOutput" class="r-output" style="display: none; margin-top: 16px;">
                       Waiting for shuffle...
+                    </div>
+                    
+                    <div style="display: flex; justify-content: center; margin-top: 12px;">
+                      <button id="clearShuffleBtn" class="clear" style="padding: 8px 16px; font-size: 0.9rem;">Clear</button>
                     </div>
                   </div>
                 </div>
@@ -2119,6 +2123,10 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
           runMultipleShuffles(5);
         });
         
+        document.getElementById('shuffleRun5xBtn').addEventListener('click', () => {
+          runMultipleShuffles(5);
+        });
+        
         document.getElementById('toggleGraphingMeansBtn').addEventListener('click', () => {
           showGraphingMeans = !showGraphingMeans;
           const btn = document.getElementById('toggleGraphingMeansBtn');
@@ -2185,8 +2193,7 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
           const shuffleOutput = document.getElementById('shuffleOutput');
           const samplingShuffleOutput = document.getElementById('samplingShuffleOutput');
           
-          if ((shuffleOutput && shuffleOutput.style.display !== 'none') || 
-              (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none')) {
+          if (shuffleOutput || samplingShuffleOutput) {
             
             const maxIntegerDigits = Math.max(...shuffleResults.map(result => {
               const formatted = formatNumber(result);
@@ -2215,11 +2222,13 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
               outputText = `... (showing last 10 of ${shuffleResults.length} results)\n` + outputText;
             }
             
-            if (shuffleOutput && shuffleOutput.style.display !== 'none') {
+            if (shuffleOutput) {
               shuffleOutput.textContent = outputText;
+              shuffleOutput.style.display = 'block';
             }
-            if (samplingShuffleOutput && samplingShuffleOutput.style.display !== 'none') {
+            if (samplingShuffleOutput) {
               samplingShuffleOutput.textContent = outputText;
+              samplingShuffleOutput.style.display = 'block';
             }
           }
         }
