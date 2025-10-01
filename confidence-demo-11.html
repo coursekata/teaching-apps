@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Draggable Histogram + CI + p-value (simplified)</title>
+<style>
+  :root{
+    --fg:#111; --muted:#666; --bg:#fff; --accent:#2563eb;
+    --bar:#60a5fa55; --bar-stroke:#1e4ed8aa; --mean:#ef4444; --axis:#333;
+    --tail:#1e3a8a; --tailFill:#1e3a8a44; --mark:#1d4ed8;
+  }
+  body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:#fff;display:grid;place-items:start center;padding:16px}
+  .app{width:min(1100px,95vw)}
+  h1{font-size:18px;margin:0 0 8px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0 12px}
+  .row label{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
+  input[type=number],input[type=range],button{font:inherit;border-radius:10px;border:1px solid #ddd;padding:6px 8px;background:#fafafa;outline:none}
+  input[type=number]{width:50px}
+  input[type=range]{width:154px;accent-color:var(--accent)}
+  button{background:#f4f4f4;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .panel{border:1px solid #eee;border-radius:14px;padding:10px}
+  .svg-wrap{position:relative;width:100%;height:560px;border:1px solid #eee;border-radius:14px;overflow:hidden}
+  .axis path,.axis line{stroke:#bbb}
+  .axis.x text{font-size:16px}
+  .hist-bar{fill:var(--bar);stroke:var(--bar-stroke)}
+  .hist-shade{fill:var(--tailFill);stroke:none}
+  .draggable-veil{cursor:grab}
+  .draggable-veil:active{cursor:grabbing}
+  .mean-line{stroke:var(--mean);stroke-width:2.5;shape-rendering:crispEdges}
+  .axis-label{fill:#333;font-weight:700;font-size:20px}
+  .curve{fill:none;stroke:#111;stroke-width:2}
+  .tail-line{stroke:var(--tail);stroke-width:2}
+  .tail-area{fill:var(--tailFill);stroke:none}
+  .seg{display:inline-flex;border:1px solid #ddd;border-radius:10px;overflow:hidden}
+  .seg button{border:none;background:#f8f8f8;padding:6px 10px}
+  .seg button+button{border-left:1px solid #ddd}
+  .seg button.active{background:var(--accent);color:#fff}
+  .overlay-btn{
+    position:absolute; z-index:2; transform:translate(-50%,0);
+    font-size:12px; padding:4px 10px; border-radius:10px;
+    background:#fff; border:1px solid var(--mark); color:var(--mark);
+    box-shadow:0 1px 2px rgba(0,0,0,.04); white-space:nowrap;
+  }
+  .overlay-btn.hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Draggable Sampling-Distribution Histogram</h1>
+
+  <!-- Controls -->
+  <div class="row panel">
+    <!-- Row 1 -->
+    <div class="row" style="gap:16px;">
+      <label>β
+        <input id="betaInput" type="number" step="0.1" value="0">
+      </label>
+
+      <label>SE
+        <input id="seInput" type="number" step="0.01" value="1" style="width:45px">
+        <input id="seRange" type="range" min="0.1" max="5" step="0.05" value="1">
+      </label>
+
+      <label>n draws
+        <input id="nInput" type="number" min="10" max="200000" step="10" value="1000">
+      </label>
+
+      <button id="regenBtn" class="primary">Simulate</button>
+      <div style="flex:1 1 auto;"></div>
+
+      <label>b
+        <input id="bInput" type="number" step="0.01" value="">
+      </label>
+      <button id="bBtn" class="primary">Update b</button>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="row" style="gap:16px;">
+      <label>Scale
+        <input id="scaleRange" type="range" min="0.5" max="3" step="0.1" value="1.75">
+      </label>
+
+      <label>Bins
+        <input id="binsRange" type="range" min="1" max="200" step="1" value="30">
+      </label>
+
+      <div class="seg" id="curveSeg" title="Overlay curve">
+        <button data-curve="off" class="active">Off</button>
+        <button data-curve="normal">N</button>
+        <button data-curve="t">t</button>
+      </div>
+
+      <label>df
+        <input id="dfInput" type="number" min="1" step="1" value="10" style="width:60px">
+      </label>
+
+      <div class="seg" id="ciSeg">
+        <button data-ci="off" class="active">OFF</button>
+        <button data-ci="90">90%</button>
+        <button data-ci="95">95%</button>
+        <button data-ci="99">99%</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="svg-wrap" id="chart">
+    <!-- Hover-only mark button -->
+    <button id="btnMarkBound" class="overlay-btn hidden">Mark Lower Bound</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+(function(){
+  const chartWrap = document.getElementById('chart');
+  const nInput = document.getElementById('nInput');
+  const binsRange = document.getElementById('binsRange');
+  const betaInput = document.getElementById('betaInput');
+  const seInput = document.getElementById('seInput');
+  const seRange = document.getElementById('seRange');
+  const scaleRange = document.getElementById('scaleRange');
+  const ciSeg = document.getElementById('ciSeg');
+  const bInput = document.getElementById('bInput');
+  const bBtn = document.getElementById('bBtn');
+  const regenBtn = document.getElementById('regenBtn');
+  const curveSeg = document.getElementById('curveSeg');
+  const dfInput  = document.getElementById('dfInput');
+  const btnMarkBound = document.getElementById('btnMarkBound');
+
+  let width = chartWrap.clientWidth, height = chartWrap.clientHeight;
+  let margin = {top:56, right:20, bottom:116, left:44};
+  let innerW = width - margin.left - margin.right;
+  let innerH = height - margin.top - margin.bottom;
+  const axisInsetTop = 12;
+  const axisInsetBottom = 14;
+  let plotH = Math.max(1, innerH - axisInsetTop - axisInsetBottom);
+
+  const svg = d3.select('#chart').append('svg').attr('width',width).attr('height',height);
+
+  // Arrowheads
+  const defs = svg.append('defs');
+  defs.append('marker').attr('id','arrowUpRed').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,0 L8,4 L0,8 Z').attr('fill','#ef4444');
+  defs.append('marker').attr('id','arrowDownRed').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,8 L8,4 L0,0 Z').attr('fill','#ef4444');
+  defs.append('marker').attr('id','arrowDownBlue').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,8 L8,4 L0,0 Z').attr('fill','#1d4ed8');
+
+  const root = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
+
+  // Axes
+  const xAxisTopG = root.append('g').attr('class','axis x');
+  const xAxisG    = root.append('g').attr('class','axis x');
+
+  // Plot area (shifts when dragging)
+  const plotWrap = root.append('g');
+  const histWrap = plotWrap.append('g').attr('class','hist-wrap');
+  const histG    = histWrap.append('g').attr('class','hist');
+  const histShadeG = histWrap.append('g').attr('class','hist-shade-wrap');
+  const meanLine = histWrap.append('line').attr('class','mean-line');
+
+  // Overlay (curve + tails)
+  const overlayG = histWrap.append('g').attr('class','overlay');
+  const curvePath = overlayG.append('path').attr('class','curve').style('display','none');
+  const tailLineL = overlayG.append('line').attr('class','tail-line').style('display','none');
+  const tailLineR = overlayG.append('line').attr('class','tail-line').style('display','none');
+  const tailAreaL = overlayG.append('path').attr('class','tail-area').style('display','none');
+  const tailAreaR = overlayG.append('path').attr('class','tail-area').style('display','none');
+
+  // b marker (bottom)
+  const bMarkerG = root.append('g').attr('class','b-marker').style('cursor','ew-resize');
+  const bLine = bMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowUpRed)');
+  const bBG   = bMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+  const bLabel= bMarkerG.append('text').attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',18);
+
+  // β marker (top)
+  const betaMarkerG = root.append('g').attr('class','beta-marker');
+  const betaLine = betaMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowDownRed)');
+  const betaBG   = betaMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+  const betaLabel= betaMarkerG.append('text').attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',18);
+
+  // Blue bound markers (top)
+  const lowerLine = root.append('line').attr('stroke','#1d4ed8').attr('stroke-width',3).attr('marker-end','url(#arrowDownBlue)').attr('display','none');
+  const lowerBG   = root.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4).attr('display','none');
+  const lowerLabel= root.append('text').attr('fill','#1d4ed8').attr('font-weight','700').attr('font-size','18px').attr('text-anchor','middle').attr('display','none');
+  const upperLine = root.append('line').attr('stroke','#1d4ed8').attr('stroke-width',3).attr('marker-end','url(#arrowDownBlue)').attr('display','none');
+  const upperBG   = root.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4).attr('display','none');
+  const upperLabel= root.append('text').attr('fill','#1d4ed8').attr('font-weight','700').attr('font-size','18px').attr('text-anchor','middle').attr('display','none');
+
+  // Drag veil
+  const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent');
+
+  // Bottom axis label
+  const xLabelBottom = root.append('text').attr('class','axis-label').attr('text-anchor','middle').text('b');
+
+  // p-value text (blue)
+  const pTextRight = root.append('text')
+    .attr('fill', '#1d4ed8')
+    .attr('font-weight', 700)
+    .attr('font-size', 18)
+    .attr('text-anchor', 'start')
+    .attr('display', 'none');
+
+  // Data & state
+  let data=[], bins=[];
+  const x = d3.scaleLinear().range([0, innerW]);
+  const y = d3.scaleLinear().range([plotH, 0]);
+  let shiftUnits = 0;     // drag offset in DATA units
+  let bValue = null;      // no b initially
+  let ciMode = 'off';     // 'off' | '90' | '95' | '99'
+  let lowerMarked=false, upperMarked=false;
+  let lowerVal=null, upperVal=null;
+
+  // Curve mode: 'off' | 'normal' | 't'
+  let curveMode = 'off';
+
+  // Track domain lock (used for simulate & initial domain)
+  let fixedDomain = null;
+
+  // Layering helpers
+  let blueOnTopUntilDrag = false;
+  let lastRaised = null; // 'lower' | 'upper' | null
+  function raiseBlueBound(which){
+    if(which === 'lower'){
+      lowerLine.raise(); lowerBG.raise(); lowerLabel.raise();
+    } else {
+      upperLine.raise(); upperBG.raise(); upperLabel.raise();
+    }
+  }
+  function restoreRedBetaOnTop(){ betaMarkerG.raise(); }
+
+  // ---------- helpers ----------
+  function getBeta(){ return +betaInput.value||0; }
+  function getSE(){ return Math.max(+seInput.value||1,1e-9); }
+  function getScale(){ return Math.max(+scaleRange.value||1.75,0.1); }
+  function getN(){ return Math.max(+nInput.value||1000,1); }
+  function getBins(){ return Math.max(1, Math.floor(+binsRange.value || 30)); }
+  function getDf(){ return Math.max(1, Math.floor(+dfInput.value || 10)); }
+  function pxPerUnit(){ const u0=x.domain()[0]; return Math.abs(x(u0+1)-x(u0)); }
+  function dataUnitsPerPx(){ return 1/pxPerUnit(); }
+
+  // Robust Phi(z)
+  function cdfStandard(z){
+    const sign = z < 0 ? -1 : 1;
+    const xabs = Math.abs(z)/Math.SQRT2;
+    const t = 1/(1+0.3275911*xabs);
+    const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429;
+    const erf = 1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t)*Math.exp(-xabs*xabs);
+    return 0.5*(1+sign*erf);
+  }
+  function zFor(mode){
+    const zt={ '90':1.6448536269514722,'95':1.959963984540054,'99':2.5758293035489004 };
+    return zt[mode]||zt['95'];
+  }
+  function pdfNormal(xv, beta, se){
+    return (1/(se*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*Math.pow((xv-beta)/se,2));
+  }
+  // Student-t PDF with df (nu), centered at beta with scale se
+  function pdfT(xv, beta, se, nu){
+    const z = (xv - beta) / se;
+    const v = nu;
+    const norm = Math.exp(gammaln((v+1)/2) - gammaln(v/2)) / (Math.sqrt(v*Math.PI) * se);
+    return norm * Math.pow(1 + (z*z)/v, -(v+1)/2);
+  }
+  // Lanczos approximation for log gamma
+  function gammaln(x){
+    const cof=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+    let y=x; let tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
+    let ser=1.000000000190015;
+    for(let j=0;j<6;j++){ y+=1; ser+=cof[j]/y; }
+    return -tmp + Math.log(2.5066282746310005*ser/x);
+  }
+
+  // --- Student-t helpers ---
+  function pdfTStd(x, nu){
+    const v = nu;
+    const norm = Math.exp(gammaln((v+1)/2) - gammaln(v/2)) / Math.sqrt(v*Math.PI);
+    return norm * Math.pow(1 + (x*x)/v, -(v+1)/2);
+  }
+  function simpson(f, a, b){
+    const c = 0.5*(a+b);
+    return (b-a)/6 * (f(a) + 4*f(c) + f(b));
+  }
+  function adaptiveSimpson(f, a, b, eps, maxDepth){
+    const S = simpson(f,a,b);
+    return asr(f,a,b,eps,S,maxDepth);
+    function asr(f,a,b,eps,S,depth){
+      const c = 0.5*(a+b);
+      const Sleft  = simpson(f,a,c);
+      const Sright = simpson(f,c,b);
+      const S2 = Sleft + Sright;
+      if (depth <= 0 || Math.abs(S2-S) <= 15*eps) {
+        return S2 + (S2-S)/15;
+      }
+      return asr(f,a,c,eps/2,Sleft,depth-1) + asr(f,c,b,eps/2,Sright,depth-1);
+    }
+  }
+  function cdfT(z, nu){
+    if (!isFinite(z)) return z>0 ? 1 : 0;
+    if (z === 0) return 0.5;
+    if (z < 0) return 1 - cdfT(-z, nu);
+    const f = function(x){ return pdfTStd(x, nu); };
+    const area = adaptiveSimpson(f, 0, z, 1e-7, 12);
+    return 0.5 + area;
+  }
+  function tinv(p, nu){
+    if (p <= 0) return -Infinity;
+    if (p >= 1) return  Infinity;
+    if (p === 0.5) return 0;
+    const target = (p > 0.5) ? p : 1 - p;
+    let lo = 0, hi = 20;
+    while (cdfT(hi, nu) < target) hi *= 2;
+    for (let i=0; i<60; i++){
+      const mid = 0.5*(lo+hi);
+      if (cdfT(mid, nu) < target) lo = mid; else hi = mid;
+    }
+    const q = 0.5*(lo+hi);
+    return (p >= 0.5) ? q : -q;
+  }
+  function ciCrit(ciMode, curveMode, df){
+    if (ciMode === 'off') return null;
+    const conf = (+ciMode)/100;
+    const pUpper = 0.5 * (1 + conf);
+    return (curveMode === 't') ? tinv(pUpper, df) : zFor(ciMode);
+  }
+
+  function setXDomain(){
+    const beta = getBeta();
+    if (fixedDomain) { x.domain(fixedDomain); return; }
+    const span = 10 * getScale();
+    x.domain([beta - span/2, beta + span/2]);
+  }
+
+  function gaussian(n, mean=0, sd=1){
+    const arr=new Float64Array(n);
+    for(let i=0;i<n;i++){
+      let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+      let z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+      arr[i]=mean+sd*z;
+    }
+    return Array.from(arr);
+  }
+
+  function fixedThresholds(nbins){
+    const d0=x.domain()[0], d1=x.domain()[1];
+    const ts=[];
+    for(let i=0;i<=nbins;i++){ ts.push(d0 + (i/nbins)*(d1-d0)); }
+    return ts;
+  }
+  function computeBins(values, nbins){
+    if(!values||values.length===0) return [];
+    const binner=d3.bin().domain(x.domain()).thresholds(fixedThresholds(nbins));
+    return binner(values);
+  }
+
+  function recomputeYDomain(nbins){
+    const n = getN(), beta=getBeta(), se=getSE();
+    const domain = x.domain();
+    const binW = (domain[1]-domain[0]) / nbins;
+    const barMax = bins.length ? d3.max(bins, d => d.length) : 1;
+    let curveMax = 0;
+    for (let i=0;i<128;i++){
+      const xv = domain[0] + (i/127)*(domain[1]-domain[0]);
+      const pdf = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
+      curveMax = Math.max(curveMax, n * binW * pdf);
+    }
+    const yMax = Math.max(barMax, curveMax, 1);
+    y.domain([0, yMax * 1.08]);
+  }
+
+  function layoutStatic(){
+    plotH = Math.max(1, innerH - axisInsetTop - axisInsetBottom);
+    y.range([plotH, 0]); x.range([0, innerW]);
+    xAxisTopG.attr('transform','translate(0,'+axisInsetTop+')');
+    xAxisG.attr('transform','translate(0,'+(axisInsetTop+plotH)+')');
+    plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
+    veil.attr('x',0).attr('y',axisInsetTop).attr('width',innerW).attr('height',plotH);
+    xLabelBottom.attr('x', innerW/2).attr('y', axisInsetTop + plotH + 64);
+  }
+
+  function drawAxes(){
+    const xAxis=d3.axisBottom(x).tickSizeOuter(0);
+    const xAxisTop=d3.axisTop(x).tickSizeOuter(0);
+    xAxisG.call(xAxis); xAxisTopG.call(xAxisTop);
+  }
+
+  function drawHistogram(){
+    const bar=histG.selectAll('rect').data(bins,d => d.x0+'-'+d.x1);
+    bar.enter().append('rect').attr('class','hist-bar')
+      .attr('x',d => x(d.x0))
+      .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+      .attr('y',d => y(d.length))
+      .attr('height',d => y(0)-y(d.length));
+    bar
+      .attr('x',d => x(d.x0))
+      .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+      .attr('y',d => y(d.length))
+      .attr('height',d => y(0)-y(d.length));
+    bar.exit().remove();
+    drawHistogramTailShading();
+  }
+
+  function drawHistogramTailShading(){
+    const doShadeBars = (ciMode !== 'off') && (curveMode === 'off');
+    const sel = histShadeG.selectAll('rect')
+      .data(doShadeBars ? bins : [], d => d.x0 + '-' + d.x1);
+
+    sel.exit().remove();
+    if (!doShadeBars) return;
+
+    const beta = getBeta(), se = getSE();
+    const z  = zFor(ciMode);
+    const cutL = beta - z*se, cutR = beta + z*se;
+
+    function tailFrac(d){
+      const w = d.x1 - d.x0; if (w <= 0) return 0;
+      if (d.x1 <= cutL || d.x0 >= cutR) return 1;
+      if (d.x0 >= cutL && d.x1 <= cutR) return 0;
+      let f = 0;
+      if (d.x0 < cutL && d.x1 > cutL) f += (cutL - d.x0) / w;
+      if (d.x0 < cutR && d.x1 > cutR) f += (d.x1 - cutR) / w;
+      return Math.max(0, Math.min(1, f));
+    }
+
+    const merged = sel.enter().append('rect').attr('class','hist-shade').merge(sel);
+    merged
+      .attr('x', d => x(d.x0))
+      .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+      .attr('y', d => {
+        const frac = tailFrac(d);
+        const fullH = y(0) - y(d.length);
+        const h = frac * fullH;
+        return y(0) - h;
+      })
+      .attr('height', d => {
+        const frac = tailFrac(d);
+        const fullH = y(0) - y(d.length);
+        return frac * fullH;
+      });
+  }
+
+  function drawOverlay(){
+    const showCurve = (curveMode !== 'off');
+    const showCIOverCurve = (ciMode !== 'off') && (curveMode !== 'off');
+
+    curvePath.style('display', showCurve ? null : 'none');
+    tailLineL.style('display', showCIOverCurve ? null : 'none');
+    tailLineR.style('display', showCIOverCurve ? null : 'none');
+    tailAreaL.style('display', showCIOverCurve ? null : 'none');
+    tailAreaR.style('display', showCIOverCurve ? null : 'none');
+
+    if(!(showCurve || showCIOverCurve)){
+      tailAreaL.attr('d', null); tailAreaR.attr('d', null);
+      return;
+    }
+
+    const beta=getBeta(), se=getSE(), n=getN();
+    const nbins = getBins();
+    const domain = x.domain();
+    const binW = (domain[1]-domain[0]) / nbins;
+
+    const xs = [];
+    for(let i=0;i<256;i++){ xs.push(domain[0] + (i/255)*(domain[1]-domain[0])); }
+
+    function expected(t){
+      if (curveMode === 't') return n * binW * pdfT(t, beta, se, getDf());
+      return n * binW * pdfNormal(t, beta, se);
+    }
+
+    if(showCurve){
+      const lineGen = d3.line().x(d => x(d)).y(d => y(expected(d)));
+      curvePath.attr('d', lineGen(xs));
+    }
+
+    if(showCIOverCurve){
+      const crit = ciCrit(ciMode, curveMode, getDf());
+      const cutL = beta - crit*se, cutR = beta + crit*se;
+      const yCurveL = y(expected(cutL));
+      const yCurveR = y(expected(cutR));
+      tailLineL.attr('x1', x(cutL)).attr('x2', x(cutL)).attr('y1', plotH).attr('y2', yCurveL);
+      tailLineR.attr('x1', x(cutR)).attr('x2', x(cutR)).attr('y1', plotH).attr('y2', yCurveR);
+
+      const xsL = xs.filter(v => v <= cutL);
+      const xsR = xs.filter(v => v >= cutR);
+      const area = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
+      tailAreaL.attr('d', xsL.length ? area(xsL) : null);
+      tailAreaR.attr('d', xsR.length ? area(xsR) : null);
+    } else {
+      tailAreaL.attr('d', null); tailAreaR.attr('d', null);
+    }
+  }
+
+  function drawBMarker(){
+    if(bValue===null || Number.isNaN(bValue)){ bMarkerG.attr('display','none'); pTextRight.attr('display','none'); return; }
+    bMarkerG.attr('display', null);
+    const xPos = x(bValue);
+    const axisY = axisInsetTop + plotH;
+    const arrowBottom = axisY + 20;
+    bLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowBottom).attr('y2', axisY);
+    bLabel.attr('x', xPos).attr('y', arrowBottom + 24).text('');
+    bLabel.selectAll('tspan').remove();
+    bLabel.append('tspan').text('b');
+    bLabel.append('tspan').text(' = ' + bValue.toFixed(2));
+    const bb = bLabel.node().getBBox(), padX=6, padY=3;
+    bBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+    updatePTextToRightOfB();
+  }
+
+  function drawBetaMarker(){
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const xPos = x(betaVal);
+    const axisY = axisInsetTop;
+    const arrowTop = axisY - 20;
+    betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+    betaLabel.attr('x', xPos).attr('y', arrowTop - 14).text('');
+    betaLabel.selectAll('tspan').remove();
+    betaLabel.append('tspan').text('\u03B2');
+    betaLabel.append('tspan').text(' = ' + betaVal.toFixed(2));
+    const bb = betaLabel.node().getBBox(), padX=6, padY=3;
+    betaBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+    if(!blueOnTopUntilDrag) betaMarkerG.raise();
+  }
+
+  function updatePTextToRightOfB(){
+    if(bValue === null || Number.isNaN(bValue)){ pTextRight.attr('display','none'); return; }
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const se = getSE();
+    const z = (bValue - betaVal)/se;
+    const absZ = Math.abs(z);
+
+    let pOne;
+    if (curveMode === 't') {
+      const nu = getDf();
+      pOne = 1 - cdfT(absZ, nu);
+    } else {
+      pOne = 1 - cdfStandard(absZ);
+    }
+
+    const text = (pOne < 0.001) ? 'p < 0.001' : ('p = ' + pOne.toFixed(3));
+    pTextRight.text(text);
+
+    const bb = bBG.node().getBBox();
+    const pad = 10;
+    const xRight = bb.x + bb.width + pad;
+    const yBaseline = bb.y + bb.height - 8;
+    pTextRight.attr('x', xRight).attr('y', yBaseline).attr('display', null);
+  }
+
+  // Place/update a blue mark at current beta (store VALUE)
+  function setBlueMark(which){
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    if(which==='lower'){ lowerMarked = true; lowerVal = betaVal; }
+    else { upperMarked = true; upperVal = betaVal; }
+    lastRaised = which;
+    blueOnTopUntilDrag = true;
+    draw();
+    raiseBlueBound(which);
+  }
+
+  // Hide/clear blue markers (CI -> OFF)
+  function clearBlueMarks(){
+    lowerMarked = upperMarked = false;
+    lowerVal = upperVal = null;
+    blueOnTopUntilDrag = false;
+    lastRaised = null;
+    lowerLine.attr('display','none'); lowerLabel.attr('display','none'); lowerBG.attr('display','none');
+    upperLine.attr('display','none'); upperLabel.attr('display','none'); upperBG.attr('display','none');
+  }
+
+  function setXDomainAndBins(){
+    setXDomain();
+    const nbins = getBins();
+    bins = computeBins(data, nbins);
+    recomputeYDomain(nbins);
+  }
+
+  function draw(){
+    layoutStatic();
+    setXDomainAndBins();
+    drawAxes();
+    drawHistogram();
+
+    const beta=getBeta();
+    const pxShift = x(beta + shiftUnits) - x(beta);
+    plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
+    histWrap.attr('transform','translate('+pxShift+',0)');
+    meanLine.attr('x1',x(beta)).attr('x2',x(beta)).attr('y1',0).attr('y2',plotH);
+
+    drawBetaMarker();
+    drawBMarker();
+    drawOverlay();
+
+    // repaint stored blue marks
+    const axisY = axisInsetTop, arrowTop = axisY - 20;
+    if(lowerMarked && lowerVal!=null){
+      const xPosL = x(lowerVal);
+      lowerLine.attr('display',null).attr('x1',xPosL).attr('x2',xPosL).attr('y1',arrowTop).attr('y2',axisY);
+      lowerLabel.attr('display',null).attr('x',xPosL).attr('y',arrowTop-14).text('');
+      lowerLabel.selectAll('tspan').remove();
+      lowerLabel.append('tspan').text('\u03B2');
+      lowerLabel.append('tspan').text(' = ' + lowerVal.toFixed(2));
+      const bb1 = lowerLabel.node().getBBox(), padX=6, padY=3;
+      lowerBG.attr('display',null).attr('x',bb1.x-padX).attr('y',bb1.y-padY).attr('width',bb1.width+2*padX).attr('height',bb1.height+2*padY);
+    }
+    if(upperMarked && upperVal!=null){
+      const xPosU = x(upperVal);
+      upperLine.attr('display',null).attr('x1',xPosU).attr('x2',xPosU).attr('y1',arrowTop).attr('y2',axisY);
+      upperLabel.attr('display',null).attr('x',xPosU).attr('y',arrowTop-14).text('');
+      upperLabel.selectAll('tspan').remove();
+      upperLabel.append('tspan').text('\u03B2');
+      upperLabel.append('tspan').text(' = ' + upperVal.toFixed(2));
+      const bb2 = upperLabel.node().getBBox(), padX=6, padY=3;
+      upperBG.attr('display',null).attr('x',bb2.x-padX).attr('y',bb2.y-padY).attr('width',bb2.width+2*padX).attr('height',bb2.height+2*padY);
+    }
+
+    // layering
+    if(blueOnTopUntilDrag && lastRaised){ raiseBlueBound(lastRaised); }
+    else { restoreRedBetaOnTop(); }
+
+    // if the hover button is visible, keep it correctly positioned after redraw
+    if (!btnMarkBound.classList.contains('hidden')) {
+      showMarkButton();
+    }
+
+    if(bValue!==null && !Number.isNaN(bValue)) updatePTextToRightOfB();
+  }
+
+  function regenerate(opts = {}){
+    const n = getN(), beta = getBeta(), se = getSE();
+    const keepShift = opts.preserveShift === true;
+    const prevShift = shiftUnits;
+    data = gaussian(n, beta, se);
+    shiftUnits = keepShift ? prevShift : 0;
+    draw();
+  }
+
+  // ---------- interactions ----------
+  const dragHist = d3.drag()
+    .on('start', function(){
+      if(blueOnTopUntilDrag){
+        blueOnTopUntilDrag = false;
+        restoreRedBetaOnTop();
+      }
+      hideMarkButton();
+    })
+    .on('drag', function(event){
+      shiftUnits += event.dx * dataUnitsPerPx();
+      draw();
+    });
+
+  const dragB = d3.drag().on('drag', function(event){
+    if(bValue===null) bValue = 0;
+    bValue += event.dx * dataUnitsPerPx();
+    bInput.value = bValue.toFixed(2);
+    draw();
+  });
+  root.select('.draggable-veil').call(dragHist);
+  bMarkerG.call(dragB);
+
+  // Hover button logic over β marker
+  function showMarkButton(){
+    if (bValue === null || Number.isNaN(bValue)) {
+      btnMarkBound.classList.add('hidden');
+      return;
+    }
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const which = (betaVal < bValue) ? 'lower' : 'upper';
+    btnMarkBound.textContent = (which === 'lower') ? 'Mark Lower Bound' : 'Mark Upper Bound';
+
+    const betaX = x(betaVal);
+    const topScreenY = margin.top + axisInsetTop - 28; // just above the top axis
+
+    btnMarkBound.style.left = (margin.left + betaX) + 'px';
+    btnMarkBound.style.top  = topScreenY + 'px';
+    btnMarkBound.classList.remove('hidden');
+  }
+  function hideMarkButton(){ btnMarkBound.classList.add('hidden'); }
+
+  betaMarkerG
+    .on('mouseenter', showMarkButton)
+    .on('mouseleave', function(e){
+      const to = e.relatedTarget;
+      if (!(to && to.id === 'btnMarkBound')) hideMarkButton();
+    });
+
+  btnMarkBound.addEventListener('mouseenter', showMarkButton);
+  btnMarkBound.addEventListener('mouseleave', hideMarkButton);
+  btnMarkBound.addEventListener('click', function(){
+    if (bValue === null || Number.isNaN(bValue)) return;
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const which = (betaVal < bValue) ? 'lower' : 'upper';
+    setBlueMark(which);
+    hideMarkButton();
+  });
+
+  // Controls
+  binsRange.addEventListener('input', draw);
+
+  // SE slider range (dynamic around current SE)
+  function updateSESliderRange(){
+    const currentSE = +seInput.value || 1;
+    const minSE = Math.max(0.05, currentSE * 0.3);
+    const maxSE = currentSE * 1.7;
+    const step = Math.max(0.001, currentSE * 0.02);
+    seRange.min = minSE;
+    seRange.max = maxSE;
+    seRange.step = step;
+    seRange.value = currentSE;
+  }
+
+  seRange.addEventListener('input', function(){
+    seInput.value = +seRange.value;
+    regenerate({ preserveShift: true });
+  });
+
+  seInput.addEventListener('change', function(){
+    const currentMean = getBeta();
+    const currentScale = getScale();
+    const domainSpan = 10 * currentScale;
+    const meanMagnitude = Math.abs(currentMean);
+    if (meanMagnitude > domainSpan) { updateSESliderRange(); return; }
+    updateSESliderRange();
+    regenerate({ preserveShift: true });
+  });
+
+  // Enter in SE input: lock domain to ±8·SE and sync scale
+  seInput.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter') return;
+    const beta = getBeta();
+    const se = getSE();
+    fixedDomain = [beta - 8*se, beta + 8*se];
+
+    const scaleSpan = 16 * se;
+    const equivalentScale = scaleSpan / 10;
+    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+    scaleRange.max = newScaleMax;
+    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+    scaleRange.value = Math.min(equivalentScale, newScaleMax);
+
+    updateSESliderRange();
+    regenerate({ preserveShift: true });
+  });
+
+  scaleRange.addEventListener('input', function(){
+    if (fixedDomain) {
+      const currentSpan = fixedDomain[1] - fixedDomain[0];
+      const neededScale = currentSpan / 10;
+      const newMax = Math.max(3, Math.min(50, Math.ceil(neededScale * 1.5)));
+      scaleRange.max = newMax;
+      scaleRange.step = newMax > 10 ? 0.5 : 0.1;
+      scaleRange.value = Math.min(neededScale, newMax);
+    }
+    fixedDomain = null;
+    draw();
+  });
+
+  betaInput.addEventListener('change', function(){
+    const currentMean = getBeta();
+    const currentScale = getScale();
+    const domainSpan = 10 * currentScale;
+    const meanMagnitude = Math.abs(currentMean);
+    if (meanMagnitude > domainSpan) { fixedDomain = null; return; }
+    fixedDomain = null;
+    regenerate();
+  });
+
+  nInput.addEventListener('change', regenerate);
+
+  bBtn.addEventListener('click', function(){
+    const v = bInput.value.trim();
+    bValue = (v===''?null:+v);
+    draw();
+  });
+
+  bInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      const v = bInput.value.trim();
+      bValue = (v===''?null:+v);
+      draw();
+    }
+  });
+
+  // Simulate: lock to β ± 8·SE and recenter sliders
+  regenBtn.addEventListener('click', function(){
+    const beta = getBeta();
+    const se = getSE();
+    shiftUnits = 0;
+    fixedDomain = [beta - 8*se, beta + 8*se];
+
+    const scaleSpan = 16 * se;
+    const equivalentScale = scaleSpan / 10;
+    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+    scaleRange.max = newScaleMax;
+    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+    scaleRange.value = Math.min(equivalentScale, newScaleMax);
+
+    seInput.value = se;
+    setTimeout(updateSESliderRange, 0);
+    regenerate();
+  });
+
+  // Curve mode segmented control
+  curveSeg.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-curve]'); if(!btn) return;
+    curveSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    curveMode = btn.getAttribute('data-curve'); // 'off' | 'normal' | 't'
+    draw();
+  });
+
+  // df changes only matter for t curve
+  dfInput.addEventListener('change', function(){
+    if (curveMode === 't') draw();
+  });
+
+  // CI segmented control
+  ciSeg.addEventListener('click', function(e){
+    const btn=e.target.closest('button[data-ci]'); if(!btn) return;
+    ciSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); ciMode = btn.getAttribute('data-ci');
+    if(ciMode === 'off'){ clearBlueMarks(); }
+    draw();
+  });
+
+  // Responsive
+  function rescale(){
+    width = chartWrap.clientWidth; height = chartWrap.clientHeight;
+    innerW = width - margin.left - margin.right;
+    innerH = height - margin.top - margin.bottom;
+    svg.attr('width',width).attr('height',height);
+    layoutStatic();
+    draw();
+  }
+  new ResizeObserver(() => { rescale(); }).observe(chartWrap);
+
+  // Init
+  bInput.value = '';
+  bValue = null;
+  binsRange.value = 30;
+
+  // Initial domain: β ± 8·SE and centered sliders
+  (function initDomainAndSliders(){
+    const beta = getBeta();
+    const se = getSE();
+    fixedDomain = [beta - 8*se, beta + 8*se];
+    const scaleSpan = 16 * se;
+    const equivalentScale = scaleSpan / 10;
+    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+    scaleRange.max = newScaleMax;
+    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+    scaleRange.value = Math.min(equivalentScale, newScaleMax);
+    updateSESliderRange();
+  })();
+
+  regenerate();
+})();
+</script>
+</body>
+</html>
