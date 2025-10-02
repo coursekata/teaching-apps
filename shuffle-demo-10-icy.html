@@ -1205,7 +1205,7 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                 return;
               }
               
-              // Pick two random cards
+// Pick two random cards
               const idx1 = Math.floor(Math.random() * cards.length);
               let idx2 = Math.floor(Math.random() * cards.length);
               while (idx2 === idx1) {
@@ -1254,10 +1254,10 @@ function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
                     hand2.style.opacity = '0';
                     
                     swapCount++;
-                    setTimeout(performSwap, 300);
-                  }, 400);
-                }, 200);
-              }, 400);
+                    setTimeout(performSwap, 150);
+                  }, 200);
+                }, 100);
+              }, 200);
             }
             
             performSwap();
