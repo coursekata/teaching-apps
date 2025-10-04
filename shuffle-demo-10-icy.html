@@ -637,6 +637,24 @@ b1(Score_shuf~Condition, data=df)</div>
         RESET_TRANSITION: 600
       };
 
+      /** Faster animation timing when hands are disabled (in milliseconds) */
+      const ANIMATION_TIMING_NO_HANDS = {
+        CARD_TRANSITION: 800,
+        JIGGLE_DURATION: 400,
+        GATHER_DELAY: 30,
+        GATHER_TO_SHUFFLE: 400,
+        HAND_MOVEMENT: 60,
+        CARD_LIFT: 35,
+        SWAP_DURATION: 75,
+        SWAP_PAUSE: 40,
+        SHUFFLE_TO_DEAL: 200,
+        DEAL_INTERVAL: 50,
+        DEAL_CARD_DELAY: 40,
+        HAND_FADE: 0,
+        RETURN_TO_ORIGIN: 700,
+        RESET_TRANSITION: 600
+      };
+
       /** Visual constants */
       const VISUAL_CONSTANTS = {
         CARD_WIDTH: 50,
@@ -700,6 +718,10 @@ b1(Score_shuf~Condition, data=df)</div>
       if (urlParams.get('groupB')) CONFIG.groupBName = urlParams.get('groupB');
       if (urlParams.get('outcome')) CONFIG.outcomeName = urlParams.get('outcome');
       if (urlParams.get('group')) CONFIG.groupName = urlParams.get('group');
+
+      // Hand animation control (default is true/on)
+      const handsParam = urlParams.get('hands');
+      const SHOW_HANDS = handsParam === null || handsParam === 'true' || handsParam === '1' || handsParam === 'on';
 
       const tabsParam = urlParams.get('tabs');
       let visibleTabs = [1, 2, 3, 4];
@@ -792,6 +814,14 @@ b1(Score_shuf~Condition, data=df)</div>
           [result[i], result[j]] = [result[j], result[i]];
         }
         return result;
+      }
+
+      /**
+       * Gets the appropriate timing constants based on hands setting
+       * @returns {Object} Timing constants object
+       */
+      function getTiming() {
+        return SHOW_HANDS ? ANIMATION_TIMING : ANIMATION_TIMING_NO_HANDS;
       }
 
       /**
@@ -1117,13 +1147,14 @@ b1(Score_shuf~Condition, data=df)</div>
        * @returns {HTMLElement} Hand element
        */
       function createHandElement(parent) {
+        const timing = getTiming();
         const hand = document.createElement('div');
         hand.innerHTML = '🖐️';
         hand.style.position = 'absolute';
         hand.style.fontSize = VISUAL_CONSTANTS.HAND_EMOJI_SIZE + 'px';
         hand.style.pointerEvents = 'none';
         hand.style.zIndex = '1000';
-        hand.style.transition = `all ${ANIMATION_TIMING.HAND_MOVEMENT}ms ease`;
+        hand.style.transition = `all ${timing.HAND_MOVEMENT}ms ease`;
         hand.style.opacity = '0';
         parent.appendChild(hand);
         return hand;
@@ -1138,6 +1169,8 @@ b1(Score_shuf~Condition, data=df)</div>
        * @param {Function} callback - Callback after animation completes
        */
       function doShuffleAnimation(cards, layerRect, newShuffledOutcomes, callback) {
+        const timing = getTiming();
+        
         // Phase 1: Jiggle cards to show they're about to be shuffled
         cards.forEach(card => card.classList.add('show-border', 'jiggle'));
 
@@ -1149,19 +1182,19 @@ b1(Score_shuf~Condition, data=df)</div>
           };
           
           // Phase 2: Gather cards to center
-          setTimeout(() => gatherCardsToCenter(cards, tableCenter), ANIMATION_TIMING.GATHER_DELAY);
+          setTimeout(() => gatherCardsToCenter(cards, tableCenter), timing.GATHER_DELAY);
 
-          // Phase 3: Create hands and perform visible swaps
-          const hand1 = createHandElement(AppState.dom.cardsLayer);
-          const hand2 = createHandElement(AppState.dom.cardsLayer);
+          // Phase 3: Create hands (if enabled) and perform visible swaps
+          const hand1 = SHOW_HANDS ? createHandElement(AppState.dom.cardsLayer) : null;
+          const hand2 = SHOW_HANDS ? createHandElement(AppState.dom.cardsLayer) : null;
 
           setTimeout(() => {
             performVisibleSwaps(cards, hand1, hand2, 8, () => {
               // Phase 4: Deal cards to new positions
               dealCardsToNewPositions(cards, hand1, hand2, newShuffledOutcomes, callback);
             });
-          }, ANIMATION_TIMING.GATHER_TO_SHUFFLE);
-        }, ANIMATION_TIMING.JIGGLE_DURATION);
+          }, timing.GATHER_TO_SHUFFLE);
+        }, timing.JIGGLE_DURATION);
       }
 
       /**
@@ -1183,19 +1216,22 @@ b1(Score_shuf~Condition, data=df)</div>
       /**
        * Performs visible card swaps with hands
        * @param {NodeList} cards - Card elements
-       * @param {HTMLElement} hand1 - First hand element
-       * @param {HTMLElement} hand2 - Second hand element
+       * @param {HTMLElement} hand1 - First hand element (or null if hands disabled)
+       * @param {HTMLElement} hand2 - Second hand element (or null if hands disabled)
        * @param {number} totalSwaps - Number of swaps to perform
        * @param {Function} onComplete - Completion callback
        */
       function performVisibleSwaps(cards, hand1, hand2, totalSwaps, onComplete) {
+        const timing = getTiming();
         let swapCount = 0;
         
         function performSwap() {
           if (swapCount >= totalSwaps) {
-            hand1.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
-            hand2.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
-            setTimeout(onComplete, ANIMATION_TIMING.SHUFFLE_TO_DEAL);
+            if (SHOW_HANDS && hand1 && hand2) {
+              hand1.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
+              hand2.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
+            }
+            setTimeout(onComplete, timing.SHUFFLE_TO_DEAL);
             return;
           }
           
@@ -1211,13 +1247,15 @@ b1(Score_shuf~Condition, data=df)</div>
           const pos1 = { left: parseFloat(card1.style.left), top: parseFloat(card1.style.top) };
           const pos2 = { left: parseFloat(card2.style.left), top: parseFloat(card2.style.top) };
           
-          // Show hands moving to cards
-          hand1.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
-          hand2.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
-          hand1.style.left = (pos1.left + 10) + 'px';
-          hand1.style.top = (pos1.top - 35) + 'px';
-          hand2.style.left = (pos2.left + 10) + 'px';
-          hand2.style.top = (pos2.top - 35) + 'px';
+          // Show hands moving to cards (if enabled)
+          if (SHOW_HANDS && hand1 && hand2) {
+            hand1.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
+            hand2.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_VISIBLE);
+            hand1.style.left = (pos1.left + 10) + 'px';
+            hand1.style.top = (pos1.top - 35) + 'px';
+            hand2.style.left = (pos2.left + 10) + 'px';
+            hand2.style.top = (pos2.top - 35) + 'px';
+          }
           
           setTimeout(() => {
             // Lift cards
@@ -1231,26 +1269,30 @@ b1(Score_shuf~Condition, data=df)</div>
               card2.style.left = pos1.left + 'px';
               card2.style.top = pos1.top + 'px';
               
-              // Move hands with cards
-              hand1.style.left = (pos2.left + 10) + 'px';
-              hand1.style.top = (pos2.top - 35) + 'px';
-              hand2.style.left = (pos1.left + 10) + 'px';
-              hand2.style.top = (pos1.top - 35) + 'px';
+              // Move hands with cards (if enabled)
+              if (SHOW_HANDS && hand1 && hand2) {
+                hand1.style.left = (pos2.left + 10) + 'px';
+                hand1.style.top = (pos2.top - 35) + 'px';
+                hand2.style.left = (pos1.left + 10) + 'px';
+                hand2.style.top = (pos1.top - 35) + 'px';
+              }
               
               setTimeout(() => {
                 // Set cards down
                 card1.style.transform = `translateZ(50px) scale(${VISUAL_CONSTANTS.CARD_HOVER_SCALE}) rotate(${(Math.random() - 0.5) * 30}deg)`;
                 card2.style.transform = `translateZ(50px) scale(${VISUAL_CONSTANTS.CARD_HOVER_SCALE}) rotate(${(Math.random() - 0.5) * 30}deg)`;
                 
-                // Hide hands briefly
-                hand1.style.opacity = '0';
-                hand2.style.opacity = '0';
+                // Hide hands briefly (if enabled)
+                if (SHOW_HANDS && hand1 && hand2) {
+                  hand1.style.opacity = '0';
+                  hand2.style.opacity = '0';
+                }
                 
                 swapCount++;
-                setTimeout(performSwap, ANIMATION_TIMING.SWAP_PAUSE);
-              }, ANIMATION_TIMING.SWAP_DURATION);
-            }, ANIMATION_TIMING.CARD_LIFT);
-          }, ANIMATION_TIMING.HAND_MOVEMENT);
+                setTimeout(performSwap, timing.SWAP_PAUSE);
+              }, timing.SWAP_DURATION);
+            }, timing.CARD_LIFT);
+          }, timing.HAND_MOVEMENT);
         }
         
         performSwap();
@@ -1259,12 +1301,13 @@ b1(Score_shuf~Condition, data=df)</div>
       /**
        * Deals cards to their new shuffled positions
        * @param {NodeList} cards - Card elements
-       * @param {HTMLElement} hand1 - First hand element
-       * @param {HTMLElement} hand2 - Second hand element
+       * @param {HTMLElement} hand1 - First hand element (or null if hands disabled)
+       * @param {HTMLElement} hand2 - Second hand element (or null if hands disabled)
        * @param {Array} newShuffledOutcomes - New shuffle arrangement
        * @param {Function} callback - Completion callback
        */
       function dealCardsToNewPositions(cards, hand1, hand2, newShuffledOutcomes, callback) {
+        const timing = getTiming();
         AppState.shuffledOutcomes = newShuffledOutcomes;
         
         const shuffledColumnCells = document.querySelectorAll('tbody td:nth-child(3)');
@@ -1275,21 +1318,25 @@ b1(Score_shuf~Condition, data=df)</div>
           position: index 
         }));
         
-        hand1.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_DEALING);
-        hand2.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_DEALING);
+        if (SHOW_HANDS && hand1 && hand2) {
+          hand1.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_DEALING);
+          hand2.style.opacity = String(VISUAL_CONSTANTS.HAND_OPACITY_DEALING);
+        }
         
         let dealIndex = 0;
         
         function dealNextCard() {
           if (dealIndex >= cards.length) {
-            // Animation complete - clean up hands
-            hand1.style.opacity = '0';
-            hand2.style.opacity = '0';
-            
-            setTimeout(() => {
-              if (hand1.parentNode) AppState.dom.cardsLayer.removeChild(hand1);
-              if (hand2.parentNode) AppState.dom.cardsLayer.removeChild(hand2);
-            }, ANIMATION_TIMING.HAND_FADE);
+            // Animation complete - clean up hands (if they exist)
+            if (SHOW_HANDS && hand1 && hand2) {
+              hand1.style.opacity = '0';
+              hand2.style.opacity = '0';
+              
+              setTimeout(() => {
+                if (hand1.parentNode) AppState.dom.cardsLayer.removeChild(hand1);
+                if (hand2.parentNode) AppState.dom.cardsLayer.removeChild(hand2);
+              }, timing.HAND_FADE);
+            }
             
             setTimeout(() => {
               cards.forEach(card => { 
@@ -1303,7 +1350,7 @@ b1(Score_shuf~Condition, data=df)</div>
           }
           
           const card = cards[dealIndex];
-          const hand = dealIndex % 2 === 0 ? hand1 : hand2;
+          const hand = SHOW_HANDS ? (dealIndex % 2 === 0 ? hand1 : hand2) : null;
           const outcomeValue = parseFloat(card.dataset.outcomeValue);
           const positionInfo = findAndRemovePosition(shuffledPositions, outcomeValue);
           
@@ -1314,16 +1361,20 @@ b1(Score_shuf~Condition, data=df)</div>
             const centerX = cellRect.left - layerRect.left + (cellRect.width - VISUAL_CONSTANTS.CARD_WIDTH) / 2;
             const centerY = cellRect.top - layerRect.top + (cellRect.height - VISUAL_CONSTANTS.CARD_HEIGHT) / 2;
             
-            // Position hand on card
-            const currentCardLeft = parseFloat(card.style.left);
-            const currentCardTop = parseFloat(card.style.top);
-            hand.style.left = (currentCardLeft + 5) + 'px';
-            hand.style.top = (currentCardTop - 30) + 'px';
+            // Position hand on card (if enabled)
+            if (SHOW_HANDS && hand) {
+              const currentCardLeft = parseFloat(card.style.left);
+              const currentCardTop = parseFloat(card.style.top);
+              hand.style.left = (currentCardLeft + 5) + 'px';
+              hand.style.top = (currentCardTop - 30) + 'px';
+            }
             
             setTimeout(() => {
-              // Push card and hand together
+              // Push card (and hand if enabled) together
               card.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
-              hand.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
+              if (SHOW_HANDS && hand) {
+                hand.style.transition = 'all 0.35s cubic-bezier(.4,.0,.2,1)';
+              }
               
               card.style.transform = 'none';
               card.classList.remove('hover');
@@ -1332,12 +1383,14 @@ b1(Score_shuf~Condition, data=df)</div>
               card.style.width = VISUAL_CONSTANTS.CARD_WIDTH + 'px';
               card.style.height = VISUAL_CONSTANTS.CARD_HEIGHT + 'px';
               
-              hand.style.left = (centerX + 5) + 'px';
-              hand.style.top = (centerY - 30) + 'px';
+              if (SHOW_HANDS && hand) {
+                hand.style.left = (centerX + 5) + 'px';
+                hand.style.top = (centerY - 30) + 'px';
+              }
               
               dealIndex++;
-              setTimeout(dealNextCard, ANIMATION_TIMING.DEAL_INTERVAL);
-            }, ANIMATION_TIMING.DEAL_CARD_DELAY);
+              setTimeout(dealNextCard, timing.DEAL_INTERVAL);
+            }, timing.DEAL_CARD_DELAY);
           } else {
             dealIndex++;
             dealNextCard();
