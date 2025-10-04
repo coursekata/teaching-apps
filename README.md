@@ -13,6 +13,8 @@ Here's an example:
 
 You also can configure which of the three tabs to show by adding at the end, for example, `&tabs=1,2`. This would show only the first two tabs. If not specified, all tabs appear by default.
 
+And finally, showing hands shuffling is the default, but if you add &hands=false to the url it will turn the hands off.
+
 ## 2. Confidence Demo
 This is an app for demonstrating the concept of confidence interval. Here's a link to the app:
 
