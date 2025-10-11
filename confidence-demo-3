@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Draggable Histogram + CI + p-value (simplified)</title>
+<style>
+  :root{
+    --fg:#111; --muted:#666; --bg:#fff; --accent:#2563eb;
+    --bar:#60a5fa55; --bar-stroke:#1e4ed8aa; --mean:#ef4444; --axis:#333;
+    --tail:#1e3a8a; --tailFill:#1e3a8a44; --mark:#1d4ed8;
+    --orange:#f97316;
+  }
+  body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:#fff;display:grid;place-items:start center;padding:16px}
+  .app{width:min(1100px,95vw)}
+  h1{font-size:18px;margin:0 0 8px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0 12px}
+  .row label{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
+  input[type=number],input[type=range],button{font:inherit;border-radius:10px;border:1px solid #ddd;padding:6px 8px;background:#fafafa;outline:none}
+  input[type=number]{width:50px}
+  input[type=range]{width:154px;accent-color:var(--accent)}
+  button{background:#f4f4f4;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .panel{border:1px solid #eee;border-radius:14px;padding:10px}
+  .svg-wrap{position:relative;width:100%;height:560px;border:1px solid #eee;border-radius:14px;overflow:hidden}
+  .axis path,.axis line{stroke:#bbb}
+  .axis.x text{font-size:16px}
+  .hist-bar{fill:var(--bar);stroke:var(--bar-stroke)}
+  .hist-shade{fill:var(--tailFill);stroke:none}
+  .hist-shade-2{fill:#f9731644;stroke:none}
+  .draggable-veil{cursor:grab}
+  .draggable-veil:active{cursor:grabbing}
+  .mean-line{stroke:var(--mean);stroke-width:2.5;shape-rendering:crispEdges}
+  .mean-line-orange{stroke:var(--orange);stroke-width:2.5;shape-rendering:crispEdges}
+  .axis-label{fill:#333;font-weight:700;font-size:20px}
+  .curve{fill:none;stroke:#1e4ed8;stroke-width:2}
+  .curve-second{fill:none;stroke:#f97316;stroke-width:2}
+  .tail-line{stroke:var(--tail);stroke-width:2}
+  .tail-area{fill:var(--tailFill);stroke:none}
+  .tail-line-orange{stroke:var(--orange);stroke-width:2}
+  .tail-area-orange{fill:var(--orange);fill-opacity:0.25;stroke:none}
+  .seg{display:inline-flex;border:1px solid #ddd;border-radius:10px;overflow:hidden}
+  .seg button{border:none;background:#f8f8f8;padding:6px 10px}
+  .seg button+button{border-left:1px solid #ddd}
+  .seg button.active{background:var(--accent);color:#fff}
+  .seg button svg{display:block;width:20px;height:20px}
+  .seg button.active svg path{stroke:#fff;fill:#fff}
+  .seg button.active svg path.fill-only{fill:#fff;stroke:none}
+  .seg button.active svg line{stroke:#fff}
+  .icon-toggle{border:1px solid #ddd;border-radius:10px;background:#f8f8f8;padding:6px 10px;cursor:pointer;display:inline-flex}
+  .icon-toggle svg{display:block;width:20px;height:20px}
+  .icon-toggle.active{background:var(--accent);border-color:var(--accent)}
+  .icon-toggle.active svg path{stroke:#fff;fill:#fff}
+  .icon-toggle.active svg line{stroke:#fff}
+  .icon-toggle.active svg rect{fill:#fff;stroke:#fff}
+  .icon-toggle span{color:#f97316;font-weight:700;font-size:16px}
+  .icon-toggle.active span{color:#fff}
+  .overlay-btn{
+    position:absolute; z-index:2; transform:translate(-50%,0);
+    font-size:12px; padding:4px 10px; border-radius:10px;
+    background:#fff; border:1px solid var(--mark); color:var(--mark);
+    box-shadow:0 1px 2px rgba(0,0,0,.04); white-space:nowrap;
+  }
+  .overlay-btn.orange{
+    border-color:var(--orange); color:var(--orange);
+  }
+  .overlay-btn.hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Draggable Sampling-Distribution Histogram</h1>
+
+  <!-- Controls -->
+  <div class="row panel">
+    <!-- Row 1 -->
+    <div class="row" style="gap:16px;">
+      <label>β
+        <input id="betaInput" type="number" step="0.1" value="0">
+      </label>
+
+      <label>SE
+        <input id="seInput" type="number" step="0.01" value="1" style="width:45px">
+        <input id="seRange" type="range" min="0.1" max="5" step="0.05" value="1">
+      </label>
+
+      <label>n draws
+        <input id="nInput" type="number" min="10" max="200000" step="10" value="1000">
+      </label>
+
+      <button id="regenBtn" class="primary">Simulate</button>
+      <div style="flex:1 1 auto;"></div>
+
+      <label>b
+        <input id="bInput" type="number" step="0.01" value="">
+      </label>
+      <button id="bBtn" class="primary">Update b</button>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="row" style="gap:16px;">
+      <label>Scale
+        <input id="scaleRange" type="range" min="0.5" max="3" step="0.1" value="1.75">
+      </label>
+
+      <label>Bins
+        <input id="binsRange" type="range" min="1" max="200" step="1" value="30">
+      </label>
+
+      <div class="seg" id="curveSeg" title="Overlay curve">
+        <button data-curve="off" class="active">Off</button>
+        <button data-curve="normal">N</button>
+        <button data-curve="t">t</button>
+      </div>
+
+      <label>df
+        <input id="dfInput" type="number" min="1" step="1" value="10" style="width:60px">
+      </label>
+
+      <div class="seg" id="ciSeg">
+        <button data-ci="off" class="active">OFF</button>
+        <button data-ci="90">90%</button>
+        <button data-ci="95">95%</button>
+        <button data-ci="99">99%</button>
+      </div>
+
+      <button id="secondDistBtn" class="icon-toggle" title="Toggle second distribution">
+        <span>β′</span>
+      </button>
+
+      <button id="vertLinesBtn" class="icon-toggle" title="Toggle vertical CI lines">
+        <svg viewBox="0 0 20 20" fill="none">
+          <line x1="7" y1="2" x2="7" y2="18" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="2,2"/>
+          <line x1="13" y1="2" x2="13" y2="18" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="2,2"/>
+        </svg>
+      </button>
+
+      <button id="histogramBtn" class="icon-toggle active" title="Toggle histogram/curve view">
+        <svg viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="10" width="3" height="8" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
+          <rect x="6" y="6" width="3" height="12" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
+          <rect x="10" y="8" width="3" height="10" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
+          <rect x="14" y="12" width="3" height="6" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="svg-wrap" id="chart">
+    <!-- Hover-only mark buttons -->
+    <button id="btnMarkBound" class="overlay-btn hidden">Mark Bound</button>
+    <button id="btnMarkBound2" class="overlay-btn orange hidden">Mark Bound</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+(function(){
+  const chartWrap = document.getElementById('chart');
+  const nInput = document.getElementById('nInput');
+  const binsRange = document.getElementById('binsRange');
+  const betaInput = document.getElementById('betaInput');
+  const seInput = document.getElementById('seInput');
+  const seRange = document.getElementById('seRange');
+  const scaleRange = document.getElementById('scaleRange');
+  const ciSeg = document.getElementById('ciSeg');
+  const bInput = document.getElementById('bInput');
+  const bBtn = document.getElementById('bBtn');
+  const regenBtn = document.getElementById('regenBtn');
+  const curveSeg = document.getElementById('curveSeg');
+  const dfInput  = document.getElementById('dfInput');
+  const btnMarkBound = document.getElementById('btnMarkBound');
+  const btnMarkBound2 = document.getElementById('btnMarkBound2');
+  const secondDistBtn = document.getElementById('secondDistBtn');
+  const vertLinesBtn = document.getElementById('vertLinesBtn');
+  const histogramBtn = document.getElementById('histogramBtn');
+
+  let width = chartWrap.clientWidth, height = chartWrap.clientHeight;
+  let margin = {top:56, right:20, bottom:116, left:44};
+  let innerW = width - margin.left - margin.right;
+  let innerH = height - margin.top - margin.bottom;
+  const axisInsetTop = 12;
+  const axisInsetBottom = 14;
+  let plotH = Math.max(1, innerH - axisInsetTop - axisInsetBottom);
+
+  const svg = d3.select('#chart').append('svg').attr('width',width).attr('height',height);
+
+  // Arrowheads
+  const defs = svg.append('defs');
+  defs.append('marker').attr('id','arrowUpRed').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,0 L8,4 L0,8 Z').attr('fill','#ef4444');
+  defs.append('marker').attr('id','arrowDownRed').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,8 L8,4 L0,0 Z').attr('fill','#ef4444');
+  defs.append('marker').attr('id','arrowDownBlue').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,8 L8,4 L0,0 Z').attr('fill','#1d4ed8');
+  defs.append('marker').attr('id','arrowDownOrange').attr('markerWidth',10).attr('markerHeight',8)
+    .attr('refX',8).attr('refY',4).attr('orient','auto')
+    .append('path').attr('d','M0,8 L8,4 L0,0 Z').attr('fill','#f97316');
+
+  const root = svg.append('g').attr('transform','translate('+margin.left+','+margin.top+')');
+
+  // Axes
+  const xAxisTopG = root.append('g').attr('class','axis x');
+  const xAxisG    = root.append('g').attr('class','axis x');
+
+  // Plot area (shifts when dragging)
+  const plotWrap = root.append('g');
+  const histWrap = plotWrap.append('g').attr('class','hist-wrap');
+  const histG    = histWrap.append('g').attr('class','hist');
+  const histShadeG = histWrap.append('g').attr('class','hist-shade-wrap');
+  const meanLine = histWrap.append('line').attr('class','mean-line');
+  const meanLabel = histWrap.append('g').attr('class','mean-label');
+  meanLabel.append('rect')
+    .attr('fill','#fff').attr('opacity',0.75).attr('rx',3).attr('ry',3);
+  const meanLabelText = meanLabel.append('text')
+    .attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',20)
+    .attr('dy', '0.35em')
+    .text('b');
+  meanLabel.append('line')
+    .attr('class','overline')
+    .attr('stroke','#ef4444').attr('stroke-width',2).attr('stroke-linecap','round');
+  meanLabel.style('display','none');
+
+  // Second distribution (NOT in histWrap so it doesn't get transformed with main dist)
+  const secondWrap = plotWrap.append('g').attr('class','second-wrap');
+  const histG2 = secondWrap.append('g').attr('class','hist-2');
+  const histShadeG2 = secondWrap.append('g').attr('class','hist-shade-wrap-2');
+  const meanLine2 = secondWrap.append('line').attr('class','mean-line-orange').style('display','none');
+  const meanLabel2 = secondWrap.append('g').attr('class','mean-label-orange');
+  meanLabel2.append('rect')
+    .attr('fill','#fff').attr('opacity',0.75).attr('rx',3).attr('ry',3);
+  const meanLabelText2 = meanLabel2.append('text')
+    .attr('text-anchor','middle').attr('fill','#f97316').attr('font-weight',700).attr('font-size',20)
+    .attr('dy', '0.35em')
+    .text('b′');
+  meanLabel2.append('line')
+    .attr('class','overline')
+    .attr('stroke','#f97316').attr('stroke-width',2).attr('stroke-linecap','round');
+  meanLabel2.style('display','none');
+  
+  // Overlay (curve + tails) for main distribution
+  const overlayG = histWrap.append('g').attr('class','overlay');
+  const curvePath = overlayG.append('path').attr('class','curve').style('display','none');
+  const tailLineL = overlayG.append('line').attr('class','tail-line').style('display','none');
+  const tailLineR = overlayG.append('line').attr('class','tail-line').style('display','none');
+  const tailAreaL = overlayG.append('path').attr('class','tail-area').style('display','none');
+  const tailAreaR = overlayG.append('path').attr('class','tail-area').style('display','none');
+  
+  // Vertical CI lines (in histWrap so they move with the main distribution)
+  const vertLineL = histWrap.append('line').attr('stroke','#1d4ed8').attr('stroke-width',2).attr('stroke-dasharray','4,4').style('display','none');
+  const vertLineR = histWrap.append('line').attr('stroke','#1d4ed8').attr('stroke-width',2).attr('stroke-dasharray','4,4').style('display','none');
+  
+  // Second distribution overlays
+  const overlayG2 = secondWrap.append('g').attr('class','overlay2');
+  const curvePath2 = overlayG2.append('path').attr('class','curve-second').style('display','none');
+  const tailLineL2 = overlayG2.append('line').attr('class','tail-line-orange').style('display','none');
+  const tailLineR2 = overlayG2.append('line').attr('class','tail-line-orange').style('display','none');
+  const tailAreaL2 = overlayG2.append('path').attr('class','tail-area-orange').style('display','none');
+  const tailAreaR2 = overlayG2.append('path').attr('class','tail-area-orange').style('display','none');
+
+  // b marker (bottom)
+  const bMarkerG = root.append('g').attr('class','b-marker').style('cursor','ew-resize');
+  const bLine = bMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowUpRed)');
+  const bBG   = bMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+  const bLabel= bMarkerG.append('text').attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',18);
+
+  // β marker (top)
+  const betaMarkerG = root.append('g').attr('class','beta-marker').style('cursor','grab');
+  const betaLine = betaMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowDownRed)');
+  const betaBG   = betaMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+  const betaLabel= betaMarkerG.append('text').attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',18);
+
+  // β' marker (top, orange)
+  const betaPrimeMarkerG = root.append('g').attr('class','beta-prime-marker').style('cursor','grab');
+  const betaPrimeLine = betaPrimeMarkerG.append('line').attr('stroke','#f97316').attr('stroke-width',3).attr('marker-end','url(#arrowDownOrange)');
+  const betaPrimeBG   = betaPrimeMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+  const betaPrimeLabel= betaPrimeMarkerG.append('text').attr('text-anchor','middle').attr('fill','#f97316').attr('font-weight',700).attr('font-size',18);
+
+  // Blue bound markers (top) - container for dynamic marks
+  const blueMarksG = root.append('g').attr('class','blue-marks');
+
+  // Drag veil
+  const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent').attr('pointer-events','all');
+
+  // Bottom axis label
+  const xLabelBottom = root.append('text').attr('class','axis-label').attr('text-anchor','middle').text('b');
+
+  // p-value text (blue)
+  const pTextRight = root.append('text')
+    .attr('fill', '#1d4ed8')
+    .attr('font-weight', 700)
+    .attr('font-size', 18)
+    .attr('text-anchor', 'start')
+    .attr('display', 'none');
+
+  // Data & state
+  let data=[], bins=[], data2=[], bins2=[];
+  const x = d3.scaleLinear().range([0, innerW]);
+  const y = d3.scaleLinear().range([plotH, 0]);
+  let shiftUnits = 0;     // drag offset in DATA units for main distribution
+  let shiftUnits2 = 0;    // drag offset in DATA units for second distribution
+  let bValue = null;      // no b initially
+  let ciMode = 'off';     // 'off' | '90' | '95' | '99'
+  let blueMarks = [];     // array of {id: number, value: number}
+  let nextMarkId = 0;     // counter for unique mark IDs
+  let blueMarkJustPlaced = false; // track if we just placed a mark
+  let previousSE = getSE(); // track previous SE for proportional scaling
+
+  // Curve mode: 'off' | 'normal' | 't'
+  let curveMode = 'off';
+  let secondDistMode = 'off'; // 'off' | 'on'
+  let vertLinesMode = 'off';  // 'off' | 'on'
+  let histogramMode = 'on';   // 'on' | 'off'
+  let vertLinesAttachment = 'cutoffs'; // 'cutoffs' | 'b'
+  let vertLineDistFromB = {left: 0, right: 0}; // distances from b when attached to b
+  let linkedMarks = {left: null, right: null}; // mark IDs linked to vertical lines
+
+  // Track domain lock (used for simulate & initial domain)
+  let fixedDomain = null;
+
+  function restoreRedBetaOnTop(){ betaMarkerG.raise(); }
+
+  // ---------- helpers ----------
+  function getBeta(){ return +betaInput.value||0; }
+  function getSE(){ return Math.max(+seInput.value||1,1e-9); }
+  function getScale(){ return Math.max(+scaleRange.value||1.75,0.1); }
+  function getN(){ return Math.max(+nInput.value||1000,1); }
+  function getBins(){ return Math.max(1, Math.floor(+binsRange.value || 30)); }
+  function getDf(){ return Math.max(1, Math.floor(+dfInput.value || 10)); }
+  function pxPerUnit(){ const u0=x.domain()[0]; return Math.abs(x(u0+1)-x(u0)); }
+  function dataUnitsPerPx(){ return 1/pxPerUnit(); }
+
+  // Robust Phi(z)
+  function cdfStandard(z){
+    const sign = z < 0 ? -1 : 1;
+    const xabs = Math.abs(z)/Math.SQRT2;
+    const t = 1/(1+0.3275911*xabs);
+    const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429;
+    const erf = 1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t)*Math.exp(-xabs*xabs);
+    return 0.5*(1+sign*erf);
+  }
+  function zFor(mode){
+    const zt={ '90':1.6448536269514722,'95':1.959963984540054,'99':2.5758293035489004 };
+    return zt[mode]||zt['95'];
+  }
+  function pdfNormal(xv, beta, se){
+    return (1/(se*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*Math.pow((xv-beta)/se,2));
+  }
+  // Student-t PDF with df (nu), centered at beta with scale se
+  function pdfT(xv, beta, se, nu){
+    const z = (xv - beta) / se;
+    const v = nu;
+    const norm = Math.exp(gammaln((v+1)/2) - gammaln(v/2)) / (Math.sqrt(v*Math.PI) * se);
+    return norm * Math.pow(1 + (z*z)/v, -(v+1)/2);
+  }
+  // Lanczos approximation for log gamma
+  function gammaln(x){
+    const cof=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+    let y=x; let tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
+    let ser=1.000000000190015;
+    for(let j=0;j<6;j++){ y+=1; ser+=cof[j]/y; }
+    return -tmp + Math.log(2.5066282746310005*ser/x);
+  }
+
+  // --- Student-t helpers ---
+  function pdfTStd(x, nu){
+    const v = nu;
+    const norm = Math.exp(gammaln((v+1)/2) - gammaln(v/2)) / Math.sqrt(v*Math.PI);
+    return norm * Math.pow(1 + (x*x)/v, -(v+1)/2);
+  }
+  function simpson(f, a, b){
+    const c = 0.5*(a+b);
+    return (b-a)/6 * (f(a) + 4*f(c) + f(b));
+  }
+  function adaptiveSimpson(f, a, b, eps, maxDepth){
+    const S = simpson(f,a,b);
+    return asr(f,a,b,eps,S,maxDepth);
+    function asr(f,a,b,eps,S,depth){
+      const c = 0.5*(a+b);
+      const Sleft  = simpson(f,a,c);
+      const Sright = simpson(f,c,b);
+      const S2 = Sleft + Sright;
+      if (depth <= 0 || Math.abs(S2-S) <= 15*eps) {
+        return S2 + (S2-S)/15;
+      }
+      return asr(f,a,c,eps/2,Sleft,depth-1) + asr(f,c,b,eps/2,Sright,depth-1);
+    }
+  }
+  function cdfT(z, nu){
+    if (!isFinite(z)) return z>0 ? 1 : 0;
+    if (z === 0) return 0.5;
+    if (z < 0) return 1 - cdfT(-z, nu);
+    const f = function(x){ return pdfTStd(x, nu); };
+    const area = adaptiveSimpson(f, 0, z, 1e-7, 12);
+    return 0.5 + area;
+  }
+  function tinv(p, nu){
+    if (p <= 0) return -Infinity;
+    if (p >= 1) return  Infinity;
+    if (p === 0.5) return 0;
+    const target = (p > 0.5) ? p : 1 - p;
+    let lo = 0, hi = 20;
+    while (cdfT(hi, nu) < target) hi *= 2;
+    for (let i=0; i<60; i++){
+      const mid = 0.5*(lo+hi);
+      if (cdfT(mid, nu) < target) lo = mid; else hi = mid;
+    }
+    const q = 0.5*(lo+hi);
+    return (p >= 0.5) ? q : -q;
+  }
+  function ciCrit(ciMode, curveMode, df){
+    if (ciMode === 'off') return null;
+    const conf = (+ciMode)/100;
+    const pUpper = 0.5 * (1 + conf);
+    return (curveMode === 't') ? tinv(pUpper, df) : zFor(ciMode);
+  }
+
+  function setXDomain(){
+    const beta = getBeta();
+    if (fixedDomain) { x.domain(fixedDomain); return; }
+    const span = 10 * getScale();
+    x.domain([beta - span/2, beta + span/2]);
+  }
+
+  function gaussian(n, mean=0, sd=1){
+    const arr=new Float64Array(n);
+    for(let i=0;i<n;i++){
+      let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+      let z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+      arr[i]=mean+sd*z;
+    }
+    return Array.from(arr);
+  }
+
+  function fixedThresholds(nbins){
+    const d0=x.domain()[0], d1=x.domain()[1];
+    const ts=[];
+    for(let i=0;i<=nbins;i++){ ts.push(d0 + (i/nbins)*(d1-d0)); }
+    return ts;
+  }
+  function computeBins(values, nbins){
+    if(!values||values.length===0) return [];
+    const binner=d3.bin().domain(x.domain()).thresholds(fixedThresholds(nbins));
+    return binner(values);
+  }
+
+  function recomputeYDomain(nbins){
+    const n = getN(), beta=getBeta(), se=getSE();
+    const domain = x.domain();
+    const binW = (domain[1]-domain[0]) / nbins;
+    const barMax = bins.length ? d3.max(bins, d => d.length) : 1;
+    const barMax2 = (secondDistMode === 'on' && bins2.length) ? d3.max(bins2, d => d.length) : 0;
+    let curveMax = 0;
+    for (let i=0;i<128;i++){
+      const xv = domain[0] + (i/127)*(domain[1]-domain[0]);
+      const pdf = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
+      curveMax = Math.max(curveMax, n * binW * pdf);
+      
+      // Also check second distribution if it's shown
+      if(secondDistMode === 'on'){
+        const pdf2 = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
+        curveMax = Math.max(curveMax, n * binW * pdf2);
+      }
+    }
+    const yMax = Math.max(barMax, barMax2, curveMax, 1);
+    y.domain([0, yMax * 1.08]);
+  }
+
+  function layoutStatic(){
+    plotH = Math.max(1, innerH - axisInsetTop - axisInsetBottom);
+    y.range([plotH, 0]); x.range([0, innerW]);
+    xAxisTopG.attr('transform','translate(0,'+axisInsetTop+')');
+    xAxisG.attr('transform','translate(0,'+(axisInsetTop+plotH)+')');
+    plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
+    veil.attr('x',0).attr('y',axisInsetTop).attr('width',innerW).attr('height',plotH);
+    xLabelBottom.attr('x', innerW/2).attr('y', axisInsetTop + plotH + 64);
+  }
+
+  function drawAxes(){
+    const xAxis=d3.axisBottom(x).tickSizeOuter(0);
+    const xAxisTop=d3.axisTop(x).tickSizeOuter(0);
+    xAxisG.call(xAxis); xAxisTopG.call(xAxisTop);
+  }
+
+  function drawHistogram(){
+    if(histogramMode === 'on'){
+      // Draw bars for main distribution
+      const bar=histG.selectAll('rect').data(bins,d => d.x0+'-'+d.x1);
+      bar.enter().append('rect').attr('class','hist-bar')
+        .attr('x',d => x(d.x0))
+        .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+        .attr('y',d => y(d.length))
+        .attr('height',d => y(0)-y(d.length));
+      bar
+        .attr('x',d => x(d.x0))
+        .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+        .attr('y',d => y(d.length))
+        .attr('height',d => y(0)-y(d.length));
+      bar.exit().remove();
+      
+      // Draw bars for second distribution if active
+      if(secondDistMode === 'on'){
+        const bar2=histG2.selectAll('rect').data(bins2,d => d.x0+'-'+d.x1);
+        bar2.enter().append('rect').attr('class','hist-bar-2')
+          .style('fill','#f9731655')
+          .style('stroke','#f97316aa')
+          .attr('x',d => x(d.x0))
+          .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+          .attr('y',d => y(d.length))
+          .attr('height',d => y(0)-y(d.length));
+        bar2
+          .attr('x',d => x(d.x0))
+          .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+          .attr('y',d => y(d.length))
+          .attr('height',d => y(0)-y(d.length));
+        bar2.exit().remove();
+      } else {
+        histG2.selectAll('rect').remove();
+      }
+    } else {
+      // Histogram off - remove all bars
+      histG.selectAll('rect').remove();
+      histG2.selectAll('rect').remove();
+    }
+    drawHistogramTailShading();
+  }
+
+  function drawHistogramTailShading(){
+    const doShadeBars = (ciMode !== 'off') && (curveMode === 'off') && (histogramMode === 'on');
+    
+    // Shade main distribution
+    const sel = histShadeG.selectAll('rect')
+      .data(doShadeBars ? bins : [], d => d.x0 + '-' + d.x1);
+
+    sel.exit().remove();
+    
+    // Shade second distribution
+    const sel2 = histShadeG2.selectAll('rect')
+      .data(doShadeBars && secondDistMode === 'on' ? bins2 : [], d => d.x0 + '-' + d.x1);
+
+    sel2.exit().remove();
+    
+    if (!doShadeBars) return;
+
+    const beta = getBeta(), se = getSE();
+    const crit = ciCrit(ciMode, curveMode, getDf());
+    const cutL = beta - crit*se, cutR = beta + crit*se;
+
+    function tailFrac(d){
+      const w = d.x1 - d.x0; if (w <= 0) return 0;
+      if (d.x1 <= cutL || d.x0 >= cutR) return 1;
+      if (d.x0 >= cutL && d.x1 <= cutR) return 0;
+      let f = 0;
+      if (d.x0 < cutL && d.x1 > cutL) f += (cutL - d.x0) / w;
+      if (d.x0 < cutR && d.x1 > cutR) f += (d.x1 - cutR) / w;
+      return Math.max(0, Math.min(1, f));
+    }
+
+    // Apply shading to main distribution
+    const merged = sel.enter().append('rect').attr('class','hist-shade').merge(sel);
+    merged
+      .attr('x', d => x(d.x0))
+      .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+      .attr('y', d => {
+        const frac = tailFrac(d);
+        const fullH = y(0) - y(d.length);
+        const h = frac * fullH;
+        return y(0) - h;
+      })
+      .attr('height', d => {
+        const frac = tailFrac(d);
+        const fullH = y(0) - y(d.length);
+        return frac * fullH;
+      });
+      
+    // Apply shading to second distribution
+    if(secondDistMode === 'on'){
+      const merged2 = sel2.enter().append('rect').attr('class','hist-shade-2')
+        .style('fill','#f9731644')
+        .merge(sel2);
+      merged2
+        .attr('x', d => x(d.x0))
+        .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+        .attr('y', d => {
+          const frac = tailFrac(d);
+          const fullH = y(0) - y(d.length);
+          const h = frac * fullH;
+          return y(0) - h;
+        })
+        .attr('height', d => {
+          const frac = tailFrac(d);
+          const fullH = y(0) - y(d.length);
+          return frac * fullH;
+        });
+    }
+  }
+
+  function drawOverlay(){
+    const showCurve = (curveMode !== 'off');
+    const showCIOverCurve = (ciMode !== 'off') && (curveMode !== 'off');
+    const showSecond = (secondDistMode === 'on') && (curveMode !== 'off');
+    const showCIOverSecond = (ciMode !== 'off') && showSecond;
+
+    curvePath.style('display', showCurve ? null : 'none');
+    curvePath2.style('display', showSecond ? null : 'none');
+    tailLineL.style('display', showCIOverCurve ? null : 'none');
+    tailLineR.style('display', showCIOverCurve ? null : 'none');
+    tailAreaL.style('display', showCIOverCurve ? null : 'none');
+    tailAreaR.style('display', showCIOverCurve ? null : 'none');
+    tailLineL2.style('display', showCIOverSecond ? null : 'none');
+    tailLineR2.style('display', showCIOverSecond ? null : 'none');
+    tailAreaL2.style('display', showCIOverSecond ? null : 'none');
+    tailAreaR2.style('display', showCIOverSecond ? null : 'none');
+
+    if(!(showCurve || showCIOverCurve || showSecond)){
+      tailAreaL.attr('d', null); tailAreaR.attr('d', null);
+      tailAreaL2.attr('d', null); tailAreaR2.attr('d', null);
+      return;
+    }
+
+    const beta=getBeta(), se=getSE(), n=getN();
+    const nbins = getBins();
+    const domain = x.domain();
+    const binW = (domain[1]-domain[0]) / nbins;
+
+    const xs = [];
+    for(let i=0;i<256;i++){ xs.push(domain[0] + (i/255)*(domain[1]-domain[0])); }
+
+    function expected(t){
+      if (curveMode === 't') return n * binW * pdfT(t, beta, se, getDf());
+      return n * binW * pdfNormal(t, beta, se);
+    }
+
+    function expected2(t){
+      // Use base beta (secondWrap is transformed)
+      if (curveMode === 't') return n * binW * pdfT(t, beta, se, getDf());
+      return n * binW * pdfNormal(t, beta, se);
+    }
+
+    if(showCurve){
+      if(histogramMode === 'off'){
+        // Use filled area when histogram is off
+        const areaGen = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
+        curvePath.attr('d', areaGen(xs));
+        curvePath.style('fill', '#60a5fa55').style('stroke', '#1e4ed8').style('stroke-width', '2');
+      } else {
+        // Use line only when histogram is on
+        const lineGen = d3.line().x(d => x(d)).y(d => y(expected(d)));
+        curvePath.attr('d', lineGen(xs));
+        curvePath.style('fill', 'none').style('stroke', '#1e4ed8').style('stroke-width', '2');
+      }
+    }
+
+    if(showSecond){
+      if(histogramMode === 'off'){
+        // Use filled area when histogram is off
+        const areaGen2 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected2(d)));
+        curvePath2.attr('d', areaGen2(xs));
+        curvePath2.style('fill', '#f9731655').style('stroke', '#f97316').style('stroke-width', '2');
+      } else {
+        // Use line only when histogram is on
+        const lineGen2 = d3.line().x(d => x(d)).y(d => y(expected2(d)));
+        curvePath2.attr('d', lineGen2(xs));
+        curvePath2.style('fill', 'none').style('stroke', '#f97316').style('stroke-width', '2');
+      }
+    }
+
+    if(showCIOverCurve){
+      const crit = ciCrit(ciMode, curveMode, getDf());
+      const cutL = beta - crit*se, cutR = beta + crit*se;
+      const yCurveL = y(expected(cutL));
+      const yCurveR = y(expected(cutR));
+      tailLineL.attr('x1', x(cutL)).attr('x2', x(cutL)).attr('y1', plotH).attr('y2', yCurveL);
+      tailLineR.attr('x1', x(cutR)).attr('x2', x(cutR)).attr('y1', plotH).attr('y2', yCurveR);
+
+      // Include the cutoff point itself to eliminate gaps
+      const xsL = xs.filter(v => v < cutL).concat([cutL]).sort((a,b) => a-b);
+      const xsR = [cutR].concat(xs.filter(v => v > cutR)).sort((a,b) => a-b);
+      const area = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
+      tailAreaL.attr('d', xsL.length ? area(xsL) : null);
+      tailAreaR.attr('d', xsR.length ? area(xsR) : null);
+    } else {
+      tailAreaL.attr('d', null); tailAreaR.attr('d', null);
+    }
+
+    if(showCIOverSecond){
+      // Use base beta (secondWrap is transformed)
+      const crit = ciCrit(ciMode, curveMode, getDf());
+      const cutL2 = beta - crit*se, cutR2 = beta + crit*se;
+      const yCurveL2 = y(expected2(cutL2));
+      const yCurveR2 = y(expected2(cutR2));
+      // These are in secondWrap (transformed)
+      tailLineL2.attr('x1', x(cutL2)).attr('x2', x(cutL2)).attr('y1', plotH).attr('y2', yCurveL2);
+      tailLineR2.attr('x1', x(cutR2)).attr('x2', x(cutR2)).attr('y1', plotH).attr('y2', yCurveR2);
+
+      // Include the cutoff point itself to eliminate gaps
+      const xsL2 = xs.filter(v => v < cutL2).concat([cutL2]).sort((a,b) => a-b);
+      const xsR2 = [cutR2].concat(xs.filter(v => v > cutR2)).sort((a,b) => a-b);
+      const area2 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected2(d)));
+      tailAreaL2.attr('d', xsL2.length ? area2(xsL2) : null);
+      tailAreaR2.attr('d', xsR2.length ? area2(xsR2) : null);
+    } else {
+      tailAreaL2.attr('d', null); tailAreaR2.attr('d', null);
+    }
+  }
+
+  function drawVerticalLines(){
+    const showVLines = (vertLinesMode === 'on') && (ciMode !== 'off') && (curveMode !== 'off');
+    
+    vertLineL.style('display', showVLines ? null : 'none');
+    vertLineR.style('display', showVLines ? null : 'none');
+    
+    if(!showVLines) return;
+    
+    let cutL, cutR;
+    
+    if(vertLinesAttachment === 'cutoffs'){
+      // Attached to cutoffs - calculate based on CI
+      const beta = getBeta();
+      const se = getSE();
+      const crit = ciCrit(ciMode, curveMode, getDf());
+      cutL = beta - crit*se;
+      cutR = beta + crit*se;
+    } else {
+      // Attached to b - calculate based on b position and stored distances
+      // Since vertical lines are in histWrap (transformed), subtract shiftUnits to compensate
+      if(bValue !== null && !Number.isNaN(bValue)){
+        cutL = (bValue - vertLineDistFromB.left) - shiftUnits;
+        cutR = (bValue + vertLineDistFromB.right) - shiftUnits;
+      } else {
+        // If b doesn't exist, fall back to cutoffs
+        const beta = getBeta();
+        const se = getSE();
+        const crit = ciCrit(ciMode, curveMode, getDf());
+        cutL = beta - crit*se;
+        cutR = beta + crit*se;
+      }
+    }
+    
+    const xPosL = x(cutL);
+    const xPosR = x(cutR);
+    const topY = 0;
+    const bottomY = plotH;
+    
+    vertLineL.attr('x1', xPosL).attr('x2', xPosL).attr('y1', topY).attr('y2', bottomY);
+    vertLineR.attr('x1', xPosR).attr('x2', xPosR).attr('y1', topY).attr('y2', bottomY);
+  }
+
+  function drawBMarker(){
+    if(bValue===null || Number.isNaN(bValue)){ bMarkerG.attr('display','none'); pTextRight.attr('display','none'); return; }
+    bMarkerG.attr('display', null);
+    const xPos = x(bValue);
+    const axisY = axisInsetTop + plotH;
+    const arrowBottom = axisY + 20;
+    bLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowBottom).attr('y2', axisY);
+    bLabel.attr('x', xPos).attr('y', arrowBottom + 24).text('');
+    bLabel.selectAll('tspan').remove();
+    bLabel.append('tspan').text('b');
+    bLabel.append('tspan').text(' = ' + bValue.toFixed(2));
+    const bb = bLabel.node().getBBox(), padX=6, padY=3;
+    bBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+    updatePTextToRightOfB();
+  }
+
+  function drawBetaMarker(){
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const xPos = x(betaVal);
+    const axisY = axisInsetTop;
+    const arrowTop = axisY - 20;
+    
+    // Line always goes from arrow to axis (keeps arrow visible)
+    betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+    
+    betaLabel.attr('x', xPos).attr('y', arrowTop - 14).text('');
+    betaLabel.selectAll('tspan').remove();
+    betaLabel.append('tspan').text('\u03B2');
+    betaLabel.append('tspan').text(' = ' + betaVal.toFixed(2));
+    const bb = betaLabel.node().getBBox(), padX=6, padY=3;
+    betaBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+  }
+
+  function drawBetaPrimeMarker(){
+    const showSecond = (secondDistMode === 'on');
+    if(!showSecond){
+      betaPrimeMarkerG.attr('display', 'none');
+      return;
+    }
+    betaPrimeMarkerG.attr('display', null);
+    const beta2 = getBeta() + shiftUnits2;
+    const xPos = x(beta2);
+    const axisY = axisInsetTop;
+    const arrowTop = axisY - 20;
+    
+    // Line always goes from arrow to axis (keeps arrow visible)
+    betaPrimeLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+    
+    betaPrimeLabel.attr('x', xPos).attr('y', arrowTop - 14).text('');
+    betaPrimeLabel.selectAll('tspan').remove();
+    betaPrimeLabel.append('tspan').text('\u03B2\u2032');
+    betaPrimeLabel.append('tspan').text(' = ' + beta2.toFixed(2));
+    const bb = betaPrimeLabel.node().getBBox(), padX=6, padY=3;
+    betaPrimeBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+    // Always raise beta-prime on top when visible
+    betaPrimeMarkerG.raise();
+  }
+
+  function updatePTextToRightOfB(){
+    if(bValue === null || Number.isNaN(bValue)){ pTextRight.attr('display','none'); return; }
+    
+    // Hide p-value if no sampling distribution is shown
+    const showDistribution = (histogramMode === 'on') || (curveMode !== 'off');
+    if(!showDistribution){ pTextRight.attr('display','none'); return; }
+    
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const se = getSE();
+    const z = (bValue - betaVal)/se;
+    const absZ = Math.abs(z);
+
+    let pOne;
+    if (curveMode === 't') {
+      const nu = getDf();
+      pOne = 1 - cdfT(absZ, nu);
+    } else {
+      pOne = 1 - cdfStandard(absZ);
+    }
+
+    const text = (pOne < 0.001) ? 'p < 0.001' : ('p = ' + pOne.toFixed(3));
+    pTextRight.text(text);
+
+    const bb = bBG.node().getBBox();
+    const pad = 10;
+    const xRight = bb.x + bb.width + pad;
+    const yBaseline = bb.y + bb.height - 8;
+    pTextRight.attr('x', xRight).attr('y', yBaseline).attr('display', null);
+  }
+
+  // Place/update a blue mark at a position
+  function addMark(value){
+    blueMarks.push({id: nextMarkId++, value: value});
+    blueMarkJustPlaced = true;
+    draw();
+  }
+  
+  function clearMark(markId){
+    blueMarks = blueMarks.filter(m => m.id !== markId);
+    // Unlink if this mark was linked
+    if(linkedMarks.left === markId) linkedMarks.left = null;
+    if(linkedMarks.right === markId) linkedMarks.right = null;
+    draw();
+  }
+  
+  function clearAllMarks(){
+    blueMarks = [];
+    linkedMarks.left = null;
+    linkedMarks.right = null;
+    // Remove all dynamic clear buttons
+    d3.selectAll('.clear-mark-btn').remove();
+    draw();
+  }
+
+  // Hide/clear blue markers (CI -> OFF)
+  function clearBlueMarks(){
+    clearAllMarks();
+  }
+
+  function setXDomainAndBins(){
+    setXDomain();
+    const nbins = getBins();
+    bins = computeBins(data, nbins);
+    if(secondDistMode === 'on'){
+      bins2 = computeBins(data2, nbins);
+    } else {
+      bins2 = [];
+    }
+    recomputeYDomain(nbins);
+  }
+
+  function draw(){
+    layoutStatic();
+    setXDomainAndBins();
+    drawAxes();
+    drawHistogram();
+
+    const beta=getBeta();
+    const pxShift = x(beta + shiftUnits) - x(beta);
+    const pxShift2 = x(beta + shiftUnits2) - x(beta);
+    plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
+    histWrap.attr('transform','translate('+pxShift+',0)');
+    secondWrap.attr('transform','translate('+pxShift2+',0)');
+    
+    // Show/hide mean lines based on whether histogram or curves are visible
+    const showMeanLines = (histogramMode === 'on') || (curveMode !== 'off');
+    const meanLineEnd = plotH * 0.2;
+    
+    meanLine.attr('x1',x(beta)).attr('x2',x(beta)).attr('y1',0).attr('y2',meanLineEnd)
+      .style('display', showMeanLines ? null : 'none');
+    
+    meanLabel.attr('transform', 'translate(' + x(beta) + ',' + (meanLineEnd + 18) + ')')
+      .style('display', showMeanLines ? null : 'none');
+    
+    if(showMeanLines){
+      const labelText = meanLabel.select('text');
+      const labelBB = labelText.node().getBBox();
+      const labelRect = meanLabel.select('rect');
+      
+      // Position the overline
+      const overline = meanLabel.select('line.overline');
+      const overlineY = labelBB.y - 2;
+      overline.attr('x1', labelBB.x).attr('x2', labelBB.x + labelBB.width).attr('y1', overlineY).attr('y2', overlineY);
+      
+      labelRect
+        .attr('x', labelBB.x - 3)
+        .attr('y', overlineY - 3)
+        .attr('width', labelBB.width + 6)
+        .attr('height', labelBB.height + 8);
+      labelRect.lower(); // Ensure rect is behind text
+      meanLabel.raise(); // Bring label on top of curves
+    }
+
+    // Draw second distribution mean line (in secondWrap, transformed)
+    const showSecond = (secondDistMode === 'on');
+    if(showSecond){
+      meanLine2.attr('x1',x(beta)).attr('x2',x(beta)).attr('y1',0).attr('y2',meanLineEnd)
+        .style('display', showMeanLines ? null : 'none');
+      meanLabel2.attr('transform', 'translate(' + x(beta) + ',' + (meanLineEnd + 18) + ')')
+        .style('display', showMeanLines ? null : 'none');
+      
+      if(showMeanLines){
+        const labelText2 = meanLabel2.select('text');
+        const labelBB2 = labelText2.node().getBBox();
+        const labelRect2 = meanLabel2.select('rect');
+        
+        // Position the overline
+        const overline2 = meanLabel2.select('line.overline');
+        const overlineY2 = labelBB2.y - 2;
+        overline2.attr('x1', labelBB2.x).attr('x2', labelBB2.x + labelBB2.width).attr('y1', overlineY2).attr('y2', overlineY2);
+        
+        labelRect2
+          .attr('x', labelBB2.x - 3)
+          .attr('y', overlineY2 - 3)
+          .attr('width', labelBB2.width + 6)
+          .attr('height', labelBB2.height + 8);
+        labelRect2.lower(); // Ensure rect is behind text
+        meanLabel2.raise(); // Bring label on top of curves
+      }
+    } else {
+      meanLine2.style('display', 'none');
+      meanLabel2.style('display', 'none');
+    }
+
+    drawBetaMarker();
+    drawBetaPrimeMarker();
+    drawBMarker();
+    drawOverlay();
+    drawVerticalLines();
+
+    // Draw blue marks
+    const axisY = axisInsetTop, arrowTop = axisY - 20;
+    
+    const markGroups = blueMarksG.selectAll('g.mark-group').data(blueMarks, d => d.id);
+    
+    markGroups.exit().remove();
+    
+    const newMarks = markGroups.enter().append('g').attr('class', 'mark-group').style('cursor', 'pointer');
+    newMarks.append('line').attr('class', 'mark-line').attr('stroke','#1d4ed8').attr('stroke-width',3).attr('marker-end','url(#arrowDownBlue)');
+    newMarks.append('rect').attr('class', 'mark-bg').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+    newMarks.append('text').attr('class', 'mark-label').attr('fill','#1d4ed8').attr('font-weight','700').attr('font-size','18px').attr('text-anchor','middle');
+    
+    const allMarks = newMarks.merge(markGroups);
+    
+    allMarks.each(function(d){
+      const g = d3.select(this);
+      const xPos = x(d.value);
+      
+      g.select('.mark-line').attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+      
+      const label = g.select('.mark-label');
+      label.attr('x', xPos).attr('y', arrowTop - 14).text('');
+      label.selectAll('tspan').remove();
+      label.append('tspan').text('β');
+      label.append('tspan').text(' = ' + d.value.toFixed(2));
+      
+      const bb = label.node().getBBox();
+      const padX = 6, padY = 3;
+      g.select('.mark-bg').attr('x', bb.x - padX).attr('y', bb.y - padY).attr('width', bb.width + 2*padX).attr('height', bb.height + 2*padY);
+    });
+    
+    // Set up hover events for clear buttons
+    allMarks
+      .on('mouseenter', function(event, d){
+        showClearButton(d.id, d.value);
+      })
+      .on('mouseleave', function(event, d){
+        hideClearButton(d.id);
+      });
+
+    // Layering - if we just placed a mark, put it on top
+    if(blueMarkJustPlaced){
+      blueMarksG.raise();
+      blueMarkJustPlaced = false;
+    } else {
+      // Otherwise keep beta markers on top
+      const showSecond = (secondDistMode === 'on');
+      if(showSecond){
+        betaPrimeMarkerG.raise();
+      } else { 
+        restoreRedBetaOnTop(); 
+      }
+    }
+
+    // if the hover buttons are visible, keep them correctly positioned after redraw
+    if (!btnMarkBound.classList.contains('hidden')) {
+      showMarkButton();
+    }
+    if (!btnMarkBound2.classList.contains('hidden')) {
+      showMarkButton2();
+    }
+    
+    // Update positions of all clear buttons
+    blueMarks.forEach(mark => {
+      const btn = document.getElementById('clearBtn' + mark.id);
+      if(btn && !btn.classList.contains('hidden')){
+        const markX = x(mark.value);
+        const topScreenY = margin.top + axisInsetTop - 28;
+        btn.style.left = (margin.left + markX) + 'px';
+        btn.style.top = topScreenY + 'px';
+      }
+    });
+
+    if(bValue!==null && !Number.isNaN(bValue)) updatePTextToRightOfB();
+  }
+
+  function regenerate(opts = {}){
+    const n = getN(), beta = getBeta(), se = getSE();
+    const keepShift = opts.preserveShift === true;
+    const prevShift = shiftUnits;
+    data = gaussian(n, beta, se);
+    shiftUnits = keepShift ? prevShift : 0;
+    
+    // Generate data for second distribution if active (at base beta, not shifted)
+    if(secondDistMode === 'on'){
+      data2 = gaussian(n, beta, se);
+    }
+    
+    draw();
+  }
+
+  // ---------- interactions ----------
+  let dragTarget = 'main'; // 'main' or 'second'
+  
+  const dragHist = d3.drag()
+    .on('start', function(event){
+      hideMarkButton();
+      hideMarkButton2();
+      // Hide all clear buttons
+      d3.selectAll('.clear-mark-btn').classed('hidden', true);
+      blueMarkJustPlaced = false; // Reset layering preference when dragging
+      
+      // Determine which distribution to drag based on cursor position
+      if(secondDistMode === 'on'){
+        const mouseX = event.x;
+        const beta1 = getBeta() + shiftUnits;
+        const beta2 = getBeta() + shiftUnits2;
+        const dist1 = Math.abs(mouseX - x(beta1));
+        const dist2 = Math.abs(mouseX - x(beta2));
+        // If they're very close (within 30px), prefer the second (orange) distribution since it's on top
+        if(Math.abs(dist1 - dist2) < 30){
+          dragTarget = 'second';
+        } else {
+          dragTarget = (dist2 < dist1) ? 'second' : 'main';
+        }
+      } else {
+        dragTarget = 'main';
+      }
+    })
+    .on('drag', function(event){
+      if(dragTarget === 'second'){
+        shiftUnits2 += event.dx * dataUnitsPerPx();
+      } else {
+        shiftUnits += event.dx * dataUnitsPerPx();
+        // When main distribution is dragged, reset attachment to cutoffs and unlink marks
+        if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+          vertLinesAttachment = 'cutoffs';
+          linkedMarks.left = null;
+          linkedMarks.right = null;
+        }
+      }
+      draw();
+    });
+
+  const dragB = d3.drag()
+    .on('start', function(){
+      // Only validate and establish attachment if NOT already in 'b' mode
+      if(vertLinesMode === 'on' && vertLinesAttachment !== 'b'){
+        // Calculate current cutoff positions (using shifted beta since that's where they visually appear)
+        const beta = getBeta();
+        const betaShifted = beta + shiftUnits;
+        const se = getSE();
+        const crit = ciCrit(ciMode, curveMode, getDf());
+        const cutL = betaShifted - crit*se;
+        const cutR = betaShifted + crit*se;
+        
+        if(bValue !== null && !Number.isNaN(bValue)){
+          const tolerance = 2 * dataUnitsPerPx();
+          
+          // Check all conditions for allowing attachment:
+          // 1. Must have exactly 2 blue marks
+          // 2. The two marks must align with the CI cutoffs (at shifted position)
+          // 3. b must be exactly in the middle between the marks
+          
+          if(blueMarks.length === 2){
+            // Sort marks by value
+            const sortedMarks = [...blueMarks].sort((a, b) => a.value - b.value);
+            const leftMark = sortedMarks[0];
+            const rightMark = sortedMarks[1];
+            
+            // Check if marks align with cutoffs at their current shifted position
+            const leftAligned = Math.abs(leftMark.value - cutL) < tolerance;
+            const rightAligned = Math.abs(rightMark.value - cutR) < tolerance;
+            
+            // Check if b is in the middle
+            const midpoint = (leftMark.value + rightMark.value) / 2;
+            const bInMiddle = Math.abs(bValue - midpoint) < tolerance;
+            
+            // Only allow attachment if all conditions are met
+            if(leftAligned && rightAligned && bInMiddle){
+              vertLineDistFromB.left = bValue - cutL;
+              vertLineDistFromB.right = cutR - bValue;
+              vertLinesAttachment = 'b';
+              
+              // Link the marks
+              linkedMarks.left = leftMark.id;
+              linkedMarks.right = rightMark.id;
+            }
+          }
+        }
+      }
+      // If already in 'b' mode, keep the existing attachment and distance values
+    })
+    .on('drag', function(event){
+      if(bValue===null) bValue = 0;
+      bValue += event.dx * dataUnitsPerPx();
+      bInput.value = bValue.toFixed(2);
+      
+      // Move linked marks with vertical lines
+      if(linkedMarks.left !== null){
+        const mark = blueMarks.find(m => m.id === linkedMarks.left);
+        if(mark){
+          mark.value = bValue - vertLineDistFromB.left;
+        }
+      }
+      if(linkedMarks.right !== null){
+        const mark = blueMarks.find(m => m.id === linkedMarks.right);
+        if(mark){
+          mark.value = bValue + vertLineDistFromB.right;
+        }
+      }
+      
+      draw();
+    });
+  
+  root.select('.draggable-veil').call(dragHist);
+  bMarkerG.call(dragB);
+  
+  // Allow dragging beta marker to shift main distribution
+  const dragBeta = d3.drag()
+    .on('start', function(){
+      hideMarkButton();
+      hideMarkButton2();
+      d3.selectAll('.clear-mark-btn').classed('hidden', true);
+      blueMarkJustPlaced = false;
+      dragTarget = 'main';
+      betaMarkerG.style('cursor', 'grabbing');
+    })
+    .on('drag', function(event){
+      shiftUnits += event.dx * dataUnitsPerPx();
+      // When main distribution is dragged, reset attachment to cutoffs and unlink marks
+      if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+        vertLinesAttachment = 'cutoffs';
+        linkedMarks.left = null;
+        linkedMarks.right = null;
+      }
+      draw();
+    })
+    .on('end', function(){
+      betaMarkerG.style('cursor', 'grab');
+    });
+  
+  betaMarkerG.call(dragBeta);
+  
+  // Allow dragging beta-prime marker to shift second distribution
+  const dragBetaPrime = d3.drag()
+    .on('start', function(){
+      hideMarkButton();
+      hideMarkButton2();
+      d3.selectAll('.clear-mark-btn').classed('hidden', true);
+      blueMarkJustPlaced = false;
+      dragTarget = 'second';
+      betaPrimeMarkerG.style('cursor', 'grabbing');
+    })
+    .on('drag', function(event){
+      shiftUnits2 += event.dx * dataUnitsPerPx();
+      draw();
+    })
+    .on('end', function(){
+      betaPrimeMarkerG.style('cursor', 'grab');
+    });
+  
+  betaPrimeMarkerG.call(dragBetaPrime);
+
+  // Hover button logic over β marker
+  function showMarkButton(){
+    btnMarkBound.textContent = 'Mark Bound';
+
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    const betaX = x(betaVal);
+    const topScreenY = margin.top + axisInsetTop - 28;
+
+    btnMarkBound.style.left = (margin.left + betaX) + 'px';
+    btnMarkBound.style.top  = topScreenY + 'px';
+    btnMarkBound.classList.remove('hidden');
+  }
+  function hideMarkButton(){ btnMarkBound.classList.add('hidden'); }
+
+  // Hover button logic over β' marker
+  function showMarkButton2(){
+    btnMarkBound2.textContent = 'Mark Bound';
+
+    const beta2 = getBeta() + shiftUnits2;
+    const beta2X = x(beta2);
+    const topScreenY = margin.top + axisInsetTop - 28;
+
+    btnMarkBound2.style.left = (margin.left + beta2X) + 'px';
+    btnMarkBound2.style.top  = topScreenY + 'px';
+    btnMarkBound2.classList.remove('hidden');
+  }
+  function hideMarkButton2(){ btnMarkBound2.classList.add('hidden'); }
+  
+  // Dynamic clear button management
+  function showClearButton(markId, markValue){
+    const existingBtn = document.getElementById('clearBtn' + markId);
+    if(existingBtn){
+      existingBtn.classList.remove('hidden');
+      return;
+    }
+    
+    const btn = document.createElement('button');
+    btn.id = 'clearBtn' + markId;
+    btn.className = 'overlay-btn clear-mark-btn';
+    btn.textContent = 'Clear';
+    btn.style.position = 'absolute';
+    btn.style.zIndex = '2';
+    btn.style.transform = 'translate(-50%, 0)';
+    
+    const markX = x(markValue);
+    const topScreenY = margin.top + axisInsetTop - 28;
+    btn.style.left = (margin.left + markX) + 'px';
+    btn.style.top = topScreenY + 'px';
+    
+    btn.addEventListener('mouseenter', () => {
+      btn.classList.remove('hidden');
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.classList.add('hidden');
+    });
+    btn.addEventListener('click', () => {
+      clearMark(markId);
+      btn.remove();
+    });
+    
+    chartWrap.appendChild(btn);
+  }
+  
+  function hideClearButton(markId){
+    const btn = document.getElementById('clearBtn' + markId);
+    if(btn){
+      btn.classList.add('hidden');
+    }
+  }
+
+  // Wire up hover events for beta marker
+  betaMarkerG
+    .style('pointer-events', 'all')
+    .on('mouseenter', function(){
+      showMarkButton();
+    })
+    .on('mouseleave', function(e){
+      const to = e.relatedTarget;
+      if (!(to && to.id === 'btnMarkBound')) hideMarkButton();
+    });
+
+  // Wire up hover events for beta-prime marker  
+  betaPrimeMarkerG
+    .style('pointer-events', 'all')
+    .on('mouseenter', function(){
+      showMarkButton2();
+    })
+    .on('mouseleave', function(e){
+      const to = e.relatedTarget;
+      if (!(to && to.id === 'btnMarkBound2')) hideMarkButton2();
+    });
+
+  // Button event listeners
+  btnMarkBound.addEventListener('mouseenter', showMarkButton);
+  btnMarkBound.addEventListener('mouseleave', hideMarkButton);
+  btnMarkBound.addEventListener('click', function(){
+    const beta = getBeta();
+    const betaVal = beta + shiftUnits;
+    addMark(betaVal);
+    hideMarkButton();
+  });
+
+  btnMarkBound2.addEventListener('mouseenter', showMarkButton2);
+  btnMarkBound2.addEventListener('mouseleave', hideMarkButton2);
+  btnMarkBound2.addEventListener('click', function(){
+    const beta2 = getBeta() + shiftUnits2;
+    addMark(beta2);
+    hideMarkButton2();
+  });
+
+  // Controls
+  binsRange.addEventListener('input', draw);
+
+  // SE slider range (dynamic around current SE)
+  function updateSESliderRange(){
+    const currentSE = +seInput.value || 1;
+    const minSE = Math.max(0.05, currentSE * 0.3);
+    const maxSE = currentSE * 1.7;
+    const step = Math.max(0.001, currentSE * 0.02);
+    seRange.min = minSE;
+    seRange.max = maxSE;
+    seRange.step = step;
+    seRange.value = currentSE;
+  }
+
+  seRange.addEventListener('input', function(){
+    const oldSE = previousSE;
+    seInput.value = +seRange.value;
+    const newSE = +seRange.value;
+    
+    // If in b mode, scale the distances proportionally instead of resetting
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldSE > 0){
+      const ratio = newSE / oldSE;
+      vertLineDistFromB.left *= ratio;
+      vertLineDistFromB.right *= ratio;
+    }
+    
+    previousSE = newSE;
+    regenerate({ preserveShift: true });
+  });
+
+  seInput.addEventListener('change', function(){
+    const currentMean = getBeta();
+    const currentScale = getScale();
+    const domainSpan = 10 * currentScale;
+    const meanMagnitude = Math.abs(currentMean);
+    if (meanMagnitude > domainSpan) { updateSESliderRange(); return; }
+    
+    const oldSE = getSE();
+    updateSESliderRange();
+    const newSE = getSE();
+    
+    // If in b mode, scale the distances proportionally instead of resetting
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldSE > 0){
+      const ratio = newSE / oldSE;
+      vertLineDistFromB.left *= ratio;
+      vertLineDistFromB.right *= ratio;
+    }
+    
+    regenerate({ preserveShift: true });
+  });
+
+  // Enter in SE input: lock domain to ±8·SE and sync scale
+  seInput.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter') return;
+    const beta = getBeta();
+    const se = getSE();
+    fixedDomain = [beta - 8*se, beta + 8*se];
+
+    const scaleSpan = 16 * se;
+    const equivalentScale = scaleSpan / 10;
+    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+    scaleRange.max = newScaleMax;
+    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+    scaleRange.value = Math.min(equivalentScale, newScaleMax);
+
+    updateSESliderRange();
+    // Reset attachment when SE changes since cutoffs depend on SE
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    regenerate({ preserveShift: true });
+  });
+
+  scaleRange.addEventListener('input', function(){
+    if (fixedDomain) {
+      const currentSpan = fixedDomain[1] - fixedDomain[0];
+      const neededScale = currentSpan / 10;
+      const newMax = Math.max(3, Math.min(50, Math.ceil(neededScale * 1.5)));
+      scaleRange.max = newMax;
+      scaleRange.step = newMax > 10 ? 0.5 : 0.1;
+      scaleRange.value = Math.min(neededScale, newMax);
+    }
+    fixedDomain = null;
+    draw();
+  });
+
+  betaInput.addEventListener('change', function(){
+    const currentMean = getBeta();
+    const currentScale = getScale();
+    const domainSpan = 10 * currentScale;
+    const meanMagnitude = Math.abs(currentMean);
+    if (meanMagnitude > domainSpan) { fixedDomain = null; return; }
+    fixedDomain = null;
+    // Reset attachment when beta changes since cutoffs depend on beta
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    regenerate();
+  });
+
+  nInput.addEventListener('change', regenerate);
+
+  bBtn.addEventListener('click', function(){
+    const v = bInput.value.trim();
+    const oldBValue = bValue;
+    bValue = (v===''?null:+v);
+    
+    // Only validate and establish attachment if NOT already in 'b' mode
+    if(vertLinesMode === 'on' && vertLinesAttachment !== 'b' && bValue !== null && !Number.isNaN(bValue)){
+      const beta = getBeta();
+      const betaShifted = beta + shiftUnits;
+      const se = getSE();
+      const crit = ciCrit(ciMode, curveMode, getDf());
+      const cutL = betaShifted - crit*se;
+      const cutR = betaShifted + crit*se;
+      
+      const tolerance = 2 * dataUnitsPerPx();
+      
+      // Check all conditions for allowing attachment
+      if(blueMarks.length === 2){
+        const sortedMarks = [...blueMarks].sort((a, b) => a.value - b.value);
+        const leftMark = sortedMarks[0];
+        const rightMark = sortedMarks[1];
+        
+        const leftAligned = Math.abs(leftMark.value - cutL) < tolerance;
+        const rightAligned = Math.abs(rightMark.value - cutR) < tolerance;
+        
+        const midpoint = (leftMark.value + rightMark.value) / 2;
+        const bInMiddle = Math.abs(bValue - midpoint) < tolerance;
+        
+        if(leftAligned && rightAligned && bInMiddle){
+          vertLineDistFromB.left = bValue - cutL;
+          vertLineDistFromB.right = cutR - bValue;
+          vertLinesAttachment = 'b';
+          
+          linkedMarks.left = leftMark.id;
+          linkedMarks.right = rightMark.id;
+        }
+      }
+    }
+    
+    draw();
+  });
+
+  bInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      const v = bInput.value.trim();
+      const oldBValue = bValue;
+      bValue = (v===''?null:+v);
+      
+      // Only validate and establish attachment if NOT already in 'b' mode
+      if(vertLinesMode === 'on' && vertLinesAttachment !== 'b' && bValue !== null && !Number.isNaN(bValue)){
+        const beta = getBeta();
+        const betaShifted = beta + shiftUnits;
+        const se = getSE();
+        const crit = ciCrit(ciMode, curveMode, getDf());
+        const cutL = betaShifted - crit*se;
+        const cutR = betaShifted + crit*se;
+        
+        const tolerance = 2 * dataUnitsPerPx();
+        
+        // Check all conditions for allowing attachment
+        if(blueMarks.length === 2){
+          const sortedMarks = [...blueMarks].sort((a, b) => a.value - b.value);
+          const leftMark = sortedMarks[0];
+          const rightMark = sortedMarks[1];
+          
+          const leftAligned = Math.abs(leftMark.value - cutL) < tolerance;
+          const rightAligned = Math.abs(rightMark.value - cutR) < tolerance;
+          
+          const midpoint = (leftMark.value + rightMark.value) / 2;
+          const bInMiddle = Math.abs(bValue - midpoint) < tolerance;
+          
+          if(leftAligned && rightAligned && bInMiddle){
+            vertLineDistFromB.left = bValue - cutL;
+            vertLineDistFromB.right = cutR - bValue;
+            vertLinesAttachment = 'b';
+            
+            linkedMarks.left = leftMark.id;
+            linkedMarks.right = rightMark.id;
+          }
+        }
+      }
+      
+      draw();
+    }
+  });
+
+  // Simulate: lock to β ± 8·SE and recenter sliders
+  regenBtn.addEventListener('click', function(){
+    const beta = getBeta();
+    const se = getSE();
+    shiftUnits = 0;
+    fixedDomain = [beta - 8*se, beta + 8*se];
+
+    const scaleSpan = 16 * se;
+    const equivalentScale = scaleSpan / 10;
+    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+    scaleRange.max = newScaleMax;
+    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+    scaleRange.value = Math.min(equivalentScale, newScaleMax);
+
+    seInput.value = se;
+    setTimeout(updateSESliderRange, 0);
+    // Reset attachment when simulating since distribution is reset
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    regenerate();
+  });
+
+  // Curve mode segmented control
+  curveSeg.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-curve]'); if(!btn) return;
+    curveSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const oldCurveMode = curveMode;
+    curveMode = btn.getAttribute('data-curve'); // 'off' | 'normal' | 't'
+    // Reset attachment when curve mode changes since cutoffs differ between normal and t
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCurveMode !== curveMode){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    draw();
+  });
+
+  // df changes only matter for t curve
+  dfInput.addEventListener('change', function(){
+    // Reset attachment when df changes since cutoffs depend on df for t-distribution
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && curveMode === 't'){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    if (curveMode === 't') draw();
+  });
+
+  // Second distribution toggle
+  secondDistBtn.addEventListener('click', function(){
+    if(secondDistMode === 'off'){
+      secondDistMode = 'on';
+      secondDistBtn.classList.add('active');
+      shiftUnits2 = shiftUnits; // Start at same position as main distribution
+      // Generate data for second distribution at base beta (not shifted)
+      const n = getN(), beta = getBeta(), se = getSE();
+      data2 = gaussian(n, beta, se);
+    } else {
+      secondDistMode = 'off';
+      secondDistBtn.classList.remove('active');
+      data2 = [];
+      bins2 = [];
+    }
+    draw();
+  });
+
+  // Vertical lines toggle
+  vertLinesBtn.addEventListener('click', function(){
+    if(vertLinesMode === 'off'){
+      vertLinesMode = 'on';
+      vertLinesBtn.classList.add('active');
+      vertLinesAttachment = 'cutoffs'; // Always attach to cutoffs when turning on
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    } else {
+      vertLinesMode = 'off';
+      vertLinesBtn.classList.remove('active');
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    draw();
+  });
+
+  // Histogram toggle
+  histogramBtn.addEventListener('click', function(){
+    if(histogramMode === 'on'){
+      histogramMode = 'off';
+      histogramBtn.classList.remove('active');
+    } else {
+      histogramMode = 'on';
+      histogramBtn.classList.add('active');
+    }
+    draw();
+  });
+
+  // CI segmented control
+  ciSeg.addEventListener('click', function(e){
+    const btn=e.target.closest('button[data-ci]'); if(!btn) return;
+    ciSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); 
+    const oldCiMode = ciMode;
+    ciMode = btn.getAttribute('data-ci');
+    if(ciMode === 'off'){ clearBlueMarks(); }
+    // Reset attachment when CI mode changes since cutoffs depend on CI level
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCiMode !== ciMode){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
+    draw();
+  });
+
+  // Responsive
+  function rescale(){
+    width = chartWrap.clientWidth; height = chartWrap.clientHeight;
+    innerW = width - margin.left - margin.right;
+    innerH = height - margin.top - margin.bottom;
+    svg.attr('width',width).attr('height',height);
+    layoutStatic();
+    draw();
+  }
+  new ResizeObserver(() => { rescale(); }).observe(chartWrap);
+
+  // Init
+  bInput.value = '';
+  bValue = null;
+  binsRange.value = 30;
+
+  // Initial domain: β ± 8·SE and centered sliders
+  (function initDomainAndSliders(){
+    const beta = getBeta();
+    const se = getSE();
+    fixedDomain = [beta - 8*se, beta + 8*se];
+    const scaleSpan = 16 * se;
+    const equivalentScale = scaleSpan / 10;
+    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+    scaleRange.max = newScaleMax;
+    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+    scaleRange.value = Math.min(equivalentScale, newScaleMax);
+    updateSESliderRange();
+  })();
+
+  regenerate();
+})();
+</script>
+</body>
+</html>
