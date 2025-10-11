@@ -719,7 +719,7 @@
     let cutL, cutR;
     
     if(vertLinesAttachment === 'cutoffs'){
-      // Attached to cutoffs - calculate based on CI
+      // Attached to cutoffs - calculate based on CI (relative to beta, will transform with histWrap)
       const beta = getBeta();
       const se = getSE();
       const crit = ciCrit(ciMode, curveMode, getDf());
