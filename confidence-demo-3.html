@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Draggable Histogram + CI + p-value (simplified)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <style>
   :root{
     --fg:#111; --muted:#666; --bg:#fff; --accent:#2563eb;
@@ -65,6 +66,13 @@
     border-color:var(--orange); color:var(--orange);
   }
   .overlay-btn.hidden{display:none;}
+  
+  /* LaTeX rendering styles */
+  .katex { font-size: 1.15em; color: #111; font-weight: 700; }
+  .latex-label { display: inline-block; }
+  .latex-label .katex { color: inherit; font-weight: 700; }
+  button .katex, button.primary .katex { color: #fff !important; font-weight: 700 !important; }
+  button.primary { display: inline-flex; align-items: center; gap: 4px; }
 </style>
 </head>
 <body>
@@ -91,10 +99,8 @@
       <button id="regenBtn" class="primary">Simulate</button>
       <div style="flex:1 1 auto;"></div>
 
-      <label>b
-        <input id="bInput" type="number" step="0.01" value="">
-      </label>
-      <button id="bBtn" class="primary">Update b</button>
+      <input id="bInput" type="number" step="0.01" value="" style="width:60px">
+      <button id="bBtn" class="primary" style="visibility:hidden;">Update</button>
     </div>
 
     <!-- Row 2 -->
@@ -154,9 +160,54 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script>
 (function(){
+  // Parse URL parameters for custom labels (LaTeX notation)
+  const urlParams = new URLSearchParams(window.location.search);
+  const labelsParam = urlParams.get('labels');
+  
+  // Parse optional beta and se from URL
+  const urlBeta = urlParams.get('beta');
+  const urlSE = urlParams.get('se');
+  
+  // Default labels (LaTeX strings)
+  let labelParamLatex = '\\beta';           // Population parameter (top marker)
+  let labelSampleStatLatex = 'b';           // Sample statistic (bottom marker)
+  let labelSamplingMeanLatex = '\\bar{b}';  // Mean of sampling distribution (mean line)
+  
+  // Example URL parameters:
+  // ?labels=$\mu$,$\bar{x}$,$E[\bar{X}]$
+  // ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$
+  // ?labels=$\theta$,$\hat{\theta}$,$E[\hat{\theta}]$
+  
+  if(labelsParam){
+    const parts = labelsParam.split(',').map(s => s.trim());
+    if(parts.length >= 1) labelParamLatex = stripDollars(parts[0]);
+    if(parts.length >= 2) labelSampleStatLatex = stripDollars(parts[1]);
+    if(parts.length >= 3) labelSamplingMeanLatex = stripDollars(parts[2]);
+  }
+  
+  function stripDollars(str){
+    return str.replace(/^\$+|\$+$/g, '');
+  }
+  
+  // Render LaTeX to HTML string
+  function renderLatex(latex){
+    try {
+      if(typeof katex === 'undefined') {
+        return latex;
+      }
+      return katex.renderToString(latex, {
+        throwOnError: false,
+        displayMode: false
+      });
+    } catch(e) {
+      return latex; // fallback to plain text
+    }
+  }
+  
   const chartWrap = document.getElementById('chart');
   const nInput = document.getElementById('nInput');
   const binsRange = document.getElementById('binsRange');
@@ -167,6 +218,12 @@
   const ciSeg = document.getElementById('ciSeg');
   const bInput = document.getElementById('bInput');
   const bBtn = document.getElementById('bBtn');
+  
+  // Update button immediately
+  if(bBtn) {
+    bBtn.innerHTML = 'Update ' + renderLatex(labelSampleStatLatex);
+    bBtn.style.visibility = 'visible';
+  }
   const regenBtn = document.getElementById('regenBtn');
   const curveSeg = document.getElementById('curveSeg');
   const dfInput  = document.getElementById('dfInput');
@@ -216,13 +273,7 @@
   const meanLabel = histWrap.append('g').attr('class','mean-label');
   meanLabel.append('rect')
     .attr('fill','#fff').attr('opacity',0.75).attr('rx',3).attr('ry',3);
-  const meanLabelText = meanLabel.append('text')
-    .attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',20)
-    .attr('dy', '0.35em')
-    .text('b');
-  meanLabel.append('line')
-    .attr('class','overline')
-    .attr('stroke','#ef4444').attr('stroke-width',2).attr('stroke-linecap','round');
+  const meanLabelFO = meanLabel.append('foreignObject');
   meanLabel.style('display','none');
 
   // Second distribution (NOT in histWrap so it doesn't get transformed with main dist)
@@ -233,13 +284,7 @@
   const meanLabel2 = secondWrap.append('g').attr('class','mean-label-orange');
   meanLabel2.append('rect')
     .attr('fill','#fff').attr('opacity',0.75).attr('rx',3).attr('ry',3);
-  const meanLabelText2 = meanLabel2.append('text')
-    .attr('text-anchor','middle').attr('fill','#f97316').attr('font-weight',700).attr('font-size',20)
-    .attr('dy', '0.35em')
-    .text('b′');
-  meanLabel2.append('line')
-    .attr('class','overline')
-    .attr('stroke','#f97316').attr('stroke-width',2).attr('stroke-linecap','round');
+  const meanLabelFO2 = meanLabel2.append('foreignObject');
   meanLabel2.style('display','none');
   
   // Overlay (curve + tails) for main distribution
@@ -266,19 +311,19 @@
   const bMarkerG = root.append('g').attr('class','b-marker').style('cursor','ew-resize');
   const bLine = bMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowUpRed)');
   const bBG   = bMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-  const bLabel= bMarkerG.append('text').attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',18);
+  const bLabelFO = bMarkerG.append('foreignObject').attr('width',200).attr('height',40);
 
   // β marker (top)
   const betaMarkerG = root.append('g').attr('class','beta-marker').style('cursor','grab');
   const betaLine = betaMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowDownRed)');
   const betaBG   = betaMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-  const betaLabel= betaMarkerG.append('text').attr('text-anchor','middle').attr('fill','#ef4444').attr('font-weight',700).attr('font-size',18);
+  const betaLabelFO = betaMarkerG.append('foreignObject').attr('width',200).attr('height',40);
 
-  // β' marker (top, orange)
+  // β′ marker (top, orange)
   const betaPrimeMarkerG = root.append('g').attr('class','beta-prime-marker').style('cursor','grab');
   const betaPrimeLine = betaPrimeMarkerG.append('line').attr('stroke','#f97316').attr('stroke-width',3).attr('marker-end','url(#arrowDownOrange)');
   const betaPrimeBG   = betaPrimeMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-  const betaPrimeLabel= betaPrimeMarkerG.append('text').attr('text-anchor','middle').attr('fill','#f97316').attr('font-weight',700).attr('font-size',18);
+  const betaPrimeLabelFO = betaPrimeMarkerG.append('foreignObject').attr('width',200).attr('height',40);
 
   // Blue bound markers (top) - container for dynamic marks
   const blueMarksG = root.append('g').attr('class','blue-marks');
@@ -286,8 +331,8 @@
   // Drag veil
   const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent').attr('pointer-events','all');
 
-  // Bottom axis label
-  const xLabelBottom = root.append('text').attr('class','axis-label').attr('text-anchor','middle').text('b');
+  // Bottom axis label (foreignObject for LaTeX)
+  const xLabelBottomFO = root.append('foreignObject').attr('width',300).attr('height',50);
 
   // p-value text (blue)
   const pTextRight = root.append('text')
@@ -301,26 +346,48 @@
   let data=[], bins=[], data2=[], bins2=[];
   const x = d3.scaleLinear().range([0, innerW]);
   const y = d3.scaleLinear().range([plotH, 0]);
-  let shiftUnits = 0;     // drag offset in DATA units for main distribution
-  let shiftUnits2 = 0;    // drag offset in DATA units for second distribution
-  let bValue = null;      // no b initially
-  let ciMode = 'off';     // 'off' | '90' | '95' | '99'
-  let blueMarks = [];     // array of {id: number, value: number}
-  let nextMarkId = 0;     // counter for unique mark IDs
-  let blueMarkJustPlaced = false; // track if we just placed a mark
-  let previousSE = getSE(); // track previous SE for proportional scaling
+  let shiftUnits = 0;
+  let shiftUnits2 = 0;
+  let bValue = null;
+  let ciMode = 'off';
+  let blueMarks = [];
+  let nextMarkId = 0;
+  let blueMarkJustPlaced = false;
+  let previousSE; // Will be set after URL params are applied
 
-  // Curve mode: 'off' | 'normal' | 't'
   let curveMode = 'off';
-  let secondDistMode = 'off'; // 'off' | 'on'
-  let vertLinesMode = 'off';  // 'off' | 'on'
-  let histogramMode = 'on';   // 'on' | 'off'
-  let vertLinesAttachment = 'cutoffs'; // 'cutoffs' | 'b'
-  let vertLineDistFromB = {left: 0, right: 0}; // distances from b when attached to b
-  let linkedMarks = {left: null, right: null}; // mark IDs linked to vertical lines
+  let secondDistMode = 'off';
+  let vertLinesMode = 'off';
+  let histogramMode = 'on';
+  let vertLinesAttachment = 'cutoffs';
+  let vertLineDistFromB = {left: 0, right: 0};
+  let linkedMarks = {left: null, right: null};
 
-  // Track domain lock (used for simulate & initial domain)
   let fixedDomain = null;
+
+  // SE slider range helper
+  function updateSESliderRange(){
+    const currentSE = +seInput.value || 1;
+    const minSE = Math.max(0.05, currentSE * 0.3);
+    const maxSE = currentSE * 1.7;
+    const step = Math.max(0.001, currentSE * 0.02);
+    seRange.min = minSE;
+    seRange.max = maxSE;
+    seRange.step = step;
+    seRange.value = currentSE;
+  }
+  
+  // Apply URL parameters to inputs BEFORE initialization
+  if(urlBeta !== null) {
+    betaInput.value = parseFloat(urlBeta);
+  }
+  if(urlSE !== null) {
+    seInput.value = parseFloat(urlSE);
+    updateSESliderRange();
+  }
+  
+  // Now set previousSE after URL params are applied
+  previousSE = getSE();
 
   function restoreRedBetaOnTop(){ betaMarkerG.raise(); }
 
@@ -350,14 +417,12 @@
   function pdfNormal(xv, beta, se){
     return (1/(se*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*Math.pow((xv-beta)/se,2));
   }
-  // Student-t PDF with df (nu), centered at beta with scale se
   function pdfT(xv, beta, se, nu){
     const z = (xv - beta) / se;
     const v = nu;
     const norm = Math.exp(gammaln((v+1)/2) - gammaln(v/2)) / (Math.sqrt(v*Math.PI) * se);
     return norm * Math.pow(1 + (z*z)/v, -(v+1)/2);
   }
-  // Lanczos approximation for log gamma
   function gammaln(x){
     const cof=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
     let y=x; let tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
@@ -366,7 +431,6 @@
     return -tmp + Math.log(2.5066282746310005*ser/x);
   }
 
-  // --- Student-t helpers ---
   function pdfTStd(x, nu){
     const v = nu;
     const norm = Math.exp(gammaln((v+1)/2) - gammaln(v/2)) / Math.sqrt(v*Math.PI);
@@ -460,7 +524,6 @@
       const pdf = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
       curveMax = Math.max(curveMax, n * binW * pdf);
       
-      // Also check second distribution if it's shown
       if(secondDistMode === 'on'){
         const pdf2 = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
         curveMax = Math.max(curveMax, n * binW * pdf2);
@@ -477,7 +540,11 @@
     xAxisG.attr('transform','translate(0,'+(axisInsetTop+plotH)+')');
     plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
     veil.attr('x',0).attr('y',axisInsetTop).attr('width',innerW).attr('height',plotH);
-    xLabelBottom.attr('x', innerW/2).attr('y', axisInsetTop + plotH + 64);
+    
+    // Position axis label - centered
+    const axisLabelY = axisInsetTop + plotH + 64;
+    xLabelBottomFO.attr('x', innerW/2 - 150).attr('y', axisLabelY);
+    xLabelBottomFO.html('<div style="width:100%;text-align:center;color:#333;font-weight:700;font-size:22px;" class="latex-label">' + renderLatex(labelSampleStatLatex) + '</div>');
   }
 
   function drawAxes(){
@@ -488,7 +555,6 @@
 
   function drawHistogram(){
     if(histogramMode === 'on'){
-      // Draw bars for main distribution
       const bar=histG.selectAll('rect').data(bins,d => d.x0+'-'+d.x1);
       bar.enter().append('rect').attr('class','hist-bar')
         .attr('x',d => x(d.x0))
@@ -502,7 +568,6 @@
         .attr('height',d => y(0)-y(d.length));
       bar.exit().remove();
       
-      // Draw bars for second distribution if active
       if(secondDistMode === 'on'){
         const bar2=histG2.selectAll('rect').data(bins2,d => d.x0+'-'+d.x1);
         bar2.enter().append('rect').attr('class','hist-bar-2')
@@ -522,7 +587,6 @@
         histG2.selectAll('rect').remove();
       }
     } else {
-      // Histogram off - remove all bars
       histG.selectAll('rect').remove();
       histG2.selectAll('rect').remove();
     }
@@ -532,16 +596,12 @@
   function drawHistogramTailShading(){
     const doShadeBars = (ciMode !== 'off') && (curveMode === 'off') && (histogramMode === 'on');
     
-    // Shade main distribution
     const sel = histShadeG.selectAll('rect')
       .data(doShadeBars ? bins : [], d => d.x0 + '-' + d.x1);
-
     sel.exit().remove();
     
-    // Shade second distribution
     const sel2 = histShadeG2.selectAll('rect')
       .data(doShadeBars && secondDistMode === 'on' ? bins2 : [], d => d.x0 + '-' + d.x1);
-
     sel2.exit().remove();
     
     if (!doShadeBars) return;
@@ -560,7 +620,6 @@
       return Math.max(0, Math.min(1, f));
     }
 
-    // Apply shading to main distribution
     const merged = sel.enter().append('rect').attr('class','hist-shade').merge(sel);
     merged
       .attr('x', d => x(d.x0))
@@ -577,7 +636,6 @@
         return frac * fullH;
       });
       
-    // Apply shading to second distribution
     if(secondDistMode === 'on'){
       const merged2 = sel2.enter().append('rect').attr('class','hist-shade-2')
         .style('fill','#f9731644')
@@ -636,19 +694,16 @@
     }
 
     function expected2(t){
-      // Use base beta (secondWrap is transformed)
       if (curveMode === 't') return n * binW * pdfT(t, beta, se, getDf());
       return n * binW * pdfNormal(t, beta, se);
     }
 
     if(showCurve){
       if(histogramMode === 'off'){
-        // Use filled area when histogram is off
         const areaGen = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
         curvePath.attr('d', areaGen(xs));
         curvePath.style('fill', '#60a5fa55').style('stroke', '#1e4ed8').style('stroke-width', '2');
       } else {
-        // Use line only when histogram is on
         const lineGen = d3.line().x(d => x(d)).y(d => y(expected(d)));
         curvePath.attr('d', lineGen(xs));
         curvePath.style('fill', 'none').style('stroke', '#1e4ed8').style('stroke-width', '2');
@@ -657,12 +712,10 @@
 
     if(showSecond){
       if(histogramMode === 'off'){
-        // Use filled area when histogram is off
         const areaGen2 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected2(d)));
         curvePath2.attr('d', areaGen2(xs));
         curvePath2.style('fill', '#f9731655').style('stroke', '#f97316').style('stroke-width', '2');
       } else {
-        // Use line only when histogram is on
         const lineGen2 = d3.line().x(d => x(d)).y(d => y(expected2(d)));
         curvePath2.attr('d', lineGen2(xs));
         curvePath2.style('fill', 'none').style('stroke', '#f97316').style('stroke-width', '2');
@@ -677,7 +730,6 @@
       tailLineL.attr('x1', x(cutL)).attr('x2', x(cutL)).attr('y1', plotH).attr('y2', yCurveL);
       tailLineR.attr('x1', x(cutR)).attr('x2', x(cutR)).attr('y1', plotH).attr('y2', yCurveR);
 
-      // Include the cutoff point itself to eliminate gaps
       const xsL = xs.filter(v => v < cutL).concat([cutL]).sort((a,b) => a-b);
       const xsR = [cutR].concat(xs.filter(v => v > cutR)).sort((a,b) => a-b);
       const area = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
@@ -688,16 +740,13 @@
     }
 
     if(showCIOverSecond){
-      // Use base beta (secondWrap is transformed)
       const crit = ciCrit(ciMode, curveMode, getDf());
       const cutL2 = beta - crit*se, cutR2 = beta + crit*se;
       const yCurveL2 = y(expected2(cutL2));
       const yCurveR2 = y(expected2(cutR2));
-      // These are in secondWrap (transformed)
       tailLineL2.attr('x1', x(cutL2)).attr('x2', x(cutL2)).attr('y1', plotH).attr('y2', yCurveL2);
       tailLineR2.attr('x1', x(cutR2)).attr('x2', x(cutR2)).attr('y1', plotH).attr('y2', yCurveR2);
 
-      // Include the cutoff point itself to eliminate gaps
       const xsL2 = xs.filter(v => v < cutL2).concat([cutL2]).sort((a,b) => a-b);
       const xsR2 = [cutR2].concat(xs.filter(v => v > cutR2)).sort((a,b) => a-b);
       const area2 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected2(d)));
@@ -719,20 +768,16 @@
     let cutL, cutR;
     
     if(vertLinesAttachment === 'cutoffs'){
-      // Attached to cutoffs - calculate based on CI (relative to beta, will transform with histWrap)
       const beta = getBeta();
       const se = getSE();
       const crit = ciCrit(ciMode, curveMode, getDf());
       cutL = beta - crit*se;
       cutR = beta + crit*se;
     } else {
-      // Attached to b - calculate based on b position and stored distances
-      // Since vertical lines are in histWrap (transformed), subtract shiftUnits to compensate
       if(bValue !== null && !Number.isNaN(bValue)){
         cutL = (bValue - vertLineDistFromB.left) - shiftUnits;
         cutR = (bValue + vertLineDistFromB.right) - shiftUnits;
       } else {
-        // If b doesn't exist, fall back to cutoffs
         const beta = getBeta();
         const se = getSE();
         const crit = ciCrit(ciMode, curveMode, getDf());
@@ -757,12 +802,22 @@
     const axisY = axisInsetTop + plotH;
     const arrowBottom = axisY + 20;
     bLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowBottom).attr('y2', axisY);
-    bLabel.attr('x', xPos).attr('y', arrowBottom + 24).text('');
-    bLabel.selectAll('tspan').remove();
-    bLabel.append('tspan').text('b');
-    bLabel.append('tspan').text(' = ' + bValue.toFixed(2));
-    const bb = bLabel.node().getBBox(), padX=6, padY=3;
-    bBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+    
+    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+      renderLatex(labelSampleStatLatex) + ' = ' + bValue.toFixed(2) + '</div>';
+    bLabelFO.html(labelHtml);
+    
+    // Measure and position
+    setTimeout(() => {
+      const labelDiv = bLabelFO.node().querySelector('div');
+      if(labelDiv){
+        const bb = labelDiv.getBoundingClientRect();
+        bLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowBottom + 24 - bb.height/2);
+        bBG.attr('x', xPos - bb.width/2 - 6).attr('y', arrowBottom + 24 - bb.height/2 - 3)
+          .attr('width', bb.width + 12).attr('height', bb.height + 6);
+      }
+    }, 0);
+    
     updatePTextToRightOfB();
   }
 
@@ -773,15 +828,21 @@
     const axisY = axisInsetTop;
     const arrowTop = axisY - 20;
     
-    // Line always goes from arrow to axis (keeps arrow visible)
     betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
     
-    betaLabel.attr('x', xPos).attr('y', arrowTop - 14).text('');
-    betaLabel.selectAll('tspan').remove();
-    betaLabel.append('tspan').text('\u03B2');
-    betaLabel.append('tspan').text(' = ' + betaVal.toFixed(2));
-    const bb = betaLabel.node().getBBox(), padX=6, padY=3;
-    betaBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
+    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+      renderLatex(labelParamLatex) + ' = ' + betaVal.toFixed(2) + '</div>';
+    betaLabelFO.html(labelHtml);
+    
+    setTimeout(() => {
+      const labelDiv = betaLabelFO.node().querySelector('div');
+      if(labelDiv){
+        const bb = labelDiv.getBoundingClientRect();
+        betaLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
+        betaBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
+          .attr('width', bb.width + 8).attr('height', bb.height + 4);
+      }
+    }, 0);
   }
 
   function drawBetaPrimeMarker(){
@@ -796,23 +857,28 @@
     const axisY = axisInsetTop;
     const arrowTop = axisY - 20;
     
-    // Line always goes from arrow to axis (keeps arrow visible)
     betaPrimeLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
     
-    betaPrimeLabel.attr('x', xPos).attr('y', arrowTop - 14).text('');
-    betaPrimeLabel.selectAll('tspan').remove();
-    betaPrimeLabel.append('tspan').text('\u03B2\u2032');
-    betaPrimeLabel.append('tspan').text(' = ' + beta2.toFixed(2));
-    const bb = betaPrimeLabel.node().getBBox(), padX=6, padY=3;
-    betaPrimeBG.attr('x',bb.x-padX).attr('y',bb.y-padY).attr('width',bb.width+2*padX).attr('height',bb.height+2*padY);
-    // Always raise beta-prime on top when visible
+    const labelHtml = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+      renderLatex(labelParamLatex + '\'') + ' = ' + beta2.toFixed(2) + '</div>';
+    betaPrimeLabelFO.html(labelHtml);
+    
+    setTimeout(() => {
+      const labelDiv = betaPrimeLabelFO.node().querySelector('div');
+      if(labelDiv){
+        const bb = labelDiv.getBoundingClientRect();
+        betaPrimeLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
+        betaPrimeBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
+          .attr('width', bb.width + 8).attr('height', bb.height + 4);
+      }
+    }, 0);
+    
     betaPrimeMarkerG.raise();
   }
 
   function updatePTextToRightOfB(){
     if(bValue === null || Number.isNaN(bValue)){ pTextRight.attr('display','none'); return; }
     
-    // Hide p-value if no sampling distribution is shown
     const showDistribution = (histogramMode === 'on') || (curveMode !== 'off');
     if(!showDistribution){ pTextRight.attr('display','none'); return; }
     
@@ -840,7 +906,6 @@
     pTextRight.attr('x', xRight).attr('y', yBaseline).attr('display', null);
   }
 
-  // Place/update a blue mark at a position
   function addMark(value){
     blueMarks.push({id: nextMarkId++, value: value});
     blueMarkJustPlaced = true;
@@ -849,7 +914,6 @@
   
   function clearMark(markId){
     blueMarks = blueMarks.filter(m => m.id !== markId);
-    // Unlink if this mark was linked
     if(linkedMarks.left === markId) linkedMarks.left = null;
     if(linkedMarks.right === markId) linkedMarks.right = null;
     draw();
@@ -859,12 +923,10 @@
     blueMarks = [];
     linkedMarks.left = null;
     linkedMarks.right = null;
-    // Remove all dynamic clear buttons
     d3.selectAll('.clear-mark-btn').remove();
     draw();
   }
 
-  // Hide/clear blue markers (CI -> OFF)
   function clearBlueMarks(){
     clearAllMarks();
   }
@@ -894,7 +956,6 @@
     histWrap.attr('transform','translate('+pxShift+',0)');
     secondWrap.attr('transform','translate('+pxShift2+',0)');
     
-    // Show/hide mean lines based on whether histogram or curves are visible
     const showMeanLines = (histogramMode === 'on') || (curveMode !== 'off');
     const meanLineEnd = plotH * 0.2;
     
@@ -905,25 +966,25 @@
       .style('display', showMeanLines ? null : 'none');
     
     if(showMeanLines){
-      const labelText = meanLabel.select('text');
-      const labelBB = labelText.node().getBBox();
-      const labelRect = meanLabel.select('rect');
+      const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:20px;white-space:nowrap;" class="latex-label">' + 
+        renderLatex(labelSamplingMeanLatex) + '</div>';
+      meanLabelFO.html(labelHtml);
       
-      // Position the overline
-      const overline = meanLabel.select('line.overline');
-      const overlineY = labelBB.y - 2;
-      overline.attr('x1', labelBB.x).attr('x2', labelBB.x + labelBB.width).attr('y1', overlineY).attr('y2', overlineY);
+      setTimeout(() => {
+        const labelDiv = meanLabelFO.node().querySelector('div');
+        if(labelDiv){
+          const bb = labelDiv.getBoundingClientRect();
+          meanLabelFO.attr('x', -bb.width/2).attr('y', -bb.height/2).attr('width', bb.width).attr('height', bb.height);
+          const labelRect = meanLabel.select('rect');
+          labelRect.attr('x', -bb.width/2 - 3).attr('y', -bb.height/2 - 3)
+            .attr('width', bb.width + 6).attr('height', bb.height + 6);
+          labelRect.lower();
+        }
+      }, 0);
       
-      labelRect
-        .attr('x', labelBB.x - 3)
-        .attr('y', overlineY - 3)
-        .attr('width', labelBB.width + 6)
-        .attr('height', labelBB.height + 8);
-      labelRect.lower(); // Ensure rect is behind text
-      meanLabel.raise(); // Bring label on top of curves
+      meanLabel.raise();
     }
 
-    // Draw second distribution mean line (in secondWrap, transformed)
     const showSecond = (secondDistMode === 'on');
     if(showSecond){
       meanLine2.attr('x1',x(beta)).attr('x2',x(beta)).attr('y1',0).attr('y2',meanLineEnd)
@@ -932,22 +993,23 @@
         .style('display', showMeanLines ? null : 'none');
       
       if(showMeanLines){
-        const labelText2 = meanLabel2.select('text');
-        const labelBB2 = labelText2.node().getBBox();
-        const labelRect2 = meanLabel2.select('rect');
+        const labelHtml2 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;" class="latex-label">' + 
+          renderLatex(labelSamplingMeanLatex + '\'') + '</div>';
+        meanLabelFO2.html(labelHtml2);
         
-        // Position the overline
-        const overline2 = meanLabel2.select('line.overline');
-        const overlineY2 = labelBB2.y - 2;
-        overline2.attr('x1', labelBB2.x).attr('x2', labelBB2.x + labelBB2.width).attr('y1', overlineY2).attr('y2', overlineY2);
+        setTimeout(() => {
+          const labelDiv2 = meanLabelFO2.node().querySelector('div');
+          if(labelDiv2){
+            const bb2 = labelDiv2.getBoundingClientRect();
+            meanLabelFO2.attr('x', -bb2.width/2).attr('y', -bb2.height/2).attr('width', bb2.width).attr('height', bb2.height);
+            const labelRect2 = meanLabel2.select('rect');
+            labelRect2.attr('x', -bb2.width/2 - 3).attr('y', -bb2.height/2 - 3)
+              .attr('width', bb2.width + 6).attr('height', bb2.height + 6);
+            labelRect2.lower();
+          }
+        }, 0);
         
-        labelRect2
-          .attr('x', labelBB2.x - 3)
-          .attr('y', overlineY2 - 3)
-          .attr('width', labelBB2.width + 6)
-          .attr('height', labelBB2.height + 8);
-        labelRect2.lower(); // Ensure rect is behind text
-        meanLabel2.raise(); // Bring label on top of curves
+        meanLabel2.raise();
       }
     } else {
       meanLine2.style('display', 'none');
@@ -964,13 +1026,12 @@
     const axisY = axisInsetTop, arrowTop = axisY - 20;
     
     const markGroups = blueMarksG.selectAll('g.mark-group').data(blueMarks, d => d.id);
-    
     markGroups.exit().remove();
     
     const newMarks = markGroups.enter().append('g').attr('class', 'mark-group').style('cursor', 'pointer');
     newMarks.append('line').attr('class', 'mark-line').attr('stroke','#1d4ed8').attr('stroke-width',3).attr('marker-end','url(#arrowDownBlue)');
     newMarks.append('rect').attr('class', 'mark-bg').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-    newMarks.append('text').attr('class', 'mark-label').attr('fill','#1d4ed8').attr('font-weight','700').attr('font-size','18px').attr('text-anchor','middle');
+    newMarks.append('foreignObject').attr('class', 'mark-label-fo').attr('width',200).attr('height',40);
     
     const allMarks = newMarks.merge(markGroups);
     
@@ -980,18 +1041,23 @@
       
       g.select('.mark-line').attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
       
-      const label = g.select('.mark-label');
-      label.attr('x', xPos).attr('y', arrowTop - 14).text('');
-      label.selectAll('tspan').remove();
-      label.append('tspan').text('β');
-      label.append('tspan').text(' = ' + d.value.toFixed(2));
+      const labelFO = g.select('.mark-label-fo');
+      const labelHtml = '<div style="text-align:center;color:#1d4ed8;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+        renderLatex(labelParamLatex) + ' = ' + d.value.toFixed(2) + '</div>';
+      labelFO.html(labelHtml);
       
-      const bb = label.node().getBBox();
-      const padX = 6, padY = 3;
-      g.select('.mark-bg').attr('x', bb.x - padX).attr('y', bb.y - padY).attr('width', bb.width + 2*padX).attr('height', bb.height + 2*padY);
+      setTimeout(() => {
+        const labelDiv = labelFO.node().querySelector('div');
+        if(labelDiv){
+          const bb = labelDiv.getBoundingClientRect();
+          labelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
+          g.select('.mark-bg')
+            .attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
+            .attr('width', bb.width + 8).attr('height', bb.height + 4);
+        }
+      }, 0);
     });
     
-    // Set up hover events for clear buttons
     allMarks
       .on('mouseenter', function(event, d){
         showClearButton(d.id, d.value);
@@ -1000,12 +1066,10 @@
         hideClearButton(d.id);
       });
 
-    // Layering - if we just placed a mark, put it on top
     if(blueMarkJustPlaced){
       blueMarksG.raise();
       blueMarkJustPlaced = false;
     } else {
-      // Otherwise keep beta markers on top
       const showSecond = (secondDistMode === 'on');
       if(showSecond){
         betaPrimeMarkerG.raise();
@@ -1014,7 +1078,6 @@
       }
     }
 
-    // if the hover buttons are visible, keep them correctly positioned after redraw
     if (!btnMarkBound.classList.contains('hidden')) {
       showMarkButton();
     }
@@ -1022,7 +1085,6 @@
       showMarkButton2();
     }
     
-    // Update positions of all clear buttons
     blueMarks.forEach(mark => {
       const btn = document.getElementById('clearBtn' + mark.id);
       if(btn && !btn.classList.contains('hidden')){
@@ -1043,7 +1105,6 @@
     data = gaussian(n, beta, se);
     shiftUnits = keepShift ? prevShift : 0;
     
-    // Generate data for second distribution if active (at base beta, not shifted)
     if(secondDistMode === 'on'){
       data2 = gaussian(n, beta, se);
     }
@@ -1052,24 +1113,21 @@
   }
 
   // ---------- interactions ----------
-  let dragTarget = 'main'; // 'main' or 'second'
+  let dragTarget = 'main';
   
   const dragHist = d3.drag()
     .on('start', function(event){
       hideMarkButton();
       hideMarkButton2();
-      // Hide all clear buttons
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
-      blueMarkJustPlaced = false; // Reset layering preference when dragging
+      blueMarkJustPlaced = false;
       
-      // Determine which distribution to drag based on cursor position
       if(secondDistMode === 'on'){
         const mouseX = event.x;
         const beta1 = getBeta() + shiftUnits;
         const beta2 = getBeta() + shiftUnits2;
         const dist1 = Math.abs(mouseX - x(beta1));
         const dist2 = Math.abs(mouseX - x(beta2));
-        // If they're very close (within 30px), prefer the second (orange) distribution since it's on top
         if(Math.abs(dist1 - dist2) < 30){
           dragTarget = 'second';
         } else {
@@ -1084,7 +1142,6 @@
         shiftUnits2 += event.dx * dataUnitsPerPx();
       } else {
         shiftUnits += event.dx * dataUnitsPerPx();
-        // When main distribution is dragged, reset attachment to cutoffs and unlink marks
         if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
           vertLinesAttachment = 'cutoffs';
           linkedMarks.left = null;
@@ -1096,9 +1153,7 @@
 
   const dragB = d3.drag()
     .on('start', function(){
-      // Only validate and establish attachment if NOT already in 'b' mode
       if(vertLinesMode === 'on' && vertLinesAttachment !== 'b'){
-        // Calculate current cutoff positions (using shifted beta since that's where they visually appear)
         const beta = getBeta();
         const betaShifted = beta + shiftUnits;
         const se = getSE();
@@ -1109,54 +1164,39 @@
         if(bValue !== null && !Number.isNaN(bValue)){
           const tolerance = 2 * dataUnitsPerPx();
           
-          // Check all conditions for allowing attachment:
-          // 1. Must have exactly 2 blue marks
-          // 2. The two marks must align with the CI cutoffs (at shifted position)
-          // 3. b must be exactly in the middle between the marks
-          
           if(blueMarks.length === 2){
-            // Sort marks by value
             const sortedMarks = [...blueMarks].sort((a, b) => a.value - b.value);
             const leftMark = sortedMarks[0];
             const rightMark = sortedMarks[1];
             
-            // Check if marks align with cutoffs at their current shifted position
             const leftAligned = Math.abs(leftMark.value - cutL) < tolerance;
             const rightAligned = Math.abs(rightMark.value - cutR) < tolerance;
             
-            // Check if b is in the middle
             const midpoint = (leftMark.value + rightMark.value) / 2;
             const bInMiddle = Math.abs(bValue - midpoint) < tolerance;
             
-            // Only allow attachment if all conditions are met
             if(leftAligned && rightAligned && bInMiddle){
               vertLineDistFromB.left = bValue - cutL;
               vertLineDistFromB.right = cutR - bValue;
               vertLinesAttachment = 'b';
               
-              // Link the marks
               linkedMarks.left = leftMark.id;
               linkedMarks.right = rightMark.id;
             }
           }
         }
       }
-      // If already in 'b' mode, keep the existing attachment and distance values
     })
     .on('drag', function(event){
       if(bValue===null) bValue = 0;
       bValue += event.dx * dataUnitsPerPx();
       bInput.value = bValue.toFixed(2);
-      
-      // Blue marks should NEVER move when b is dragged - they stay at their absolute positions
-      
       draw();
     });
   
   root.select('.draggable-veil').call(dragHist);
   bMarkerG.call(dragB);
   
-  // Allow dragging beta marker to shift main distribution
   const dragBeta = d3.drag()
     .on('start', function(){
       hideMarkButton();
@@ -1168,7 +1208,6 @@
     })
     .on('drag', function(event){
       shiftUnits += event.dx * dataUnitsPerPx();
-      // When main distribution is dragged, reset attachment to cutoffs and unlink marks
       if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
         vertLinesAttachment = 'cutoffs';
         linkedMarks.left = null;
@@ -1182,7 +1221,6 @@
   
   betaMarkerG.call(dragBeta);
   
-  // Allow dragging beta-prime marker to shift second distribution
   const dragBetaPrime = d3.drag()
     .on('start', function(){
       hideMarkButton();
@@ -1202,36 +1240,29 @@
   
   betaPrimeMarkerG.call(dragBetaPrime);
 
-  // Hover button logic over β marker
   function showMarkButton(){
     btnMarkBound.textContent = 'Mark Bound';
-
     const beta = getBeta();
     const betaVal = beta + shiftUnits;
     const betaX = x(betaVal);
     const topScreenY = margin.top + axisInsetTop - 28;
-
     btnMarkBound.style.left = (margin.left + betaX) + 'px';
     btnMarkBound.style.top  = topScreenY + 'px';
     btnMarkBound.classList.remove('hidden');
   }
   function hideMarkButton(){ btnMarkBound.classList.add('hidden'); }
 
-  // Hover button logic over β' marker
   function showMarkButton2(){
     btnMarkBound2.textContent = 'Mark Bound';
-
     const beta2 = getBeta() + shiftUnits2;
     const beta2X = x(beta2);
     const topScreenY = margin.top + axisInsetTop - 28;
-
     btnMarkBound2.style.left = (margin.left + beta2X) + 'px';
     btnMarkBound2.style.top  = topScreenY + 'px';
     btnMarkBound2.classList.remove('hidden');
   }
   function hideMarkButton2(){ btnMarkBound2.classList.add('hidden'); }
   
-  // Dynamic clear button management
   function showClearButton(markId, markValue){
     const existingBtn = document.getElementById('clearBtn' + markId);
     if(existingBtn){
@@ -1273,7 +1304,6 @@
     }
   }
 
-  // Wire up hover events for beta marker
   betaMarkerG
     .style('pointer-events', 'all')
     .on('mouseenter', function(){
@@ -1284,7 +1314,6 @@
       if (!(to && to.id === 'btnMarkBound')) hideMarkButton();
     });
 
-  // Wire up hover events for beta-prime marker  
   betaPrimeMarkerG
     .style('pointer-events', 'all')
     .on('mouseenter', function(){
@@ -1295,7 +1324,6 @@
       if (!(to && to.id === 'btnMarkBound2')) hideMarkButton2();
     });
 
-  // Button event listeners
   btnMarkBound.addEventListener('mouseenter', showMarkButton);
   btnMarkBound.addEventListener('mouseleave', hideMarkButton);
   btnMarkBound.addEventListener('click', function(){
@@ -1316,7 +1344,6 @@
   // Controls
   binsRange.addEventListener('input', draw);
 
-  // SE slider range (dynamic around current SE)
   function updateSESliderRange(){
     const currentSE = +seInput.value || 1;
     const minSE = Math.max(0.05, currentSE * 0.3);
@@ -1333,7 +1360,6 @@
     seInput.value = +seRange.value;
     const newSE = +seRange.value;
     
-    // If in b mode, scale the distances proportionally instead of resetting
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldSE > 0){
       const ratio = newSE / oldSE;
       vertLineDistFromB.left *= ratio;
@@ -1355,7 +1381,6 @@
     updateSESliderRange();
     const newSE = getSE();
     
-    // If in b mode, scale the distances proportionally instead of resetting
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldSE > 0){
       const ratio = newSE / oldSE;
       vertLineDistFromB.left *= ratio;
@@ -1365,7 +1390,6 @@
     regenerate({ preserveShift: true });
   });
 
-  // Enter in SE input: lock domain to ±8·SE and sync scale
   seInput.addEventListener('keydown', function(e){
     if(e.key !== 'Enter') return;
     const beta = getBeta();
@@ -1380,7 +1404,6 @@
     scaleRange.value = Math.min(equivalentScale, newScaleMax);
 
     updateSESliderRange();
-    // Reset attachment when SE changes since cutoffs depend on SE
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1409,7 +1432,6 @@
     const meanMagnitude = Math.abs(currentMean);
     if (meanMagnitude > domainSpan) { fixedDomain = null; return; }
     fixedDomain = null;
-    // Reset attachment when beta changes since cutoffs depend on beta
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1425,7 +1447,6 @@
     const oldBValue = bValue;
     bValue = (v===''?null:+v);
     
-    // Only validate and establish attachment if NOT already in 'b' mode
     if(vertLinesMode === 'on' && vertLinesAttachment !== 'b' && bValue !== null && !Number.isNaN(bValue)){
       const beta = getBeta();
       const betaShifted = beta + shiftUnits;
@@ -1436,7 +1457,6 @@
       
       const tolerance = 2 * dataUnitsPerPx();
       
-      // Check all conditions for allowing attachment
       if(blueMarks.length === 2){
         const sortedMarks = [...blueMarks].sort((a, b) => a.value - b.value);
         const leftMark = sortedMarks[0];
@@ -1468,7 +1488,6 @@
       const oldBValue = bValue;
       bValue = (v===''?null:+v);
       
-      // Only validate and establish attachment if NOT already in 'b' mode
       if(vertLinesMode === 'on' && vertLinesAttachment !== 'b' && bValue !== null && !Number.isNaN(bValue)){
         const beta = getBeta();
         const betaShifted = beta + shiftUnits;
@@ -1479,7 +1498,6 @@
         
         const tolerance = 2 * dataUnitsPerPx();
         
-        // Check all conditions for allowing attachment
         if(blueMarks.length === 2){
           const sortedMarks = [...blueMarks].sort((a, b) => a.value - b.value);
           const leftMark = sortedMarks[0];
@@ -1506,7 +1524,6 @@
     }
   });
 
-  // Simulate: lock to β ± 8·SE and recenter sliders
   regenBtn.addEventListener('click', function(){
     const beta = getBeta();
     const se = getSE();
@@ -1522,7 +1539,6 @@
 
     seInput.value = se;
     setTimeout(updateSESliderRange, 0);
-    // Reset attachment when simulating since distribution is reset
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1531,14 +1547,12 @@
     regenerate();
   });
 
-  // Curve mode segmented control
   curveSeg.addEventListener('click', function(e){
     const btn = e.target.closest('button[data-curve]'); if(!btn) return;
     curveSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const oldCurveMode = curveMode;
-    curveMode = btn.getAttribute('data-curve'); // 'off' | 'normal' | 't'
-    // Reset attachment when curve mode changes since cutoffs differ between normal and t
+    curveMode = btn.getAttribute('data-curve');
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCurveMode !== curveMode){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1547,9 +1561,7 @@
     draw();
   });
 
-  // df changes only matter for t curve
   dfInput.addEventListener('change', function(){
-    // Reset attachment when df changes since cutoffs depend on df for t-distribution
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && curveMode === 't'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1558,13 +1570,11 @@
     if (curveMode === 't') draw();
   });
 
-  // Second distribution toggle
   secondDistBtn.addEventListener('click', function(){
     if(secondDistMode === 'off'){
       secondDistMode = 'on';
       secondDistBtn.classList.add('active');
-      shiftUnits2 = shiftUnits; // Start at same position as main distribution
-      // Generate data for second distribution at base beta (not shifted)
+      shiftUnits2 = shiftUnits;
       const n = getN(), beta = getBeta(), se = getSE();
       data2 = gaussian(n, beta, se);
     } else {
@@ -1576,12 +1586,11 @@
     draw();
   });
 
-  // Vertical lines toggle
   vertLinesBtn.addEventListener('click', function(){
     if(vertLinesMode === 'off'){
       vertLinesMode = 'on';
       vertLinesBtn.classList.add('active');
-      vertLinesAttachment = 'cutoffs'; // Always attach to cutoffs when turning on
+      vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
       linkedMarks.right = null;
     } else {
@@ -1593,7 +1602,6 @@
     draw();
   });
 
-  // Histogram toggle
   histogramBtn.addEventListener('click', function(){
     if(histogramMode === 'on'){
       histogramMode = 'off';
@@ -1605,7 +1613,6 @@
     draw();
   });
 
-  // CI segmented control
   ciSeg.addEventListener('click', function(e){
     const btn=e.target.closest('button[data-ci]'); if(!btn) return;
     ciSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
@@ -1613,7 +1620,6 @@
     const oldCiMode = ciMode;
     ciMode = btn.getAttribute('data-ci');
     if(ciMode === 'off'){ clearBlueMarks(); }
-    // Reset attachment when CI mode changes since cutoffs depend on CI level
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCiMode !== ciMode){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1622,7 +1628,6 @@
     draw();
   });
 
-  // Responsive
   function rescale(){
     width = chartWrap.clientWidth; height = chartWrap.clientHeight;
     innerW = width - margin.left - margin.right;
@@ -1633,12 +1638,10 @@
   }
   new ResizeObserver(() => { rescale(); }).observe(chartWrap);
 
-  // Init
   bInput.value = '';
   bValue = null;
   binsRange.value = 30;
 
-  // Initial domain: β ± 8·SE and centered sliders
   (function initDomainAndSliders(){
     const beta = getBeta();
     const se = getSE();
