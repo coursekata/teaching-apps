@@ -1148,19 +1148,7 @@
       bValue += event.dx * dataUnitsPerPx();
       bInput.value = bValue.toFixed(2);
       
-      // Move linked marks with vertical lines
-      if(linkedMarks.left !== null){
-        const mark = blueMarks.find(m => m.id === linkedMarks.left);
-        if(mark){
-          mark.value = bValue - vertLineDistFromB.left;
-        }
-      }
-      if(linkedMarks.right !== null){
-        const mark = blueMarks.find(m => m.id === linkedMarks.right);
-        if(mark){
-          mark.value = bValue + vertLineDistFromB.right;
-        }
-      }
+      // Blue marks should NEVER move when b is dragged - they stay at their absolute positions
       
       draw();
     });
