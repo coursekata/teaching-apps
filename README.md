@@ -18,4 +18,20 @@ And finally, showing hands shuffling is the default, but if you add &hands=false
 ## 2. Confidence Demo
 This is an app for demonstrating the concept of confidence interval. Here's a link to the app:
 
-> https://coursekata.github.io/teaching-apps/confidence-demo-11.html
+> https://coursekata.github.io/teaching-apps/confidence-demo-3.html
+
+Several parameters can be set within the url:
+
+- beta - Population Mean (default: 0)
+- se - Standard Error (default: 1)
+- labels - LaTeX notation for labels (optional)
+
+The labels setting can include these elements, separated by commas:
+
+- Population parameter (labelParam)
+- Sample statistic (labelSampleStat)
+- Sampling mean (labelSamplingMean)
+
+For example, if could add this to the url: 
+
+- ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$
