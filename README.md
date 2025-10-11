@@ -34,4 +34,5 @@ The labels setting can include these elements, separated by commas:
 
 For example, if could add this to the url: 
 
-- ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$
+- ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$   or
+- ?beta=100&se=15&labels=$\mu$,$\bar{X}$,$E[\bar{X}]$
