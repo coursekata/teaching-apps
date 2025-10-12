@@ -16,7 +16,7 @@ You also can configure which of the three tabs to show by adding at the end, for
 And finally, showing hands shuffling is the default, but if you add &hands=false to the url it will turn the hands off.
 
 ## 2. Confidence Demo
-This is an app for demonstrating the concept of confidence interval. Here's a link to the app:
+This is an app for grounding discussions about the concept of confidence interval. Here's a link to the app:
 
 > https://coursekata.github.io/teaching-apps/confidence-demo-3.html
 
@@ -32,7 +32,7 @@ The labels setting can include these elements, separated by commas:
 - Sample statistic (labelSampleStat)
 - Sampling mean (labelSamplingMean)
 
-For example, if could add this to the url: 
+For example, you could add this to the url: 
 
-- ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$   or
+- ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$   -or-
 - ?beta=100&se=15&labels=$\mu$,$\bar{X}$,$E[\bar{X}]$
