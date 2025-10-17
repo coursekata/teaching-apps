@@ -1,0 +1,643 @@
+\<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Regression Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .main-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+        .graph-container {
+            flex-shrink: 0;
+            position: relative;
+        }
+        .info-box {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: 3px solid #2196F3;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            pointer-events: none;
+            transition: border-color 0.3s;
+        }
+        .info-box.active {
+            border-color: #FF5722;
+        }
+        .graph-equation {
+            text-align: center;
+            font-size: 22px;
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            font-weight: bold;
+            color: #222;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+        }
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 180px;
+            max-width: 200px;
+            height: 450px;
+        }
+        .stats-box {
+            padding: 20px 15px;
+            border-radius: 6px;
+            border: 2px solid;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .best-fit-stats {
+            border-color: #2196F3;
+            background-color: #E3F2FD;
+        }
+        .custom-stats {
+            border-color: #FF5722;
+            background-color: #FFE0B2;
+        }
+        .stats-box h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .stats-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .stat-row {
+            margin: 0;
+            font-family: monospace;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+        }
+        .stat-row.sse-row {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        .stat-label {
+            font-weight: bold;
+        }
+        .stat-input {
+            width: 80px;
+            padding: 2px 4px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            text-align: right;
+        }
+        .stat-value {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="graph-container">
+                <div class="info-box" id="infoBox">
+                    <div class="graph-equation" id="equationDisplay"></div>
+                </div>
+                <canvas id="scatterPlot" width="700" height="450"></canvas>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stats-box best-fit-stats" id="bestFitStats">
+                    <h3>Best-Fit Model</h3>
+                    <div class="stats-content">
+                        <div class="stat-row">
+                            <span class="stat-label">b₀:</span>
+                            <span id="bfIntercept" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">b₁:</span>
+                            <span id="bfSlope" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-row sse-row">
+                            <span class="stat-label">SSE:</span>
+                            <span id="bfSSE" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">SST:</span>
+                            <span id="bfSST" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-box custom-stats" id="customStats">
+                    <h3>Your Model</h3>
+                    <div class="stats-content">
+                        <div class="stat-row">
+                            <span class="stat-label">b₀:</span>
+                            <input type="number" class="stat-input" id="custInterceptInput" step="0.1" placeholder="--">
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">b₁:</span>
+                            <input type="number" class="stat-input" id="custSlopeInput" step="0.1" placeholder="--">
+                        </div>
+                        <div class="stat-row sse-row">
+                            <span class="stat-label">SSE:</span>
+                            <span id="custSSE" class="stat-value">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">SST:</span>
+                            <span id="custSST" class="stat-value">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        function getDataFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const xLabel = params.get('xlabel') || 'X Variable';
+            const yLabel = params.get('ylabel') || 'Y Variable';
+            
+            // Parse data arrays, default to sample data if not provided
+            const xData = params.get('x') 
+                ? params.get('x').split(',').map(Number).filter(n => !isNaN(n))
+                : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+            const yData = params.get('y') 
+                ? params.get('y').split(',').map(Number).filter(n => !isNaN(n))
+                : [2, 4, 5, 4, 5, 7, 8, 9, 10, 11];
+            
+            // Validate that we have matching lengths and at least 2 points
+            if (xData.length !== yData.length || xData.length < 2) {
+                console.warn('Invalid data: x and y must have the same length and at least 2 points. Using default data.');
+                return {
+                    xLabel: 'X Variable',
+                    yLabel: 'Y Variable',
+                    xData: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                    yData: [2, 4, 5, 4, 5, 7, 8, 9, 10, 11]
+                };
+            }
+            
+            return { xLabel, yLabel, xData, yData };
+        }
+
+        const { xLabel, yLabel, xData, yData } = getDataFromURL();
+        
+        const canvas = document.getElementById('scatterPlot');
+        const ctx = canvas.getContext('2d');
+        
+        const padding = 60;
+        const plotWidth = canvas.width - 2 * padding;
+        const plotHeight = canvas.height - 2 * padding;
+
+        // Calculate statistics
+        const n = xData.length;
+        const meanX = xData.reduce((a, b) => a + b) / n;
+        const meanY = yData.reduce((a, b) => a + b) / n;
+        
+        // Best fit line
+        let sumXY = 0, sumX2 = 0;
+        for (let i = 0; i < n; i++) {
+            sumXY += (xData[i] - meanX) * (yData[i] - meanY);
+            sumX2 += (xData[i] - meanX) ** 2;
+        }
+        const bfSlope = sumXY / sumX2;
+        const bfIntercept = meanY - bfSlope * meanX;
+
+        // Calculate SST
+        const SST = yData.reduce((sum, y) => sum + (y - meanY) ** 2, 0);
+
+        // Custom line (start at best fit)
+        let custSlope = bfSlope;
+        let custIntercept = bfIntercept;
+        let customLineActive = false; // Track if user has modified the line
+
+        // Scale functions
+        const minX = Math.min(...xData);
+        const maxX = Math.max(...xData);
+        const minY = Math.min(...yData);
+        const maxY = Math.max(...yData);
+        
+        const rangeX = maxX - minX;
+        const rangeY = maxY - minY;
+        const marginX = rangeX * 0.1;
+        const marginY = rangeY * 0.1;
+
+        function scaleX(x) {
+            return padding + ((x - minX + marginX) / (rangeX + 2 * marginX)) * plotWidth;
+        }
+
+        function scaleY(y) {
+            return canvas.height - padding - ((y - minY + marginY) / (rangeY + 2 * marginY)) * plotHeight;
+        }
+
+        function unscaleX(px) {
+            return ((px - padding) / plotWidth) * (rangeX + 2 * marginX) + minX - marginX;
+        }
+
+        function unscaleY(py) {
+            return ((canvas.height - padding - py) / plotHeight) * (rangeY + 2 * marginY) + minY - marginY;
+        }
+
+        function calculateStats(slope, intercept) {
+            let SSE = 0;
+            for (let i = 0; i < n; i++) {
+                const predicted = slope * xData[i] + intercept;
+                SSE += (yData[i] - predicted) ** 2;
+            }
+            return { SSE, SST };
+        }
+
+        function activateCustomLine() {
+            if (!customLineActive) {
+                customLineActive = true;
+                // Copy best-fit values to custom line
+                custSlope = bfSlope;
+                custIntercept = bfIntercept;
+            }
+        }
+
+        function deactivateCustomLine() {
+            customLineActive = false;
+            // Clear the input fields
+            document.getElementById('custInterceptInput').value = '';
+            document.getElementById('custSlopeInput').value = '';
+            document.getElementById('custSSE').textContent = '--';
+            document.getElementById('custSST').textContent = '--';
+        }
+
+        function drawPlot() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.moveTo(padding, canvas.height - padding);
+            ctx.lineTo(padding, padding);
+            ctx.stroke();
+
+            // Draw tick marks and labels
+            ctx.fillStyle = '#000';
+            ctx.font = '16px Arial';
+            ctx.lineWidth = 1;
+            
+            // X-axis ticks and labels
+            const xTickCount = 5;
+            for (let i = 0; i <= xTickCount; i++) {
+                const xVal = minX - marginX + (i / xTickCount) * (rangeX + 2 * marginX);
+                const xPos = scaleX(xVal);
+                
+                // Tick mark
+                ctx.beginPath();
+                ctx.moveTo(xPos, canvas.height - padding);
+                ctx.lineTo(xPos, canvas.height - padding + 5);
+                ctx.stroke();
+                
+                // Label
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(xVal.toFixed(1), xPos, canvas.height - padding + 8);
+            }
+            
+            // Y-axis ticks and labels
+            const yTickCount = 5;
+            for (let i = 0; i <= yTickCount; i++) {
+                const yVal = minY - marginY + (i / yTickCount) * (rangeY + 2 * marginY);
+                const yPos = scaleY(yVal);
+                
+                // Tick mark
+                ctx.beginPath();
+                ctx.moveTo(padding, yPos);
+                ctx.lineTo(padding - 5, yPos);
+                ctx.stroke();
+                
+                // Label
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(yVal.toFixed(1), padding - 8, yPos);
+            }
+
+            // Axis labels
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(xLabel, canvas.width / 2, canvas.height - 20);
+            ctx.save();
+            ctx.translate(10, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(yLabel, 0, 0);
+            ctx.restore();
+
+            // Draw points
+            ctx.fillStyle = '#333';
+            for (let i = 0; i < n; i++) {
+                ctx.beginPath();
+                ctx.arc(scaleX(xData[i]), scaleY(yData[i]), 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Draw residuals (always on)
+            const slope = customLineActive ? custSlope : bfSlope;
+            const intercept = customLineActive ? custIntercept : bfIntercept;
+            const color = customLineActive ? '#FF5722' : '#2196F3';
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            
+            for (let i = 0; i < n; i++) {
+                const x = xData[i];
+                const y = yData[i];
+                const predictedY = slope * x + intercept;
+                
+                ctx.beginPath();
+                ctx.moveTo(scaleX(x), scaleY(y));
+                ctx.lineTo(scaleX(x), scaleY(predictedY));
+                ctx.stroke();
+            }
+            
+            ctx.setLineDash([]);
+
+            // Draw best-fit line (dashed if custom line is active)
+            ctx.strokeStyle = '#2196F3';
+            ctx.lineWidth = 2;
+            if (customLineActive) {
+                ctx.setLineDash([5, 5]); // Make it dashed
+            } else {
+                ctx.setLineDash([]); // Solid
+            }
+            ctx.beginPath();
+            const x1 = minX - marginX;
+            const x2 = maxX + marginX;
+            ctx.moveTo(scaleX(x1), scaleY(bfSlope * x1 + bfIntercept));
+            ctx.lineTo(scaleX(x2), scaleY(bfSlope * x2 + bfIntercept));
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset to solid
+
+            // Draw custom line if active
+            if (customLineActive) {
+                ctx.strokeStyle = '#FF5722';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(scaleX(x1), scaleY(custSlope * x1 + custIntercept));
+                ctx.lineTo(scaleX(x2), scaleY(custSlope * x2 + custIntercept));
+                ctx.stroke();
+            }
+        }
+
+        function updateStats() {
+            // Always show best fit stats
+            const bfStats = calculateStats(bfSlope, bfIntercept);
+            document.getElementById('bfIntercept').textContent = bfIntercept.toFixed(3);
+            document.getElementById('bfSlope').textContent = bfSlope.toFixed(3);
+            document.getElementById('bfSSE').textContent = bfStats.SSE.toFixed(3);
+            document.getElementById('bfSST').textContent = bfStats.SST.toFixed(3);
+
+            if (customLineActive) {
+                const custStats = calculateStats(custSlope, custIntercept);
+                document.getElementById('custInterceptInput').value = custIntercept.toFixed(3);
+                document.getElementById('custSlopeInput').value = custSlope.toFixed(3);
+                document.getElementById('custSSE').textContent = custStats.SSE.toFixed(3);
+                document.getElementById('custSST').textContent = custStats.SST.toFixed(3);
+            }
+            
+            // Update equation display
+            updateEquation();
+        }
+
+        function updateEquation() {
+            const b0 = customLineActive ? custIntercept : bfIntercept;
+            const b1 = customLineActive ? custSlope : bfSlope;
+            const color = customLineActive ? '#FF5722' : '#2196F3';
+            
+            // Update info box border color
+            const infoBox = document.getElementById('infoBox');
+            if (customLineActive) {
+                infoBox.classList.add('active');
+            } else {
+                infoBox.classList.remove('active');
+            }
+            
+            // Format numbers with sign
+            const b0Str = b0.toFixed(2);
+            const b1Str = (b1 >= 0 ? '+' : '') + b1.toFixed(2);
+            
+            document.getElementById('equationDisplay').innerHTML = 
+                `<span style="color: ${color};">Ŷ<sub>i</sub> = ${b0Str} ${b1Str}X<sub>i</sub></span>`;
+        }
+
+        // Helper function to check if mouse is near the best-fit line (for deactivation)
+        function isNearBestFitLine(mouseX, mouseY, threshold = 15) {
+            const dataX = unscaleX(mouseX);
+            const lineY = bfSlope * dataX + bfIntercept;
+            const lineYPx = scaleY(lineY);
+            return Math.abs(mouseY - lineYPx) < threshold;
+        }
+
+        // Helper function to check if mouse is near the line
+        function isNearLine(mouseX, mouseY, threshold = 15) {
+            if (customLineActive) {
+                // Check against custom line
+                const dataX = unscaleX(mouseX);
+                const lineY = custSlope * dataX + custIntercept;
+                const lineYPx = scaleY(lineY);
+                return Math.abs(mouseY - lineYPx) < threshold;
+            } else {
+                // Check against best-fit line
+                return isNearBestFitLine(mouseX, mouseY, threshold);
+            }
+        }
+
+        // Helper function to determine if mouse is in lower or upper part of line
+        function getLineRegion(mouseX) {
+            // Lower half = left of mean X, upper half = right of mean X
+            const meanXPx = scaleX(meanX);
+            
+            if (mouseX < meanXPx) {
+                return 'lower'; // translate (intercept)
+            } else {
+                return 'upper'; // rotate (slope)
+            }
+        }
+
+        // Interaction
+        let dragging = false;
+        let dragMode = null; // 'translate' or 'rotate'
+        let dragStartY = 0;
+        let dragStartIntercept = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Check if clicking near the orange line first (give it precedence)
+            if (customLineActive && isNearLine(mouseX, mouseY)) {
+                dragging = true;
+                const region = getLineRegion(mouseX);
+                dragMode = region === 'lower' ? 'translate' : 'rotate';
+                dragStartY = mouseY;
+                dragStartIntercept = custIntercept;
+                const color = '#FF5722';
+                if (dragMode === 'translate') {
+                    canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₀</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, ns-resize`;
+                } else {
+                    canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₁</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, alias`;
+                }
+                return;
+            }
+            
+            // If custom line is active and clicking on the dashed best-fit line, deactivate
+            if (customLineActive && isNearBestFitLine(mouseX, mouseY)) {
+                deactivateCustomLine();
+                drawPlot();
+                updateStats();
+                return;
+            }
+            
+            // Check if clicking near the best-fit line to activate custom line
+            if (!customLineActive && isNearLine(mouseX, mouseY)) {
+                activateCustomLine();
+                dragging = true;
+                const region = getLineRegion(mouseX);
+                dragMode = region === 'lower' ? 'translate' : 'rotate';
+                dragStartY = mouseY;
+                dragStartIntercept = custIntercept;
+                const color = '#FF5722';
+                if (dragMode === 'translate') {
+                    canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₀</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, ns-resize`;
+                } else {
+                    canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₁</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, alias`;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            if (!dragging) {
+                // Update cursor based on hover
+                if (customLineActive && isNearBestFitLine(mouseX, mouseY)) {
+                    // Hovering over dashed blue line - show pointer to indicate clickable
+                    canvas.style.cursor = 'pointer';
+                } else if (isNearLine(mouseX, mouseY)) {
+                    const region = getLineRegion(mouseX);
+                    const color = customLineActive ? '#FF5722' : '#2196F3';
+                    // Create custom cursor with b₀ or b₁ text with arrows
+                    if (region === 'lower') {
+                        canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₀</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, ns-resize`;
+                    } else {
+                        canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₁</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, alias`;
+                    }
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+                return;
+            }
+            
+            if (dragMode === 'translate') {
+                const color = customLineActive ? '#FF5722' : '#2196F3';
+                canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₀</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, ns-resize`;
+                const dataStartY = unscaleY(dragStartY);
+                const dataCurrentY = unscaleY(mouseY);
+                const dataDeltaY = dataCurrentY - dataStartY;
+                custIntercept = dragStartIntercept + dataDeltaY;
+            } else if (dragMode === 'rotate') {
+                const color = customLineActive ? '#FF5722' : '#2196F3';
+                canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><polygon points="20,8 17,12 23,12" fill="${encodeURIComponent(color)}"/><text x="20" y="23" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="bold" fill="${encodeURIComponent(color)}">b₁</text><polygon points="20,34 17,30 23,30" fill="${encodeURIComponent(color)}"/></svg>') 20 20, alias`;
+                const dataX = unscaleX(mouseX);
+                const dataY = unscaleY(mouseY);
+                custSlope = (dataY - custIntercept) / dataX;
+            }
+
+            drawPlot();
+            updateStats();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            dragging = false;
+            canvas.style.cursor = 'default';
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            dragging = false;
+            canvas.style.cursor = 'default';
+        });
+
+        // Input field handlers
+        document.getElementById('custInterceptInput').addEventListener('change', (e) => {
+            const value = parseFloat(e.target.value);
+            if (!isNaN(value)) {
+                activateCustomLine();
+                custIntercept = value;
+                drawPlot();
+                updateStats();
+            }
+        });
+
+        document.getElementById('custSlopeInput').addEventListener('change', (e) => {
+            const value = parseFloat(e.target.value);
+            if (!isNaN(value)) {
+                activateCustomLine();
+                custSlope = value;
+                drawPlot();
+                updateStats();
+            }
+        });
+
+        // Handle Enter key in input fields
+        document.getElementById('custInterceptInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.target.blur(); // Trigger change event
+            }
+        });
+
+        document.getElementById('custSlopeInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.target.blur(); // Trigger change event
+            }
+        });
+
+        // Initial draw
+        drawPlot();
+        updateStats();
+    </script>
+</body>
+</html>
