@@ -42,5 +42,4 @@ This is an app that lets us explore whether changing the $b_0$ and $b_1$ of the 
 
 You can specify variable names and data points in the url. Here's an example for one dataset:
 
-> html?xlabel=active&ylabel=exam&x=40,53,45,21,68,60,82,11,34,75&y=83,85,75,70,84,88,79,66,71,68
-> 
+> https://coursekata.github.io/teaching-apps/regression-line-1.html?xlabel=active&ylabel=exam&x=40,53,45,21,68,60,82,11,34,75&y=83,85,75,70,84,88,79,66,71,68
