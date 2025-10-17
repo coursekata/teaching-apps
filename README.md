@@ -36,3 +36,11 @@ For example, you could add this to the url:
 
 - ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$   -or-
 - ?beta=100&se=15&labels=$\mu$,$\bar{X}$,$E[\bar{X}]$
+
+## 3. Regression Line Demo
+This is an app that lets us explore whether changing the $b_0$ and $b_1$ of the best-fitting line can possibly reduce the Sum of Squares Error from a regression model. 
+
+You can specify variable names and data points in the url. Here's an example for one dataset:
+
+> html?xlabel=active&ylabel=exam&x=40,53,45,21,68,60,82,11,34,75&y=83,85,75,70,84,88,79,66,71,68
+> 
