@@ -53,7 +53,7 @@ These parameters control which visualization features are enabled by default.
 |-----------|---------|---------|-------------|
 | `histogram` | `on`, `off` | `on` | Show or hide histogram bars |
 | `curve` | `off`, `normal`, `t` | `off` | Set curve overlay mode (none, normal distribution, or t-distribution) |
-| `ci` or `alpha` | `off`, `90`, `95`, `99` | `off` | Set alpha level for confidence intervals (α=.10, .05, .01) |
+| `alpha` | `off`, `.10`, `.05`, `.01` | `off` | Set alpha level (α=.10, α=.05, α=.01). For backwards compatibility, also accepts `90`, `95`, `99` (converted to `.10`, `.05`, `.01`) |
 | `seconddist` | `on`, `off` | `off` | Enable the second distribution (β′) |
 | `powermode` | `tails`, `power` | `tails` | Set shading mode for second distribution (tail shading or power analysis) |
 | `vertlines` | `on`, `off` | `off` | Show vertical confidence interval lines |
@@ -62,8 +62,8 @@ These parameters control which visualization features are enabled by default.
 
 ```
 ?histogram=off&curve=normal
-?curve=t&ci=95
-?seconddist=on&powermode=power&ci=95
+?curve=t&alpha=.05
+?seconddist=on&powermode=power&alpha=.05
 ```
 
 ## Default Value Parameters
@@ -142,31 +142,31 @@ The `labels` parameter allows you to customize the variable names displayed in t
 
 ### Example 1: Simple t-test demonstration
 ```
-?beta=0&se=2&n=1000&curve=t&df=20&ci=95&hide_scale=true&hide_bins=true
+?beta=0&se=2&n=1000&curve=t&df=20&alpha=.05&hide_scale=true&hide_bins=true
 ```
 Shows a t-distribution with α=.05, hides some advanced controls.
 
 ### Example 2: Power analysis
 ```
-?beta=0&se=1&seconddist=on&curve=normal&ci=95&powermode=power&labels=\mu_0,\bar{x},\bar{x}
+?beta=0&se=1&seconddist=on&curve=normal&alpha=.05&powermode=power&labels=\mu_0,\bar{x},\bar{x}
 ```
 Set up for demonstrating statistical power with customized labels.
 
 ### Example 3: Minimal interface
 ```
-?histogram=off&curve=normal&ci=95&hide_simulate=true&hide_scale=true&hide_bins=true&hide_curve=true&hide_df=true&hide_vertlines=true&hide_histogram=true&hide_seconddist=true
+?histogram=off&curve=normal&alpha=.05&hide_simulate=true&hide_scale=true&hide_bins=true&hide_curve=true&hide_df=true&hide_vertlines=true&hide_histogram=true&hide_seconddist=true
 ```
 Shows only the essential visualization with most controls hidden.
 
 ### Example 4: Proportion testing
 ```
-?beta=0.5&se=0.05&labels=p,\hat{p},\bar{\hat{p}}&curve=normal&ci=95&n=1000
+?beta=0.5&se=0.05&labels=p,\hat{p},\bar{\hat{p}}&curve=normal&alpha=.05&n=1000
 ```
 Configured for demonstrating proportion hypothesis testing.
 
 ### Example 5: Custom scenario with locked parameters
 ```
-?beta=10&se=3&n=2000&bins=40&curve=normal&ci=99&hide_beta=true&hide_se=true&hide_n=true
+?beta=10&se=3&n=2000&bins=40&curve=normal&alpha=.01&hide_beta=true&hide_se=true&hide_n=true
 ```
 Shows a specific scenario with parameters locked (hidden from user control).
 
@@ -177,17 +177,18 @@ Shows a specific scenario with parameters locked (hidden from user control).
 3. **Case sensitive**: Use lowercase for parameter names
 4. **Boolean values**: Use `true` for hide parameters, `on`/`off` for toggle parameters
 5. **URL encoding**: Special characters in labels may need encoding (e.g., spaces as `%20`)
+6. **Alpha values**: Use `.10`, `.05`, `.01` for alpha levels (old values `90`, `95`, `99` still work for backwards compatibility)
 
 ## Common Use Cases
 
 ### Teaching Confidence Intervals
 ```
-?beta=0&se=1&curve=normal&ci=95&hide_seconddist=true
+?beta=0&se=1&curve=normal&alpha=.05&hide_seconddist=true
 ```
 
 ### Demonstrating Type I vs Type II Errors
 ```
-?seconddist=on&powermode=power&ci=95&curve=normal&vertlines=on
+?seconddist=on&powermode=power&alpha=.05&curve=normal&vertlines=on
 ```
 
 ### Fixed Scenario Exploration
@@ -197,7 +198,7 @@ Shows a specific scenario with parameters locked (hidden from user control).
 
 ### T-distribution Comparison
 ```
-?curve=t&df=5&ci=95&hide_seconddist=true
+?curve=t&df=5&alpha=.05&hide_seconddist=true
 ```
 
 
