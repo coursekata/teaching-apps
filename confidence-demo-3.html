@@ -1106,7 +1106,7 @@
     shiftUnits = keepShift ? prevShift : 0;
     
     if(secondDistMode === 'on'){
-      data2 = gaussian(n, beta, se);
+      data2 = [...data];
     }
     
     draw();
@@ -1576,7 +1576,7 @@
       secondDistBtn.classList.add('active');
       shiftUnits2 = shiftUnits;
       const n = getN(), beta = getBeta(), se = getSE();
-      data2 = gaussian(n, beta, se);
+      data2 = [...data];
     } else {
       secondDistMode = 'off';
       secondDistBtn.classList.remove('active');
