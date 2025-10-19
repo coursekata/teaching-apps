@@ -41,6 +41,166 @@ For example, you could add this to the url:
 - ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$   -or-
 - ?beta=100&se=15&labels=$\mu$,$\bar{X}$,$E[\bar{X}]$
 
+# Draggable Histogram - URL Parameters Reference
+
+This document describes all URL parameters that can be used to customize the draggable histogram visualization.
+
+## Display Mode Parameters
+
+These parameters control which visualization features are enabled by default.
+
+| Parameter | Options | Default | Description |
+|-----------|---------|---------|-------------|
+| `histogram` | `on`, `off` | `on` | Show or hide histogram bars |
+| `curve` | `off`, `normal`, `t` | `off` | Set curve overlay mode (none, normal distribution, or t-distribution) |
+| `ci` or `alpha` | `off`, `90`, `95`, `99` | `off` | Set alpha level for confidence intervals (α=.10, .05, .01) |
+| `seconddist` | `on`, `off` | `off` | Enable the second distribution (β′) |
+| `powermode` | `tails`, `power` | `tails` | Set shading mode for second distribution (tail shading or power analysis) |
+| `vertlines` | `on`, `off` | `off` | Show vertical confidence interval lines |
+
+### Examples
+
+```
+?histogram=off&curve=normal
+?curve=t&ci=95
+?seconddist=on&powermode=power&ci=95
+```
+
+## Default Value Parameters
+
+These parameters set the initial values for various controls.
+
+| Parameter | Type | Default | Range/Notes | Description |
+|-----------|------|---------|-------------|-------------|
+| `beta` | number | `0` | any number | Population parameter value (β) |
+| `se` | number | `1` | > 0 | Standard error |
+| `df` | integer | `10` | ≥ 1 | Degrees of freedom (for t-distribution) |
+| `n` | integer | `1000` | 10-200000 | Number of random draws to simulate |
+| `scale` | number | `1.75` | 0.5-3+ | Horizontal scale/zoom level |
+| `bins` | integer | `30` | 1-200 | Number of histogram bins |
+
+### Examples
+
+```
+?beta=5&se=2&n=5000
+?beta=0&se=1.5&df=15&curve=t
+?scale=2.5&bins=50
+```
+
+## Hide Control Parameters
+
+These parameters hide specific UI controls. All hide parameters use the format `hide_[control]=true`.
+
+| Parameter | Description |
+|-----------|-------------|
+| `hide_simulate` | Hide the "Simulate" button |
+| `hide_beta` | Hide the β input field |
+| `hide_se` | Hide the SE input and slider |
+| `hide_n` | Hide the n draws input |
+| `hide_scale` | Hide the Scale slider |
+| `hide_bins` | Hide the Bins slider |
+| `hide_curve` | Hide the curve mode selector (Off/N/t buttons) |
+| `hide_df` | Hide the degrees of freedom input |
+| `hide_ci` | Hide the alpha level selector buttons |
+| `hide_vertlines` | Hide the vertical lines toggle button |
+| `hide_histogram` | Hide the histogram toggle button |
+| `hide_seconddist` | Hide the β′ button and power mode selector |
+| `hide_powermode` | Hide only the power mode selector (Tails/Power) |
+| `hide_b` | Hide the b input and Update button |
+
+### Examples
+
+```
+?hide_simulate=true&hide_scale=true
+?hide_beta=true&hide_se=true&beta=5&se=2
+?hide_n=true&hide_bins=true&hide_scale=true
+```
+
+## Label Customization
+
+The `labels` parameter allows you to customize the variable names displayed in the visualization using LaTeX notation.
+
+| Parameter | Format | Default | Description |
+|-----------|--------|---------|-------------|
+| `labels` | `param,stat,mean` | `\beta,b,\bar{b}` | Comma-separated LaTeX strings for: population parameter, sample statistic, and sampling mean |
+
+**Notes:**
+- Enclose LaTeX in the URL without dollar signs
+- Use URL encoding for special characters if needed
+- Greek letters: `\alpha`, `\beta`, `\mu`, `\sigma`, etc.
+- Common notation: `\bar{x}` (x-bar), `\hat{p}` (p-hat), `x_0` (subscript)
+
+### Examples
+
+```
+?labels=\mu,\bar{x},\bar{x}
+?labels=p,\hat{p},\bar{\hat{p}}
+?labels=\theta,t,\bar{t}
+```
+
+## Complete Examples
+
+### Example 1: Simple t-test demonstration
+```
+?beta=0&se=2&n=1000&curve=t&df=20&ci=95&hide_scale=true&hide_bins=true
+```
+Shows a t-distribution with α=.05, hides some advanced controls.
+
+### Example 2: Power analysis
+```
+?beta=0&se=1&seconddist=on&curve=normal&ci=95&powermode=power&labels=\mu_0,\bar{x},\bar{x}
+```
+Set up for demonstrating statistical power with customized labels.
+
+### Example 3: Minimal interface
+```
+?histogram=off&curve=normal&ci=95&hide_simulate=true&hide_scale=true&hide_bins=true&hide_curve=true&hide_df=true&hide_vertlines=true&hide_histogram=true&hide_seconddist=true
+```
+Shows only the essential visualization with most controls hidden.
+
+### Example 4: Proportion testing
+```
+?beta=0.5&se=0.05&labels=p,\hat{p},\bar{\hat{p}}&curve=normal&ci=95&n=1000
+```
+Configured for demonstrating proportion hypothesis testing.
+
+### Example 5: Custom scenario with locked parameters
+```
+?beta=10&se=3&n=2000&bins=40&curve=normal&ci=99&hide_beta=true&hide_se=true&hide_n=true
+```
+Shows a specific scenario with parameters locked (hidden from user control).
+
+## URL Parameter Tips
+
+1. **Combine parameters** with `&`: `?param1=value1&param2=value2`
+2. **Order doesn't matter**: Parameters can be in any sequence
+3. **Case sensitive**: Use lowercase for parameter names
+4. **Boolean values**: Use `true` for hide parameters, `on`/`off` for toggle parameters
+5. **URL encoding**: Special characters in labels may need encoding (e.g., spaces as `%20`)
+
+## Common Use Cases
+
+### Teaching Confidence Intervals
+```
+?beta=0&se=1&curve=normal&ci=95&hide_seconddist=true
+```
+
+### Demonstrating Type I vs Type II Errors
+```
+?seconddist=on&powermode=power&ci=95&curve=normal&vertlines=on
+```
+
+### Fixed Scenario Exploration
+```
+?beta=5&se=2&hide_beta=true&hide_se=true&hide_simulate=true&curve=normal
+```
+
+### T-distribution Comparison
+```
+?curve=t&df=5&ci=95&hide_seconddist=true
+```
+
+
 ## 3. Regression Line Demo
 This is an app that lets us explore whether changing the $b_0$ and $b_1$ of the best-fitting line can possibly reduce the Sum of Squares Error from a regression model. 
 
