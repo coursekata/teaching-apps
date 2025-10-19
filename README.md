@@ -13,7 +13,9 @@ Here's an example:
 
 You also can configure which of the three tabs to show by adding at the end, for example, `&tabs=1,2`. This would show only the first two tabs. If not specified, all tabs appear by default.
 
-We have a simple app to generate a url based on your requirements; it is https://github.com/coursekata/teaching-apps/blob/main/shuffle-url-generator.html
+We have a simple app to generate a url based on your requirements; it is 
+
+> https://coursekata.github.io/teaching-apps/blob/main/shuffle-url-generator.html
 
 And finally, showing hands shuffling is the default, but if you add &hands=false to the url it will turn the hands off.
 
