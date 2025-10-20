@@ -24,22 +24,9 @@ This is an app for grounding discussions about the concept of confidence interva
 
 > https://coursekata.github.io/teaching-apps/confidence-demo-4.html
 
-Several parameters can be set within the url:
+All the parameters, defaults, and controls (whether to hide them or not) can be set in the url. Here's a link to an app you can use to generate a url for the exact display that you want:
 
-- beta - Population Mean (default: 0)
-- se - Standard Error (default: 1)
-- labels - LaTeX notation for labels (optional)
-
-The labels setting can include these elements, separated by commas:
-
-- Population parameter (labelParam)
-- Sample statistic (labelSampleStat)
-- Sampling mean (labelSamplingMean)
-
-For example, you could add this to the url: 
-
-- ?beta=5&se=2&labels=$\beta_1$,$b_1$,$\bar{b}_1$   -or-
-- ?beta=100&se=15&labels=$\mu$,$\bar{X}$,$E[\bar{X}]$
+> https://coursekata.github.io/teaching-apps/confidence-power-url-generator.html
 
 # Draggable Histogram - URL Parameters Reference
 
