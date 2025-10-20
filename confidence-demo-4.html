@@ -848,6 +848,8 @@
 
     const beta = getBeta(), se = getSE();
     const crit = ciCrit(ciMode, curveMode, getDf());
+    
+    // For main distribution, cutoffs are based on beta
     const cutL = beta - crit*se, cutR = beta + crit*se;
 
     function tailFrac(d){
@@ -877,23 +879,106 @@
       });
       
     if(secondDistMode === 'on'){
-      const merged2 = sel2.enter().append('rect').attr('class','hist-shade-2')
-        .style('fill','#f9731644')
-        .merge(sel2);
-      merged2
-        .attr('x', d => x(d.x0))
-        .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
-        .attr('y', d => {
-          const frac = tailFrac(d);
-          const fullH = y(0) - y(d.length);
-          const h = frac * fullH;
-          return y(0) - h;
-        })
-        .attr('height', d => {
-          const frac = tailFrac(d);
-          const fullH = y(0) - y(d.length);
-          return frac * fullH;
-        });
+      // In power mode, use power/type2 shading; in tails mode, use tail shading
+      if(powerMode === 'power'){
+        // Power mode: cutoffs based on blue distribution, shading on orange distribution
+        const betaRelative = beta + (shiftUnits - shiftUnits2);
+        const cutLPower = betaRelative - crit*se;
+        const cutRPower = betaRelative + crit*se;
+        
+        function powerFrac(d){
+          const w = d.x1 - d.x0; if (w <= 0) return 0;
+          // Power is outside the cutoffs
+          if (d.x1 <= cutLPower || d.x0 >= cutRPower) return 1;
+          if (d.x0 >= cutLPower && d.x1 <= cutRPower) return 0;
+          let f = 0;
+          if (d.x0 < cutLPower && d.x1 > cutLPower) f += (cutLPower - d.x0) / w;
+          if (d.x0 < cutRPower && d.x1 > cutRPower) f += (d.x1 - cutRPower) / w;
+          return Math.max(0, Math.min(1, f));
+        }
+        
+        function type2Frac(d){
+          const w = d.x1 - d.x0; if (w <= 0) return 0;
+          // Type 2 is inside the cutoffs
+          if (d.x1 <= cutLPower || d.x0 >= cutRPower) return 0;
+          if (d.x0 >= cutLPower && d.x1 <= cutRPower) return 1;
+          let f = 0;
+          if (d.x0 < cutLPower && d.x1 > cutLPower) f += (d.x1 - cutLPower) / w;
+          if (d.x0 < cutRPower && d.x1 > cutRPower) f += (cutRPower - d.x0) / w;
+          return Math.max(0, Math.min(1, f));
+        }
+        
+        // Clear existing and create two layers: power and type2
+        sel2.remove();
+        
+        // Power shading (orange)
+        const selPower = histShadeG2.selectAll('rect.power-shade')
+          .data(bins2, d => d.x0 + '-' + d.x1);
+        selPower.exit().remove();
+        const mergedPower = selPower.enter().append('rect').attr('class','power-shade')
+          .style('fill','#f97316')
+          .style('fill-opacity', 0.4)
+          .merge(selPower);
+        mergedPower
+          .attr('x', d => x(d.x0))
+          .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+          .attr('y', d => {
+            const frac = powerFrac(d);
+            const fullH = y(0) - y(d.length);
+            const h = frac * fullH;
+            return y(0) - h;
+          })
+          .attr('height', d => {
+            const frac = powerFrac(d);
+            const fullH = y(0) - y(d.length);
+            return frac * fullH;
+          });
+        
+        // Type 2 shading (yellow)
+        const selType2 = histShadeG2.selectAll('rect.type2-shade')
+          .data(bins2, d => d.x0 + '-' + d.x1);
+        selType2.exit().remove();
+        const mergedType2 = selType2.enter().append('rect').attr('class','type2-shade')
+          .style('fill','#fbbf24')
+          .style('fill-opacity', 0.3)
+          .merge(selType2);
+        mergedType2
+          .attr('x', d => x(d.x0))
+          .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+          .attr('y', d => {
+            const frac = type2Frac(d);
+            const fullH = y(0) - y(d.length);
+            const h = frac * fullH;
+            return y(0) - h;
+          })
+          .attr('height', d => {
+            const frac = type2Frac(d);
+            const fullH = y(0) - y(d.length);
+            return frac * fullH;
+          });
+      } else {
+        // Tails mode: regular tail shading
+        histShadeG2.selectAll('rect.power-shade').remove();
+        histShadeG2.selectAll('rect.type2-shade').remove();
+        
+        const merged2 = sel2.enter().append('rect').attr('class','hist-shade-2')
+          .style('fill','#f9731644')
+          .merge(sel2);
+        merged2
+          .attr('x', d => x(d.x0))
+          .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+          .attr('y', d => {
+            const frac = tailFrac(d);
+            const fullH = y(0) - y(d.length);
+            const h = frac * fullH;
+            return y(0) - h;
+          })
+          .attr('height', d => {
+            const frac = tailFrac(d);
+            const fullH = y(0) - y(d.length);
+            return frac * fullH;
+          });
+      }
     }
   }
 
