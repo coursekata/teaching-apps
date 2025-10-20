@@ -219,7 +219,7 @@
   const urlParams = new URLSearchParams(window.location.search);
   const labelsParam = urlParams.get('labels');
   
-  // Parse optional beta and se from URL
+  // Parse optional beta, se, and b from URL
   const urlBeta = urlParams.get('beta');
   const urlSE = urlParams.get('se');
   const urlB = urlParams.get('b');
@@ -472,11 +472,6 @@
   }
   if(urlDf !== null) {
     dfInput.value = parseInt(urlDf);
-  }
-  if(urlB !== null) {
-  const bVal = parseFloat(urlB);
-  bInput.value = bVal;
-  bValue = bVal;
   }
   if(urlN !== null) {
     nInput.value = parseInt(urlN);
@@ -1883,8 +1878,16 @@
   }
   new ResizeObserver(() => { rescale(); }).observe(chartWrap);
 
-  bInput.value = '';
-  bValue = null;
+  // Initialize b value from URL if provided, otherwise set to null
+  if(urlB !== null) {
+    const bVal = parseFloat(urlB);
+    bInput.value = bVal;
+    bValue = bVal;
+  } else {
+    bInput.value = '';
+    bValue = null;
+  }
+  
   binsRange.value = 30;
 
   (function initDomainAndSliders(){
