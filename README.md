@@ -22,7 +22,7 @@ And finally, showing hands shuffling is the default, but if you add &hands=false
 ## 2. Confidence Demo
 This is an app for grounding discussions about the concept of confidence interval. Here's a link to the app:
 
-> https://coursekata.github.io/teaching-apps/confidence-demo-3.html
+> https://coursekata.github.io/teaching-apps/confidence-demo-4.html
 
 Several parameters can be set within the url:
 
