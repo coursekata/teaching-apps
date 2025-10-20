@@ -177,7 +177,7 @@
   <!-- Base URL Configuration -->
   <div class="base-url-section">
     <label>Base URL (update this to your hosted file location)</label>
-    <input type="text" id="baseURL" value="https://coursekata.github.io/teaching-apps/confidence-demo-4.html.html" placeholder="https://coursekata.github.io/teaching-apps/confidence-demo-4.html">
+    <input type="text" id="baseURL" value="https://coursekata.github.io/teaching-apps/confidence-demo-4.html" placeholder="https://coursekata.github.io/teaching-apps/confidence-demo-4.html">
   </div>
 
   <!-- Default Values Section -->
