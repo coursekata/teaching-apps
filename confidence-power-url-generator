@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Histogram URL Generator</title>
+<style>
+  body{
+    margin:0;
+    font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:#f5f5f5;
+    padding:20px;
+  }
+  .container{
+    max-width:900px;
+    margin:0 auto;
+    background:#fff;
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
+  h1{
+    margin:0 0 10px;
+    font-size:24px;
+    color:#111;
+  }
+  .subtitle{
+    color:#666;
+    margin:0 0 30px;
+    font-size:14px;
+  }
+  .section{
+    margin:25px 0;
+    padding:20px;
+    background:#f9f9f9;
+    border-radius:8px;
+  }
+  .section-title{
+    font-weight:700;
+    font-size:16px;
+    margin:0 0 15px;
+    color:#333;
+  }
+  .control-group{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+    margin:15px 0;
+  }
+  .control{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+  }
+  .control label{
+    font-size:13px;
+    font-weight:600;
+    color:#555;
+  }
+  .control input[type="number"],
+  .control input[type="text"],
+  .control select{
+    padding:8px 10px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    font:inherit;
+    background:#fff;
+  }
+  .checkbox-group{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:10px;
+    margin:10px 0;
+  }
+  .checkbox-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .checkbox-item input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    cursor:pointer;
+  }
+  .checkbox-item label{
+    font-size:13px;
+    color:#555;
+    cursor:pointer;
+  }
+  .url-output{
+    margin:30px 0;
+    padding:20px;
+    background:#f0f7ff;
+    border:2px solid #2563eb;
+    border-radius:8px;
+  }
+  .url-output-title{
+    font-weight:700;
+    margin:0 0 10px;
+    color:#1e40af;
+  }
+  .url-display{
+    padding:12px;
+    background:#fff;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    word-break:break-all;
+    font-family:monospace;
+    font-size:13px;
+    color:#1e293b;
+    max-height:150px;
+    overflow-y:auto;
+  }
+  .button-group{
+    display:flex;
+    gap:10px;
+    margin-top:15px;
+  }
+  button{
+    padding:10px 20px;
+    border:none;
+    border-radius:6px;
+    font:inherit;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.2s;
+  }
+  .btn-primary{
+    background:#2563eb;
+    color:#fff;
+  }
+  .btn-primary:hover{
+    background:#1d4ed8;
+  }
+  .btn-secondary{
+    background:#64748b;
+    color:#fff;
+  }
+  .btn-secondary:hover{
+    background:#475569;
+  }
+  .info-box{
+    background:#fff3cd;
+    border:1px solid #ffc107;
+    border-radius:6px;
+    padding:12px;
+    margin:15px 0;
+    font-size:13px;
+    color:#856404;
+  }
+  .base-url-section{
+    margin:20px 0;
+    padding:15px;
+    background:#e7f3ff;
+    border-radius:8px;
+  }
+  .base-url-section label{
+    display:block;
+    font-weight:600;
+    margin-bottom:8px;
+    color:#333;
+  }
+  .base-url-section input{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    font:inherit;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Sampling Distribution Histogram - URL Generator</h1>
+  <p class="subtitle">Configure the interactive visualization and generate a URL to share with students</p>
+
+  <!-- Base URL Configuration -->
+  <div class="base-url-section">
+    <label>Base URL (update this to your hosted file location)</label>
+    <input type="text" id="baseURL" value="https://coursekata.github.io/teaching-apps/confidence-demo-4.html.html" placeholder="https://coursekata.github.io/teaching-apps/confidence-demo-4.html">
+  </div>
+
+  <!-- Default Values Section -->
+  <div class="section">
+    <div class="section-title">Default Values</div>
+    <div class="control-group">
+      <div class="control">
+        <label>β (Population Parameter)</label>
+        <input type="number" id="beta" value="0" step="0.1">
+      </div>
+      <div class="control">
+        <label>SE (Standard Error)</label>
+        <input type="number" id="se" value="1" step="0.1" min="0.01">
+      </div>
+      <div class="control">
+        <label>n (Sample Size)</label>
+        <input type="number" id="n" value="1000" step="10" min="10">
+      </div>
+      <div class="control">
+        <label>Bins</label>
+        <input type="number" id="bins" value="30" min="1" max="200">
+      </div>
+      <div class="control">
+        <label>Scale</label>
+        <input type="number" id="scale" value="1.75" step="0.1" min="0.5" max="3">
+      </div>
+      <div class="control">
+        <label>df (degrees of freedom)</label>
+        <input type="number" id="df" value="10" min="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- Initial State Section -->
+  <div class="section">
+    <div class="section-title">Initial State</div>
+    <div class="control-group">
+      <div class="control">
+        <label>Curve Overlay</label>
+        <select id="curve">
+          <option value="off">Off</option>
+          <option value="normal">Normal</option>
+          <option value="t">t-distribution</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Alpha Level</label>
+        <select id="alpha">
+          <option value="off">Off</option>
+          <option value=".10">α=.10</option>
+          <option value=".05">α=.05</option>
+          <option value=".01">α=.01</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Histogram Display</label>
+        <select id="histogram">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Second Distribution</label>
+        <select id="seconddist">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Power Mode</label>
+        <select id="powermode">
+          <option value="tails">Tails</option>
+          <option value="power">Power</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Vertical Lines</label>
+        <select id="vertlines">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Labels Section -->
+  <div class="section">
+    <div class="section-title">Custom Labels (LaTeX)</div>
+    <div class="info-box">
+      Use LaTeX notation (e.g., \mu, \bar{x}, \beta_1). Separate with commas. Leave blank to use defaults.
+    </div>
+    <div class="control-group">
+      <div class="control">
+        <label>Population Parameter Label</label>
+        <input type="text" id="label_param" value="" placeholder="\beta (default)">
+      </div>
+      <div class="control">
+        <label>Sample Statistic Label</label>
+        <input type="text" id="label_stat" value="" placeholder="b (default)">
+      </div>
+      <div class="control">
+        <label>Sampling Mean Label</label>
+        <input type="text" id="label_mean" value="" placeholder="\bar{b} (default)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Hide Controls Section -->
+  <div class="section">
+    <div class="section-title">Hide Controls</div>
+    <div class="info-box">
+      Check the boxes below to hide controls from students
+    </div>
+    <div class="checkbox-group">
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_beta">
+        <label for="hide_beta">Hide β</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_se">
+        <label for="hide_se">Hide SE</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_n">
+        <label for="hide_n">Hide n</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_simulate">
+        <label for="hide_simulate">Hide Simulate</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_seconddist">
+        <label for="hide_seconddist">Hide β′</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_powermode">
+        <label for="hide_powermode">Hide Power Mode</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_b">
+        <label for="hide_b">Hide b input</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_scale">
+        <label for="hide_scale">Hide Scale</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_bins">
+        <label for="hide_bins">Hide Bins</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_curve">
+        <label for="hide_curve">Hide Curve</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_df">
+        <label for="hide_df">Hide df</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_ci">
+        <label for="hide_ci">Hide Alpha</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_vertlines">
+        <label for="hide_vertlines">Hide Vert Lines</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_histogram">
+        <label for="hide_histogram">Hide Histogram</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generated URL Section -->
+  <div class="url-output">
+    <div class="url-output-title">Generated URL</div>
+    <div class="url-display" id="urlDisplay">Configure settings above and the URL will update automatically</div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="copyURL()">Copy to Clipboard</button>
+      <button class="btn-primary" onclick="openPreview()">Open Preview</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function generateURL() {
+  // Get base URL
+  const baseURL = document.getElementById('baseURL').value.trim() || 'confidence-demo-new-5.html';
+  
+  const params = new URLSearchParams();
+  
+  // Add default values (only if different from defaults)
+  const beta = document.getElementById('beta').value;
+  const se = document.getElementById('se').value;
+  const n = document.getElementById('n').value;
+  const bins = document.getElementById('bins').value;
+  const scale = document.getElementById('scale').value;
+  const df = document.getElementById('df').value;
+  
+  if(beta !== '0') params.append('beta', beta);
+  if(se !== '1') params.append('se', se);
+  if(n !== '1000') params.append('n', n);
+  if(bins !== '30') params.append('bins', bins);
+  if(scale !== '1.75') params.append('scale', scale);
+  if(df !== '10') params.append('df', df);
+  
+  // Add initial states
+  const curve = document.getElementById('curve').value;
+  const alpha = document.getElementById('alpha').value;
+  const histogram = document.getElementById('histogram').value;
+  const seconddist = document.getElementById('seconddist').value;
+  const powermode = document.getElementById('powermode').value;
+  const vertlines = document.getElementById('vertlines').value;
+  
+  if(curve !== 'off') params.append('curve', curve);
+  if(alpha !== 'off') params.append('alpha', alpha);
+  if(histogram !== 'on') params.append('histogram', histogram);
+  if(seconddist !== 'off') params.append('seconddist', seconddist);
+  if(powermode !== 'tails') params.append('powermode', powermode);
+  if(vertlines !== 'off') params.append('vertlines', vertlines);
+  
+  // Add labels (only if provided)
+  const labelParam = document.getElementById('label_param').value.trim();
+  const labelStat = document.getElementById('label_stat').value.trim();
+  const labelMean = document.getElementById('label_mean').value.trim();
+  
+  if(labelParam || labelStat || labelMean) {
+    const labels = [
+      labelParam || '\\beta', 
+      labelStat || 'b', 
+      labelMean || '\\bar{b}'
+    ];
+    params.append('labels', labels.join(','));
+  }
+  
+  // Add hide controls
+  const hideControls = [
+    'hide_beta', 'hide_se', 'hide_n', 'hide_simulate',
+    'hide_seconddist', 'hide_powermode', 'hide_b',
+    'hide_scale', 'hide_bins', 'hide_curve', 'hide_df',
+    'hide_ci', 'hide_vertlines', 'hide_histogram'
+  ];
+  
+  hideControls.forEach(control => {
+    if(document.getElementById(control).checked) {
+      params.append(control, 'true');
+    }
+  });
+  
+  // Generate final URL
+  const finalURL = params.toString() ? `${baseURL}?${params.toString()}` : baseURL;
+  document.getElementById('urlDisplay').textContent = finalURL;
+  
+  return finalURL;
+}
+
+function copyURL() {
+  const url = document.getElementById('urlDisplay').textContent;
+  
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.background = '#10b981';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 2000);
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    alert('Failed to copy URL. Please copy manually.');
+  });
+}
+
+function openPreview() {
+  const url = document.getElementById('urlDisplay').textContent;
+  window.open(url, '_blank');
+}
+
+// Auto-generate on any input change
+document.querySelectorAll('input, select').forEach(element => {
+  element.addEventListener('change', generateURL);
+  element.addEventListener('input', generateURL);
+});
+
+// Generate initial URL
+generateURL();
+</script>
+</body>
+</html>
