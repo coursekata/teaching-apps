@@ -1221,7 +1221,8 @@
 
   function drawBetaMarker(){
     const beta = getBeta();
-    const showBetaMarker = (betaValue !== null && !Number.isNaN(betaValue));
+    const showDistribution = (histogramMode === 'on') || (curveMode !== 'off');
+    const showBetaMarker = (betaValue !== null && !Number.isNaN(betaValue)) || showDistribution;
     
     if(!showBetaMarker){
       betaMarkerG.attr('display', 'none');
