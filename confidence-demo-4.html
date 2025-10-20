@@ -222,6 +222,7 @@
   // Parse optional beta and se from URL
   const urlBeta = urlParams.get('beta');
   const urlSE = urlParams.get('se');
+  const urlB = urlParams.get('b');
   
   // Parse display mode parameters
   const urlHistogram = urlParams.get('histogram');
@@ -471,6 +472,11 @@
   }
   if(urlDf !== null) {
     dfInput.value = parseInt(urlDf);
+  }
+  if(urlB !== null) {
+  const bVal = parseFloat(urlB);
+  bInput.value = bVal;
+  bValue = bVal;
   }
   if(urlN !== null) {
     nInput.value = parseInt(urlN);
