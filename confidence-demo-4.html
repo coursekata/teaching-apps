@@ -19,6 +19,7 @@
   .row label{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
   input[type=number],input[type=range],button{font:inherit;border-radius:10px;border:1px solid #ddd;padding:6px 8px;background:#fafafa;outline:none}
   input[type=number]{width:50px}
+  input[type=number].small-input{width:30px}
   input[type=range]{width:154px;accent-color:var(--accent)}
   button{background:#f4f4f4;cursor:pointer}
   button.primary{background:var(--accent);color:#fff;border-color:transparent}
@@ -116,9 +117,8 @@
   <div class="row panel">
     <!-- Row 1 -->
     <div class="row" style="gap:16px;">
-      <label>β
-        <input id="betaInput" type="number" step="0.1" value="0">
-      </label>
+      <input id="betaInput" type="number" step="0.1" value="" class="small-input">
+      <button id="betaBtn" class="primary" style="visibility:hidden;">Update</button>
 
       <label>SE
         <input id="seInput" type="number" step="0.01" value="1" style="width:45px">
@@ -142,7 +142,7 @@
 
       <div style="flex:1 1 auto;"></div>
 
-      <input id="bInput" type="number" step="0.01" value="" style="width:60px">
+      <input id="bInput" type="number" step="0.01" value="" class="small-input">
       <button id="bBtn" class="primary" style="visibility:hidden;">Update</button>
     </div>
 
@@ -288,6 +288,7 @@
   const nInput = document.getElementById('nInput');
   const binsRange = document.getElementById('binsRange');
   const betaInput = document.getElementById('betaInput');
+  const betaBtn = document.getElementById('betaBtn');
   const seInput = document.getElementById('seInput');
   const seRange = document.getElementById('seRange');
   const scaleRange = document.getElementById('scaleRange');
@@ -295,7 +296,11 @@
   const bInput = document.getElementById('bInput');
   const bBtn = document.getElementById('bBtn');
   
-  // Update button immediately
+  // Update buttons immediately
+  if(betaBtn) {
+    betaBtn.innerHTML = 'Update ' + renderLatex(labelParamLatex);
+    betaBtn.style.visibility = 'visible';
+  }
   if(bBtn) {
     bBtn.innerHTML = 'Update ' + renderLatex(labelSampleStatLatex);
     bBtn.style.visibility = 'visible';
@@ -432,6 +437,7 @@
   let shiftUnits = 0;
   let shiftUnits2 = 0;
   let bValue = null;
+  let betaValue = null;
   let ciMode = 'off';
   let blueMarks = [];
   let nextMarkId = 0;
@@ -464,7 +470,12 @@
   
   // Apply URL parameters
   if(urlBeta !== null) {
-    betaInput.value = parseFloat(urlBeta);
+    const betaVal = parseFloat(urlBeta);
+    betaInput.value = betaVal;
+    betaValue = betaVal;
+  } else {
+    betaInput.value = '';
+    betaValue = null;
   }
   if(urlSE !== null) {
     seInput.value = parseFloat(urlSE);
@@ -546,7 +557,8 @@
     regenBtn.style.display = 'none';
   }
   if(hideBeta) {
-    betaInput.parentElement.style.display = 'none';
+    betaInput.style.display = 'none';
+    betaBtn.style.display = 'none';
   }
   if(hideSE) {
     seInput.parentElement.style.display = 'none';
@@ -592,7 +604,10 @@
   function restoreRedBetaOnTop(){ betaMarkerG.raise(); }
 
   // ---------- helpers ----------
-  function getBeta(){ return +betaInput.value||0; }
+  function getBeta(){ 
+    if(betaValue !== null && !Number.isNaN(betaValue)) return betaValue;
+    return 0;
+  }
   function getSE(){ return Math.max(+seInput.value||1,1e-9); }
   function getScale(){ return Math.max(+scaleRange.value||1.75,0.1); }
   function getN(){ return Math.max(+nInput.value||1000,1); }
@@ -1206,6 +1221,14 @@
 
   function drawBetaMarker(){
     const beta = getBeta();
+    const showBetaMarker = (betaValue !== null && !Number.isNaN(betaValue));
+    
+    if(!showBetaMarker){
+      betaMarkerG.attr('display', 'none');
+      return;
+    }
+    
+    betaMarkerG.attr('display', null);
     const betaVal = beta + shiftUnits;
     const xPos = x(betaVal);
     const axisY = axisInsetTop;
@@ -1825,6 +1848,20 @@
     regenerate();
   });
 
+  betaBtn.addEventListener('click', function(){
+    const v = betaInput.value.trim();
+    betaValue = (v===''?null:+v);
+    draw();
+  });
+
+  betaInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      const v = betaInput.value.trim();
+      betaValue = (v===''?null:+v);
+      draw();
+    }
+  });
+
   nInput.addEventListener('change', regenerate);
 
   bBtn.addEventListener('click', function(){
@@ -1963,7 +2000,7 @@
   }
   new ResizeObserver(() => { rescale(); }).observe(chartWrap);
 
-  // Initialize b value from URL if provided, otherwise set to null
+  // Initialize b and beta values from URL if provided, otherwise set to null
   if(urlB !== null) {
     const bVal = parseFloat(urlB);
     bInput.value = bVal;
@@ -1972,6 +2009,8 @@
     bInput.value = '';
     bValue = null;
   }
+  
+  // Beta was already initialized earlier in URL parameter section
   
   binsRange.value = 30;
 
