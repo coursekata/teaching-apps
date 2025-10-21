@@ -419,8 +419,9 @@
   // Drag veil
   const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent').attr('pointer-events','all');
 
-  // Bottom axis label
-  const xLabelBottomFO = root.append('foreignObject').attr('width',300).attr('height',50);
+  // Axis labels - positioned on the left side
+  const xLabelTopFO = root.append('foreignObject').attr('width',200).attr('height',50);
+  const xLabelBottomFO = root.append('foreignObject').attr('width',200).attr('height',50);
 
   // p-value text
   const pTextRight = root.append('text')
@@ -797,9 +798,16 @@
     plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
     veil.attr('x',0).attr('y',axisInsetTop).attr('width',innerW).attr('height',plotH);
     
-    const axisLabelY = axisInsetTop + plotH + 64;
-    xLabelBottomFO.attr('x', innerW/2 - 150).attr('y', axisLabelY);
-    xLabelBottomFO.html('<div style="width:100%;text-align:center;color:#333;font-weight:700;font-size:22px;" class="latex-label">' + renderLatex(labelSampleStatLatex) + '</div>');
+    // Position axis labels on the left side with symmetrical spacing
+    const labelOffset = 16;
+    const topLabelY = axisInsetTop + labelOffset - 6;
+    const bottomLabelY = axisInsetTop + plotH - labelOffset - 28;
+    
+    xLabelTopFO.attr('x', -5).attr('y', topLabelY);
+    xLabelTopFO.html('<div style="display:flex;align-items:center;gap:8px;"><span style="color:#333;font-weight:700;font-size:28px;" class="latex-label">' + renderLatex(labelParamLatex) + '</span><span style="color:#666;font-size:12px;line-height:1.3;font-weight:600;">population<br>parameter</span></div>');
+    
+    xLabelBottomFO.attr('x', -5).attr('y', bottomLabelY);
+    xLabelBottomFO.html('<div style="display:flex;align-items:center;gap:8px;"><span style="color:#333;font-weight:700;font-size:28px;" class="latex-label">' + renderLatex(labelSampleStatLatex) + '</span><span style="color:#666;font-size:12px;line-height:1.3;font-weight:600;">sample<br>statistic</span></div>');
   }
 
   function drawAxes(){
@@ -1852,6 +1860,11 @@
   betaBtn.addEventListener('click', function(){
     const v = betaInput.value.trim();
     betaValue = (v===''?null:+v);
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+      vertLinesAttachment = 'cutoffs';
+      linkedMarks.left = null;
+      linkedMarks.right = null;
+    }
     draw();
   });
 
@@ -1859,6 +1872,11 @@
     if(e.key === 'Enter'){
       const v = betaInput.value.trim();
       betaValue = (v===''?null:+v);
+      if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+        vertLinesAttachment = 'cutoffs';
+        linkedMarks.left = null;
+        linkedMarks.right = null;
+      }
       draw();
     }
   });
