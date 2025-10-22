@@ -1247,19 +1247,20 @@
     
     betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
     
-    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;visibility:hidden;" class="latex-label">' + 
       renderLatex(labelParamLatex) + ' = ' + betaVal.toFixed(2) + '</div>';
     betaLabelFO.html(labelHtml);
     
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       const labelDiv = betaLabelFO.node().querySelector('div');
       if(labelDiv){
         const bb = labelDiv.getBoundingClientRect();
         betaLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
         betaBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
           .attr('width', bb.width + 8).attr('height', bb.height + 4);
+        labelDiv.style.visibility = 'visible';
       }
-    });
+    }, 0);
   }
 
   function drawBetaPrimeMarker(){
