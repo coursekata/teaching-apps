@@ -1251,7 +1251,7 @@
       renderLatex(labelParamLatex) + ' = ' + betaVal.toFixed(2) + '</div>';
     betaLabelFO.html(labelHtml);
     
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       const labelDiv = betaLabelFO.node().querySelector('div');
       if(labelDiv){
         const bb = labelDiv.getBoundingClientRect();
@@ -1259,7 +1259,7 @@
         betaBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
           .attr('width', bb.width + 8).attr('height', bb.height + 4);
       }
-    }, 0);
+    });
   }
 
   function drawBetaPrimeMarker(){
