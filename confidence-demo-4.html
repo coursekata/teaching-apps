@@ -402,19 +402,19 @@
   const bMarkerG = root.append('g').attr('class','b-marker').style('cursor','ew-resize');
   const bLine = bMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowUpRed)');
   const bBG   = bMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-  const bLabelFO = bMarkerG.append('foreignObject').attr('width',200).attr('height',40);
+  const bLabelFO = bMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
   // β marker (top)
   const betaMarkerG = root.append('g').attr('class','beta-marker').style('cursor','grab');
   const betaLine = betaMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowDownRed)');
   const betaBG   = betaMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-  const betaLabelFO = betaMarkerG.append('foreignObject').attr('width',200).attr('height',40);
+  const betaLabelFO = betaMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
   // β′ marker (top, orange)
   const betaPrimeMarkerG = root.append('g').attr('class','beta-prime-marker').style('cursor','grab');
   const betaPrimeLine = betaPrimeMarkerG.append('line').attr('stroke','#f97316').attr('stroke-width',3).attr('marker-end','url(#arrowDownOrange)');
   const betaPrimeBG   = betaPrimeMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
-  const betaPrimeLabelFO = betaPrimeMarkerG.append('foreignObject').attr('width',200).attr('height',40);
+  const betaPrimeLabelFO = betaPrimeMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
   // Blue bound markers
   const blueMarksG = root.append('g').attr('class','blue-marks');
