@@ -1247,7 +1247,7 @@
     
     betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
     
-    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;visibility:hidden;" class="latex-label">' + 
+    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
       renderLatex(labelParamLatex) + ' = ' + betaVal.toFixed(2) + '</div>';
     betaLabelFO.html(labelHtml);
     
@@ -1258,7 +1258,6 @@
         betaLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
         betaBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
           .attr('width', bb.width + 8).attr('height', bb.height + 4);
-        labelDiv.style.visibility = 'visible';
       }
     }, 0);
   }
@@ -1318,9 +1317,9 @@
     pTextRight.text(text);
 
     const bb = bBG.node().getBBox();
-    const pad = 10;
+    const pad = 6;
     const xRight = bb.x + bb.width + pad;
-    const yBaseline = bb.y + bb.height - 8;
+    const yBaseline = bb.y + bb.height / 2 + 6;
     pTextRight.attr('x', xRight).attr('y', yBaseline).attr('display', null);
   }
 
