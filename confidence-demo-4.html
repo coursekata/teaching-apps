@@ -19,7 +19,10 @@
   .row label{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
   input[type=number],input[type=range],button{font:inherit;border-radius:10px;border:1px solid #ddd;padding:6px 8px;background:#fafafa;outline:none}
   input[type=number]{width:50px}
-  input[type=number].small-input{width:30px}
+  input[type=number].small-input{width:36px}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
   input[type=range]{width:154px;accent-color:var(--accent)}
   button{background:#f4f4f4;cursor:pointer}
   button.primary{background:var(--accent);color:#fff;border-color:transparent}
@@ -1222,9 +1225,8 @@
         bBG.attr('x', xPos - bb.width/2 - 6).attr('y', arrowBottom + 24 - bb.height/2 - 3)
           .attr('width', bb.width + 12).attr('height', bb.height + 6);
       }
+      updatePTextToRightOfB();
     }, 0);
-    
-    updatePTextToRightOfB();
   }
 
   function drawBetaMarker(){
@@ -1510,7 +1512,9 @@
       }
     });
 
-    if(bValue!==null && !Number.isNaN(bValue)) updatePTextToRightOfB();
+    if(bValue!==null && !Number.isNaN(bValue)) {
+      // updatePTextToRightOfB is now called inside drawBMarker's setTimeout
+    }
   }
 
   function regenerate(opts = {}){
