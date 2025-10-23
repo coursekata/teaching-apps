@@ -36,6 +36,7 @@
   .hist-shade{fill:var(--tailFill);stroke:none}
   .hist-shade-2{fill:#f9731644;stroke:none}
   .draggable-veil{cursor:grab}
+  .draggable-veil.disabled{cursor:not-allowed}
   .draggable-veil:active{cursor:grabbing}
   .mean-line{stroke:var(--mean);stroke-width:2.5;shape-rendering:crispEdges}
   .mean-line-orange{stroke:var(--orange);stroke-width:2.5;shape-rendering:crispEdges}
@@ -77,7 +78,7 @@
   
   .legend{
     position:absolute;
-    top:70px;
+    top:80px;
     right:30px;
     background:#fff;
     border:1px solid #ddd;
@@ -112,6 +113,69 @@
   .latex-label .katex { color: inherit; font-weight: 700; }
   button .katex, button.primary .katex { color: #fff !important; font-weight: 700 !important; }
   button.primary { display: inline-flex; align-items: center; gap: 4px; }
+  
+  /* Dropdown button styles */
+  .dropdown-btn-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+  .dropdown-btn-wrap button#regenBtn {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+  }
+  .dropdown-btn-wrap button.dropdown-arrow {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 6px 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: auto;
+  }
+  .dropdown-btn-wrap button.dropdown-arrow svg {
+    display: block;
+  }
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: none;
+    flex-direction: column;
+    min-width: 120px;
+    z-index: 1000;
+    overflow: hidden;
+  }
+  .dropdown-menu.show {
+    display: flex;
+  }
+  .dropdown-menu button {
+    background: #fff;
+    border: none;
+    border-radius: 0;
+    padding: 8px 14px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+    transition: background 0.15s;
+  }
+  .dropdown-menu button:hover {
+    background: #f5f5f5;
+  }
+  .dropdown-menu button + button {
+    border-top: 1px solid #eee;
+  }
+  .dropdown-menu button.active {
+    background: #e8f0ff;
+    color: var(--accent);
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -128,11 +192,20 @@
         <input id="seRange" type="range" min="0.1" max="5" step="0.05" value="1">
       </label>
 
-      <label>n draws
-        <input id="nInput" type="number" min="10" max="200000" step="10" value="1000">
-      </label>
-
-      <button id="regenBtn" class="primary">Simulate</button>
+      <div class="dropdown-btn-wrap">
+        <button id="regenBtn" class="primary">Simulate 1000x</button>
+        <button id="regenDropdownBtn" class="primary dropdown-arrow" title="Simulation options">
+          <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+            <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div id="regenDropdown" class="dropdown-menu">
+          <button data-n="1">1x</button>
+          <button data-n="10">10x</button>
+          <button data-n="100">100x</button>
+          <button data-n="1000">1000x</button>
+        </div>
+      </div>
 
       <button id="secondDistBtn" class="icon-toggle" title="Toggle second distribution">
         <span>β′</span>
@@ -288,7 +361,9 @@
   }
   
   const chartWrap = document.getElementById('chart');
-  const nInput = document.getElementById('nInput');
+  let nValue = 1000; // Number of draws per simulation click
+  let currentN = 0; // Current total number of samples accumulated
+  let isLockedToBeta = false; // Tracks if sample mean has locked to beta
   const binsRange = document.getElementById('binsRange');
   const betaInput = document.getElementById('betaInput');
   const betaBtn = document.getElementById('betaBtn');
@@ -489,7 +564,7 @@
     dfInput.value = parseInt(urlDf);
   }
   if(urlN !== null) {
-    nInput.value = parseInt(urlN);
+    nValue = parseInt(urlN);
   }
   if(urlScale !== null) {
     scaleRange.value = parseFloat(urlScale);
@@ -567,9 +642,6 @@
   if(hideSE) {
     seInput.parentElement.style.display = 'none';
   }
-  if(hideN) {
-    nInput.parentElement.style.display = 'none';
-  }
   if(hideScale) {
     scaleRange.parentElement.style.display = 'none';
   }
@@ -614,7 +686,7 @@
   }
   function getSE(){ return Math.max(+seInput.value||1,1e-9); }
   function getScale(){ return Math.max(+scaleRange.value||1.75,0.1); }
-  function getN(){ return Math.max(+nInput.value||1000,1); }
+  function getN(){ return Math.max(nValue||1000,1); }
   function getBins(){ return Math.max(1, Math.floor(+binsRange.value || 30)); }
   function getDf(){ return Math.max(1, Math.floor(+dfInput.value || 10)); }
   function pxPerUnit(){ const u0=x.domain()[0]; return Math.abs(x(u0+1)-x(u0)); }
@@ -773,24 +845,47 @@
   }
 
   function recomputeYDomain(nbins){
-    const n = getN(), beta=getBeta(), se=getSE();
+    // Smooth adaptive scaling: expand y-axis only when needed
+    const beta=getBeta(), se=getSE();
     const domain = x.domain();
     const binW = (domain[1]-domain[0]) / nbins;
+    
+    // Get actual bar heights
     const barMax = bins.length ? d3.max(bins, d => d.length) : 1;
     const barMax2 = (secondDistMode === 'on' && bins2.length) ? d3.max(bins2, d => d.length) : 0;
+    const actualMax = Math.max(barMax, barMax2, 1);
+    
+    // When curve is shown, consider its height
     let curveMax = 0;
+    if(curveMode !== 'off') {
+      // Use currentN if we have samples, otherwise use the dropdown value
+      const nForCurve = currentN > 0 ? currentN : getN();
+      for (let i=0;i<128;i++){
+        const xv = domain[0] + (i/127)*(domain[1]-domain[0]);
+        const pdf = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
+        curveMax = Math.max(curveMax, nForCurve * binW * pdf);
+      }
+    }
+    
+    // Calculate what the curve would be at 1000 samples for reference
+    let curveMax1000 = 0;
     for (let i=0;i<128;i++){
       const xv = domain[0] + (i/127)*(domain[1]-domain[0]);
       const pdf = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
-      curveMax = Math.max(curveMax, n * binW * pdf);
-      
-      if(secondDistMode === 'on'){
-        const pdf2 = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
-        curveMax = Math.max(curveMax, n * binW * pdf2);
-      }
+      curveMax1000 = Math.max(curveMax1000, 1000 * binW * pdf);
     }
-    const yMax = Math.max(barMax, barMax2, curveMax, 1);
-    y.domain([0, yMax * 1.08]);
+    
+    // Start with initial expected max for small n (30 samples)
+    const initialMax = curveMax1000 * (30 / 1000);
+    
+    // Calculate yMax to leave approximately 30px at the top
+    const topPadding = 30;
+    const scaleFactor = innerH / (innerH - topPadding);
+    
+    // Use the larger of: actual bars, curve height, or initial minimum (all with 30px headroom)
+    const yMax = Math.max(actualMax * scaleFactor, curveMax * scaleFactor, initialMax);
+    
+    y.domain([0, yMax]);
   }
 
   function layoutStatic(){
@@ -1069,7 +1164,9 @@
       return;
     }
 
-    const beta=getBeta(), se=getSE(), n=getN();
+    const beta=getBeta(), se=getSE();
+    // Use currentN if we have samples, otherwise use the dropdown value
+    const n = currentN > 0 ? currentN : getN();
     const nbins = getBins();
     const domain = x.domain();
     const binW = (domain[1]-domain[0]) / nbins;
@@ -1088,7 +1185,10 @@
     }
 
     if(showCurve){
-      if(histogramMode === 'off'){
+      // Draw as filled area if histogram is off OR if there's no histogram data yet
+      const showCurveAsFill = (histogramMode === 'off') || (bins.length === 0);
+      
+      if(showCurveAsFill){
         const areaGen = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
         curvePath.attr('d', areaGen(xs));
         curvePath.style('fill', '#60a5fa55').style('stroke', '#1e4ed8').style('stroke-width', '2');
@@ -1100,7 +1200,10 @@
     }
 
     if(showSecond){
-      if(histogramMode === 'off'){
+      // Draw as filled area if histogram is off OR if there's no histogram data yet
+      const showCurveAsFill = (histogramMode === 'off') || (bins2.length === 0);
+      
+      if(showCurveAsFill){
         const areaGen2 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected2(d)));
         curvePath2.attr('d', areaGen2(xs));
         curvePath2.style('fill', '#f9731655').style('stroke', '#f97316').style('stroke-width', '2');
@@ -1125,7 +1228,8 @@
       tailAreaL.attr('d', xsL.length ? area(xsL) : null);
       tailAreaR.attr('d', xsR.length ? area(xsR) : null);
     } else {
-      tailAreaL.attr('d', null); tailAreaR.attr('d', null);
+      tailAreaL.attr('d', null);
+      tailAreaR.attr('d', null);
     }
 
     if(showCIOverSecond){
@@ -1296,8 +1400,16 @@
   function updatePTextToRightOfB(){
     if(bValue === null || Number.isNaN(bValue)){ pTextRight.attr('display','none'); return; }
     
-    const showDistribution = (histogramMode === 'on') || (curveMode !== 'off');
-    if(!showDistribution){ pTextRight.attr('display','none'); return; }
+    // Show p-value only if:
+    // 1. Curve is on (can use curve as statistical model), OR
+    // 2. Histogram has data that's locked to beta
+    const curveIsVisible = (curveMode !== 'off');
+    const histogramIsLockedAndVisible = (histogramMode === 'on') && (currentN > 0) && isLockedToBeta;
+    
+    if(!curveIsVisible && !histogramIsLockedAndVisible){ 
+      pTextRight.attr('display','none'); 
+      return; 
+    }
     
     const beta = getBeta();
     const betaVal = beta + shiftUnits;
@@ -1369,17 +1481,47 @@
     const beta=getBeta();
     const pxShift = x(beta + shiftUnits) - x(beta);
     const pxShift2 = x(beta + shiftUnits2) - x(beta);
+    console.log('Draw: beta=', beta, 'shiftUnits=', shiftUnits, 'pxShift=', pxShift);
     plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
     histWrap.attr('transform','translate('+pxShift+',0)');
     secondWrap.attr('transform','translate('+pxShift2+',0)');
     
-    const showMeanLines = (histogramMode === 'on') || (curveMode !== 'off');
+    // Calculate actual sample mean and check lock status
+    let sampleMean = beta; // default to theoretical mean
+    let showSampleMean = false;
+    const se = getSE();
+    const lockThreshold = 0.1 * se; // Scale-invariant lock threshold (10% of SE)
+    
+    if(currentN > 0 && data.length > 0) {
+      const sum = data.reduce((acc, val) => acc + val, 0);
+      sampleMean = sum / data.length;
+      showSampleMean = true;
+      
+      // Check if should lock (but don't unlock once locked)
+      // Lock when we have at least 200 samples
+      if(!isLockedToBeta && currentN >= 200) {
+        isLockedToBeta = true;
+      }
+      
+      // If locked, always show at beta position
+      if(isLockedToBeta) {
+        sampleMean = beta;
+      }
+    }
+    
+    const showMeanLines = showSampleMean && ((histogramMode === 'on') || (curveMode !== 'off'));
     const meanLineEnd = plotH * 0.2;
     
-    meanLine.attr('x1',x(beta)).attr('x2',x(beta)).attr('y1',0).attr('y2',meanLineEnd)
+    // Position mean line within histWrap
+    // histWrap is already translated by pxShift, so we just need local coordinates
+    // When locked: position at x(beta) so everything aligns
+    // When not locked: position at x(sampleMean) to show actual sample mean
+    const meanLineX = isLockedToBeta ? x(beta) : x(sampleMean);
+    
+    meanLine.attr('x1', meanLineX).attr('x2', meanLineX).attr('y1',0).attr('y2',meanLineEnd)
       .style('display', showMeanLines ? null : 'none');
     
-    meanLabel.attr('transform', 'translate(' + x(beta) + ',' + (meanLineEnd + 18) + ')')
+    meanLabel.attr('transform', 'translate(' + meanLineX + ',' + (meanLineEnd + 18) + ')')
       .style('display', showMeanLines ? null : 'none');
     
     if(showMeanLines){
@@ -1404,12 +1546,32 @@
 
     const showSecond = (secondDistMode === 'on');
     if(showSecond){
-      meanLine2.attr('x1',x(beta)).attr('x2',x(beta)).attr('y1',0).attr('y2',meanLineEnd)
-        .style('display', showMeanLines ? null : 'none');
-      meanLabel2.attr('transform', 'translate(' + x(beta) + ',' + (meanLineEnd + 18) + ')')
-        .style('display', showMeanLines ? null : 'none');
+      // Calculate sample mean for second distribution
+      let sampleMean2 = beta;
+      let showSampleMean2 = false;
       
-      if(showMeanLines){
+      if(currentN > 0 && data2.length > 0) {
+        const sum2 = data2.reduce((acc, val) => acc + val, 0);
+        sampleMean2 = sum2 / data2.length;
+        showSampleMean2 = true;
+        
+        // If main distribution is locked, lock second one too at beta
+        if(isLockedToBeta) {
+          sampleMean2 = beta;
+        }
+      }
+      
+      const showMeanLines2 = showSampleMean2 && ((histogramMode === 'on') || (curveMode !== 'off'));
+      
+      // Position mean line within secondWrap (which is translated by pxShift2)
+      const meanLineX2 = isLockedToBeta ? x(beta) : x(sampleMean2);
+      
+      meanLine2.attr('x1', meanLineX2).attr('x2', meanLineX2).attr('y1',0).attr('y2',meanLineEnd)
+        .style('display', showMeanLines2 ? null : 'none');
+      meanLabel2.attr('transform', 'translate(' + meanLineX2 + ',' + (meanLineEnd + 18) + ')')
+        .style('display', showMeanLines2 ? null : 'none');
+      
+      if(showMeanLines2){
         const labelHtml2 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;" class="latex-label">' + 
           renderLatex(labelSamplingMeanLatex + '\'') + '</div>';
         meanLabelFO2.html(labelHtml2);
@@ -1515,14 +1677,33 @@
     if(bValue!==null && !Number.isNaN(bValue)) {
       // updatePTextToRightOfB is now called inside drawBMarker's setTimeout
     }
+    
+    // Update cursor styles based on lock status
+    const isLocked = isSampleMeanLocked();
+    const cursorStyle = isLocked ? 'grab' : 'not-allowed';
+    root.select('.draggable-veil').style('cursor', cursorStyle);
+    betaMarkerG.style('cursor', cursorStyle);
   }
 
   function regenerate(opts = {}){
     const n = getN(), beta = getBeta(), se = getSE();
     const keepShift = opts.preserveShift === true;
+    const reset = opts.reset === true;
     const prevShift = shiftUnits;
-    data = gaussian(n, beta, se);
-    shiftUnits = keepShift ? prevShift : 0;
+    
+    if(reset) {
+      // Full reset - generate samples at current (possibly dragged) position
+      const centerPos = keepShift ? (beta + prevShift) : beta;
+      data = gaussian(n, centerPos, se);
+      currentN = n;
+      shiftUnits = 0; // Reset shift since samples are now at that position
+    } else {
+      // Append mode: generate at beta (the theoretical center)
+      // shiftUnits is just for visual display, don't use it for generating samples
+      const newSamples = gaussian(n, beta, se);
+      data = data.concat(newSamples);
+      currentN += n;
+    }
     
     if(secondDistMode === 'on'){
       data2 = [...data];
@@ -1534,8 +1715,20 @@
   // ---------- interactions ----------
   let dragTarget = 'main';
   
+  // Helper function to check if sample mean is locked to beta
+  function isSampleMeanLocked() {
+    // Allow dragging if: no samples yet OR locked to beta
+    return currentN === 0 || isLockedToBeta;
+  }
+  
   const dragHist = d3.drag()
     .on('start', function(event){
+      // Only allow dragging if sample mean is locked to beta
+      if(!isSampleMeanLocked()) {
+        event.sourceEvent.stopPropagation();
+        return;
+      }
+      
       hideMarkButton();
       hideMarkButton2();
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
@@ -1557,10 +1750,16 @@
       }
     })
     .on('drag', function(event){
+      if(!isSampleMeanLocked()) return;
+      
+      const dx = event.dx * dataUnitsPerPx();
+      
       if(dragTarget === 'second'){
-        shiftUnits2 += event.dx * dataUnitsPerPx();
+        shiftUnits2 += dx;
       } else {
-        shiftUnits += event.dx * dataUnitsPerPx();
+        // When dragging main distribution while locked, just shift the histogram view
+        shiftUnits += dx;
+        
         if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
           vertLinesAttachment = 'cutoffs';
           linkedMarks.left = null;
@@ -1618,6 +1817,11 @@
   
   const dragBeta = d3.drag()
     .on('start', function(){
+      // Only allow dragging if sample mean is locked to beta
+      if(!isSampleMeanLocked()) {
+        return;
+      }
+      
       hideMarkButton();
       hideMarkButton2();
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
@@ -1626,7 +1830,13 @@
       betaMarkerG.style('cursor', 'grabbing');
     })
     .on('drag', function(event){
-      shiftUnits += event.dx * dataUnitsPerPx();
+      if(!isSampleMeanLocked()) return;
+      
+      const dx = event.dx * dataUnitsPerPx();
+      
+      // When dragging beta marker while locked, just shift the histogram view
+      shiftUnits += dx;
+      
       if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
         vertLinesAttachment = 'cutoffs';
         linkedMarks.left = null;
@@ -1785,7 +1995,10 @@
     }
     
     previousSE = newSE;
-    regenerate({ preserveShift: true });
+    currentN = 0; // Reset sample count when SE changes
+    isLockedToBeta = false; // Reset lock state
+    regenerate({ reset: true, preserveShift: true });
+    updateSimulateButtonText();
   });
 
   seInput.addEventListener('change', function(){
@@ -1805,7 +2018,10 @@
       vertLineDistFromB.right *= ratio;
     }
     
-    regenerate({ preserveShift: true });
+    currentN = 0; // Reset sample count when SE changes
+    isLockedToBeta = false; // Reset lock state
+    regenerate({ reset: true, preserveShift: true });
+    updateSimulateButtonText();
   });
 
   seInput.addEventListener('keydown', function(e){
@@ -1828,7 +2044,10 @@
       linkedMarks.left = null;
       linkedMarks.right = null;
     }
-    regenerate({ preserveShift: true });
+    currentN = 0; // Reset sample count when SE changes
+    isLockedToBeta = false; // Reset lock state
+    regenerate({ reset: true, preserveShift: true });
+    updateSimulateButtonText();
   });
 
   scaleRange.addEventListener('input', function(){
@@ -1846,6 +2065,32 @@
   });
 
   betaInput.addEventListener('change', function(){
+    const v = betaInput.value.trim();
+    const newBetaValue = (v===''?null:+v);
+    
+    console.log('Change handler: isLockedToBeta=', isLockedToBeta, 'betaValue=', betaValue, 'newBetaValue=', newBetaValue);
+    
+    // If locked, adjust shiftUnits like a drag would
+    if(isLockedToBeta && betaValue !== null && newBetaValue !== null) {
+      const currentDisplayPosition = betaValue + shiftUnits;
+      const delta = newBetaValue - currentDisplayPosition;
+      console.log('Beta update (LOCKED):', {betaValue, shiftUnits, currentDisplayPosition, newBetaValue, delta});
+      shiftUnits += delta;
+      console.log('New shiftUnits:', shiftUnits);
+      // Update input to show the new displayed position
+      betaInput.value = (betaValue + shiftUnits).toFixed(2);
+      
+      if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+        vertLinesAttachment = 'cutoffs';
+        linkedMarks.left = null;
+        linkedMarks.right = null;
+      }
+      draw();
+      return;
+    }
+    
+    // Not locked - do full reset
+    console.log('Change handler: NOT LOCKED BRANCH');
     const currentMean = getBeta();
     const currentScale = getScale();
     const domainSpan = 10 * currentScale;
@@ -1858,12 +2103,37 @@
       linkedMarks.left = null;
       linkedMarks.right = null;
     }
-    regenerate();
+    currentN = 0; // Reset sample count when beta changes
+    isLockedToBeta = false; // Reset lock state
+    regenerate({ reset: true });
+    updateSimulateButtonText();
   });
 
   betaBtn.addEventListener('click', function(){
     const v = betaInput.value.trim();
-    betaValue = (v===''?null:+v);
+    const newBetaValue = (v===''?null:+v);
+    
+    // If locked (has samples that are locked to beta), adjust shiftUnits like a drag would
+    if(isLockedToBeta && currentN > 0 && newBetaValue !== null) {
+      const beta = getBeta(); // Get current beta (could be null->0 or actual value)
+      const currentDisplayPosition = beta + shiftUnits;
+      const delta = newBetaValue - currentDisplayPosition;
+      console.log('Button: beta=', beta, 'shiftUnits=', shiftUnits, 'new=', newBetaValue, 'delta=', delta);
+      shiftUnits += delta;
+      console.log('Button: New shiftUnits=', shiftUnits);
+      // Update input to show the new displayed position
+      betaInput.value = (getBeta() + shiftUnits).toFixed(2);
+      
+      if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+        vertLinesAttachment = 'cutoffs';
+        linkedMarks.left = null;
+        linkedMarks.right = null;
+      }
+      draw();
+      return;
+    }
+    
+    betaValue = newBetaValue;
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -1875,7 +2145,29 @@
   betaInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){
       const v = betaInput.value.trim();
-      betaValue = (v===''?null:+v);
+      const newBetaValue = (v===''?null:+v);
+      
+      // If locked (has samples that are locked to beta), adjust shiftUnits like a drag would
+      if(isLockedToBeta && currentN > 0 && newBetaValue !== null) {
+        const beta = getBeta(); // Get current beta (could be null->0 or actual value)
+        const currentDisplayPosition = beta + shiftUnits;
+        const delta = newBetaValue - currentDisplayPosition;
+        console.log('Enter: beta=', beta, 'shiftUnits=', shiftUnits, 'new=', newBetaValue, 'delta=', delta);
+        shiftUnits += delta;
+        console.log('Enter: New shiftUnits=', shiftUnits);
+        // Update input to show the new displayed position
+        betaInput.value = (getBeta() + shiftUnits).toFixed(2);
+        
+        if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+          vertLinesAttachment = 'cutoffs';
+          linkedMarks.left = null;
+          linkedMarks.right = null;
+        }
+        draw();
+        return;
+      }
+      
+      betaValue = newBetaValue;
       if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
         vertLinesAttachment = 'cutoffs';
         linkedMarks.left = null;
@@ -1885,7 +2177,53 @@
     }
   });
 
-  nInput.addEventListener('change', regenerate);
+  // Dropdown functionality for Simulate button
+  const regenDropdownBtn = document.getElementById('regenDropdownBtn');
+  const regenDropdown = document.getElementById('regenDropdown');
+  
+  // Function to update button text
+  function updateSimulateButtonText() {
+    if(currentN === 0) {
+      regenBtn.textContent = `Simulate ${nValue}x`;
+    } else {
+      regenBtn.textContent = `Simulate ${nValue}x (n=${currentN})`;
+    }
+  }
+  
+  // Toggle dropdown
+  regenDropdownBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    regenDropdown.classList.toggle('show');
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.dropdown-btn-wrap')){
+      regenDropdown.classList.remove('show');
+    }
+  });
+  
+  // Dropdown menu item selection
+  regenDropdown.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-n]');
+    if(!btn) return;
+    
+    nValue = parseInt(btn.getAttribute('data-n'));
+    updateSimulateButtonText();
+    
+    // Update active state
+    regenDropdown.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    regenDropdown.classList.remove('show');
+  });
+  
+  // Initialize based on current nValue
+  const activeBtn = regenDropdown.querySelector(`button[data-n="${nValue}"]`);
+  if(activeBtn) {
+    activeBtn.classList.add('active');
+    updateSimulateButtonText();
+  }
 
   bBtn.addEventListener('click', function(){
     const v = bInput.value.trim();
@@ -1902,27 +2240,55 @@
   });
 
   regenBtn.addEventListener('click', function(){
-    const beta = getBeta();
-    const se = getSE();
-    shiftUnits = 0;
-    domainOffset = 0;
-    fixedDomain = [beta - 8*se, beta + 8*se];
-
-    const scaleSpan = 16 * se;
-    const equivalentScale = scaleSpan / 10;
-    const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
-    scaleRange.max = newScaleMax;
-    scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
-    scaleRange.value = Math.min(equivalentScale, newScaleMax);
-
-    seInput.value = se;
-    setTimeout(updateSESliderRange, 0);
-    if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
-      vertLinesAttachment = 'cutoffs';
-      linkedMarks.left = null;
-      linkedMarks.right = null;
+    // Auto-enable histogram if it's currently off
+    if(histogramMode === 'off'){
+      histogramMode = 'on';
+      histogramBtn.classList.add('active');
     }
-    regenerate();
+    
+    if(currentN === 0) {
+      // First simulation - do full reset and setup
+      const beta = getBeta();
+      const se = getSE();
+      
+      // If beta was dragged before simulation, keep the current view and update betaValue
+      if(shiftUnits !== 0) {
+        // Capture current domain to preserve the view
+        const currentDomain = x.domain();
+        fixedDomain = [currentDomain[0], currentDomain[1]];
+        
+        // Update betaValue to the new position
+        betaValue = beta + shiftUnits;
+        betaInput.value = betaValue.toFixed(2);
+      } else {
+        // No drag - center on beta as normal
+        fixedDomain = [beta - 8*se, beta + 8*se];
+      }
+      
+      domainOffset = 0;
+      isLockedToBeta = false; // Reset lock state for new simulation
+
+      const scaleSpan = 16 * se;
+      const equivalentScale = scaleSpan / 10;
+      const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
+      scaleRange.max = newScaleMax;
+      scaleRange.step = newScaleMax > 10 ? 0.5 : 0.1;
+      scaleRange.value = Math.min(equivalentScale, newScaleMax);
+
+      seInput.value = se;
+      setTimeout(updateSESliderRange, 0);
+      if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
+        vertLinesAttachment = 'cutoffs';
+        linkedMarks.left = null;
+        linkedMarks.right = null;
+      }
+      // Don't use preserveShift since we've already updated betaValue to include the shift
+      regenerate({ reset: true });
+    } else {
+      // Subsequent simulations - just append
+      regenerate();
+    }
+    updateSimulateButtonText();
   });
 
   curveSeg.addEventListener('click', function(e){
@@ -2051,7 +2417,12 @@
     updateSESliderRange();
   })();
 
-  regenerate();
+  // Initialize with empty data (user will click Simulate to build it up)
+  currentN = 0;
+  isLockedToBeta = false;
+  data = [];
+  data2 = [];
+  draw();
 })();
 </script>
 </body>
