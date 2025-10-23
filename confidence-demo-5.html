@@ -1503,6 +1503,10 @@
       if(isLockedToBeta) {
         sampleMean = beta;
       }
+    } else if(curveMode !== 'off') {
+      // No histogram data, but curve is showing - show mean at beta
+      showSampleMean = true;
+      sampleMean = beta;
     }
     
     const showMeanLines = showSampleMean && ((histogramMode === 'on') || (curveMode !== 'off'));
@@ -1555,6 +1559,10 @@
         if(isLockedToBeta) {
           sampleMean2 = beta;
         }
+      } else if(curveMode !== 'off') {
+        // No histogram data, but curve is showing - show mean at beta
+        showSampleMean2 = true;
+        sampleMean2 = beta;
       }
       
       const showMeanLines2 = showSampleMean2 && ((histogramMode === 'on') || (curveMode !== 'off'));
