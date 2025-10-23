@@ -177,7 +177,7 @@
   <!-- Base URL Configuration -->
   <div class="base-url-section">
     <label>Base URL (update this to your hosted file location)</label>
-    <input type="text" id="baseURL" value="https://coursekata.github.io/teaching-apps/confidence-demo-4.html" placeholder="https://coursekata.github.io/teaching-apps/confidence-demo-4.html">
+    <input type="text" id="baseURL" value="https://coursekata.github.io/teaching-apps/confidence-demo-5.html" placeholder="https://coursekata.github.io/teaching-apps/confidence-demo-5.html">
   </div>
 
   <!-- Default Values Section -->
@@ -197,8 +197,13 @@
         <input type="number" id="se" value="1" step="0.1" min="0.01">
       </div>
       <div class="control">
-        <label>n (Sample Size)</label>
-        <input type="number" id="n" value="1000" step="10" min="10">
+        <label>Simulate Button Default</label>
+        <select id="n">
+          <option value="1" selected>1x</option>
+          <option value="10">10x</option>
+          <option value="100">100x</option>
+          <option value="1000">1000x</option>
+        </select>
       </div>
       <div class="control">
         <label>Bins</label>
@@ -305,10 +310,6 @@
         <label for="hide_se">Hide SE</label>
       </div>
       <div class="checkbox-item">
-        <input type="checkbox" id="hide_n">
-        <label for="hide_n">Hide n</label>
-      </div>
-      <div class="checkbox-item">
         <input type="checkbox" id="hide_simulate">
         <label for="hide_simulate">Hide Simulate</label>
       </div>
@@ -385,7 +386,7 @@ function generateURL() {
   if(beta !== '') params.append('beta', beta);
   if(b !== '') params.append('b', b);
   if(se !== '1') params.append('se', se);
-  if(n !== '1000') params.append('n', n);
+  if(n !== '1') params.append('n', n);
   if(bins !== '30') params.append('bins', bins);
   if(scale !== '1.75') params.append('scale', scale);
   if(df !== '10') params.append('df', df);
@@ -421,7 +422,7 @@ function generateURL() {
   
   // Add hide controls
   const hideControls = [
-    'hide_beta', 'hide_se', 'hide_n', 'hide_simulate',
+    'hide_beta', 'hide_se', 'hide_simulate',
     'hide_seconddist', 'hide_powermode', 'hide_b',
     'hide_scale', 'hide_bins', 'hide_curve', 'hide_df',
     'hide_ci', 'hide_vertlines', 'hide_histogram'
