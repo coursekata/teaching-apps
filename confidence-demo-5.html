@@ -361,7 +361,7 @@
   }
   
   const chartWrap = document.getElementById('chart');
-  let nValue = 1000; // Number of draws per simulation click
+  let nValue = 1; // Number of draws per simulation click
   let currentN = 0; // Current total number of samples accumulated
   let isLockedToBeta = false; // Tracks if sample mean has locked to beta
   const binsRange = document.getElementById('binsRange');
@@ -858,8 +858,8 @@
     // When curve is shown, consider its height
     let curveMax = 0;
     if(curveMode !== 'off') {
-      // Use currentN if we have samples, otherwise use the dropdown value
-      const nForCurve = currentN > 0 ? currentN : getN();
+      // Use currentN if we have samples, otherwise use 1000 for nice scaling when curve is shown alone
+      const nForCurve = currentN > 0 ? currentN : 1000;
       for (let i=0;i<128;i++){
         const xv = domain[0] + (i/127)*(domain[1]-domain[0]);
         const pdf = (curveMode==='t') ? pdfT(xv, beta, se, getDf()) : pdfNormal(xv, beta, se);
@@ -1165,8 +1165,8 @@
     }
 
     const beta=getBeta(), se=getSE();
-    // Use currentN if we have samples, otherwise use the dropdown value
-    const n = currentN > 0 ? currentN : getN();
+    // Use currentN if we have samples, otherwise use 1000 for nice scaling when curve is shown alone
+    const n = currentN > 0 ? currentN : 1000;
     const nbins = getBins();
     const domain = x.domain();
     const binW = (domain[1]-domain[0]) / nbins;
@@ -1334,16 +1334,13 @@
   }
 
   function drawBetaMarker(){
-    const beta = getBeta();
-    const showDistribution = (histogramMode === 'on') || (curveMode !== 'off');
-    const showBetaMarker = (betaValue !== null && !Number.isNaN(betaValue)) || showDistribution;
-    
-    if(!showBetaMarker){
+    if(betaValue === null || Number.isNaN(betaValue)){
       betaMarkerG.attr('display', 'none');
       return;
     }
     
     betaMarkerG.attr('display', null);
+    const beta = getBeta();
     const betaVal = beta + shiftUnits;
     const xPos = x(betaVal);
     const axisY = axisInsetTop;
@@ -1481,7 +1478,6 @@
     const beta=getBeta();
     const pxShift = x(beta + shiftUnits) - x(beta);
     const pxShift2 = x(beta + shiftUnits2) - x(beta);
-    console.log('Draw: beta=', beta, 'shiftUnits=', shiftUnits, 'pxShift=', pxShift);
     plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
     histWrap.attr('transform','translate('+pxShift+',0)');
     secondWrap.attr('transform','translate('+pxShift2+',0)');
@@ -2068,15 +2064,11 @@
     const v = betaInput.value.trim();
     const newBetaValue = (v===''?null:+v);
     
-    console.log('Change handler: isLockedToBeta=', isLockedToBeta, 'betaValue=', betaValue, 'newBetaValue=', newBetaValue);
-    
     // If locked, adjust shiftUnits like a drag would
     if(isLockedToBeta && betaValue !== null && newBetaValue !== null) {
       const currentDisplayPosition = betaValue + shiftUnits;
       const delta = newBetaValue - currentDisplayPosition;
-      console.log('Beta update (LOCKED):', {betaValue, shiftUnits, currentDisplayPosition, newBetaValue, delta});
       shiftUnits += delta;
-      console.log('New shiftUnits:', shiftUnits);
       // Update input to show the new displayed position
       betaInput.value = (betaValue + shiftUnits).toFixed(2);
       
@@ -2089,24 +2081,29 @@
       return;
     }
     
-    // Not locked - do full reset
-    console.log('Change handler: NOT LOCKED BRANCH');
-    const currentMean = getBeta();
-    const currentScale = getScale();
-    const domainSpan = 10 * currentScale;
-    const meanMagnitude = Math.abs(currentMean);
-    if (meanMagnitude > domainSpan) { fixedDomain = null; domainOffset = 0; return; }
-    fixedDomain = null;
-    domainOffset = 0;
+    // Not locked - just update betaValue and reset shift
+    betaValue = newBetaValue;
+    shiftUnits = 0; // Reset any previous drag offset
+    
+    // Only recenter if the new beta value is outside the current visible domain
+    if(newBetaValue !== null && !Number.isNaN(newBetaValue)) {
+      const currentDomain = x.domain();
+      const isVisible = newBetaValue >= currentDomain[0] && newBetaValue <= currentDomain[1];
+      
+      if(!isVisible) {
+        // Beta is outside visible range - recenter on it
+        fixedDomain = null;
+        domainOffset = 0;
+      }
+      // Otherwise, keep current domain and just show the marker
+    }
+    
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
       linkedMarks.right = null;
     }
-    currentN = 0; // Reset sample count when beta changes
-    isLockedToBeta = false; // Reset lock state
-    regenerate({ reset: true });
-    updateSimulateButtonText();
+    draw();
   });
 
   betaBtn.addEventListener('click', function(){
@@ -2118,9 +2115,7 @@
       const beta = getBeta(); // Get current beta (could be null->0 or actual value)
       const currentDisplayPosition = beta + shiftUnits;
       const delta = newBetaValue - currentDisplayPosition;
-      console.log('Button: beta=', beta, 'shiftUnits=', shiftUnits, 'new=', newBetaValue, 'delta=', delta);
       shiftUnits += delta;
-      console.log('Button: New shiftUnits=', shiftUnits);
       // Update input to show the new displayed position
       betaInput.value = (getBeta() + shiftUnits).toFixed(2);
       
@@ -2133,7 +2128,23 @@
       return;
     }
     
+    // Not locked - set beta directly and reset shift
     betaValue = newBetaValue;
+    shiftUnits = 0; // Reset any previous drag offset
+    
+    // Only recenter if the new beta value is outside the current visible domain
+    if(newBetaValue !== null && !Number.isNaN(newBetaValue)) {
+      const currentDomain = x.domain();
+      const isVisible = newBetaValue >= currentDomain[0] && newBetaValue <= currentDomain[1];
+      
+      if(!isVisible) {
+        // Beta is outside visible range - recenter on it
+        fixedDomain = null;
+        domainOffset = 0;
+      }
+      // Otherwise, keep current domain and just show the marker
+    }
+    
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -2152,9 +2163,7 @@
         const beta = getBeta(); // Get current beta (could be null->0 or actual value)
         const currentDisplayPosition = beta + shiftUnits;
         const delta = newBetaValue - currentDisplayPosition;
-        console.log('Enter: beta=', beta, 'shiftUnits=', shiftUnits, 'new=', newBetaValue, 'delta=', delta);
         shiftUnits += delta;
-        console.log('Enter: New shiftUnits=', shiftUnits);
         // Update input to show the new displayed position
         betaInput.value = (getBeta() + shiftUnits).toFixed(2);
         
@@ -2167,7 +2176,23 @@
         return;
       }
       
+      // Not locked - set beta directly and reset shift
       betaValue = newBetaValue;
+      shiftUnits = 0; // Reset any previous drag offset
+      
+      // Only recenter if the new beta value is outside the current visible domain
+      if(newBetaValue !== null && !Number.isNaN(newBetaValue)) {
+        const currentDomain = x.domain();
+        const isVisible = newBetaValue >= currentDomain[0] && newBetaValue <= currentDomain[1];
+        
+        if(!isVisible) {
+          // Beta is outside visible range - recenter on it
+          fixedDomain = null;
+          domainOffset = 0;
+        }
+        // Otherwise, keep current domain and just show the marker
+      }
+      
       if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
         vertLinesAttachment = 'cutoffs';
         linkedMarks.left = null;
@@ -2240,6 +2265,12 @@
   });
 
   regenBtn.addEventListener('click', function(){
+    // Check if beta is set before allowing simulation
+    if(betaValue === null || Number.isNaN(betaValue)){
+      alert('You must set a value for the population parameter in order to simulate a sample.');
+      return;
+    }
+    
     // Auto-enable histogram if it's currently off
     if(histogramMode === 'off'){
       histogramMode = 'on';
@@ -2293,10 +2324,18 @@
 
   curveSeg.addEventListener('click', function(e){
     const btn = e.target.closest('button[data-curve]'); if(!btn) return;
+    const oldCurveMode = curveMode;
+    const newCurveMode = btn.getAttribute('data-curve');
+    
+    // Check if beta is set before allowing curve to be shown
+    if(newCurveMode !== 'off' && (betaValue === null || Number.isNaN(betaValue))){
+      alert('You must set a value for the population parameter in order to show a curve.');
+      return;
+    }
+    
     curveSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    const oldCurveMode = curveMode;
-    curveMode = btn.getAttribute('data-curve');
+    curveMode = newCurveMode;
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCurveMode !== curveMode){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
