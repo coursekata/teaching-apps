@@ -2292,8 +2292,17 @@
         betaValue = beta + shiftUnits;
         betaInput.value = betaValue.toFixed(2);
       } else {
-        // No drag - center on beta as normal
-        fixedDomain = [beta - 8*se, beta + 8*se];
+        // Check if beta is visible in current domain
+        const currentDomain = x.domain();
+        const isVisible = beta >= currentDomain[0] && beta <= currentDomain[1];
+        
+        if(isVisible) {
+          // Beta is visible - keep current domain
+          fixedDomain = [currentDomain[0], currentDomain[1]];
+        } else {
+          // Beta is not visible - center on beta
+          fixedDomain = [beta - 8*se, beta + 8*se];
+        }
       }
       
       domainOffset = 0;
