@@ -2463,7 +2463,23 @@
     const beta = getBeta();
     const se = getSE();
     domainOffset = 0;
-    fixedDomain = [beta - 8*se, beta + 8*se];
+    
+    // Determine center point based on what's specified
+    let centerPoint = beta; // default to beta (or 0 if beta not specified)
+    
+    if(betaValue !== null && !Number.isNaN(betaValue) && bValue !== null && !Number.isNaN(bValue)) {
+      // Both specified - center between them
+      centerPoint = (betaValue + bValue) / 2;
+    } else if(bValue !== null && !Number.isNaN(bValue)) {
+      // Only b specified - center on b
+      centerPoint = bValue;
+    } else if(betaValue !== null && !Number.isNaN(betaValue)) {
+      // Only beta specified - center on beta
+      centerPoint = betaValue;
+    }
+    // else: neither specified, centerPoint stays at 0 (from getBeta())
+    
+    fixedDomain = [centerPoint - 8*se, centerPoint + 8*se];
     const scaleSpan = 16 * se;
     const equivalentScale = scaleSpan / 10;
     const newScaleMax = Math.max(3, Math.min(50, Math.ceil(equivalentScale * 1.5)));
