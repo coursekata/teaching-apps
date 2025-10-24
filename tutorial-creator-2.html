@@ -1258,37 +1258,31 @@
   function handleClick(e) {
     if (!isRecording || isPaused) return;
     
-    // Check if this click is on a draggable element - if so, skip it (mousedown handles drags)
+    // Skip clicks that will be handled by drag - check if mousedown was on a draggable
+    // But don't skip regular button clicks
     let element = e.target;
+    let isDraggableClick = false;
+    
     while (element && element !== e.currentTarget) {
-      if (element.draggable || 
-          element.classList.contains('draggable-veil') ||
-          element.tagName === 'circle' || 
+      // Check for SVG draggable elements
+      if (element.tagName === 'circle' || 
           element.tagName === 'rect' || 
           element.tagName === 'line' ||
           element.tagName === 'path' ||
-          (element.tagName === 'g' && (window.getComputedStyle(element).cursor === 'grab' || 
-                                        window.getComputedStyle(element).cursor === 'move' || 
-                                        window.getComputedStyle(element).cursor === 'pointer'))) {
-        console.log('Skipping click on draggable element:', element.tagName);
-        return; // Skip - this will be handled by drag recording
+          element.classList.contains('draggable-veil')) {
+        isDraggableClick = true;
+        break;
       }
       element = element.parentElement;
     }
     
-    // Find the actual clickable element (button, link, etc.) not a child text/span
-    let clickTarget = e.target;
-    while (clickTarget && clickTarget !== e.currentTarget) {
-      if (clickTarget.tagName === 'BUTTON' || 
-          clickTarget.tagName === 'A' || 
-          clickTarget.onclick ||
-          clickTarget.getAttribute('onclick')) {
-        break; // Found the actual clickable element
-      }
-      clickTarget = clickTarget.parentElement;
+    if (isDraggableClick) {
+      console.log('Skipping click on draggable SVG element');
+      return; // Skip - this will be handled by drag recording
     }
     
-    const selector = generateSelector(clickTarget);
+    // Record the click on the actual target (don't walk up the tree)
+    const selector = generateSelector(e.target);
     if (!selector) return;
     
     recordedEvents.push({
