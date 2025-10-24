@@ -1258,13 +1258,12 @@
   function handleClick(e) {
     if (!isRecording || isPaused) return;
     
-    // Skip clicks that will be handled by drag - check if mousedown was on a draggable
-    // But don't skip regular button clicks
+    // Skip clicks that will be handled by drag - check if this is on a draggable SVG element
     let element = e.target;
     let isDraggableClick = false;
     
     while (element && element !== e.currentTarget) {
-      // Check for SVG draggable elements
+      // Check for SVG draggable elements only
       if (element.tagName === 'circle' || 
           element.tagName === 'rect' || 
           element.tagName === 'line' ||
@@ -1281,8 +1280,26 @@
       return; // Skip - this will be handled by drag recording
     }
     
-    // Record the click on the actual target (don't walk up the tree)
-    const selector = generateSelector(e.target);
+    // Find the actual interactive element (button, input, etc.)
+    // Walk up the tree to find BUTTON or element with onclick
+    let targetElement = e.target;
+    while (targetElement && targetElement !== e.currentTarget) {
+      if (targetElement.tagName === 'BUTTON' || 
+          targetElement.tagName === 'INPUT' ||
+          targetElement.tagName === 'SELECT' ||
+          targetElement.tagName === 'A') {
+        // Found the interactive element
+        break;
+      }
+      targetElement = targetElement.parentElement;
+    }
+    
+    // If we didn't find a specific interactive element, use the original target
+    if (!targetElement || targetElement === e.currentTarget) {
+      targetElement = e.target;
+    }
+    
+    const selector = generateSelector(targetElement);
     if (!selector) return;
     
     recordedEvents.push({
@@ -1291,7 +1308,7 @@
       target: selector
     });
     
-    console.log('Recorded click:', selector);
+    console.log('Recorded click on:', targetElement.tagName, selector);
   }
   
   function handleInput(e) {
@@ -1737,7 +1754,14 @@
         setTimeout(() => {
           element.style.outline = originalOutline;
         }, 500);
-        element.click();
+        
+        // Dispatch a proper MouseEvent to trigger all event listeners
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: iframeDoc.defaultView
+        });
+        element.dispatchEvent(clickEvent);
       } else if (event.type === 'input' || event.type === 'change') {
         if (event.detail.value !== undefined) {
           element.value = event.detail.value;
