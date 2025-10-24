@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial System</title>
+<title>Interactive Tutorial System - Advanced</title>
 <style>
   :root{
     --accent:#2563eb;
     --record:#ef4444;
     --success:#10b981;
+    --warning:#f59e0b;
   }
   body{
     margin:0;
@@ -65,6 +66,17 @@
     background:#fff;
     cursor:pointer;
     font-size:13px;
+    transition:all 0.2s;
+  }
+  
+  button:hover:not(:disabled){
+    background:#f9f9f9;
+    transform:translateY(-1px);
+  }
+  
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
   }
   
   button.primary{
@@ -85,6 +97,12 @@
     border-color:var(--success);
   }
   
+  button.warning{
+    background:var(--warning);
+    color:#fff;
+    border-color:var(--warning);
+  }
+  
   button.record.recording{
     animation:pulse 1.5s infinite;
   }
@@ -102,6 +120,15 @@
     font-weight:600;
     font-size:13px;
     animation:pulse 1.5s infinite;
+  }
+  
+  .paused-indicator{
+    background:var(--warning);
+    color:#fff;
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+    font-size:13px;
   }
   
   .playback-controls{
@@ -172,6 +199,17 @@
   .annotation-box.pos-bottom-left{bottom:20px;left:20px;transform:none;max-width:400px;}
   .annotation-box.pos-bottom-right{bottom:20px;right:20px;transform:none;max-width:400px;}
   
+  /* Draggable annotation editor */
+  .annotation-box.draggable{
+    cursor:move;
+    border-color:var(--warning);
+    border-style:dashed;
+  }
+  
+  .annotation-box.custom-position{
+    transform:none !important;
+  }
+  
   @keyframes slideIn{
     from{opacity:0;}
     to{opacity:1;}
@@ -231,6 +269,15 @@
     border:1px solid #ddd;
     border-radius:8px;
     resize:vertical;
+  }
+  
+  .modal input[type=text]{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    margin-bottom:12px;
   }
   
   .modal-buttons{
@@ -299,6 +346,115 @@
   .info-box strong{
     color:#075985;
   }
+  
+  .warning-box{
+    background:#fef3c7;
+    border:1px solid #f59e0b;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+    font-size:13px;
+    color:#92400e;
+  }
+  
+  .annotation-list{
+    background:#f9fafb;
+    border:1px solid #e5e7eb;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+    max-height:200px;
+    overflow-y:auto;
+  }
+  
+  .annotation-item{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:6px;
+    padding:10px;
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  
+  .annotation-item:last-child{
+    margin-bottom:0;
+  }
+  
+  .annotation-item-info{
+    flex:1;
+  }
+  
+  .annotation-item-title{
+    font-weight:600;
+    color:#111;
+    margin-bottom:4px;
+  }
+  
+  .annotation-item-meta{
+    font-size:11px;
+    color:#666;
+  }
+  
+  .annotation-item-actions{
+    display:flex;
+    gap:6px;
+  }
+  
+  .annotation-item-actions button{
+    padding:4px 8px;
+    font-size:11px;
+  }
+  
+  .form-group{
+    margin-bottom:16px;
+  }
+  
+  .form-group label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:#374151;
+  }
+  
+  .form-group textarea{
+    width:100%;
+    min-height:100px;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    resize:vertical;
+  }
+  
+  .position-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
+    margin-top:8px;
+  }
+  
+  .position-option{
+    padding:8px;
+    border:2px solid #e5e7eb;
+    border-radius:6px;
+    text-align:center;
+    cursor:pointer;
+    font-size:11px;
+    transition:all 0.2s;
+  }
+  
+  .position-option:hover{
+    border-color:#9ca3af;
+  }
+  
+  .position-option.selected{
+    border-color:var(--accent);
+    background:#eff6ff;
+    font-weight:600;
+  }
 </style>
 </head>
 <body>
@@ -312,26 +468,23 @@
       <div id="recordingControls" class="control-group">
         <label>
           App URL:
-          <input type="text" id="appUrl" placeholder="Enter your app URL">
+          <input type="text" id="appUrl" placeholder="https://example.com/app.html" value=""/>
         </label>
-        <button id="loadApp" class="primary">Load App</button>
-        <button id="reloadApp" class="primary" style="display:none;">🔄 Reload App</button>
-        <button id="startRecord" class="record" style="display:none;">● Start Recording</button>
-        <button id="stopRecord" class="record" style="display:none;">■ Stop Recording</button>
-        <span id="recordingIndicator" class="recording-indicator" style="display:none;">● REC <span id="recordingTime">0:00</span></span>
-        <button id="previewRecording" class="primary" style="display:none;">▶ Preview Recording</button>
-        <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause</button>
-        <button id="recordAgain" class="record" style="display:none;">🔄 Record Again</button>
+        <button id="startRecording" class="record">⏺ Start Recording</button>
+        <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
+        <button id="resumeRecording" class="success" style="display:none;">▶ Resume</button>
+        <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
+        <button id="stopRecording" class="success" style="display:none;">⏹ Stop & Export</button>
+        <button id="previewRecording" style="display:none;">👁 Preview</button>
+        <button id="playPausePreview" style="display:none;">▶ Play/⏸ Pause</button>
       </div>
       
       <div id="playbackControls" class="playback-controls" style="display:none;">
-        <button id="loadTutorial" class="primary">📂 Load Tutorial</button>
-        <button id="backToRecording" class="primary" style="display:none;">← Back to Recording</button>
         <button id="playBtn">▶ Play</button>
         <button id="pauseBtn" style="display:none;">⏸ Pause</button>
-        <button id="restartBtn">⟲ Restart</button>
+        <button id="restartBtn">↻ Restart</button>
         <div class="playback-timeline">
-          <input type="range" id="timelineSlider" min="0" max="100" value="0">
+          <input type="range" id="timelineSlider" min="0" max="100" value="0"/>
           <div class="time-display">
             <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
           </div>
@@ -347,16 +500,73 @@
         </label>
       </div>
       
-      <button id="exportTutorial" class="success" style="display:none;">📥 Export Tutorial</button>
-      <button id="helpBtn">❓ Help</button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button id="loadTutorialBtn">📂 Load Tutorial</button>
+        <button id="helpBtn">❓ Help</button>
+      </div>
+      
+      <div id="recordingIndicator" class="recording-indicator" style="display:none;">
+        ⏺ RECORDING
+      </div>
+      
+      <div id="pausedIndicator" class="paused-indicator" style="display:none;">
+        ⏸ PAUSED
+      </div>
     </div>
   </div>
   
   <div class="app-container">
-    <iframe id="appFrame"></iframe>
+    <iframe id="appFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+    
     <div id="annotationBox" class="annotation-box">
       <h3 id="annotationTitle"></h3>
       <p id="annotationText"></p>
+    </div>
+  </div>
+  
+  <!-- Annotation Editor Modal -->
+  <div id="annotationEditorModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Add Annotation</h2>
+      
+      <div class="info-box">
+        <strong>📝 Instructions:</strong> Type your annotation, then drag the preview box to position it exactly where you want. Click "Save Annotation" when ready.
+      </div>
+      
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="annTitle" placeholder="Enter annotation title..."/>
+      </div>
+      
+      <div class="form-group">
+        <label>Text</label>
+        <textarea id="annText" placeholder="Enter annotation description..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Duration (seconds)</label>
+        <input type="number" id="annDuration" value="5" min="1" max="60" style="width:100px;"/>
+      </div>
+      
+      <div class="form-group">
+        <label>Position Preset (or drag the box above)</label>
+        <div class="position-grid">
+          <div class="position-option" data-position="top-left">↖<br>Top Left</div>
+          <div class="position-option selected" data-position="top">↑<br>Top</div>
+          <div class="position-option" data-position="top-right">↗<br>Top Right</div>
+          <div class="position-option" data-position="left">←<br>Left</div>
+          <div class="position-option" data-position="center">•<br>Center</div>
+          <div class="position-option" data-position="right">→<br>Right</div>
+          <div class="position-option" data-position="bottom-left">↙<br>Bottom Left</div>
+          <div class="position-option" data-position="bottom">↓<br>Bottom</div>
+          <div class="position-option" data-position="bottom-right">↘<br>Bottom Right</div>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="cancelAnnotation">Cancel</button>
+        <button id="saveAnnotation" class="success">💾 Save Annotation</button>
+      </div>
     </div>
   </div>
   
@@ -364,10 +574,20 @@
   <div id="exportModal" class="modal-overlay">
     <div class="modal">
       <h2>Export Tutorial</h2>
-      <div class="help-text">
-        Copy this JSON and save it. You can edit the annotations array to add helpful text at specific timestamps.
+      
+      <div class="info-box">
+        <strong>✓ Recording Complete!</strong><br>
+        Your tutorial has been recorded with <strong id="eventCount">0</strong> events and <strong id="annotationCount">0</strong> annotations.
       </div>
+      
+      <div id="annotationsList" class="annotation-list" style="display:none;">
+        <strong style="display:block;margin-bottom:8px;">Annotations in this recording:</strong>
+      </div>
+      
+      <p class="help-text">Copy the JSON below to save your tutorial. You can load it later using the "Load Tutorial" button.</p>
+      
       <textarea id="exportTextarea" readonly></textarea>
+      
       <div class="modal-buttons">
         <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
         <button id="closeExportModal">Close</button>
@@ -379,15 +599,15 @@
   <div id="loadModal" class="modal-overlay">
     <div class="modal">
       <h2>Load Tutorial</h2>
-      <div class="help-text">
-        Paste your tutorial JSON below, or load from a file:
-      </div>
-      <input type="file" id="fileInput" accept=".json" style="display:none;">
-      <button id="loadFromFile" class="primary">📁 Choose File</button>
-      <textarea id="loadTextarea" placeholder='Paste tutorial JSON here...'></textarea>
-      <div id="loadError" class="help-text" style="display:none;color:#ef4444;"></div>
+      
+      <p class="help-text">Paste your tutorial JSON below and click "Load Tutorial".</p>
+      
+      <textarea id="loadTextarea" placeholder="Paste tutorial JSON here..."></textarea>
+      
+      <div id="loadError" class="warning-box" style="display:none;"></div>
+      
       <div class="modal-buttons">
-        <button id="loadFromText" class="primary">✓ Load Tutorial</button>
+        <button id="loadTutorialSubmit" class="primary">Load Tutorial</button>
         <button id="closeLoadModal">Cancel</button>
       </div>
     </div>
@@ -396,83 +616,93 @@
   <!-- Help Modal -->
   <div id="helpModal" class="modal-overlay">
     <div class="modal">
-      <h2>How to Use This Tutorial System</h2>
+      <h2>How to Use</h2>
       
-      <h3>Record Mode (Default)</h3>
-      <p class="help-text">
-        Enter your app URL and click "Load App". You can now use your app normally. When you're ready to create a tutorial:
-      </p>
+      <h3>Recording Mode:</h3>
       <ol class="help-text">
-        <li>Click "Start Recording"</li>
-        <li>Interact with your app (clicks, inputs, drags, etc.)</li>
-        <li>Click "Stop Recording"</li>
-        <li>Click "Preview Recording" to see it play back</li>
-        <li>Click "Export Tutorial" to get the JSON</li>
-        <li>Click "Record Again" to create a new recording</li>
+        <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
+        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" to begin</li>
+        <li><strong>Interact Normally</strong> - Click, type, and drag in your app. All interactions are captured</li>
+        <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations</li>
+        <li><strong>Add Annotations</strong> - While paused, click "➕ Add Annotation" to create a tutorial callout
+          <ul style="margin-left:20px;">
+            <li>Type your annotation text</li>
+            <li>Drag the preview box to position it exactly where you want</li>
+            <li>Set duration and save</li>
+          </ul>
+        </li>
+        <li><strong>Resume Recording</strong> - Click "▶ Resume" to continue recording</li>
+        <li><strong>Toggle Annotations</strong> - Pause again to edit or toggle annotation visibility</li>
+        <li><strong>Stop & Export</strong> - Click "⏹ Stop & Export" when done</li>
+        <li><strong>Copy JSON</strong> - Copy the generated JSON to save your tutorial</li>
       </ol>
-      <p class="help-text">
-        <strong>Note:</strong> Your app remains fully interactive between recordings and after previews. 
-        Use "Reload App" if you need to reset the app state.
-      </p>
       
-      <h3>Playback Mode</h3>
-      <p class="help-text">
-        This mode is for loading and viewing tutorial JSON files created by others. 
-        Click "Load Tutorial", paste the JSON, and use the playback controls to watch the tutorial.
-      </p>
-      
-      <h3>Adding Annotations</h3>
-      <p class="help-text">
-        Edit the "annotations" array in the exported JSON to add text overlays at specific timestamps. 
-        Each annotation needs: timestamp (ms), duration (ms), title, text, and position 
-        (top, bottom, left, right, center, top-left, top-right, bottom-left, bottom-right).
-      </p>
-      
-      <div class="info-box">
-        <strong>Note:</strong> This system works best with apps on the same domain or with CORS enabled. 
-        For cross-origin apps, host them on GitHub Pages or a server with appropriate CORS headers.
-      </div>
+      <h3>Playback Mode:</h3>
+      <ol class="help-text">
+        <li><strong>Load Tutorial</strong> - Click "📂 Load Tutorial" and paste your JSON</li>
+        <li><strong>Switch to Playback</strong> - Click the "Playback" tab</li>
+        <li><strong>Play</strong> - Click "▶ Play" to watch the tutorial replay</li>
+        <li><strong>Controls</strong> - Use pause, restart, and speed controls as needed</li>
+      </ol>
       
       <div class="modal-buttons">
         <button id="closeHelpModal" class="primary">Got it!</button>
       </div>
     </div>
   </div>
-
+  
 <script>
 (function() {
   'use strict';
   
-  // Elements
+  // DOM Elements
   const modeRecord = document.getElementById('modeRecord');
   const modePlayback = document.getElementById('modePlayback');
   const recordingControls = document.getElementById('recordingControls');
   const playbackControls = document.getElementById('playbackControls');
   const appUrl = document.getElementById('appUrl');
-  const loadApp = document.getElementById('loadApp');
-  const reloadApp = document.getElementById('reloadApp');
   const appFrame = document.getElementById('appFrame');
-  const startRecord = document.getElementById('startRecord');
-  const stopRecord = document.getElementById('stopRecord');
-  const recordingIndicator = document.getElementById('recordingIndicator');
-  const recordingTime = document.getElementById('recordingTime');
+  
+  const startRecording = document.getElementById('startRecording');
+  const pauseRecording = document.getElementById('pauseRecording');
+  const resumeRecording = document.getElementById('resumeRecording');
+  const addAnnotation = document.getElementById('addAnnotation');
+  const stopRecording = document.getElementById('stopRecording');
   const previewRecording = document.getElementById('previewRecording');
   const playPausePreview = document.getElementById('playPausePreview');
-  const exportTutorial = document.getElementById('exportTutorial');
-  const recordAgain = document.getElementById('recordAgain');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const pausedIndicator = document.getElementById('pausedIndicator');
+  
+  const annotationBox = document.getElementById('annotationBox');
+  const annotationTitle = document.getElementById('annotationTitle');
+  const annotationText = document.getElementById('annotationText');
+  
+  const annotationEditorModal = document.getElementById('annotationEditorModal');
+  const annTitle = document.getElementById('annTitle');
+  const annText = document.getElementById('annText');
+  const annDuration = document.getElementById('annDuration');
+  const saveAnnotation = document.getElementById('saveAnnotation');
+  const cancelAnnotation = document.getElementById('cancelAnnotation');
+  
   const exportModal = document.getElementById('exportModal');
   const exportTextarea = document.getElementById('exportTextarea');
+  const eventCount = document.getElementById('eventCount');
+  const annotationCount = document.getElementById('annotationCount');
+  const annotationsList = document.getElementById('annotationsList');
   const copyExport = document.getElementById('copyExport');
   const closeExportModal = document.getElementById('closeExportModal');
-  const loadTutorial = document.getElementById('loadTutorial');
-  const backToRecording = document.getElementById('backToRecording');
+  
   const loadModal = document.getElementById('loadModal');
   const loadTextarea = document.getElementById('loadTextarea');
-  const loadFromFile = document.getElementById('loadFromFile');
-  const loadFromText = document.getElementById('loadFromText');
-  const closeLoadModal = document.getElementById('closeLoadModal');
-  const fileInput = document.getElementById('fileInput');
   const loadError = document.getElementById('loadError');
+  const loadTutorialBtn = document.getElementById('loadTutorialBtn');
+  const loadTutorialSubmit = document.getElementById('loadTutorialSubmit');
+  const closeLoadModal = document.getElementById('closeLoadModal');
+  
+  const helpModal = document.getElementById('helpModal');
+  const helpBtn = document.getElementById('helpBtn');
+  const closeHelpModal = document.getElementById('closeHelpModal');
+  
   const playBtn = document.getElementById('playBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const restartBtn = document.getElementById('restartBtn');
@@ -480,19 +710,22 @@
   const currentTimeEl = document.getElementById('currentTime');
   const totalTimeEl = document.getElementById('totalTime');
   const playbackSpeedSelect = document.getElementById('playbackSpeed');
-  const annotationBox = document.getElementById('annotationBox');
-  const annotationTitle = document.getElementById('annotationTitle');
-  const annotationText = document.getElementById('annotationText');
-  const helpBtn = document.getElementById('helpBtn');
-  const helpModal = document.getElementById('helpModal');
-  const closeHelpModal = document.getElementById('closeHelpModal');
   
   // State
   let currentMode = 'record';
   let isRecording = false;
-  let recordStartTime = 0;
+  let isPaused = false;
+  let recordingStartTime = 0;
+  let pausedTime = 0;
+  let totalPausedDuration = 0;
   let recordedEvents = [];
-  let recordingInterval = null;
+  let recordedAnnotations = [];
+  let currentAnnotation = null;
+  let draggingAnnotation = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+  let customPosition = null;
+  
   let currentTutorial = null;
   let isPlaying = false;
   let playbackStartTime = 0;
@@ -501,265 +734,428 @@
   let eventQueue = [];
   let currentAnnotationIndex = -1;
   
-  // Drag tracking - SIMPLIFIED APPROACH
-  let isDragging = false;
-  let dragElement = null;
-  let dragStartTime = 0;
-  let dragStartSnapshot = null;
-  let dragCheckInterval = null;
-  
   // Mode switching
-  function setMode(mode) {
-    const previousMode = currentMode;
-    currentMode = mode;
-    
-    // Hide any visible annotations when switching modes
-    annotationBox.classList.remove('visible');
-    currentAnnotationIndex = -1;
-    
-    // Update button states
-    [modeRecord, modePlayback].forEach(btn => btn.classList.remove('active'));
-    
-    // Hide all control groups
-    recordingControls.style.display = 'none';
+  modeRecord.addEventListener('click', () => {
+    currentMode = 'record';
+    modeRecord.classList.add('active');
+    modePlayback.classList.remove('active');
+    recordingControls.style.display = 'flex';
     playbackControls.style.display = 'none';
-    
-    if (mode === 'record') {
-      modeRecord.classList.add('active');
-      recordingControls.style.display = 'flex';
-      
-      // If switching from playback to record, reload the app to reset state
-      if (previousMode === 'playback' && appFrame.src && appFrame.src !== 'about:blank') {
-        const url = appFrame.src;
-        appFrame.src = '';
-        setTimeout(() => {
-          appFrame.src = url;
-          console.log('🔄 App reloaded for record mode');
-        }, 100);
-      }
-    } else if (mode === 'playback') {
-      modePlayback.classList.add('active');
-      playbackControls.style.display = 'flex';
-      
-      // Show Load Tutorial button, hide Back to Recording
-      loadTutorial.style.display = 'inline-block';
-      backToRecording.style.display = 'none';
-    }
-  }
+  });
   
-  modeRecord.addEventListener('click', () => setMode('record'));
-  modePlayback.addEventListener('click', () => setMode('playback'));
+  modePlayback.addEventListener('click', () => {
+    currentMode = 'playback';
+    modePlayback.classList.add('active');
+    modeRecord.classList.remove('active');
+    recordingControls.style.display = 'none';
+    playbackControls.style.display = 'flex';
+  });
   
-  // Load app
-  loadApp.addEventListener('click', () => {
+  // Recording controls
+  startRecording.addEventListener('click', () => {
     const url = appUrl.value.trim();
     if (!url) {
-      alert('Please enter a URL');
+      alert('Please enter an app URL first!');
       return;
     }
     
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      appUrl.value = 'https://' + url;
-    }
+    // Reset state
+    recordedEvents = [];
+    recordedAnnotations = [];
+    totalPausedDuration = 0;
+    isRecording = true;
+    isPaused = false;
+    recordingStartTime = Date.now();
     
-    appFrame.src = appUrl.value;
+    // Update UI
+    startRecording.style.display = 'none';
+    pauseRecording.style.display = 'inline-block';
+    stopRecording.style.display = 'inline-block';
+    recordingIndicator.style.display = 'inline-block';
+    appUrl.disabled = true;
     
-    // Show recording controls after loading
+    // Load app
+    appFrame.src = url;
+    
     setTimeout(() => {
-      loadApp.style.display = 'none';
-      reloadApp.style.display = 'inline-block';
-      startRecord.style.display = 'inline-block';
+      setupEventListeners();
+      console.log('✓ Recording started');
     }, 500);
   });
   
-  // Reload app
-  reloadApp.addEventListener('click', () => {
-    const url = appFrame.src;
-    if (url && url !== 'about:blank') {
-      appFrame.src = '';
-      setTimeout(() => {
-        appFrame.src = url;
-        console.log('🔄 App reloaded');
-      }, 100);
-    }
-  });
-  
-  // Recording
-  startRecord.addEventListener('click', () => {
-    if (!appFrame.src || appFrame.src === 'about:blank') {
-      alert('Please load an app first!');
-      return;
-    }
+  pauseRecording.addEventListener('click', () => {
+    isPaused = true;
+    pausedTime = Date.now();
     
-    isRecording = true;
-    recordStartTime = Date.now();
-    recordedEvents = [];
-    
-    startRecord.style.display = 'none';
-    stopRecord.style.display = 'inline-block';
-    recordingIndicator.style.display = 'inline-block';
-    previewRecording.style.display = 'none';
-    exportTutorial.style.display = 'none';
-    
-    attachListeners();
-    
-    recordingInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
-      const mins = Math.floor(elapsed / 60);
-      const secs = elapsed % 60;
-      recordingTime.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
-    }, 1000);
-    
-    console.log('🔴 Recording started');
-  });
-  
-  stopRecord.addEventListener('click', () => {
-    isRecording = false;
-    clearInterval(recordingInterval);
-    
-    stopRecord.style.display = 'none';
-    startRecord.style.display = 'none';
+    pauseRecording.style.display = 'none';
+    resumeRecording.style.display = 'inline-block';
+    addAnnotation.style.display = 'inline-block';
+    addAnnotation.disabled = false;
     recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'inline-block';
+    
+    console.log('⏸ Recording paused');
+  });
+  
+  resumeRecording.addEventListener('click', () => {
+    const pauseDuration = Date.now() - pausedTime;
+    totalPausedDuration += pauseDuration;
+    isPaused = false;
+    
+    resumeRecording.style.display = 'none';
+    pauseRecording.style.display = 'inline-block';
+    addAnnotation.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    recordingIndicator.style.display = 'inline-block';
+    
+    console.log('▶ Recording resumed (paused for', pauseDuration, 'ms)');
+  });
+  
+  stopRecording.addEventListener('click', () => {
+    isRecording = false;
+    isPaused = false;
+    
+    const duration = Date.now() - recordingStartTime - totalPausedDuration;
+    
+    startRecording.style.display = 'inline-block';
+    pauseRecording.style.display = 'none';
+    resumeRecording.style.display = 'none';
+    addAnnotation.style.display = 'none';
+    stopRecording.style.display = 'none';
     previewRecording.style.display = 'inline-block';
-    recordAgain.style.display = 'inline-block';
-    exportTutorial.style.display = 'inline-block';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    appUrl.disabled = false;
     
-    detachListeners();
-    
-    console.log('⏹ Recording stopped. Captured ' + recordedEvents.length + ' events');
-  });
-  
-  recordAgain.addEventListener('click', () => {
-    // Stop any active playback
-    isPlaying = false;
-    
-    // Hide any visible annotations
-    annotationBox.classList.remove('visible');
-    currentAnnotationIndex = -1;
-    
-    // Reload the app to reset its state
-    const url = appFrame.src;
-    appFrame.src = '';
-    
-    setTimeout(() => {
-      appFrame.src = url;
-      
-      // Reset recording UI - keep app controls visible
-      recordedEvents = [];
-      currentTutorial = null;
-      
-      reloadApp.style.display = 'inline-block';
-      startRecord.style.display = 'inline-block';
-      stopRecord.style.display = 'none';
-      recordingIndicator.style.display = 'none';
-      previewRecording.style.display = 'none';
-      playPausePreview.style.display = 'none';
-      recordAgain.style.display = 'none';
-      exportTutorial.style.display = 'none';
-      
-      console.log('🔄 Ready to record again');
-    }, 100);
-  });
-  
-  backToRecording.addEventListener('click', () => {
-    // Stop any active playback
-    isPlaying = false;
-    
-    // Hide any visible annotations
-    annotationBox.classList.remove('visible');
-    currentAnnotationIndex = -1;
-    
-    // Go back to recording mode
-    setMode('record');
-    
-    // Show the post-recording buttons
-    previewRecording.style.display = 'inline-block';
-    playPausePreview.style.display = 'none';
-    recordAgain.style.display = 'inline-block';
-    exportTutorial.style.display = 'inline-block';
-    
-    console.log('← Back to recording controls');
-  });
-  
-  previewRecording.addEventListener('click', () => {
-    if (recordedEvents.length === 0) {
-      alert('No events recorded to preview!');
-      return;
-    }
-    
-    // Stop any active playback first
-    isPlaying = false;
-    
-    // Create a temporary tutorial from the recorded events
-    currentTutorial = {
-      version: '1.0',
-      appUrl: appFrame.src,
-      duration: recordedEvents[recordedEvents.length - 1].timestamp,
+    // Build tutorial JSON
+    const tutorial = {
+      appUrl: appUrl.value.trim(),
+      duration: duration,
       events: recordedEvents,
-      annotations: []
+      annotations: recordedAnnotations
     };
     
-    // Hide Preview button, show Play/Pause button
-    previewRecording.style.display = 'none';
-    playPausePreview.style.display = 'inline-block';
-    playPausePreview.textContent = '⏸ Pause';
+    currentTutorial = tutorial;
     
-    // ALWAYS reload the app to reset state - critical for repeated previews
-    const url = appFrame.src;
-    appFrame.src = '';
+    // Show export modal
+    const json = JSON.stringify(tutorial, null, 2);
+    exportTextarea.value = json;
+    eventCount.textContent = recordedEvents.length;
+    annotationCount.textContent = recordedAnnotations.length;
     
-    setTimeout(() => {
-      appFrame.src = url;
-      
-      // Wait for app to load, then auto-start playback with fresh state
-      setTimeout(() => {
-        // Reset all playback state
-        playbackPausedAt = 0;
-        playbackStartTime = Date.now();
-        eventQueue = [...currentTutorial.events];
-        isPlaying = true;
-        
-        requestAnimationFrame(playbackLoop);
-        
-        console.log('▶ Playing preview... (fresh start)');
-      }, 500);
-    }, 100);
-  });
-  
-  playPausePreview.addEventListener('click', () => {
-    if (isPlaying) {
-      // Pause
-      isPlaying = false;
-      playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
-      playPausePreview.textContent = '▶ Resume';
-      console.log('⏸ Paused preview');
+    // Show annotation list
+    if (recordedAnnotations.length > 0) {
+      annotationsList.style.display = 'block';
+      annotationsList.innerHTML = '<strong style="display:block;margin-bottom:8px;">Annotations in this recording:</strong>';
+      recordedAnnotations.forEach((ann, idx) => {
+        const item = document.createElement('div');
+        item.className = 'annotation-item';
+        item.innerHTML = `
+          <div class="annotation-item-info">
+            <div class="annotation-item-title">${ann.title}</div>
+            <div class="annotation-item-meta">At ${formatTime(ann.timestamp / 1000)} • ${ann.duration / 1000}s • ${ann.position}</div>
+          </div>
+        `;
+        annotationsList.appendChild(item);
+      });
     } else {
-      // Resume
-      isPlaying = true;
-      playbackStartTime = Date.now() - playbackPausedAt * 1000;
-      playPausePreview.textContent = '⏸ Pause';
-      requestAnimationFrame(playbackLoop);
-      console.log('▶ Resumed preview');
+      annotationsList.style.display = 'none';
     }
+    
+    exportModal.classList.add('visible');
+    
+    console.log('✓ Recording stopped. Duration:', duration, 'ms');
+    console.log('  Events:', recordedEvents.length);
+    console.log('  Annotations:', recordedAnnotations.length);
   });
   
-  function getElementSelector(element) {
-    // Try ID first
+  // Annotation authoring
+  addAnnotation.addEventListener('click', () => {
+    // Reset form
+    annTitle.value = '';
+    annText.value = '';
+    annDuration.value = '5';
+    customPosition = null;
+    
+    // Select default position
+    document.querySelectorAll('.position-option').forEach(el => el.classList.remove('selected'));
+    document.querySelector('[data-position="top"]').classList.add('selected');
+    
+    // Show preview annotation
+    annotationBox.className = 'annotation-box visible pos-top draggable';
+    annotationTitle.textContent = 'Preview: Drag me to position!';
+    annotationText.textContent = 'Type your annotation text, then drag this box to exactly where you want it to appear. You can also use the position presets below.';
+    
+    // Enable dragging
+    makeDraggable();
+    
+    annotationEditorModal.classList.add('visible');
+  });
+  
+  // Position presets
+  document.querySelectorAll('.position-option').forEach(option => {
+    option.addEventListener('click', () => {
+      document.querySelectorAll('.position-option').forEach(el => el.classList.remove('selected'));
+      option.classList.add('selected');
+      
+      const position = option.dataset.position;
+      customPosition = null;
+      annotationBox.className = 'annotation-box visible pos-' + position + ' draggable';
+      annotationBox.style.left = '';
+      annotationBox.style.top = '';
+    });
+  });
+  
+  // Live preview of annotation text
+  annTitle.addEventListener('input', () => {
+    annotationTitle.textContent = annTitle.value || 'Preview: Drag me to position!';
+  });
+  
+  annText.addEventListener('input', () => {
+    annotationText.textContent = annText.value || 'Type your annotation text, then drag this box to exactly where you want it to appear.';
+  });
+  
+  saveAnnotation.addEventListener('click', () => {
+    const title = annTitle.value.trim();
+    const text = annText.value.trim();
+    const duration = parseInt(annDuration.value) * 1000;
+    
+    if (!title || !text) {
+      alert('Please enter both title and text for the annotation!');
+      return;
+    }
+    
+    // Determine position
+    let position;
+    if (customPosition) {
+      position = customPosition;
+    } else {
+      const selected = document.querySelector('.position-option.selected');
+      position = selected ? selected.dataset.position : 'top';
+    }
+    
+    // Calculate timestamp (current recording time minus paused duration)
+    const timestamp = Date.now() - recordingStartTime - totalPausedDuration;
+    
+    const annotation = {
+      timestamp: timestamp,
+      title: title,
+      text: text,
+      duration: duration,
+      position: position
+    };
+    
+    recordedAnnotations.push(annotation);
+    
+    console.log('✓ Annotation saved:', annotation);
+    
+    // Close modal
+    annotationEditorModal.classList.remove('visible');
+    annotationBox.classList.remove('visible', 'draggable');
+    
+    // Show feedback
+    alert(`✓ Annotation "${title}" added at ${formatTime(timestamp / 1000)}`);
+  });
+  
+  cancelAnnotation.addEventListener('click', () => {
+    annotationEditorModal.classList.remove('visible');
+    annotationBox.classList.remove('visible', 'draggable');
+  });
+  
+  // Dragging functionality
+  function makeDraggable() {
+    annotationBox.addEventListener('mousedown', startDrag);
+  }
+  
+  function startDrag(e) {
+    if (!annotationBox.classList.contains('draggable')) return;
+    
+    draggingAnnotation = true;
+    const rect = annotationBox.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', stopDrag);
+    
+    e.preventDefault();
+  }
+  
+  function doDrag(e) {
+    if (!draggingAnnotation) return;
+    
+    const containerRect = appFrame.getBoundingClientRect();
+    let x = e.clientX - containerRect.left - dragOffsetX;
+    let y = e.clientY - containerRect.top - dragOffsetY;
+    
+    // Keep within bounds
+    x = Math.max(0, Math.min(x, containerRect.width - annotationBox.offsetWidth));
+    y = Math.max(0, Math.min(y, containerRect.height - annotationBox.offsetHeight));
+    
+    annotationBox.className = 'annotation-box visible draggable custom-position';
+    annotationBox.style.left = x + 'px';
+    annotationBox.style.top = y + 'px';
+    
+    // Deselect all position presets
+    document.querySelectorAll('.position-option').forEach(el => el.classList.remove('selected'));
+    
+    e.preventDefault();
+  }
+  
+  function stopDrag(e) {
+    if (draggingAnnotation) {
+      // Save custom position
+      const containerRect = appFrame.getBoundingClientRect();
+      const rect = annotationBox.getBoundingClientRect();
+      customPosition = {
+        left: rect.left - containerRect.left,
+        top: rect.top - containerRect.top
+      };
+      
+      console.log('Custom position set:', customPosition);
+    }
+    
+    draggingAnnotation = false;
+    document.removeEventListener('mousemove', doDrag);
+    document.removeEventListener('mouseup', stopDrag);
+  }
+  
+  // Event recording setup
+  function setupEventListeners() {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      
+      iframeDoc.addEventListener('click', handleClick, true);
+      iframeDoc.addEventListener('input', handleInput, true);
+      iframeDoc.addEventListener('change', handleChange, true);
+      iframeDoc.addEventListener('mousedown', handleMouseDown, true);
+      
+      console.log('✓ Event listeners attached to iframe');
+    } catch (e) {
+      console.error('Failed to attach event listeners:', e);
+      alert('Could not access the app. Make sure it allows embedding and doesn\'t have cross-origin restrictions.');
+    }
+  }
+  
+  function getTimestamp() {
+    return Date.now() - recordingStartTime - totalPausedDuration;
+  }
+  
+  function handleClick(e) {
+    if (!isRecording || isPaused) return;
+    
+    const selector = generateSelector(e.target);
+    if (!selector) return;
+    
+    recordedEvents.push({
+      type: 'click',
+      timestamp: getTimestamp(),
+      target: selector
+    });
+    
+    console.log('Recorded click:', selector);
+  }
+  
+  function handleInput(e) {
+    if (!isRecording || isPaused) return;
+    
+    const selector = generateSelector(e.target);
+    if (!selector) return;
+    
+    recordedEvents.push({
+      type: 'input',
+      timestamp: getTimestamp(),
+      target: selector,
+      detail: { value: e.target.value }
+    });
+  }
+  
+  function handleChange(e) {
+    if (!isRecording || isPaused) return;
+    
+    const selector = generateSelector(e.target);
+    if (!selector) return;
+    
+    recordedEvents.push({
+      type: 'change',
+      timestamp: getTimestamp(),
+      target: selector,
+      detail: { value: e.target.value }
+    });
+  }
+  
+  let dragElement = null;
+  let dragStartTime = 0;
+  let animationFrames = [];
+  let lastFrameTime = 0;
+  
+  function handleMouseDown(e) {
+    if (!isRecording || isPaused) return;
+    
+    const target = e.target;
+    if (!target.draggable && target.tagName !== 'circle' && target.tagName !== 'rect' && target.tagName !== 'line' && target.tagName !== 'path') {
+      return;
+    }
+    
+    dragElement = target;
+    dragStartTime = Date.now();
+    animationFrames = [];
+    lastFrameTime = 0;
+    
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    
+    function captureFrame() {
+      if (!dragElement) return;
+      
+      const now = Date.now();
+      const frameTime = now - dragStartTime;
+      
+      if (frameTime - lastFrameTime >= 16) {
+        animationFrames.push({
+          time: frameTime,
+          html: iframeDoc.body.innerHTML
+        });
+        lastFrameTime = frameTime;
+      }
+      
+      requestAnimationFrame(captureFrame);
+    }
+    
+    function handleMouseUp() {
+      if (!dragElement) return;
+      
+      const selector = generateSelector(dragElement);
+      const duration = Date.now() - dragStartTime;
+      
+      recordedEvents.push({
+        type: 'drag',
+        timestamp: getTimestamp(),
+        target: selector,
+        detail: {
+          duration: duration,
+          animationFrames: animationFrames
+        }
+      });
+      
+      console.log('Recorded drag:', selector, 'with', animationFrames.length, 'frames');
+      
+      dragElement = null;
+      animationFrames = [];
+      iframeDoc.removeEventListener('mouseup', handleMouseUp);
+    }
+    
+    captureFrame();
+    iframeDoc.addEventListener('mouseup', handleMouseUp);
+  }
+  
+  function generateSelector(element) {
+    if (!element) return null;
+    
     if (element.id) {
       return '#' + element.id;
     }
     
-    // Try unique attribute combinations
-    const tag = element.tagName.toLowerCase();
-    
-    // For SVG groups with specific classes (common in D3)
-    if (tag === 'g' && element.classList.length > 0) {
-      const classes = Array.from(element.classList);
-      return tag + '.' + classes.join('.');
-    }
-    
-    // For buttons with text content
-    if (tag === 'button' && element.textContent.trim()) {
+    if (element.tagName === 'BUTTON' && element.textContent) {
       return {
         type: 'button-text',
         tagName: 'button',
@@ -767,309 +1163,43 @@
       };
     }
     
-    // Try name attribute
-    if (element.name) {
-      return tag + '[name="' + element.name + '"]';
-    }
+    let path = [];
+    let current = element;
     
-    // Try class combinations
-    if (element.className && typeof element.className === 'string') {
-      const classes = element.className.split(' ').filter(c => c.trim());
-      if (classes.length > 0) {
-        return tag + '.' + classes.join('.');
-      }
-    }
-    
-    // For SVG elements, try data attributes
-    if (element.hasAttribute('data-index')) {
-      return tag + '[data-index="' + element.getAttribute('data-index') + '"]';
-    }
-    
-    // Fallback to nth-of-type
-    let parent = element.parentElement;
-    if (parent) {
-      const siblings = Array.from(parent.children).filter(el => el.tagName === element.tagName);
-      const index = siblings.indexOf(element);
-      if (index >= 0) {
-        return tag + ':nth-of-type(' + (index + 1) + ')';
-      }
-    }
-    
-    return tag;
-  }
-  
-  function recordEvent(type, target, detail = {}) {
-    if (!isRecording) return;
-    
-    const timestamp = Date.now() - recordStartTime;
-    const selector = getElementSelector(target);
-    
-    const event = {
-      timestamp,
-      type,
-      target: selector,
-      detail
-    };
-    
-    recordedEvents.push(event);
-    console.log('📝 Recorded:', type, selector, detail);
-  }
-  
-  function handleClick(e) {
-    // Don't record if it's part of a drag
-    if (isDragging) return;
-    recordEvent('click', e.target);
-  }
-  
-  function handleInput(e) {
-    recordEvent('input', e.target, { value: e.target.value });
-  }
-  
-  function handleChange(e) {
-    recordEvent('change', e.target, { value: e.target.value });
-  }
-  
-  // SIMPLIFIED DRAG APPROACH: Snapshot entire iframe before/after
-  function handleMouseDown(e) {
-    try {
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      if (!iframeDoc) return;
+    while (current && current !== document.body) {
+      let selector = current.tagName.toLowerCase();
       
-      // Check if element is draggable
-      let element = e.target;
-      let draggable = null;
-      
-      while (element && element !== iframeDoc) {
-        const style = window.getComputedStyle(element);
-        const cursor = style.cursor;
-        
-        if (cursor === 'grab' || cursor === 'move' || cursor === 'grabbing' ||
-            element.draggable ||
-            element.classList.contains('draggable') ||
-            element.classList.contains('draggable-veil')) {
-          draggable = element;
-          break;
+      if (current.className && typeof current.className === 'string') {
+        const classes = current.className.split(' ').filter(c => c);
+        if (classes.length > 0) {
+          selector += '.' + classes.join('.');
         }
-        element = element.parentElement;
       }
       
-      if (!draggable) return;
-      
-      isDragging = true;
-      dragElement = draggable;
-      dragStartTime = Date.now() - recordStartTime;
-      
-      // Take snapshots at regular intervals during the drag
-      dragStartSnapshot = {
-        frames: [
-          {
-            time: 0,
-            html: iframeDoc.body.innerHTML
-          }
-        ]
-      };
-      
-      // Sample the DOM every 100ms during drag for smooth replay
-      dragCheckInterval = setInterval(() => {
-        if (isDragging) {
-          const currentTime = Date.now() - recordStartTime - dragStartTime;
-          dragStartSnapshot.frames.push({
-            time: currentTime,
-            html: iframeDoc.body.innerHTML
-          });
+      let parent = current.parentElement;
+      if (parent) {
+        let siblings = Array.from(parent.children).filter(e => e.tagName === current.tagName);
+        if (siblings.length > 1) {
+          let index = siblings.indexOf(current);
+          selector += ':nth-of-type(' + (index + 1) + ')';
         }
-      }, 100);
+      }
       
-      console.log('🖱️ Drag started - capturing animation frames...');
-      
-    } catch (e) {
-      console.warn('Cannot handle mousedown:', e);
+      path.unshift(selector);
+      current = parent;
     }
+    
+    return path.join(' > ');
   }
   
-  function handleMouseUp(e) {
-    console.log('🖱️ mouseup detected, isDragging:', isDragging, 'dragElement:', dragElement);
-    
-    if (!isDragging || !dragElement) return;
-    
-    // Stop capturing frames
-    if (dragCheckInterval) {
-      clearInterval(dragCheckInterval);
-      dragCheckInterval = null;
-    }
-    
-    // CRITICAL: Capture the current recording state NOW, before the setTimeout
-    const wasRecording = isRecording;
-    const capturedDragElement = dragElement;
-    const capturedSnapshot = dragStartSnapshot;
-    const capturedStartTime = dragStartTime;
-    
-    // Clear drag state immediately
-    isDragging = false;
-    dragElement = null;
-    dragStartSnapshot = null;
-    
-    if (!wasRecording || !capturedSnapshot) {
-      console.log('Drag ended but not recording or no snapshot');
-      return;
-    }
-    
-    try {
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      if (!iframeDoc) {
-        console.warn('Cannot access iframe document on mouseup');
-        return;
-      }
-      
-      // Wait a moment for the app to finish updating, then record
-      setTimeout(() => {
-        const currentTime = Date.now() - recordStartTime - capturedStartTime;
-        
-        // Add final frame
-        capturedSnapshot.frames.push({
-          time: currentTime,
-          html: iframeDoc.body.innerHTML
-        });
-        
-        console.log('📸 Captured', capturedSnapshot.frames.length, 'total frames');
-        
-        // Always record the drag if we have multiple frames
-        if (capturedSnapshot.frames.length > 1) {
-          // Manually add to recordedEvents (bypassing isRecording check in recordEvent)
-          const timestamp = capturedStartTime;
-          const selector = getElementSelector(capturedDragElement);
-          
-          const event = {
-            timestamp,
-            type: 'drag',
-            target: selector,
-            detail: {
-              animationFrames: capturedSnapshot.frames,
-              duration: currentTime
-            }
-          };
-          
-          recordedEvents.push(event);
-          console.log('✅ Drag recorded successfully with', capturedSnapshot.frames.length, 'animation frames');
-        } else {
-          console.warn('⚠️ Drag had only 1 frame - not recording');
-        }
-        
-      }, 100); // Wait 100ms for app to finish updating
-      
-    } catch (e) {
-      console.warn('Cannot handle mouseup:', e);
-    }
-  }
-  
-  function attachListeners() {
-    try {
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      const iframeWin = appFrame.contentWindow;
-      
-      if (!iframeDoc) {
-        console.warn('Cannot access iframe document');
-        return;
-      }
-      
-      // Click events
-      iframeDoc.addEventListener('click', handleClick, true);
-      
-      // Input events
-      const inputs = iframeDoc.querySelectorAll('input, select, textarea');
-      inputs.forEach(input => {
-        input.addEventListener('input', handleInput);
-        input.addEventListener('change', handleChange);
-      });
-      
-      // Drag events - attach to BOTH document and window
-      // D3 often uses window-level listeners for drag
-      iframeDoc.addEventListener('mousedown', handleMouseDown, true);
-      iframeDoc.addEventListener('mouseup', handleMouseUp, true);
-      
-      if (iframeWin) {
-        iframeWin.addEventListener('mouseup', handleMouseUp, true);
-        console.log('✓ Event listeners attached to both document and window (including simplified drag tracking)');
-      } else {
-        console.log('✓ Event listeners attached to document only (including simplified drag tracking)');
-      }
-    } catch (e) {
-      console.warn('Cannot attach listeners to iframe:', e);
-    }
-  }
-  
-  function detachListeners() {
-    try {
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      const iframeWin = appFrame.contentWindow;
-      
-      if (!iframeDoc) return;
-      
-      iframeDoc.removeEventListener('click', handleClick, true);
-      iframeDoc.removeEventListener('mousedown', handleMouseDown, true);
-      iframeDoc.removeEventListener('mouseup', handleMouseUp, true);
-      
-      // Also remove from window
-      if (iframeWin) {
-        iframeWin.removeEventListener('mouseup', handleMouseUp, true);
-      }
-      
-      const inputs = iframeDoc.querySelectorAll('input, select, textarea');
-      inputs.forEach(input => {
-        input.removeEventListener('input', handleInput);
-        input.removeEventListener('change', handleChange);
-      });
-      
-      // Clean up any active drag sampling
-      if (dragCheckInterval) {
-        clearInterval(dragCheckInterval);
-        dragCheckInterval = null;
-      }
-      isDragging = false;
-      dragElement = null;
-      dragStartSnapshot = null;
-      
-      console.log('✓ Event listeners detached');
-    } catch (e) {
-      console.warn('Cannot detach listeners from iframe:', e);
-    }
-  }
-  
-  // Export
-  exportTutorial.addEventListener('click', () => {
-    const tutorial = {
-      version: '1.0',
-      appUrl: appFrame.src,
-      duration: recordedEvents.length > 0 ? recordedEvents[recordedEvents.length - 1].timestamp : 0,
-      events: recordedEvents,
-      annotations: [
-        {
-          timestamp: 0,
-          duration: 3000,
-          title: "Welcome",
-          text: "Edit this tutorial JSON to add your annotations. Change timestamps, titles, text, and positions.",
-          position: "top"
-        },
-        {
-          timestamp: 5000,
-          duration: 4000,
-          title: "Step 1",
-          text: "Add annotations at key moments. Available positions: top, bottom, left, right, center, top-left, top-right, bottom-left, bottom-right",
-          position: "bottom"
-        }
-      ],
-      notes: "Position options: 'top' (default), 'bottom', 'left', 'right', 'center', 'top-left', 'top-right', 'bottom-left', 'bottom-right'"
-    };
-    
-    exportTextarea.value = JSON.stringify(tutorial, null, 2);
-    exportModal.classList.add('visible');
-  });
-  
+  // Export controls
   copyExport.addEventListener('click', () => {
     exportTextarea.select();
     document.execCommand('copy');
     copyExport.textContent = '✓ Copied!';
-    setTimeout(() => { copyExport.textContent = '📋 Copy to Clipboard'; }, 2000);
+    setTimeout(() => {
+      copyExport.textContent = '📋 Copy to Clipboard';
+    }, 2000);
   });
   
   closeExportModal.addEventListener('click', () => {
@@ -1077,33 +1207,15 @@
   });
   
   // Load tutorial
-  loadTutorial.addEventListener('click', () => {
+  loadTutorialBtn.addEventListener('click', () => {
     loadModal.classList.add('visible');
     loadError.style.display = 'none';
   });
   
-  loadFromFile.addEventListener('click', () => {
-    fileInput.click();
-  });
-  
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      loadTextarea.value = e.target.result;
-    };
-    reader.readAsText(file);
-  });
-  
-  loadFromText.addEventListener('click', () => {
+  loadTutorialSubmit.addEventListener('click', () => {
     const jsonText = loadTextarea.value.trim();
-    
-    loadError.style.display = 'none';
-    
     if (!jsonText) {
-      loadError.textContent = 'Please paste tutorial JSON first!';
+      loadError.textContent = 'Please paste tutorial JSON!';
       loadError.style.display = 'block';
       return;
     }
@@ -1111,22 +1223,19 @@
     try {
       currentTutorial = JSON.parse(jsonText);
       
-      // Validate
       if (!currentTutorial.appUrl) {
-        throw new Error('Missing "appUrl" field in tutorial');
+        throw new Error('Missing "appUrl" field');
       }
-      if (!currentTutorial.events || !Array.isArray(currentTutorial.events)) {
-        throw new Error('Missing or invalid "events" array');
+      if (!currentTutorial.events) {
+        throw new Error('Missing "events" field');
       }
       if (currentTutorial.duration === undefined) {
         throw new Error('Missing "duration" field');
       }
       
-      // Load the app
       appFrame.src = currentTutorial.appUrl;
       appUrl.value = currentTutorial.appUrl;
       
-      // Setup playback
       const duration = currentTutorial.duration / 1000;
       totalTimeEl.textContent = formatTime(duration);
       timelineSlider.max = duration;
@@ -1144,7 +1253,6 @@
       loadError.textContent = 'Invalid JSON! Error: ' + e.message + '\n\nMake sure you copied the entire JSON correctly.';
       loadError.style.display = 'block';
       console.error('JSON parse error:', e);
-      console.log('Attempted JSON:', jsonText.substring(0, 500));
     }
   });
   
@@ -1192,7 +1300,6 @@
     annotationBox.classList.remove('visible');
     eventQueue = [];
     
-    // Reload app
     const url = appFrame.src;
     appFrame.src = '';
     setTimeout(() => { appFrame.src = url; }, 100);
@@ -1214,11 +1321,8 @@
     const elapsed = (Date.now() - playbackStartTime) / 1000;
     const duration = currentTutorial.duration / 1000;
     
-    // Update timeline if visible (only in full playback mode)
-    if (playbackControls.style.display !== 'none') {
-      timelineSlider.value = elapsed;
-      currentTimeEl.textContent = formatTime(elapsed);
-    }
+    timelineSlider.value = elapsed;
+    currentTimeEl.textContent = formatTime(elapsed);
     
     // Process events
     while (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 <= elapsed) {
@@ -1234,7 +1338,7 @@
         
         if (elapsed >= annStart && elapsed < annEnd && currentAnnotationIndex !== idx) {
           currentAnnotationIndex = idx;
-          showAnnotation(ann.title, ann.text, ann.position || 'top');
+          showAnnotation(ann);
         } else if (elapsed >= annEnd && currentAnnotationIndex === idx) {
           annotationBox.classList.remove('visible');
           currentAnnotationIndex = -1;
@@ -1244,29 +1348,10 @@
     
     if (elapsed >= duration) {
       isPlaying = false;
-      
-      // Hide any visible annotations
+      playBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
-      
-      // If this was a simple preview (playPausePreview visible), reload app to restore interactivity
-      if (playPausePreview.style.display !== 'none') {
-        playPausePreview.style.display = 'none';
-        previewRecording.style.display = 'inline-block';
-        
-        // Reload app to restore full interactivity (preview modifies DOM which breaks event listeners)
-        const url = appFrame.src;
-        appFrame.src = '';
-        setTimeout(() => {
-          appFrame.src = url;
-          console.log('✓ Preview finished - app reloaded and interactive');
-        }, 100);
-      } else {
-        // Normal playback mode
-        playBtn.style.display = 'inline-block';
-        pauseBtn.style.display = 'none';
-      }
-      
       return;
     }
     
@@ -1283,7 +1368,6 @@
         return;
       }
       
-      // Visual feedback
       const originalOutline = element.style.outline;
       element.style.outline = '3px solid #2563eb';
       element.style.outlineOffset = '2px';
@@ -1303,23 +1387,16 @@
         replayDrag(element, event.detail, iframeDoc);
       }
       
-      console.log('Replayed event:', event.type, event.target);
     } catch (e) {
       console.warn('Cannot replay event:', e, event);
     }
   }
   
   function replayDrag(element, detail, iframeDoc) {
-    // Use animation frames method - replay each frame with proper timing
     if (detail.animationFrames && detail.animationFrames.length > 0) {
       try {
-        console.log('🎬 Replaying drag with', detail.animationFrames.length, 'animation frames at speed', playbackSpeed + 'x');
-        
-        // Play frames using cumulative timing (not just frame.time directly)
         let cumulativeDelay = 0;
         detail.animationFrames.forEach((frame, index) => {
-          // For first frame, delay is 0
-          // For subsequent frames, delay is based on time since previous frame
           if (index > 0) {
             const intervalSinceLast = frame.time - detail.animationFrames[index - 1].time;
             cumulativeDelay += intervalSinceLast / playbackSpeed;
@@ -1328,11 +1405,6 @@
           setTimeout(() => {
             try {
               iframeDoc.body.innerHTML = frame.html;
-              console.log('  Frame', index + 1, '/', detail.animationFrames.length);
-              
-              if (index === detail.animationFrames.length - 1) {
-                console.log('✓ Drag animation complete');
-              }
             } catch (e) {
               console.warn('Failed to apply frame', index, ':', e);
             }
@@ -1345,25 +1417,21 @@
       }
     }
     
-    // Backward compatibility: handle old snapshot format
     if (detail.snapshotAfter) {
       try {
         iframeDoc.body.innerHTML = detail.snapshotAfter;
-        console.log('✓ Replayed drag using snapshot (legacy format)');
         return;
       } catch (e) {
         console.warn('Snapshot replay failed:', e);
       }
     }
     
-    // Fallback: can't replay drag
     console.warn('Cannot replay drag - no animation data available');
   }
   
   function findElement(doc, selector) {
     if (!selector) return null;
     
-    // Handle object-based selectors
     if (typeof selector === 'object') {
       if (selector.type === 'button-text') {
         const buttons = doc.querySelectorAll(selector.tagName || 'button');
@@ -1376,17 +1444,14 @@
       return null;
     }
     
-    // String selectors
     if (selector.startsWith('#')) {
       return doc.getElementById(selector.substring(1));
     }
     
-    // Try direct querySelector
     try {
       const element = doc.querySelector(selector);
       if (element) return element;
       
-      // If not found and it's an SVG selector, try looking in SVG namespace
       const svg = doc.querySelector('svg');
       if (svg) {
         return svg.querySelector(selector);
@@ -1399,10 +1464,22 @@
     }
   }
   
-  function showAnnotation(title, text, position = 'top') {
-    annotationBox.className = 'annotation-box visible pos-' + position;
-    annotationTitle.textContent = title;
-    annotationText.textContent = text;
+  function showAnnotation(ann) {
+    // Handle both preset and custom positions
+    if (typeof ann.position === 'object') {
+      // Custom position with left/top coordinates
+      annotationBox.className = 'annotation-box visible custom-position';
+      annotationBox.style.left = ann.position.left + 'px';
+      annotationBox.style.top = ann.position.top + 'px';
+    } else {
+      // Preset position
+      annotationBox.className = 'annotation-box visible pos-' + ann.position;
+      annotationBox.style.left = '';
+      annotationBox.style.top = '';
+    }
+    
+    annotationTitle.textContent = ann.title;
+    annotationText.textContent = ann.text;
   }
   
   function formatTime(seconds) {
@@ -1421,10 +1498,13 @@
   });
   
   // Close modals on outside click
-  [exportModal, loadModal, helpModal].forEach(modal => {
+  [exportModal, loadModal, helpModal, annotationEditorModal].forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.remove('visible');
+        if (modal === annotationEditorModal) {
+          annotationBox.classList.remove('visible', 'draggable');
+        }
       }
     });
   });
