@@ -315,6 +315,7 @@
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">● REC <span id="recordingTime">0:00</span></span>
         <button id="previewRecording" class="primary" style="display:none;">▶ Preview Recording</button>
         <button id="exportTutorial" class="success" style="display:none;">📥 Export Tutorial</button>
+        <button id="recordAgain" class="primary" style="display:none;">🔄 Record Again</button>
       </div>
       
       <div id="playbackControls" class="playback-controls" style="display:none;">
@@ -444,6 +445,7 @@
   const recordingTime = document.getElementById('recordingTime');
   const previewRecording = document.getElementById('previewRecording');
   const exportTutorial = document.getElementById('exportTutorial');
+  const recordAgain = document.getElementById('recordAgain');
   const exportModal = document.getElementById('exportModal');
   const exportTextarea = document.getElementById('exportTextarea');
   const copyExport = document.getElementById('copyExport');
@@ -493,6 +495,7 @@
   
   // Mode switching
   function setMode(mode) {
+    const previousMode = currentMode;
     currentMode = mode;
     
     // Update button states
@@ -509,6 +512,25 @@
     } else if (mode === 'record') {
       modeRecord.classList.add('active');
       recordingControls.style.display = 'flex';
+      
+      // If switching from playback to record, reload the app to reset state
+      if (previousMode === 'playback' && appFrame.src && appFrame.src !== 'about:blank') {
+        const url = appFrame.src;
+        appFrame.src = '';
+        setTimeout(() => {
+          appFrame.src = url;
+          
+          // Show start recording button
+          startRecord.style.display = 'inline-block';
+          stopRecord.style.display = 'none';
+          recordingIndicator.style.display = 'none';
+          previewRecording.style.display = 'none';
+          exportTutorial.style.display = 'none';
+          recordAgain.style.display = 'none';
+          
+          console.log('🔄 App reloaded for new recording');
+        }, 100);
+      }
     } else if (mode === 'playback') {
       modePlayback.classList.add('active');
       playbackControls.style.display = 'flex';
@@ -568,14 +590,38 @@
     clearInterval(recordingInterval);
     
     stopRecord.style.display = 'none';
-    startRecord.style.display = 'inline-block';
+    startRecord.style.display = 'none';
     recordingIndicator.style.display = 'none';
     previewRecording.style.display = 'inline-block';
     exportTutorial.style.display = 'inline-block';
+    recordAgain.style.display = 'inline-block';
     
     detachListeners();
     
     console.log('⏹ Recording stopped. Captured ' + recordedEvents.length + ' events');
+  });
+  
+  recordAgain.addEventListener('click', () => {
+    // Reload the app to reset its state
+    const url = appFrame.src;
+    appFrame.src = '';
+    
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      // Reset recording UI
+      recordedEvents = [];
+      currentTutorial = null;
+      
+      startRecord.style.display = 'inline-block';
+      stopRecord.style.display = 'none';
+      recordingIndicator.style.display = 'none';
+      previewRecording.style.display = 'none';
+      exportTutorial.style.display = 'none';
+      recordAgain.style.display = 'none';
+      
+      console.log('🔄 Ready to record again');
+    }, 100);
   });
   
   previewRecording.addEventListener('click', () => {
