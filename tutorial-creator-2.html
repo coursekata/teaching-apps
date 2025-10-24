@@ -397,7 +397,7 @@
       <h3>2. Record Mode</h3>
       <p class="help-text">
         Load your app, then click "Start Recording". Interact with your app (click buttons, fill inputs, drag elements, etc.). 
-        Click "Stop Recording" when done, then "Export Tutorial" to get the JSON.
+        Click "Stop Recording" when done, then "Preview Recording" to test, or "Export Tutorial" to get the JSON.
       </p>
       
       <h3>3. Playback Mode</h3>
@@ -484,15 +484,12 @@
   let eventQueue = [];
   let currentAnnotationIndex = -1;
   
-  // Drag tracking
+  // Drag tracking - SIMPLIFIED APPROACH
   let isDragging = false;
-  let dragStartPos = null;
   let dragElement = null;
   let dragStartTime = 0;
-  let dragTransformStart = null;
-  let dragObserver = null;
-  let activeTransformWatchers = [];
-  let dragStateCapture = null;
+  let dragStartSnapshot = null;
+  let dragCheckInterval = null;
   
   // Mode switching
   function setMode(mode) {
@@ -717,269 +714,82 @@
     recordEvent('change', e.target, { value: e.target.value });
   }
   
+  // SIMPLIFIED DRAG APPROACH: Snapshot entire iframe before/after
   function handleMouseDown(e) {
-    // Check if this element or its ancestors are draggable
-    let element = e.target;
-    let draggable = null;
-    
-    // Look for elements with common draggable indicators
-    while (element && element !== e.currentTarget) {
-      const style = window.getComputedStyle(element);
-      const cursor = style.cursor;
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (!iframeDoc) return;
       
-      // Check for drag cursors, draggable attributes, or SVG groups with transforms
-      if (cursor === 'grab' || cursor === 'move' || 
-          element.draggable || 
-          element.getAttribute('data-draggable') === 'true' ||
-          element.classList.contains('draggable') ||
-          element.classList.contains('draggable-veil') ||
-          (element.tagName === 'g' && element.hasAttribute('transform'))) {
-        draggable = element;
-        break;
+      // Check if element is draggable
+      let element = e.target;
+      let draggable = null;
+      
+      while (element && element !== iframeDoc) {
+        const style = window.getComputedStyle(element);
+        const cursor = style.cursor;
+        
+        if (cursor === 'grab' || cursor === 'move' || cursor === 'grabbing' ||
+            element.draggable ||
+            element.classList.contains('draggable') ||
+            element.classList.contains('draggable-veil')) {
+          draggable = element;
+          break;
+        }
+        element = element.parentElement;
       }
-      element = element.parentElement;
-    }
-    
-    if (!draggable) return;
-    
-    isDragging = true;
-    dragElement = draggable;
-    dragStartTime = Date.now() - recordStartTime;
-    
-    // Capture initial transform if it's an SVG element
-    if (draggable.tagName === 'g' && draggable.hasAttribute('transform')) {
-      dragTransformStart = draggable.getAttribute('transform');
-    } else {
-      dragTransformStart = null;
-    }
-    
-    dragStartPos = {
-      x: e.clientX,
-      y: e.clientY,
-      elementX: draggable.offsetLeft || 0,
-      elementY: draggable.offsetTop || 0
-    };
-    
-    // Capture the entire SVG state before drag
-    const svg = draggable.closest('svg');
-    if (svg) {
-      dragStateCapture = {
-        before: svg.innerHTML
+      
+      if (!draggable) return;
+      
+      isDragging = true;
+      dragElement = draggable;
+      dragStartTime = Date.now() - recordStartTime;
+      
+      // Take a snapshot of the ENTIRE document body
+      dragStartSnapshot = {
+        html: iframeDoc.body.innerHTML
       };
+      
+      console.log('🖱️ Drag started - snapshot captured');
+      
+    } catch (e) {
+      console.warn('Cannot handle mousedown:', e);
     }
-    
-    console.log('🖱️ Drag started on', draggable, 'transform:', dragTransformStart);
-  }
-  
-  function handleMouseMove(e) {
-    if (!isDragging || !dragElement) return;
-    
-    // Track the current position during drag
-    dragStartPos.currentX = e.clientX;
-    dragStartPos.currentY = e.clientY;
   }
   
   function handleMouseUp(e) {
     if (!isDragging || !dragElement) return;
     
-    const endPos = {
-      x: e.clientX,
-      y: e.clientY
-    };
-    
-    const deltaX = endPos.x - dragStartPos.x;
-    const deltaY = endPos.y - dragStartPos.y;
-    
-    // Capture final transform if it's an SVG element
-    let dragTransformEnd = null;
-    if (dragElement.tagName === 'g' && dragElement.hasAttribute('transform')) {
-      dragTransformEnd = dragElement.getAttribute('transform');
-    }
-    
-    // Capture the entire SVG state after drag (with a small delay to let D3 finish)
-    const svg = dragElement.closest('svg');
-    if (svg && dragStateCapture) {
-      setTimeout(() => {
-        dragStateCapture.after = svg.innerHTML;
-        
-        // Only record if there was significant movement OR state change
-        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2 || 
-            dragStateCapture.before !== dragStateCapture.after) {
-          const eventDetail = {
-            startX: dragStartPos.x,
-            startY: dragStartPos.y,
-            endX: endPos.x,
-            endY: endPos.y,
-            deltaX: deltaX,
-            deltaY: deltaY,
-            elementStartX: dragStartPos.elementX,
-            elementStartY: dragStartPos.elementY
-          };
-          
-          // Add transform info if available
-          if (dragTransformStart !== null) {
-            eventDetail.transformStart = dragTransformStart;
-          }
-          if (dragTransformEnd !== null) {
-            eventDetail.transformEnd = dragTransformEnd;
-          }
-          
-          // Add SVG state snapshots
-          eventDetail.svgStateBefore = dragStateCapture.before;
-          eventDetail.svgStateAfter = dragStateCapture.after;
-          
-          recordEvent('drag', dragElement, eventDetail);
-          console.log('📊 Captured SVG state change during drag');
-        }
-        
-        dragStateCapture = null;
-      }, 50); // Small delay to let D3 finish rendering
-    } else {
-      // No SVG capture - use old method
-      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-        const eventDetail = {
-          startX: dragStartPos.x,
-          startY: dragStartPos.y,
-          endX: endPos.x,
-          endY: endPos.y,
-          deltaX: deltaX,
-          deltaY: deltaY,
-          elementStartX: dragStartPos.elementX,
-          elementStartY: dragStartPos.elementY
-        };
-        
-        // Add transform info if available
-        if (dragTransformStart !== null) {
-          eventDetail.transformStart = dragTransformStart;
-        }
-        if (dragTransformEnd !== null) {
-          eventDetail.transformEnd = dragTransformEnd;
-        }
-        
-        recordEvent('drag', dragElement, eventDetail);
-      }
-    }
-    
-    isDragging = false;
-    dragElement = null;
-    dragStartPos = null;
-    dragTransformStart = null;
-    
-    console.log('🖱️ Drag ended');
-  }
-  
-  // Transform watchers for D3 drag behavior
-  function setupTransformWatcher() {
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (!iframeDoc) return;
       
-      // Find all SVG groups that might be draggable
-      const svgGroups = iframeDoc.querySelectorAll('svg g[transform]');
-      
-      svgGroups.forEach(group => {
-        // Check if this group or its children have draggable styling
-        const style = window.getComputedStyle(group);
-        const cursor = style.cursor;
+      // Wait a moment for the app to finish updating, then take snapshot
+      setTimeout(() => {
+        const dragEndSnapshot = {
+          html: iframeDoc.body.innerHTML
+        };
         
-        // Also check if any child has grab cursor
-        let hasGrabCursor = cursor === 'grab' || cursor === 'move';
-        if (!hasGrabCursor) {
-          const children = group.querySelectorAll('*');
-          for (let child of children) {
-            const childStyle = window.getComputedStyle(child);
-            if (childStyle.cursor === 'grab' || childStyle.cursor === 'move') {
-              hasGrabCursor = true;
-              break;
-            }
-          }
+        // Only record if something actually changed
+        if (dragStartSnapshot.html !== dragEndSnapshot.html) {
+          recordEvent('drag', dragElement, {
+            snapshotBefore: dragStartSnapshot.html,
+            snapshotAfter: dragEndSnapshot.html
+          });
+          
+          console.log('📊 Drag recorded with full page snapshots');
         }
         
-        if (hasGrabCursor || group.classList.contains('draggable-veil') || group.classList.contains('axis')) {
-          
-          const initialTransform = group.getAttribute('transform');
-          let watchingDrag = false;
-          let dragStartTransform = null;
-          let dragStartTimestamp = 0;
-          
-          const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-              if (mutation.type === 'attributes' && mutation.attributeName === 'transform') {
-                const currentTransform = group.getAttribute('transform');
-                
-                // Start of drag - first transform change
-                if (!watchingDrag && currentTransform !== dragStartTransform) {
-                  watchingDrag = true;
-                  dragStartTransform = mutation.oldValue || initialTransform;
-                  dragStartTimestamp = Date.now() - recordStartTime;
-                  console.log('🔍 Watching drag on', group, 'start:', dragStartTransform);
-                }
-              }
-            });
-          });
-          
-          // Watch for mouseup on the document to capture the end of drag
-          const mouseUpHandler = () => {
-            if (watchingDrag) {
-              const finalTransform = group.getAttribute('transform');
-              
-              if (dragStartTransform !== finalTransform) {
-                console.log('🎯 Drag completed:', dragStartTransform, '→', finalTransform);
-                
-                recordEvent('drag', group, {
-                  transformStart: dragStartTransform,
-                  transformEnd: finalTransform,
-                  startX: 0,
-                  startY: 0,
-                  endX: 0,
-                  endY: 0,
-                  deltaX: 0,
-                  deltaY: 0
-                });
-              }
-              
-              watchingDrag = false;
-              dragStartTransform = group.getAttribute('transform');
-            }
-          };
-          
-          iframeDoc.addEventListener('mouseup', mouseUpHandler);
-          
-          observer.observe(group, {
-            attributes: true,
-            attributeFilter: ['transform'],
-            attributeOldValue: true
-          });
-          
-          activeTransformWatchers.push({
-            observer: observer,
-            handler: mouseUpHandler,
-            element: group
-          });
-        }
-      });
+        isDragging = false;
+        dragElement = null;
+        dragStartSnapshot = null;
+        
+      }, 100); // Wait 100ms for app to finish updating
       
-      console.log('✓ Transform watchers set up for', activeTransformWatchers.length, 'elements');
     } catch (e) {
-      console.warn('Cannot setup transform watchers:', e);
-    }
-  }
-  
-  function cleanupTransformWatchers() {
-    try {
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      
-      activeTransformWatchers.forEach(watcher => {
-        watcher.observer.disconnect();
-        if (iframeDoc) {
-          iframeDoc.removeEventListener('mouseup', watcher.handler);
-        }
-      });
-      
-      activeTransformWatchers = [];
-      console.log('✓ Transform watchers cleaned up');
-    } catch (e) {
-      console.warn('Cannot cleanup transform watchers:', e);
+      console.warn('Cannot handle mouseup:', e);
+      isDragging = false;
+      dragElement = null;
+      dragStartSnapshot = null;
     }
   }
   
@@ -1001,15 +811,11 @@
         input.addEventListener('change', handleChange);
       });
       
-      // Drag events
+      // Drag events - document level
       iframeDoc.addEventListener('mousedown', handleMouseDown, true);
-      iframeDoc.addEventListener('mousemove', handleMouseMove, true);
       iframeDoc.addEventListener('mouseup', handleMouseUp, true);
       
-      // Transform watchers for D3 drag behavior
-      setupTransformWatcher();
-      
-      console.log('✓ Event listeners attached (including drag support)');
+      console.log('✓ Event listeners attached (including simplified drag tracking)');
     } catch (e) {
       console.warn('Cannot attach listeners to iframe:', e);
     }
@@ -1022,7 +828,6 @@
       
       iframeDoc.removeEventListener('click', handleClick, true);
       iframeDoc.removeEventListener('mousedown', handleMouseDown, true);
-      iframeDoc.removeEventListener('mousemove', handleMouseMove, true);
       iframeDoc.removeEventListener('mouseup', handleMouseUp, true);
       
       const inputs = iframeDoc.querySelectorAll('input, select, textarea');
@@ -1030,9 +835,6 @@
         input.removeEventListener('input', handleInput);
         input.removeEventListener('change', handleChange);
       });
-      
-      // Clean up transform watchers
-      cleanupTransformWatchers();
       
       console.log('✓ Event listeners detached');
     } catch (e) {
@@ -1281,8 +1083,7 @@
           element.dispatchEvent(new Event('change', { bubbles: true }));
         }
       } else if (event.type === 'drag') {
-        // Replay drag event
-        replayDrag(element, event.detail);
+        replayDrag(element, event.detail, iframeDoc);
       }
       
       console.log('Replayed event:', event.type, event.target);
@@ -1291,95 +1092,20 @@
     }
   }
   
-  function replayDrag(element, detail) {
-    // If we have SVG state snapshots, use those for the most accurate replay
-    if (detail.svgStateAfter) {
-      const svg = element.closest('svg');
-      if (svg) {
-        // Smoothly transition by setting the final state
-        svg.innerHTML = detail.svgStateAfter;
-        console.log('Replayed drag using SVG state snapshot');
+  function replayDrag(element, detail, iframeDoc) {
+    // Use snapshot method - replace entire body HTML
+    if (detail.snapshotAfter) {
+      try {
+        iframeDoc.body.innerHTML = detail.snapshotAfter;
+        console.log('✓ Replayed drag using full page snapshot');
         return;
+      } catch (e) {
+        console.warn('Snapshot replay failed:', e);
       }
     }
     
-    // For SVG elements with transforms, apply the transform directly
-    if (detail.transformEnd && element.tagName === 'g') {
-      // Animate the transform change
-      const startTransform = detail.transformStart || 'translate(0,0)';
-      const endTransform = detail.transformEnd;
-      
-      // Parse translate values
-      const parseTranslate = (transform) => {
-        const match = transform.match(/translate\(([-\d.]+)[,\s]+([-\d.]+)\)/);
-        if (match) return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
-        return { x: 0, y: 0 };
-      };
-      
-      const start = parseTranslate(startTransform);
-      const end = parseTranslate(endTransform);
-      
-      // Animate the translation
-      const steps = 15;
-      const deltaX = (end.x - start.x) / steps;
-      const deltaY = (end.y - start.y) / steps;
-      
-      for (let i = 1; i <= steps; i++) {
-        setTimeout(() => {
-          const newX = start.x + deltaX * i;
-          const newY = start.y + deltaY * i;
-          element.setAttribute('transform', `translate(${newX},${newY})`);
-          
-          if (i === steps) {
-            console.log('Replayed SVG drag:', startTransform, '→', endTransform);
-          }
-        }, i * 15);
-      }
-      
-      return;
-    }
-    
-    // Fallback: Create and dispatch mouse events to simulate the drag
-    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-    
-    // Dispatch mousedown
-    const mouseDownEvent = new MouseEvent('mousedown', {
-      bubbles: true,
-      cancelable: true,
-      clientX: detail.startX,
-      clientY: detail.startY
-    });
-    element.dispatchEvent(mouseDownEvent);
-    
-    // Dispatch mousemove events (simulate smooth drag)
-    const steps = 10;
-    const deltaX = detail.deltaX / steps;
-    const deltaY = detail.deltaY / steps;
-    
-    for (let i = 1; i <= steps; i++) {
-      setTimeout(() => {
-        const mouseMoveEvent = new MouseEvent('mousemove', {
-          bubbles: true,
-          cancelable: true,
-          clientX: detail.startX + deltaX * i,
-          clientY: detail.startY + deltaY * i
-        });
-        element.dispatchEvent(mouseMoveEvent);
-      }, i * 20);
-    }
-    
-    // Dispatch mouseup
-    setTimeout(() => {
-      const mouseUpEvent = new MouseEvent('mouseup', {
-        bubbles: true,
-        cancelable: true,
-        clientX: detail.endX,
-        clientY: detail.endY
-      });
-      element.dispatchEvent(mouseUpEvent);
-      
-      console.log('Replayed drag:', detail);
-    }, steps * 20 + 20);
+    // Fallback: can't replay drag without snapshot
+    console.warn('Cannot replay drag - no snapshot available');
   }
   
   function findElement(doc, selector) {
