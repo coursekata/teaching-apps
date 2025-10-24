@@ -829,7 +829,7 @@
     if (isDragging) {
       isDragging = false;
       if (dragCheckInterval) {
-        clearInterval(dragCheckInterval);
+        cancelAnimationFrame(dragCheckInterval);
         dragCheckInterval = null;
       }
       if (mouseUpHandler) {
@@ -1278,7 +1278,7 @@
       dragElement = draggable;
       dragStartTime = Date.now();
       
-      // Take snapshots at regular intervals during the drag
+      // Take snapshots continuously during the drag
       dragStartSnapshot = {
         frames: [
           {
@@ -1288,16 +1288,24 @@
         ]
       };
       
-      // Sample the DOM every 100ms during drag for smooth replay
-      dragCheckInterval = setInterval(() => {
+      // Use requestAnimationFrame to capture smooth continuous frames during drag
+      let animationFrameId;
+      const captureFrame = () => {
         if (isDragging) {
           const currentTime = Date.now() - dragStartTime;
           dragStartSnapshot.frames.push({
             time: currentTime,
             html: iframeDoc.body.innerHTML
           });
+          animationFrameId = requestAnimationFrame(captureFrame);
         }
-      }, 100);
+      };
+      
+      // Start capturing frames continuously
+      animationFrameId = requestAnimationFrame(captureFrame);
+      
+      // Store the animation frame ID so we can cancel it on mouseup
+      dragCheckInterval = animationFrameId;
       
       console.log('🖱️ Drag started on', dragElement.tagName, dragElement.className, '- capturing animation frames...');
       
@@ -1307,9 +1315,9 @@
         
         if (!isDragging || !dragElement) return;
         
-        // Stop capturing frames
+        // Stop capturing frames - cancel the animation frame
         if (dragCheckInterval) {
-          clearInterval(dragCheckInterval);
+          cancelAnimationFrame(dragCheckInterval);
           dragCheckInterval = null;
         }
         
