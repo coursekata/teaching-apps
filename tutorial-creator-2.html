@@ -796,6 +796,27 @@
     isRecording = false;
     isPaused = false;
     
+    // Clean up any active drag capture
+    if (isDragging) {
+      isDragging = false;
+      if (dragCheckInterval) {
+        clearInterval(dragCheckInterval);
+        dragCheckInterval = null;
+      }
+      if (mouseUpHandler) {
+        try {
+          const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+          if (iframeDoc) iframeDoc.removeEventListener('mouseup', mouseUpHandler, true);
+          document.removeEventListener('mouseup', mouseUpHandler, true);
+        } catch (e) {
+          console.warn('Error cleaning up listeners:', e);
+        }
+        mouseUpHandler = null;
+      }
+      dragElement = null;
+      dragStartSnapshot = null;
+    }
+    
     const duration = Date.now() - recordingStartTime - totalPausedDuration;
     
     pauseRecording.style.display = 'none';
@@ -1144,6 +1165,7 @@
   let dragStartSnapshot = null;
   let dragCheckInterval = null;
   let isDragging = false;
+  let mouseUpHandler = null;
   
   function handleMouseDown(e) {
     if (!isRecording || isPaused) return;
@@ -1203,8 +1225,10 @@
       
       console.log('🖱️ Drag started on', dragElement.tagName, dragElement.className, '- capturing animation frames...');
       
-      // Add mouseup listener to iframe
-      function handleMouseUp() {
+      // Create mouseup handler function
+      mouseUpHandler = function handleMouseUp(upEvent) {
+        console.log('🖱️ mouseup detected, isDragging:', isDragging);
+        
         if (!isDragging || !dragElement) return;
         
         // Stop capturing frames
@@ -1216,11 +1240,17 @@
         // CRITICAL: Capture the current recording state NOW
         const capturedDragElement = dragElement;
         const capturedSnapshot = dragStartSnapshot;
+        const capturedStartTime = dragStartTime;
         
         // Clear drag state immediately
         isDragging = false;
         dragElement = null;
         dragStartSnapshot = null;
+        
+        // Remove listeners
+        iframeDoc.removeEventListener('mouseup', mouseUpHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+        mouseUpHandler = null;
         
         if (!capturedSnapshot) {
           console.log('Drag ended but no snapshot');
@@ -1230,32 +1260,34 @@
         try {
           // Add final frame
           capturedSnapshot.frames.push({
-            time: Date.now() - dragStartTime,
+            time: Date.now() - capturedStartTime,
             html: iframeDoc.body.innerHTML
           });
           
           const selector = generateSelector(capturedDragElement);
+          const dragDuration = Date.now() - capturedStartTime;
           
           recordedEvents.push({
             type: 'drag',
-            timestamp: getTimestamp() - (Date.now() - dragStartTime),
+            timestamp: getTimestamp() - dragDuration,
             target: selector,
             detail: {
-              duration: Date.now() - dragStartTime,
+              duration: dragDuration,
               animationFrames: capturedSnapshot.frames
             }
           });
           
-          console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames');
+          console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames, duration:', dragDuration, 'ms');
           
         } catch (e) {
           console.warn('Error recording drag:', e);
         }
-        
-        iframeDoc.removeEventListener('mouseup', handleMouseUp);
-      }
+      };
       
-      iframeDoc.addEventListener('mouseup', handleMouseUp);
+      // Add mouseup listener to BOTH iframe document AND main document
+      // This ensures we catch the mouseup even if D3 prevents bubbling
+      iframeDoc.addEventListener('mouseup', mouseUpHandler, true); // Use capture phase
+      document.addEventListener('mouseup', mouseUpHandler, true); // Backup listener
       
     } catch (e) {
       console.warn('Cannot handle mousedown:', e);
