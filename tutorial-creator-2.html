@@ -773,6 +773,8 @@
   }
   
   function handleMouseUp(e) {
+    console.log('🖱️ mouseup detected, isDragging:', isDragging, 'dragElement:', dragElement);
+    
     if (!isDragging || !dragElement) return;
     
     // Stop capturing frames
@@ -848,6 +850,8 @@
   function attachListeners() {
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeWin = appFrame.contentWindow;
+      
       if (!iframeDoc) {
         console.warn('Cannot access iframe document');
         return;
@@ -863,11 +867,17 @@
         input.addEventListener('change', handleChange);
       });
       
-      // Drag events - document level
+      // Drag events - attach to BOTH document and window
+      // D3 often uses window-level listeners for drag
       iframeDoc.addEventListener('mousedown', handleMouseDown, true);
       iframeDoc.addEventListener('mouseup', handleMouseUp, true);
       
-      console.log('✓ Event listeners attached (including simplified drag tracking)');
+      if (iframeWin) {
+        iframeWin.addEventListener('mouseup', handleMouseUp, true);
+        console.log('✓ Event listeners attached to both document and window (including simplified drag tracking)');
+      } else {
+        console.log('✓ Event listeners attached to document only (including simplified drag tracking)');
+      }
     } catch (e) {
       console.warn('Cannot attach listeners to iframe:', e);
     }
@@ -876,11 +886,18 @@
   function detachListeners() {
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeWin = appFrame.contentWindow;
+      
       if (!iframeDoc) return;
       
       iframeDoc.removeEventListener('click', handleClick, true);
       iframeDoc.removeEventListener('mousedown', handleMouseDown, true);
       iframeDoc.removeEventListener('mouseup', handleMouseUp, true);
+      
+      // Also remove from window
+      if (iframeWin) {
+        iframeWin.removeEventListener('mouseup', handleMouseUp, true);
+      }
       
       const inputs = iframeDoc.querySelectorAll('input, select, textarea');
       inputs.forEach(input => {
