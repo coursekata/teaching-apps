@@ -781,56 +781,67 @@
       dragCheckInterval = null;
     }
     
+    // CRITICAL: Capture the current recording state NOW, before the setTimeout
+    const wasRecording = isRecording;
+    const capturedDragElement = dragElement;
+    const capturedSnapshot = dragStartSnapshot;
+    const capturedStartTime = dragStartTime;
+    
+    // Clear drag state immediately
+    isDragging = false;
+    dragElement = null;
+    dragStartSnapshot = null;
+    
+    if (!wasRecording || !capturedSnapshot) {
+      console.log('Drag ended but not recording or no snapshot');
+      return;
+    }
+    
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (!iframeDoc) {
         console.warn('Cannot access iframe document on mouseup');
-        isDragging = false;
-        dragElement = null;
-        dragStartSnapshot = null;
         return;
       }
       
-      // Wait a moment for the app to finish updating, then take final snapshot
+      // Wait a moment for the app to finish updating, then record
       setTimeout(() => {
-        const currentTime = Date.now() - recordStartTime - dragStartTime;
+        const currentTime = Date.now() - recordStartTime - capturedStartTime;
         
         // Add final frame
-        dragStartSnapshot.frames.push({
+        capturedSnapshot.frames.push({
           time: currentTime,
           html: iframeDoc.body.innerHTML
         });
         
-        console.log('📸 Captured', dragStartSnapshot.frames.length, 'total frames');
+        console.log('📸 Captured', capturedSnapshot.frames.length, 'total frames');
         
-        // Always record the drag if we have multiple frames (even if HTML looks the same)
-        // because some visual changes might not show up in innerHTML comparison
-        if (dragStartSnapshot.frames.length > 1) {
-          recordEvent('drag', dragElement, {
-            animationFrames: dragStartSnapshot.frames,
-            duration: currentTime
-          });
+        // Always record the drag if we have multiple frames
+        if (capturedSnapshot.frames.length > 1) {
+          // Manually add to recordedEvents (bypassing isRecording check in recordEvent)
+          const timestamp = capturedStartTime;
+          const selector = getElementSelector(capturedDragElement);
           
-          console.log('✅ Drag recorded successfully with', dragStartSnapshot.frames.length, 'animation frames');
+          const event = {
+            timestamp,
+            type: 'drag',
+            target: selector,
+            detail: {
+              animationFrames: capturedSnapshot.frames,
+              duration: currentTime
+            }
+          };
+          
+          recordedEvents.push(event);
+          console.log('✅ Drag recorded successfully with', capturedSnapshot.frames.length, 'animation frames');
         } else {
           console.warn('⚠️ Drag had only 1 frame - not recording');
         }
-        
-        isDragging = false;
-        dragElement = null;
-        dragStartSnapshot = null;
         
       }, 100); // Wait 100ms for app to finish updating
       
     } catch (e) {
       console.warn('Cannot handle mouseup:', e);
-      isDragging = false;
-      dragElement = null;
-      dragStartSnapshot = null;
-      if (dragCheckInterval) {
-        clearInterval(dragCheckInterval);
-        dragCheckInterval = null;
-      }
     }
   }
   
