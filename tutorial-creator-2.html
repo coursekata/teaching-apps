@@ -1249,14 +1249,18 @@
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
       
-      // If this was a simple preview (playPausePreview visible), reset to preview button
+      // If this was a simple preview (playPausePreview visible), reload app to restore interactivity
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.style.display = 'none';
         previewRecording.style.display = 'inline-block';
         
-        // App remains interactive - no reload needed
-        // User can continue using the app normally
-        console.log('✓ Preview finished - app remains interactive');
+        // Reload app to restore full interactivity (preview modifies DOM which breaks event listeners)
+        const url = appFrame.src;
+        appFrame.src = '';
+        setTimeout(() => {
+          appFrame.src = url;
+          console.log('✓ Preview finished - app reloaded and interactive');
+        }, 100);
       } else {
         // Normal playback mode
         playBtn.style.display = 'inline-block';
