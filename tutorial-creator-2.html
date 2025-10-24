@@ -4,6 +4,15 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Interactive Tutorial System - Advanced</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$']],
+      displayMath: [['$$', '$$']]
+    }
+  };
+</script>
 <style>
   :root{
     --accent:#2563eb;
@@ -820,7 +829,22 @@
     pausedIndicator.style.display = 'none';
     recordingIndicator.style.display = 'inline-block';
     
-    console.log('▶ Recording resumed (paused for', pauseDuration, 'ms)');
+    // Show the most recent annotation (if any) for its duration
+    if (recordedAnnotations.length > 0) {
+      const mostRecentAnn = recordedAnnotations[recordedAnnotations.length - 1];
+      
+      // Display the annotation
+      showAnnotation(mostRecentAnn);
+      
+      // Hide it after its duration
+      setTimeout(() => {
+        annotationBox.classList.remove('visible');
+      }, mostRecentAnn.duration);
+      
+      console.log('▶ Recording resumed - showing annotation for', mostRecentAnn.duration, 'ms');
+    } else {
+      console.log('▶ Recording resumed (paused for', pauseDuration, 'ms)');
+    }
   });
   
   stopRecording.addEventListener('click', () => {
@@ -1035,8 +1059,13 @@
     annotationBox.style.left = '50%';
     annotationBox.style.top = '50%';
     annotationBox.style.transform = 'translate(-50%, -50%)';
-    annotationTitle.textContent = title;
-    annotationText.textContent = text;
+    annotationTitle.innerHTML = title;
+    annotationText.innerHTML = text;
+    
+    // Trigger MathJax to process the preview
+    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+      MathJax.typesetPromise([annotationBox]).catch((err) => console.warn('MathJax error:', err));
+    }
     
     // Show positioning overlay
     positionEditorOverlay.style.display = 'block';
@@ -1760,8 +1789,14 @@
     annotationBox.style.top = ann.position.top + 'px';
     annotationBox.style.transform = 'none';
     
-    annotationTitle.textContent = ann.title;
-    annotationText.textContent = ann.text;
+    // Use innerHTML to allow LaTeX rendering
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    // Trigger MathJax to process the new content
+    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+      MathJax.typesetPromise([annotationBox]).catch((err) => console.warn('MathJax error:', err));
+    }
   }
   
   function formatTime(seconds) {
