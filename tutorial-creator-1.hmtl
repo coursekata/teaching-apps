@@ -1,1 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport"="width=device-width,initial-scale=1"/>
+<title>Interactive Tutorial System</title>
+<style>
+  :root{
+    --accent:#2563eb;
+    --record:#ef4444;
+    --success:#10b981;
+  }
+  body{
+    margin:0;
+    font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:#111;
+    background:#f5f5f5;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+  }
+  
+  .tutorial-header{
+    background:#fff;
+    border-bottom:2px solid #ddd;
+    padding:12px 20px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .tutorial-controls{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  
+  .mode-toggle{
+    display:flex;
+    gap:8px;
+    padding:4px;
+    background:#f0f0f0;
+    border-radius:8px;
+  }
+  
+  .mode-toggle button{
+    padding:8px 16px;
+    border-radius:6px;
+    border:1px solid #ddd;
+    background:#fff;
+    cursor:pointer;
+    font-weight:600;
+    font-size:13px;
+  }
+  
+  .mode-toggle button.active{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  
+  button{
+    padding:8px 14px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    background:#fff;
+    cursor:pointer;
+    font-size:13px;
+  }
+  
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  
+  button.record{
+    background:var(--record);
+    color:#fff;
+    border-color:var(--record);
+  }
+  
+  button.success{
+    background:var(--success);
+    color:#fff;
+    border-color:var(--success);
+  }
+  
+  button.record.recording{
+    animation:pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse{
+    0%,100%{opacity:1}
+    50%{opacity:0.6}
+  }
+  
+  .recording-indicator{
+    background:var(--record);
+    color:#fff;
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+    font-size:13px;
+    animation:pulse 1.5s infinite;
+  }
+  
+  .playback-controls{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    background:#f0f0f0;
+    padding:8px;
+    border-radius:8px;
+  }
+  
+  .playback-timeline{
+    flex:1;
+    min-width:200px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  
+  .playback-timeline input[type=range]{
+    width:100%;
+    accent-color:var(--accent);
+  }
+  
+  .time-display{
+    font-size:11px;
+    color:#666;
+    text-align:center;
+  }
+  
+  .app-container{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+  }
+  
+  iframe{
+    width:100%;
+    height:100%;
+    border:none;
+  }
+  
+  .annotation-box{
+    position:absolute;
+    max-width:500px;
+    background:rgba(255,255,255,0.98);
+    border:3px solid var(--accent);
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.15);
+    z-index:100;
+    display:none;
+  }
+  
+  .annotation-box.visible{
+    display:block;
+    animation:slideIn 0.3s ease-out;
+  }
+  
+  /* Position variants */
+  .annotation-box.pos-top{top:20px;left:50%;transform:translateX(-50%);}
+  .annotation-box.pos-bottom{bottom:20px;left:50%;transform:translateX(-50%);}
+  .annotation-box.pos-left{top:50%;left:20px;transform:translateY(-50%);max-width:350px;}
+  .annotation-box.pos-right{top:50%;right:20px;transform:translateY(-50%);max-width:350px;}
+  .annotation-box.pos-center{top:50%;left:50%;transform:translate(-50%, -50%);}
+  .annotation-box.pos-top-left{top:20px;left:20px;transform:none;max-width:400px;}
+  .annotation-box.pos-top-right{top:20px;right:20px;transform:none;max-width:400px;}
+  .annotation-box.pos-bottom-left{bottom:20px;left:20px;transform:none;max-width:400px;}
+  .annotation-box.pos-bottom-right{bottom:20px;right:20px;transform:none;max-width:400px;}
+  
+  @keyframes slideIn{
+    from{opacity:0;}
+    to{opacity:1;}
+  }
+  
+  .annotation-box h3{
+    margin:0 0 12px;
+    color:var(--accent);
+    font-size:18px;
+  }
+  
+  .annotation-box p{
+    margin:0;
+    line-height:1.6;
+    font-size:15px;
+  }
+  
+  .modal-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+  }
+  
+  .modal-overlay.visible{
+    display:flex;
+  }
+  
+  .modal{
+    background:#fff;
+    border-radius:12px;
+    padding:24px;
+    max-width:700px;
+    width:90%;
+    max-height:80vh;
+    overflow-y:auto;
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  }
+  
+  .modal h2{
+    margin:0 0 16px;
+    color:#111;
+  }
+  
+  .modal textarea{
+    width:100%;
+    min-height:300px;
+    font-family:monospace;
+    font-size:12px;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    resize:vertical;
+  }
+  
+  .modal-buttons{
+    display:flex;
+    gap:8px;
+    margin-top:16px;
+    justify-content:flex-end;
+  }
+  
+  .help-text{
+    font-size:13px;
+    color:#666;
+    margin:8px 0;
+    line-height:1.5;
+  }
+  
+  select{
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid #ddd;
+    background:#fff;
+    font-size:13px;
+  }
+  
+  .control-group{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  
+  label{
+    font-size:12px;
+    color:#666;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  
+  input[type=text]{
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid #ddd;
+    font-size:13px;
+    width:300px;
+  }
+  
+  .info-box{
+    background:#e0f2fe;
+    border:1px solid #0284c7;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+    font-size:13px;
+    color:#0c4a6e;
+  }
+  
+  .info-box strong{
+    color:#075985;
+  }
+</style>
+</head>
+<body>
+  <div class="tutorial-header">
+    <div class="tutorial-controls">
+      <div class="mode-toggle">
+        <button id="modeNormal" class="active">Normal</button>
+        <button id="modeRecord">Record</button>
+        <button id="modePlayback">Playback</button>
+      </div>
+      
+      <div id="normalControls" class="control-group">
+        <label>
+          App URL:
+          <input type="text" id="appUrl" placeholder="Enter your app URL">
+        </label>
+        <button id="loadApp" class="primary">Load App</button>
+      </div>
+      
+      <div id="recordingControls" class="control-group" style="display:none;">
+        <button id="startRecord" class="record">● Start Recording</button>
+        <button id="stopRecord" class="record" style="display:none;">■ Stop Recording</button>
+        <span id="recordingIndicator" class="recording-indicator" style="display:none;">● REC <span id="recordingTime">0:00</span></span>
+        <div id="recordingComplete" style="display:none;gap:8px;">
+          <button id="testPlayback" class="success">▶ Test Your Recording</button>
+          <button id="exportTutorial">💾 Export as JSON</button>
+        </div>
+      </div>
+      
+      <div id="playbackControls" class="playback-controls" style="display:none;">
+        <button id="playBtn">▶</button>
+        <button id="pauseBtn" style="display:none;">⏸</button>
+        <button id="restartBtn">⟲</button>
+        <div class="playback-timeline">
+          <input id="timelineSlider" type="range" min="0" max="100" value="0" step="0.1">
+          <div class="time-display">
+            <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+          </div>
+        </div>
+        <label>
+          Speed:
+          <select id="playbackSpeed">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+        </label>
+      </div>
+      
+      <button id="loadTutorial">📂 Load Tutorial</button>
+      <button id="helpBtn">?</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <iframe id="appFrame" src=""></iframe>
+    <div id="annotationBox" class="annotation-box">
+      <h3 id="annotationTitle"></h3>
+      <p id="annotationText"></p>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal-overlay">
+    <div class="modal">
+      <h2>📤 Export Your Tutorial</h2>
+      <p class="help-text">Copy this JSON and save it to a file. You can edit it to add annotations at specific timestamps!</p>
+      <textarea id="exportTextarea" readonly></textarea>
+      <div class="modal-buttons">
+        <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
+        <button id="closeExportModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Modal -->
+  <div id="loadModal" class="modal-overlay">
+    <div class="modal">
+      <h2>📂 Load Tutorial</h2>
+      <p class="help-text">Paste your tutorial JSON here, or load from a file:</p>
+      <textarea id="loadTextarea" placeholder='{"version": "1.0", "appUrl": "...", "events": [...], "annotations": [...]}'></textarea>
+      <div id="loadError" style="display:none;background:#fee;border:1px solid #f00;padding:12px;border-radius:6px;margin-top:8px;font-size:12px;color:#900;"></div>
+      <div class="modal-buttons">
+        <button id="loadFromFile">📁 Load from File</button>
+        <button id="loadFromText" class="primary">✓ Load Tutorial</button>
+        <button id="closeLoadModal">Cancel</button>
+      </div>
+      <input type="file" id="fileInput" accept=".json" style="display:none;">
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal">
+      <h2>📖 Tutorial System Help</h2>
+      
+      <h3>🎯 Quick Start</h3>
+      <ol>
+        <li>Load your app URL</li>
+        <li>Click "Record" mode</li>
+        <li>Click "Start Recording" and use your app</li>
+        <li>Click "Stop Recording"</li>
+        <li>Click "Test Your Recording" to preview it</li>
+        <li>Click "Export as JSON" to save it</li>
+        <li>Edit JSON to add text annotations</li>
+        <li>Share JSON with students!</li>
+      </ol>
+      
+      <h3>▶️ For Students</h3>
+      <ol>
+        <li>Click "Load Tutorial"</li>
+        <li>Paste the JSON (or load file)</li>
+        <li>Click Play (▶)</li>
+        <li>Pause anytime to interact yourself!</li>
+      </ol>
+      
+      <h3>📝 Adding Annotations</h3>
+      <p class="help-text">Edit your exported JSON to add text overlays:</p>
+      <pre style="background:#f5f5f5;padding:12px;border-radius:6px;font-size:11px;overflow-x:auto;">"annotations": [
+  {
+    "timestamp": 5000,
+    "duration": 4000,
+    "title": "Step 1",
+    "text": "Explanation...",
+    "position": "top-right"
+  }
+]</pre>
+      
+      <p class="help-text"><strong>Positions:</strong> top, bottom, left, right, center, top-left, top-right, bottom-left, bottom-right</p>
+      
+      <div class="modal-buttons">
+        <button id="closeHelpModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const DEFAULT_APP_URL = 'confidence-intro-v2.html';
+  
+  // DOM elements
+  const modeNormal = document.getElementById('modeNormal');
+  const modeRecord = document.getElementById('modeRecord');
+  const modePlayback = document.getElementById('modePlayback');
+  const normalControls = document.getElementById('normalControls');
+  const recordingControls = document.getElementById('recordingControls');
+  const playbackControls = document.getElementById('playbackControls');
+  const appUrl = document.getElementById('appUrl');
+  const loadApp = document.getElementById('loadApp');
+  const appFrame = document.getElementById('appFrame');
+  const startRecord = document.getElementById('startRecord');
+  const stopRecord = document.getElementById('stopRecord');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const recordingTime = document.getElementById('recordingTime');
+  const recordingComplete = document.getElementById('recordingComplete');
+  const testPlayback = document.getElementById('testPlayback');
+  const exportTutorial = document.getElementById('exportTutorial');
+  const loadTutorial = document.getElementById('loadTutorial');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const timelineSlider = document.getElementById('timelineSlider');
+  const currentTimeEl = document.getElementById('currentTime');
+  const totalTimeEl = document.getElementById('totalTime');
+  const playbackSpeedSelect = document.getElementById('playbackSpeed');
+  const annotationBox = document.getElementById('annotationBox');
+  const annotationTitle = document.getElementById('annotationTitle');
+  const annotationText = document.getElementById('annotationText');
+  const helpBtn = document.getElementById('helpBtn');
+  
+  // Modals
+  const exportModal = document.getElementById('exportModal');
+  const exportTextarea = document.getElementById('exportTextarea');
+  const copyExport = document.getElementById('copyExport');
+  const closeExportModal = document.getElementById('closeExportModal');
+  const loadModal = document.getElementById('loadModal');
+  const loadTextarea = document.getElementById('loadTextarea');
+  const loadError = document.getElementById('loadError');
+  const loadFromFile = document.getElementById('loadFromFile');
+  const loadFromText = document.getElementById('loadFromText');
+  const closeLoadModal = document.getElementById('closeLoadModal');
+  const fileInput = document.getElementById('fileInput');
+  const helpModal = document.getElementById('helpModal');
+  const closeHelpModal = document.getElementById('closeHelpModal');
+  
+  // State
+  let tutorialMode = 'normal';
+  let isRecording = false;
+  let isPlaying = false;
+  let recordedEvents = [];
+  let recordingStartTime = 0;
+  let recordingInterval = null;
+  let currentTutorial = null;
+  let playbackStartTime = 0;
+  let playbackPausedAt = 0;
+  let playbackSpeed = 1;
+  let currentAnnotationIndex = -1;
+  let eventQueue = [];
+  
+  // Initialize
+  appUrl.value = DEFAULT_APP_URL;
+  appFrame.src = DEFAULT_APP_URL;
+  
+  // Mode switching
+  function switchMode(mode) {
+    tutorialMode = mode;
+    
+    modeNormal.classList.toggle('active', mode === 'normal');
+    modeRecord.classList.toggle('active', mode === 'recording');
+    modePlayback.classList.toggle('active', mode === 'playback');
+    
+    normalControls.style.display = mode === 'normal' ? 'flex' : 'none';
+    recordingControls.style.display = mode === 'recording' ? 'flex' : 'none';
+    playbackControls.style.display = mode === 'playback' ? 'flex' : 'none';
+    
+    annotationBox.classList.remove('visible');
+  }
+  
+  modeNormal.addEventListener('click', () => switchMode('normal'));
+  modeRecord.addEventListener('click', () => switchMode('recording'));
+  modePlayback.addEventListener('click', () => {
+    if (!currentTutorial) {
+      alert('Please load a tutorial first using the "Load Tutorial" button!');
+      return;
+    }
+    switchMode('playback');
+  });
+  
+  // Load app
+  loadApp.addEventListener('click', () => {
+    const url = appUrl.value.trim() || DEFAULT_APP_URL;
+    appFrame.src = url;
+    alert('App loaded! You can now switch to Record mode to start recording.');
+  });
+  
+  // Recording
+  function recordEvent(event) {
+    if (!isRecording) return;
+    const timestamp = Date.now() - recordingStartTime;
+    
+    const selector = getElementSelector(event.target);
+    if (!selector) return;
+    
+    recordedEvents.push({
+      timestamp,
+      type: event.type,
+      target: selector,
+      detail: getEventDetail(event)
+    });
+    
+    console.log('Recorded event:', recordedEvents[recordedEvents.length - 1]);
+  }
+  
+  function getElementSelector(element) {
+    if (!element) return null;
+    
+    // Try ID first
+    if (element.id) return '#' + element.id;
+    
+    // For buttons, try data attributes
+    if (element.tagName === 'BUTTON') {
+      if (element.dataset) {
+        for (let key in element.dataset) {
+          if (element.dataset[key]) {
+            return `button[data-${key}="${element.dataset[key]}"]`;
+          }
+        }
+      }
+      // Use text content
+      const text = element.textContent.trim();
+      if (text && text.length < 50) {
+        return {
+          type: 'button-text',
+          text: text,
+          tagName: 'BUTTON'
+        };
+      }
+    }
+    
+    // For inputs
+    if (element.tagName === 'INPUT') {
+      if (element.id) return '#' + element.id;
+      if (element.name) return `input[name="${element.name}"]`;
+      if (element.type) return `input[type="${element.type}"]`;
+    }
+    
+    return null;
+  }
+  
+  function getEventDetail(event) {
+    const detail = { eventType: event.type };
+    
+    if (event.target) {
+      if (event.target.tagName === 'INPUT') {
+        detail.value = event.target.value;
+        detail.inputType = event.target.type;
+      }
+      if (event.target.tagName === 'SELECT') {
+        detail.value = event.target.value;
+      }
+      if (event.target.dataset) {
+        detail.dataset = {...event.target.dataset};
+      }
+    }
+    
+    return detail;
+  }
+  
+  function updateRecordingTime() {
+    if (!isRecording) return;
+    const elapsed = (Date.now() - recordingStartTime) / 1000;
+    recordingTime.textContent = formatTime(elapsed);
+  }
+  
+  startRecord.addEventListener('click', () => {
+    isRecording = true;
+    recordedEvents = [];
+    recordingStartTime = Date.now();
+    
+    startRecord.style.display = 'none';
+    stopRecord.style.display = 'inline-block';
+    recordingIndicator.style.display = 'inline-block';
+    recordingComplete.style.display = 'none';
+    
+    recordingInterval = setInterval(updateRecordingTime, 100);
+    
+    // Listen to iframe events
+    attachIframeListeners();
+    
+    console.log('Recording started');
+  });
+  
+  stopRecord.addEventListener('click', () => {
+    isRecording = false;
+    
+    startRecord.style.display = 'inline-block';
+    stopRecord.style.display = 'none';
+    recordingIndicator.style.display = 'none';
+    recordingComplete.style.display = 'flex';
+    
+    if (recordingInterval) {
+      clearInterval(recordingInterval);
+      recordingInterval = null;
+    }
+    
+    detachIframeListeners();
+    
+    // Create tutorial from recording
+    currentTutorial = {
+      version: '1.0',
+      appUrl: appFrame.src,
+      duration: recordedEvents.length > 0 ? recordedEvents[recordedEvents.length - 1].timestamp : 0,
+      events: recordedEvents,
+      annotations: []
+    };
+    
+    console.log('Recording stopped. Captured', recordedEvents.length, 'events');
+    console.log('Tutorial ready:', currentTutorial);
+  });
+  
+  // Test playback
+  testPlayback.addEventListener('click', () => {
+    if (!currentTutorial) {
+      alert('No recording available!');
+      return;
+    }
+    
+    // Setup playback
+    const duration = currentTutorial.duration / 1000;
+    totalTimeEl.textContent = formatTime(duration);
+    timelineSlider.max = duration;
+    timelineSlider.value = 0;
+    currentTimeEl.textContent = '0:00';
+    playbackPausedAt = 0;
+    playbackStartTime = 0;
+    
+    // Reload app and switch to playback
+    const url = appFrame.src;
+    appFrame.src = '';
+    setTimeout(() => {
+      appFrame.src = url;
+      setTimeout(() => {
+        switchMode('playback');
+        alert('Click Play (▶) to watch your recording!');
+      }, 500);
+    }, 100);
+  });
+  
+  function attachIframeListeners() {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (!iframeDoc) {
+        alert('Warning: Cannot access app content (CORS restriction). Recording may not work properly. Make sure the app is on the same domain or use a local file.');
+        return;
+      }
+      iframeDoc.addEventListener('click', recordEvent, true);
+      iframeDoc.addEventListener('input', recordEvent, true);
+      iframeDoc.addEventListener('change', recordEvent, true);
+      console.log('Attached iframe listeners');
+    } catch (e) {
+      console.error('Cannot attach listeners to iframe:', e);
+      alert('Warning: Cannot access app content. Recording may not work. Error: ' + e.message);
+    }
+  }
+  
+  function detachIframeListeners() {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (!iframeDoc) return;
+      iframeDoc.removeEventListener('click', recordEvent, true);
+      iframeDoc.removeEventListener('input', recordEvent, true);
+      iframeDoc.removeEventListener('change', recordEvent, true);
+      console.log('Detached iframe listeners');
+    } catch (e) {
+      console.warn('Cannot detach listeners from iframe:', e);
+    }
+  }
+  
+  // Export
+  exportTutorial.addEventListener('click', () => {
+    const tutorial = {
+      version: '1.0',
+      appUrl: appFrame.src,
+      duration: recordedEvents.length > 0 ? recordedEvents[recordedEvents.length - 1].timestamp : 0,
+      events: recordedEvents,
+      annotations: [
+        {
+          timestamp: 0,
+          duration: 3000,
+          title: "Welcome",
+          text: "Edit this tutorial JSON to add your annotations. Change timestamps, titles, text, and positions.",
+          position: "top"
+        },
+        {
+          timestamp: 5000,
+          duration: 4000,
+          title: "Step 1",
+          text: "Add annotations at key moments. Available positions: top, bottom, left, right, center, top-left, top-right, bottom-left, bottom-right",
+          position: "bottom"
+        }
+      ],
+      notes: "Position options: 'top' (default), 'bottom', 'left', 'right', 'center', 'top-left', 'top-right', 'bottom-left', 'bottom-right'"
+    };
+    
+    exportTextarea.value = JSON.stringify(tutorial, null, 2);
+    exportModal.classList.add('visible');
+  });
+  
+  copyExport.addEventListener('click', () => {
+    exportTextarea.select();
+    document.execCommand('copy');
+    copyExport.textContent = '✓ Copied!';
+    setTimeout(() => { copyExport.textContent = '📋 Copy to Clipboard'; }, 2000);
+  });
+  
+  closeExportModal.addEventListener('click', () => {
+    exportModal.classList.remove('visible');
+  });
+  
+  // Load tutorial
+  loadTutorial.addEventListener('click', () => {
+    loadModal.classList.add('visible');
+    loadError.style.display = 'none';
+  });
+  
+  loadFromFile.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      loadTextarea.value = e.target.result;
+    };
+    reader.readAsText(file);
+  });
+  
+  loadFromText.addEventListener('click', () => {
+    const jsonText = loadTextarea.value.trim();
+    
+    loadError.style.display = 'none';
+    
+    if (!jsonText) {
+      loadError.textContent = 'Please paste tutorial JSON first!';
+      loadError.style.display = 'block';
+      return;
+    }
+    
+    try {
+      currentTutorial = JSON.parse(jsonText);
+      
+      // Validate
+      if (!currentTutorial.appUrl) {
+        throw new Error('Missing "appUrl" field in tutorial');
+      }
+      if (!currentTutorial.events || !Array.isArray(currentTutorial.events)) {
+        throw new Error('Missing or invalid "events" array');
+      }
+      if (currentTutorial.duration === undefined) {
+        throw new Error('Missing "duration" field');
+      }
+      
+      // Load the app
+      appFrame.src = currentTutorial.appUrl;
+      appUrl.value = currentTutorial.appUrl;
+      
+      // Setup playback
+      const duration = currentTutorial.duration / 1000;
+      totalTimeEl.textContent = formatTime(duration);
+      timelineSlider.max = duration;
+      timelineSlider.value = 0;
+      currentTimeEl.textContent = '0:00';
+      playbackPausedAt = 0;
+      playbackStartTime = 0;
+      
+      loadModal.classList.remove('visible');
+      loadTextarea.value = '';
+      
+      alert('✓ Tutorial loaded successfully! Click on the "Playback" tab, then click Play (▶) to start.');
+      
+    } catch (e) {
+      loadError.textContent = 'Invalid JSON! Error: ' + e.message + '\n\nMake sure you copied the entire JSON correctly.';
+      loadError.style.display = 'block';
+      console.error('JSON parse error:', e);
+      console.log('Attempted JSON:', jsonText.substring(0, 500));
+    }
+  });
+  
+  closeLoadModal.addEventListener('click', () => {
+    loadModal.classList.remove('visible');
+  });
+  
+  // Playback
+  playBtn.addEventListener('click', () => {
+    if (!currentTutorial) {
+      alert('Please load a tutorial first!');
+      return;
+    }
+    
+    isPlaying = true;
+    playBtn.style.display = 'none';
+    pauseBtn.style.display = 'inline-block';
+    
+    if (playbackPausedAt > 0) {
+      playbackStartTime = Date.now() - playbackPausedAt * 1000;
+    } else {
+      playbackStartTime = Date.now();
+      eventQueue = [...currentTutorial.events];
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  });
+  
+  pauseBtn.addEventListener('click', () => {
+    isPlaying = false;
+    playBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+    playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+  });
+  
+  restartBtn.addEventListener('click', () => {
+    isPlaying = false;
+    playBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+    playbackPausedAt = 0;
+    playbackStartTime = 0;
+    timelineSlider.value = 0;
+    currentTimeEl.textContent = '0:00';
+    currentAnnotationIndex = -1;
+    annotationBox.classList.remove('visible');
+    eventQueue = [];
+    
+    // Reload app
+    const url = appFrame.src;
+    appFrame.src = '';
+    setTimeout(() => { appFrame.src = url; }, 100);
+  });
+  
+  playbackSpeedSelect.addEventListener('change', () => {
+    playbackSpeed = parseFloat(playbackSpeedSelect.value);
+  });
+  
+  timelineSlider.addEventListener('input', () => {
+    if (isPlaying) return;
+    playbackPausedAt = parseFloat(timelineSlider.value);
+    currentTimeEl.textContent = formatTime(playbackPausedAt);
+  });
+  
+  function playbackLoop() {
+    if (!isPlaying) return;
+    
+    const elapsed = (Date.now() - playbackStartTime) / 1000;
+    const duration = currentTutorial.duration / 1000;
+    
+    timelineSlider.value = elapsed;
+    currentTimeEl.textContent = formatTime(elapsed);
+    
+    // Process events
+    while (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 <= elapsed) {
+      const event = eventQueue.shift();
+      replayEvent(event);
+    }
+    
+    // Handle annotations
+    if (currentTutorial.annotations) {
+      currentTutorial.annotations.forEach((ann, idx) => {
+        const annStart = ann.timestamp / 1000;
+        const annEnd = annStart + (ann.duration || 5000) / 1000;
+        
+        if (elapsed >= annStart && elapsed < annEnd && currentAnnotationIndex !== idx) {
+          currentAnnotationIndex = idx;
+          showAnnotation(ann.title, ann.text, ann.position || 'top');
+        } else if (elapsed >= annEnd && currentAnnotationIndex === idx) {
+          annotationBox.classList.remove('visible');
+          currentAnnotationIndex = -1;
+        }
+      });
+    }
+    
+    if (elapsed >= duration) {
+      isPlaying = false;
+      playBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
+      return;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  }
+  
+  function replayEvent(event) {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const element = findElement(iframeDoc, event.target);
+      
+      if (!element) {
+        console.warn('Element not found for replay:', event.target);
+        return;
+      }
+      
+      // Visual feedback
+      const originalOutline = element.style.outline;
+      element.style.outline = '3px solid #2563eb';
+      element.style.outlineOffset = '2px';
+      setTimeout(() => {
+        element.style.outline = originalOutline;
+      }, 500);
+      
+      if (event.type === 'click') {
+        element.click();
+      } else if (event.type === 'input' || event.type === 'change') {
+        if (event.detail.value !== undefined) {
+          element.value = event.detail.value;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      
+      console.log('Replayed event:', event.type, event.target);
+    } catch (e) {
+      console.warn('Cannot replay event:', e, event);
+    }
+  }
+  
+  function findElement(doc, selector) {
+    if (!selector) return null;
+    
+    // Handle object-based selectors
+    if (typeof selector === 'object') {
+      if (selector.type === 'button-text') {
+        const buttons = doc.querySelectorAll(selector.tagName || 'button');
+        for (let btn of buttons) {
+          if (btn.textContent.trim() === selector.text) {
+            return btn;
+          }
+        }
+      }
+      return null;
+    }
+    
+    // String selectors
+    if (selector.startsWith('#')) {
+      return doc.getElementById(selector.substring(1));
+    }
+    
+    // Try direct querySelector
+    try {
+      return doc.querySelector(selector);
+    } catch (e) {
+      console.warn('Invalid selector:', selector, e);
+      return null;
+    }
+  }
+  
+  function showAnnotation(title, text, position = 'top') {
+    annotationBox.className = 'annotation-box visible pos-' + position;
+    annotationTitle.textContent = title;
+    annotationText.textContent = text;
+  }
+  
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+  
+  // Help
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('visible');
+  });
+  
+  closeHelpModal.addEventListener('click', () => {
+    helpModal.classList.remove('visible');
+  });
+  
+  // Close modals on outside click
+  [exportModal, loadModal, helpModal].forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('visible');
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
 
