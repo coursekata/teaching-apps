@@ -492,6 +492,7 @@
   let dragTransformStart = null;
   let dragObserver = null;
   let activeTransformWatchers = [];
+  let dragStateCapture = null;
   
   // Mode switching
   function setMode(mode) {
@@ -759,6 +760,14 @@
       elementY: draggable.offsetTop || 0
     };
     
+    // Capture the entire SVG state before drag
+    const svg = draggable.closest('svg');
+    if (svg) {
+      dragStateCapture = {
+        before: svg.innerHTML
+      };
+    }
+    
     console.log('🖱️ Drag started on', draggable, 'transform:', dragTransformStart);
   }
   
@@ -787,28 +796,68 @@
       dragTransformEnd = dragElement.getAttribute('transform');
     }
     
-    // Only record if there was significant movement
-    if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-      const eventDetail = {
-        startX: dragStartPos.x,
-        startY: dragStartPos.y,
-        endX: endPos.x,
-        endY: endPos.y,
-        deltaX: deltaX,
-        deltaY: deltaY,
-        elementStartX: dragStartPos.elementX,
-        elementStartY: dragStartPos.elementY
-      };
-      
-      // Add transform info if available
-      if (dragTransformStart !== null) {
-        eventDetail.transformStart = dragTransformStart;
+    // Capture the entire SVG state after drag (with a small delay to let D3 finish)
+    const svg = dragElement.closest('svg');
+    if (svg && dragStateCapture) {
+      setTimeout(() => {
+        dragStateCapture.after = svg.innerHTML;
+        
+        // Only record if there was significant movement OR state change
+        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2 || 
+            dragStateCapture.before !== dragStateCapture.after) {
+          const eventDetail = {
+            startX: dragStartPos.x,
+            startY: dragStartPos.y,
+            endX: endPos.x,
+            endY: endPos.y,
+            deltaX: deltaX,
+            deltaY: deltaY,
+            elementStartX: dragStartPos.elementX,
+            elementStartY: dragStartPos.elementY
+          };
+          
+          // Add transform info if available
+          if (dragTransformStart !== null) {
+            eventDetail.transformStart = dragTransformStart;
+          }
+          if (dragTransformEnd !== null) {
+            eventDetail.transformEnd = dragTransformEnd;
+          }
+          
+          // Add SVG state snapshots
+          eventDetail.svgStateBefore = dragStateCapture.before;
+          eventDetail.svgStateAfter = dragStateCapture.after;
+          
+          recordEvent('drag', dragElement, eventDetail);
+          console.log('📊 Captured SVG state change during drag');
+        }
+        
+        dragStateCapture = null;
+      }, 50); // Small delay to let D3 finish rendering
+    } else {
+      // No SVG capture - use old method
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        const eventDetail = {
+          startX: dragStartPos.x,
+          startY: dragStartPos.y,
+          endX: endPos.x,
+          endY: endPos.y,
+          deltaX: deltaX,
+          deltaY: deltaY,
+          elementStartX: dragStartPos.elementX,
+          elementStartY: dragStartPos.elementY
+        };
+        
+        // Add transform info if available
+        if (dragTransformStart !== null) {
+          eventDetail.transformStart = dragTransformStart;
+        }
+        if (dragTransformEnd !== null) {
+          eventDetail.transformEnd = dragTransformEnd;
+        }
+        
+        recordEvent('drag', dragElement, eventDetail);
       }
-      if (dragTransformEnd !== null) {
-        eventDetail.transformEnd = dragTransformEnd;
-      }
-      
-      recordEvent('drag', dragElement, eventDetail);
     }
     
     isDragging = false;
@@ -1243,6 +1292,17 @@
   }
   
   function replayDrag(element, detail) {
+    // If we have SVG state snapshots, use those for the most accurate replay
+    if (detail.svgStateAfter) {
+      const svg = element.closest('svg');
+      if (svg) {
+        // Smoothly transition by setting the final state
+        svg.innerHTML = detail.svgStateAfter;
+        console.log('Replayed drag using SVG state snapshot');
+        return;
+      }
+    }
+    
     // For SVG elements with transforms, apply the transform directly
     if (detail.transformEnd && element.tagName === 'g') {
       // Animate the transform change
