@@ -997,18 +997,6 @@
   let pendingAnnotation = null;
   
   // Preview functionality
-  previewRecording.addEventListener('click', () => {
-    if (!currentTutorial) {
-      alert('No recording to preview!');
-      return;
-    }
-    
-    // Hide preview button, show play/pause
-    previewRecording.style.display = 'none';
-    playPausePreview.style.display = 'inline-block';
-    
-    console.log('✓ Preview mode ready');
-  });
   
   playPausePreview.addEventListener('click', () => {
     if (!currentTutorial) return;
@@ -1141,53 +1129,54 @@
       return;
     }
     
-    // Stop any active playback first
+    // Stop any active playback
     isPlaying = false;
     
-    // Restore initial app state before preview
-    if (initialAppState) {
-      try {
-        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-        if (iframeDoc && iframeDoc.body) {
-          iframeDoc.body.innerHTML = initialAppState;
-          console.log('✓ Restored initial app state for preview');
-        }
-      } catch (e) {
-        console.warn('Could not restore initial state:', e);
-      }
-    }
+    // Reload the iframe to reset app to initial state
+    // This is better than restoring HTML because it ensures proper initialization
+    const appUrl = currentTutorial.appUrl;
+    appFrame.src = '';
     
-    // Start preview playback
-    previewRecording.style.display = 'none';
-    playPausePreview.style.display = 'inline-block';
-    playPausePreview.textContent = '⏸ Pause Preview';
-    
-    // Small delay to let DOM settle after restoration
     setTimeout(() => {
-      // CRITICAL: Initialize app state by triggering change events on all inputs
-      // This ensures the app's JavaScript variables are set from HTML default values
-      try {
-        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-        const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
-        inputs.forEach(input => {
-          if (input.value) {
-            // Trigger both input and change events to ensure all handlers fire
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+      appFrame.src = appUrl;
+      
+      // Wait for iframe to load
+      appFrame.onload = () => {
+        console.log('✓ App reloaded for preview');
+        
+        // Start preview playback after a delay to ensure app is fully initialized
+        setTimeout(() => {
+          // Initialize app state by triggering change events on all inputs with values
+          try {
+            const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+            const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
+            inputs.forEach(input => {
+              if (input.value) {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            });
+            console.log('✓ Initialized', inputs.length, 'inputs by triggering change events');
+          } catch (e) {
+            console.warn('Could not initialize inputs:', e);
           }
-        });
-        console.log('✓ Initialized', inputs.length, 'inputs by triggering change events');
-      } catch (e) {
-        console.warn('Could not initialize inputs:', e);
-      }
+          
+          isPlaying = true;
+          playbackPausedAt = 0;
+          playbackStartTime = Date.now();
+          eventQueue = [...currentTutorial.events];
+          requestAnimationFrame(playbackLoop);
+          
+          console.log('✓ Preview started from clean app state');
+        }, 500);
+      };
       
-      isPlaying = true;
-      playbackPausedAt = 0;
-      playbackStartTime = Date.now();
-      eventQueue = [...currentTutorial.events];
-      requestAnimationFrame(playbackLoop);
+      // Show preview controls
+      previewRecording.style.display = 'none';
+      playPausePreview.style.display = 'inline-block';
+      playPausePreview.textContent = '⏸ Pause Preview';
       
-      console.log('✓ Preview started from initial state');
+      console.log('✓ Reloading app for preview...');
     }, 100);
   });
   
