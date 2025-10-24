@@ -1141,66 +1141,119 @@
   
   let dragElement = null;
   let dragStartTime = 0;
-  let animationFrames = [];
-  let lastFrameTime = 0;
+  let dragStartSnapshot = null;
+  let dragCheckInterval = null;
+  let isDragging = false;
   
   function handleMouseDown(e) {
     if (!isRecording || isPaused) return;
     
-    const target = e.target;
-    if (!target.draggable && target.tagName !== 'circle' && target.tagName !== 'rect' && target.tagName !== 'line' && target.tagName !== 'path') {
-      return;
-    }
-    
-    dragElement = target;
-    dragStartTime = Date.now();
-    animationFrames = [];
-    lastFrameTime = 0;
-    
-    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-    
-    function captureFrame() {
-      if (!dragElement) return;
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (!iframeDoc) return;
       
-      const now = Date.now();
-      const frameTime = now - dragStartTime;
+      // Check if the target or any parent is draggable
+      let element = e.target;
+      let draggable = null;
       
-      if (frameTime - lastFrameTime >= 16) {
-        animationFrames.push({
-          time: frameTime,
-          html: iframeDoc.body.innerHTML
-        });
-        lastFrameTime = frameTime;
+      while (element && element !== iframeDoc.body) {
+        if (element.draggable || 
+            element.tagName === 'circle' || 
+            element.tagName === 'rect' || 
+            element.tagName === 'line' ||
+            element.tagName === 'path') {
+          draggable = element;
+          break;
+        }
+        element = element.parentElement;
       }
       
-      requestAnimationFrame(captureFrame);
-    }
-    
-    function handleMouseUp() {
-      if (!dragElement) return;
+      if (!draggable) return;
       
-      const selector = generateSelector(dragElement);
-      const duration = Date.now() - dragStartTime;
+      isDragging = true;
+      dragElement = draggable;
+      dragStartTime = Date.now();
       
-      recordedEvents.push({
-        type: 'drag',
-        timestamp: getTimestamp(),
-        target: selector,
-        detail: {
-          duration: duration,
-          animationFrames: animationFrames
+      // Take snapshots at regular intervals during the drag
+      dragStartSnapshot = {
+        frames: [
+          {
+            time: 0,
+            html: iframeDoc.body.innerHTML
+          }
+        ]
+      };
+      
+      // Sample the DOM every 100ms during drag for smooth replay
+      dragCheckInterval = setInterval(() => {
+        if (isDragging) {
+          const currentTime = Date.now() - dragStartTime;
+          dragStartSnapshot.frames.push({
+            time: currentTime,
+            html: iframeDoc.body.innerHTML
+          });
         }
-      });
+      }, 100);
       
-      console.log('Recorded drag:', selector, 'with', animationFrames.length, 'frames');
+      console.log('🖱️ Drag started - capturing animation frames...');
       
-      dragElement = null;
-      animationFrames = [];
-      iframeDoc.removeEventListener('mouseup', handleMouseUp);
+      // Add mouseup listener to iframe
+      function handleMouseUp() {
+        if (!isDragging || !dragElement) return;
+        
+        // Stop capturing frames
+        if (dragCheckInterval) {
+          clearInterval(dragCheckInterval);
+          dragCheckInterval = null;
+        }
+        
+        // CRITICAL: Capture the current recording state NOW
+        const capturedDragElement = dragElement;
+        const capturedSnapshot = dragStartSnapshot;
+        
+        // Clear drag state immediately
+        isDragging = false;
+        dragElement = null;
+        dragStartSnapshot = null;
+        
+        if (!capturedSnapshot) {
+          console.log('Drag ended but no snapshot');
+          return;
+        }
+        
+        try {
+          // Add final frame
+          capturedSnapshot.frames.push({
+            time: Date.now() - dragStartTime,
+            html: iframeDoc.body.innerHTML
+          });
+          
+          const selector = generateSelector(capturedDragElement);
+          
+          recordedEvents.push({
+            type: 'drag',
+            timestamp: getTimestamp() - (Date.now() - dragStartTime),
+            target: selector,
+            detail: {
+              duration: Date.now() - dragStartTime,
+              animationFrames: capturedSnapshot.frames
+            }
+          });
+          
+          console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames');
+          
+        } catch (e) {
+          console.warn('Error recording drag:', e);
+        }
+        
+        iframeDoc.removeEventListener('mouseup', handleMouseUp);
+      }
+      
+      iframeDoc.addEventListener('mouseup', handleMouseUp);
+      
+    } catch (e) {
+      console.warn('Cannot handle mousedown:', e);
     }
-    
-    captureFrame();
-    iframeDoc.addEventListener('mouseup', handleMouseUp);
   }
   
   function generateSelector(element) {
@@ -1453,14 +1506,14 @@
         return;
       }
       
-      const originalOutline = element.style.outline;
-      element.style.outline = '3px solid #2563eb';
-      element.style.outlineOffset = '2px';
-      setTimeout(() => {
-        element.style.outline = originalOutline;
-      }, 500);
-      
+      // Visual feedback only for clicks (not drags - they have their own animation)
       if (event.type === 'click') {
+        const originalOutline = element.style.outline;
+        element.style.outline = '3px solid #2563eb';
+        element.style.outlineOffset = '2px';
+        setTimeout(() => {
+          element.style.outline = originalOutline;
+        }, 500);
         element.click();
       } else if (event.type === 'input' || event.type === 'change') {
         if (event.detail.value !== undefined) {
