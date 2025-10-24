@@ -66,12 +66,10 @@
     background:#fff;
     cursor:pointer;
     font-size:13px;
-    transition:all 0.2s;
   }
   
-  button:hover:not(:disabled){
+  button:hover:not(:disabled):not(.primary):not(.record):not(.success):not(.warning){
     background:#f9f9f9;
-    transform:translateY(-1px);
   }
   
   button:disabled{
@@ -441,29 +439,33 @@
       <div id="recordingControls" class="control-group">
         <label>
           App URL:
-          <input type="text" id="appUrl" placeholder="https://example.com/app.html" value=""/>
+          <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
-        <button id="loadApp" class="primary">📱 Load App</button>
+        <button id="loadApp" class="primary">Load App</button>
         <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
+        <button id="stopRecording" class="record" style="display:none;">⏹ Stop Recording</button>
         <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
         <button id="resumeRecording" class="success" style="display:none;">▶ Resume</button>
         <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
-        <button id="stopRecording" class="success" style="display:none;">⏹ Stop & Export</button>
-        <button id="previewRecording" style="display:none;">👁 Preview</button>
-        <button id="playPausePreview" style="display:none;">▶ Play/⏸ Pause</button>
+        <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
+        <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
+        <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
+        <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
+        <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
       </div>
       
       <div id="playbackControls" class="playback-controls" style="display:none;">
-        <button id="playBtn">▶ Play</button>
+        <button id="loadTutorialBtn" class="primary">📂 Load Tutorial</button>
+        <button id="playBtn" style="display:none;">▶ Play</button>
         <button id="pauseBtn" style="display:none;">⏸ Pause</button>
-        <button id="restartBtn">↻ Restart</button>
-        <div class="playback-timeline">
+        <button id="restartBtn" style="display:none;">↻ Restart</button>
+        <div class="playback-timeline" style="display:none;">
           <input type="range" id="timelineSlider" min="0" max="100" value="0"/>
           <div class="time-display">
             <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
           </div>
         </div>
-        <label>
+        <label style="display:none;">
           Speed:
           <select id="playbackSpeed">
             <option value="0.5">0.5x</option>
@@ -475,16 +477,7 @@
       </div>
       
       <div style="margin-left:auto;display:flex;gap:8px;">
-        <button id="loadTutorialBtn">📂 Load Tutorial</button>
         <button id="helpBtn">❓ Help</button>
-      </div>
-      
-      <div id="recordingIndicator" class="recording-indicator" style="display:none;">
-        ⏺ RECORDING
-      </div>
-      
-      <div id="pausedIndicator" class="paused-indicator" style="display:none;">
-        ⏸ PAUSED
       </div>
     </div>
   </div>
@@ -592,7 +585,7 @@
       <h3>Recording Mode:</h3>
       <ol class="help-text">
         <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
-        <li><strong>Load App</strong> - Click "📱 Load App" to load the app in the iframe</li>
+        <li><strong>Load App</strong> - Click "Load App" to load the app in the iframe</li>
         <li><strong>Start Recording</strong> - Click "⏺ Start Recording" to begin capturing interactions</li>
         <li><strong>Interact Normally</strong> - Click, type, and drag in your app. All interactions are captured</li>
         <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations</li>
@@ -606,18 +599,18 @@
           </ul>
         </li>
         <li><strong>Resume Recording</strong> - Click "▶ Resume" to continue recording</li>
-        <li><strong>Add More Annotations</strong> - Pause again to add additional annotations</li>
-        <li><strong>Stop & Export</strong> - Click "⏹ Stop & Export" when done</li>
-        <li><strong>Preview</strong> - Click "👁 Preview" to watch your recording before exporting</li>
-        <li><strong>Copy JSON</strong> - Copy the generated JSON from the export modal to save your tutorial</li>
+        <li><strong>Add More Annotations</strong> - Pause again to add additional annotations as needed</li>
+        <li><strong>Stop Recording</strong> - Click "⏹ Stop Recording" when done</li>
+        <li><strong>Preview</strong> - Click "👁 Preview" to watch your recording play back with annotations</li>
+        <li><strong>Export</strong> - Click "💾 Export Tutorial" to get the JSON, then copy it to save</li>
       </ol>
       
       <h3>Playback Mode:</h3>
       <ol class="help-text">
-        <li><strong>Load Tutorial</strong> - Click "📂 Load Tutorial" and paste your JSON</li>
         <li><strong>Switch to Playback</strong> - Click the "Playback" tab</li>
-        <li><strong>Play</strong> - Click "▶ Play" to watch the tutorial replay</li>
-        <li><strong>Controls</strong> - Use pause, restart, and speed controls as needed</li>
+        <li><strong>Load Tutorial</strong> - Click "📂 Load Tutorial" and paste your saved JSON</li>
+        <li><strong>Play</strong> - Click "▶ Play" to watch the tutorial replay with all interactions and annotations</li>
+        <li><strong>Controls</strong> - Use pause, restart, timeline, and speed controls as needed</li>
       </ol>
       
       <div class="modal-buttons">
@@ -646,6 +639,7 @@
   const stopRecording = document.getElementById('stopRecording');
   const previewRecording = document.getElementById('previewRecording');
   const playPausePreview = document.getElementById('playPausePreview');
+  const exportRecording = document.getElementById('exportRecording');
   const recordingIndicator = document.getElementById('recordingIndicator');
   const pausedIndicator = document.getElementById('pausedIndicator');
   
@@ -804,16 +798,14 @@
     
     const duration = Date.now() - recordingStartTime - totalPausedDuration;
     
-    loadApp.style.display = 'inline-block';
-    startRecording.style.display = 'none';
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'none';
     addAnnotation.style.display = 'none';
     stopRecording.style.display = 'none';
     previewRecording.style.display = 'inline-block';
+    exportRecording.style.display = 'inline-block';
     recordingIndicator.style.display = 'none';
     pausedIndicator.style.display = 'none';
-    appUrl.disabled = false;
     
     // Build tutorial JSON
     const tutorial = {
@@ -825,17 +817,28 @@
     
     currentTutorial = tutorial;
     
+    console.log('✓ Recording stopped. Duration:', duration, 'ms');
+    console.log('  Events:', recordedEvents.length);
+    console.log('  Annotations:', recordedAnnotations.length);
+  });
+  
+  exportRecording.addEventListener('click', () => {
+    if (!currentTutorial) {
+      alert('No recording to export!');
+      return;
+    }
+    
     // Show export modal
-    const json = JSON.stringify(tutorial, null, 2);
+    const json = JSON.stringify(currentTutorial, null, 2);
     exportTextarea.value = json;
-    eventCount.textContent = recordedEvents.length;
-    annotationCount.textContent = recordedAnnotations.length;
+    eventCount.textContent = currentTutorial.events.length;
+    annotationCount.textContent = currentTutorial.annotations.length;
     
     // Show annotation list
-    if (recordedAnnotations.length > 0) {
+    if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
       annotationsList.style.display = 'block';
       annotationsList.innerHTML = '<strong style="display:block;margin-bottom:8px;">Annotations in this recording:</strong>';
-      recordedAnnotations.forEach((ann, idx) => {
+      currentTutorial.annotations.forEach((ann, idx) => {
         const item = document.createElement('div');
         item.className = 'annotation-item';
         const posText = ann.position ? `(${Math.round(ann.position.left)}, ${Math.round(ann.position.top)})` : 'custom';
@@ -852,10 +855,6 @@
     }
     
     exportModal.classList.add('visible');
-    
-    console.log('✓ Recording stopped. Duration:', duration, 'ms');
-    console.log('  Events:', recordedEvents.length);
-    console.log('  Annotations:', recordedAnnotations.length);
   });
   
   // Annotation authoring
@@ -1007,6 +1006,7 @@
         // Auto-start preview playback
         isPlaying = true;
         playbackStartTime = Date.now();
+        playbackPausedAt = 0;
         eventQueue = [...currentTutorial.events];
         requestAnimationFrame(playbackLoop);
         
@@ -1020,11 +1020,13 @@
       // Pause preview
       isPlaying = false;
       playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+      playPausePreview.textContent = '▶ Resume Preview';
       console.log('⏸ Preview paused');
     } else {
       // Resume preview
       isPlaying = true;
       playbackStartTime = Date.now() - playbackPausedAt * 1000;
+      playPausePreview.textContent = '⏸ Pause Preview';
       requestAnimationFrame(playbackLoop);
       console.log('▶ Preview resumed');
     }
@@ -1287,7 +1289,6 @@
       }
       
       appFrame.src = currentTutorial.appUrl;
-      appUrl.value = currentTutorial.appUrl;
       
       const duration = currentTutorial.duration / 1000;
       totalTimeEl.textContent = formatTime(duration);
@@ -1297,10 +1298,17 @@
       playbackPausedAt = 0;
       playbackStartTime = 0;
       
+      // Show playback controls
+      loadTutorialBtn.style.display = 'none';
+      playBtn.style.display = 'inline-block';
+      restartBtn.style.display = 'inline-block';
+      document.querySelector('.playback-timeline').style.display = 'flex';
+      document.querySelector('label[style*="display:none"]').style.display = 'flex';
+      
       loadModal.classList.remove('visible');
       loadTextarea.value = '';
       
-      alert('✓ Tutorial loaded successfully! Click on the "Playback" tab, then click Play (▶) to start.');
+      alert('✓ Tutorial loaded! Click Play (▶) to start.');
       
     } catch (e) {
       loadError.textContent = 'Invalid JSON! Error: ' + e.message + '\n\nMake sure you copied the entire JSON correctly.';
@@ -1412,7 +1420,9 @@
       // If this was a preview (playPausePreview visible), reload app
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.style.display = 'none';
+        playPausePreview.textContent = '⏸ Pause Preview';
         previewRecording.style.display = 'inline-block';
+        exportRecording.style.display = 'inline-block';
         
         // Reload app to restore full interactivity
         const url = appFrame.src;
