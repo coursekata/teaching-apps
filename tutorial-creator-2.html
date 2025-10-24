@@ -702,6 +702,7 @@
   let draggingAnnotation = false;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
+  let initialAppState = null; // Capture app state at start of recording
   
   let currentTutorial = null;
   let isPlaying = false;
@@ -767,6 +768,18 @@
     isRecording = true;
     isPaused = false;
     recordingStartTime = Date.now();
+    
+    // CAPTURE INITIAL APP STATE
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (iframeDoc && iframeDoc.body) {
+        initialAppState = iframeDoc.body.innerHTML;
+        console.log('✓ Captured initial app state');
+      }
+    } catch (e) {
+      console.warn('Could not capture initial state:', e);
+      initialAppState = null;
+    }
     
     // Update UI
     startRecording.style.display = 'none';
@@ -1069,28 +1082,33 @@
     // Stop any active playback first
     isPlaying = false;
     
-    // CRITICAL: Reload app to reset to initial state BEFORE playback
-    const url = appFrame.src;
-    appFrame.src = '';
+    // Restore initial app state before preview
+    if (initialAppState) {
+      try {
+        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+        if (iframeDoc && iframeDoc.body) {
+          iframeDoc.body.innerHTML = initialAppState;
+          console.log('✓ Restored initial app state for preview');
+        }
+      } catch (e) {
+        console.warn('Could not restore initial state:', e);
+      }
+    }
     
+    // Start preview playback
+    previewRecording.style.display = 'none';
+    playPausePreview.style.display = 'inline-block';
+    playPausePreview.textContent = '⏸ Pause Preview';
+    
+    // Small delay to let DOM settle after restoration
     setTimeout(() => {
-      appFrame.src = url;
+      isPlaying = true;
+      playbackPausedAt = 0;
+      playbackStartTime = Date.now();
+      eventQueue = [...currentTutorial.events];
+      requestAnimationFrame(playbackLoop);
       
-      // Wait for app to load, then start preview
-      setTimeout(() => {
-        previewRecording.style.display = 'none';
-        playPausePreview.style.display = 'inline-block';
-        playPausePreview.textContent = '⏸ Pause Preview';
-        
-        // Auto-start preview playback with fresh app state
-        isPlaying = true;
-        playbackPausedAt = 0;
-        playbackStartTime = Date.now();
-        eventQueue = [...currentTutorial.events];
-        requestAnimationFrame(playbackLoop);
-        
-        console.log('✓ Preview started (app reloaded to initial state)');
-      }, 500);
+      console.log('✓ Preview started from initial state');
     }, 100);
   });
   
@@ -1586,7 +1604,7 @@
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
       
-      // If this was a preview (playPausePreview visible), reload app
+      // If this was a preview (playPausePreview visible), just stop - leave final state visible
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.style.display = 'none';
         playPausePreview.textContent = '⏸ Pause Preview';
@@ -1594,13 +1612,7 @@
         recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
         
-        // Reload app to restore full interactivity
-        const url = appFrame.src;
-        appFrame.src = '';
-        setTimeout(() => {
-          appFrame.src = url;
-          console.log('✓ Preview finished - app reloaded');
-        }, 100);
+        console.log('✓ Preview finished - final state visible');
       } else {
         // Normal playback mode
         playBtn.style.display = 'inline-block';
