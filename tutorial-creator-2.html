@@ -313,18 +313,15 @@
         <button id="startRecord" class="record">● Start Recording</button>
         <button id="stopRecord" class="record" style="display:none;">■ Stop Recording</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">● REC <span id="recordingTime">0:00</span></span>
-        <div id="recordingComplete" style="display:none;gap:8px;">
-          <button id="testPlayback" class="success">▶ Test Your Recording</button>
-          <button id="exportTutorial">💾 Export as JSON</button>
-        </div>
+        <button id="exportTutorial" class="success" style="display:none;">📥 Export Tutorial</button>
       </div>
       
       <div id="playbackControls" class="playback-controls" style="display:none;">
-        <button id="playBtn">▶</button>
-        <button id="pauseBtn" style="display:none;">⏸</button>
-        <button id="restartBtn">⟲</button>
+        <button id="playBtn">▶ Play</button>
+        <button id="pauseBtn" style="display:none;">⏸ Pause</button>
+        <button id="restartBtn">⟲ Restart</button>
         <div class="playback-timeline">
-          <input id="timelineSlider" type="range" min="0" max="100" value="0" step="0.1">
+          <input type="range" id="timelineSlider" min="0" max="100" value="0">
           <div class="time-display">
             <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
           </div>
@@ -340,24 +337,26 @@
         </label>
       </div>
       
-      <button id="loadTutorial">📂 Load Tutorial</button>
-      <button id="helpBtn">?</button>
+      <button id="loadTutorial" class="primary">📂 Load Tutorial</button>
+      <button id="helpBtn">❓ Help</button>
     </div>
   </div>
-
+  
   <div class="app-container">
-    <iframe id="appFrame" src=""></iframe>
+    <iframe id="appFrame"></iframe>
     <div id="annotationBox" class="annotation-box">
       <h3 id="annotationTitle"></h3>
       <p id="annotationText"></p>
     </div>
   </div>
-
+  
   <!-- Export Modal -->
   <div id="exportModal" class="modal-overlay">
     <div class="modal">
-      <h2>📤 Export Your Tutorial</h2>
-      <p class="help-text">Copy this JSON and save it to a file. You can edit it to add annotations at specific timestamps!</p>
+      <h2>Export Tutorial</h2>
+      <div class="help-text">
+        Copy this JSON and save it. You can edit the annotations array to add helpful text at specific timestamps.
+      </div>
       <textarea id="exportTextarea" readonly></textarea>
       <div class="modal-buttons">
         <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
@@ -365,73 +364,70 @@
       </div>
     </div>
   </div>
-
+  
   <!-- Load Modal -->
   <div id="loadModal" class="modal-overlay">
     <div class="modal">
-      <h2>📂 Load Tutorial</h2>
-      <p class="help-text">Paste your tutorial JSON here, or load from a file:</p>
-      <textarea id="loadTextarea" placeholder='{"version": "1.0", "appUrl": "...", "events": [...], "annotations": [...]}'></textarea>
-      <div id="loadError" style="display:none;background:#fee;border:1px solid #f00;padding:12px;border-radius:6px;margin-top:8px;font-size:12px;color:#900;"></div>
+      <h2>Load Tutorial</h2>
+      <div class="help-text">
+        Paste your tutorial JSON below, or load from a file:
+      </div>
+      <input type="file" id="fileInput" accept=".json" style="display:none;">
+      <button id="loadFromFile" class="primary">📁 Choose File</button>
+      <textarea id="loadTextarea" placeholder='Paste tutorial JSON here...'></textarea>
+      <div id="loadError" class="help-text" style="display:none;color:#ef4444;"></div>
       <div class="modal-buttons">
-        <button id="loadFromFile">📁 Load from File</button>
         <button id="loadFromText" class="primary">✓ Load Tutorial</button>
         <button id="closeLoadModal">Cancel</button>
       </div>
-      <input type="file" id="fileInput" accept=".json" style="display:none;">
     </div>
   </div>
-
+  
   <!-- Help Modal -->
   <div id="helpModal" class="modal-overlay">
     <div class="modal">
-      <h2>📖 Tutorial System Help</h2>
+      <h2>How to Use This Tutorial System</h2>
       
-      <h3>🎯 Quick Start</h3>
-      <ol>
-        <li>Load your app URL</li>
-        <li>Click "Record" mode</li>
-        <li>Click "Start Recording" and use your app</li>
-        <li>Click "Stop Recording"</li>
-        <li>Click "Test Your Recording" to preview it</li>
-        <li>Click "Export as JSON" to save it</li>
-        <li>Edit JSON to add text annotations</li>
-        <li>Share JSON with students!</li>
-      </ol>
+      <h3>1. Normal Mode</h3>
+      <p class="help-text">
+        Enter the URL of your web app and click "Load App" to view it normally.
+      </p>
       
-      <h3>▶️ For Students</h3>
-      <ol>
-        <li>Click "Load Tutorial"</li>
-        <li>Paste the JSON (or load file)</li>
-        <li>Click Play (▶)</li>
-        <li>Pause anytime to interact yourself!</li>
-      </ol>
+      <h3>2. Record Mode</h3>
+      <p class="help-text">
+        Load your app, then click "Start Recording". Interact with your app (click buttons, fill inputs, drag elements, etc.). 
+        Click "Stop Recording" when done, then "Export Tutorial" to get the JSON.
+      </p>
       
-      <h3>📝 Adding Annotations</h3>
-      <p class="help-text">Edit your exported JSON to add text overlays:</p>
-      <pre style="background:#f5f5f5;padding:12px;border-radius:6px;font-size:11px;overflow-x:auto;">"annotations": [
-  {
-    "timestamp": 5000,
-    "duration": 4000,
-    "title": "Step 1",
-    "text": "Explanation...",
-    "position": "top-right"
-  }
-]</pre>
+      <h3>3. Playback Mode</h3>
+      <p class="help-text">
+        Click "Load Tutorial" and paste your JSON. The app will load and you can click "Play" to watch 
+        the recorded interactions. Use the timeline to skip around.
+      </p>
       
-      <p class="help-text"><strong>Positions:</strong> top, bottom, left, right, center, top-left, top-right, bottom-left, bottom-right</p>
+      <h3>Adding Annotations</h3>
+      <p class="help-text">
+        Edit the "annotations" array in the exported JSON to add text overlays at specific timestamps. 
+        Each annotation needs: timestamp (ms), duration (ms), title, text, and position 
+        (top, bottom, left, right, center, top-left, top-right, bottom-left, bottom-right).
+      </p>
+      
+      <div class="info-box">
+        <strong>Note:</strong> This system works best with apps on the same domain or with CORS enabled. 
+        For cross-origin apps, host them on GitHub Pages or a server with appropriate CORS headers.
+      </div>
       
       <div class="modal-buttons">
-        <button id="closeHelpModal">Close</button>
+        <button id="closeHelpModal" class="primary">Got it!</button>
       </div>
     </div>
   </div>
 
 <script>
-(function(){
-  const DEFAULT_APP_URL = 'confidence-intro-v2.html';
+(function() {
+  'use strict';
   
-  // DOM elements
+  // Elements
   const modeNormal = document.getElementById('modeNormal');
   const modeRecord = document.getElementById('modeRecord');
   const modePlayback = document.getElementById('modePlayback');
@@ -445,10 +441,19 @@
   const stopRecord = document.getElementById('stopRecord');
   const recordingIndicator = document.getElementById('recordingIndicator');
   const recordingTime = document.getElementById('recordingTime');
-  const recordingComplete = document.getElementById('recordingComplete');
-  const testPlayback = document.getElementById('testPlayback');
   const exportTutorial = document.getElementById('exportTutorial');
+  const exportModal = document.getElementById('exportModal');
+  const exportTextarea = document.getElementById('exportTextarea');
+  const copyExport = document.getElementById('copyExport');
+  const closeExportModal = document.getElementById('closeExportModal');
   const loadTutorial = document.getElementById('loadTutorial');
+  const loadModal = document.getElementById('loadModal');
+  const loadTextarea = document.getElementById('loadTextarea');
+  const loadFromFile = document.getElementById('loadFromFile');
+  const loadFromText = document.getElementById('loadFromText');
+  const closeLoadModal = document.getElementById('closeLoadModal');
+  const fileInput = document.getElementById('fileInput');
+  const loadError = document.getElementById('loadError');
   const playBtn = document.getElementById('playBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const restartBtn = document.getElementById('restartBtn');
@@ -460,250 +465,310 @@
   const annotationTitle = document.getElementById('annotationTitle');
   const annotationText = document.getElementById('annotationText');
   const helpBtn = document.getElementById('helpBtn');
-  
-  // Modals
-  const exportModal = document.getElementById('exportModal');
-  const exportTextarea = document.getElementById('exportTextarea');
-  const copyExport = document.getElementById('copyExport');
-  const closeExportModal = document.getElementById('closeExportModal');
-  const loadModal = document.getElementById('loadModal');
-  const loadTextarea = document.getElementById('loadTextarea');
-  const loadError = document.getElementById('loadError');
-  const loadFromFile = document.getElementById('loadFromFile');
-  const loadFromText = document.getElementById('loadFromText');
-  const closeLoadModal = document.getElementById('closeLoadModal');
-  const fileInput = document.getElementById('fileInput');
   const helpModal = document.getElementById('helpModal');
   const closeHelpModal = document.getElementById('closeHelpModal');
   
   // State
-  let tutorialMode = 'normal';
+  let currentMode = 'normal';
   let isRecording = false;
-  let isPlaying = false;
+  let recordStartTime = 0;
   let recordedEvents = [];
-  let recordingStartTime = 0;
   let recordingInterval = null;
   let currentTutorial = null;
+  let isPlaying = false;
   let playbackStartTime = 0;
   let playbackPausedAt = 0;
   let playbackSpeed = 1;
-  let currentAnnotationIndex = -1;
   let eventQueue = [];
+  let currentAnnotationIndex = -1;
   
-  // Initialize
-  appUrl.value = DEFAULT_APP_URL;
-  appFrame.src = DEFAULT_APP_URL;
+  // Drag tracking
+  let isDragging = false;
+  let dragStartPos = null;
+  let dragElement = null;
+  let dragStartTime = 0;
   
   // Mode switching
-  function switchMode(mode) {
-    tutorialMode = mode;
+  function setMode(mode) {
+    currentMode = mode;
     
-    modeNormal.classList.toggle('active', mode === 'normal');
-    modeRecord.classList.toggle('active', mode === 'recording');
-    modePlayback.classList.toggle('active', mode === 'playback');
+    // Update button states
+    [modeNormal, modeRecord, modePlayback].forEach(btn => btn.classList.remove('active'));
     
-    normalControls.style.display = mode === 'normal' ? 'flex' : 'none';
-    recordingControls.style.display = mode === 'recording' ? 'flex' : 'none';
-    playbackControls.style.display = mode === 'playback' ? 'flex' : 'none';
+    // Hide all control groups
+    normalControls.style.display = 'none';
+    recordingControls.style.display = 'none';
+    playbackControls.style.display = 'none';
     
-    annotationBox.classList.remove('visible');
+    if (mode === 'normal') {
+      modeNormal.classList.add('active');
+      normalControls.style.display = 'flex';
+    } else if (mode === 'record') {
+      modeRecord.classList.add('active');
+      recordingControls.style.display = 'flex';
+    } else if (mode === 'playback') {
+      modePlayback.classList.add('active');
+      playbackControls.style.display = 'flex';
+    }
   }
   
-  modeNormal.addEventListener('click', () => switchMode('normal'));
-  modeRecord.addEventListener('click', () => switchMode('recording'));
-  modePlayback.addEventListener('click', () => {
-    if (!currentTutorial) {
-      alert('Please load a tutorial first using the "Load Tutorial" button!');
-      return;
-    }
-    switchMode('playback');
-  });
+  modeNormal.addEventListener('click', () => setMode('normal'));
+  modeRecord.addEventListener('click', () => setMode('record'));
+  modePlayback.addEventListener('click', () => setMode('playback'));
   
   // Load app
   loadApp.addEventListener('click', () => {
-    const url = appUrl.value.trim() || DEFAULT_APP_URL;
-    appFrame.src = url;
-    alert('App loaded! You can now switch to Record mode to start recording.');
+    const url = appUrl.value.trim();
+    if (!url) {
+      alert('Please enter a URL');
+      return;
+    }
+    
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      appUrl.value = 'https://' + url;
+    }
+    
+    appFrame.src = appUrl.value;
   });
   
   // Recording
-  function recordEvent(event) {
-    if (!isRecording) return;
-    const timestamp = Date.now() - recordingStartTime;
-    
-    const selector = getElementSelector(event.target);
-    if (!selector) return;
-    
-    recordedEvents.push({
-      timestamp,
-      type: event.type,
-      target: selector,
-      detail: getEventDetail(event)
-    });
-    
-    console.log('Recorded event:', recordedEvents[recordedEvents.length - 1]);
-  }
-  
-  function getElementSelector(element) {
-    if (!element) return null;
-    
-    // Try ID first
-    if (element.id) return '#' + element.id;
-    
-    // For buttons, try data attributes
-    if (element.tagName === 'BUTTON') {
-      if (element.dataset) {
-        for (let key in element.dataset) {
-          if (element.dataset[key]) {
-            return `button[data-${key}="${element.dataset[key]}"]`;
-          }
-        }
-      }
-      // Use text content
-      const text = element.textContent.trim();
-      if (text && text.length < 50) {
-        return {
-          type: 'button-text',
-          text: text,
-          tagName: 'BUTTON'
-        };
-      }
-    }
-    
-    // For inputs
-    if (element.tagName === 'INPUT') {
-      if (element.id) return '#' + element.id;
-      if (element.name) return `input[name="${element.name}"]`;
-      if (element.type) return `input[type="${element.type}"]`;
-    }
-    
-    return null;
-  }
-  
-  function getEventDetail(event) {
-    const detail = { eventType: event.type };
-    
-    if (event.target) {
-      if (event.target.tagName === 'INPUT') {
-        detail.value = event.target.value;
-        detail.inputType = event.target.type;
-      }
-      if (event.target.tagName === 'SELECT') {
-        detail.value = event.target.value;
-      }
-      if (event.target.dataset) {
-        detail.dataset = {...event.target.dataset};
-      }
-    }
-    
-    return detail;
-  }
-  
-  function updateRecordingTime() {
-    if (!isRecording) return;
-    const elapsed = (Date.now() - recordingStartTime) / 1000;
-    recordingTime.textContent = formatTime(elapsed);
-  }
-  
   startRecord.addEventListener('click', () => {
+    if (!appFrame.src || appFrame.src === 'about:blank') {
+      alert('Please load an app first!');
+      return;
+    }
+    
     isRecording = true;
+    recordStartTime = Date.now();
     recordedEvents = [];
-    recordingStartTime = Date.now();
     
     startRecord.style.display = 'none';
     stopRecord.style.display = 'inline-block';
     recordingIndicator.style.display = 'inline-block';
-    recordingComplete.style.display = 'none';
     
-    recordingInterval = setInterval(updateRecordingTime, 100);
+    attachListeners();
     
-    // Listen to iframe events
-    attachIframeListeners();
+    recordingInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      recordingTime.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }, 1000);
     
-    console.log('Recording started');
+    console.log('🔴 Recording started');
   });
   
   stopRecord.addEventListener('click', () => {
     isRecording = false;
+    clearInterval(recordingInterval);
     
-    startRecord.style.display = 'inline-block';
     stopRecord.style.display = 'none';
+    startRecord.style.display = 'inline-block';
     recordingIndicator.style.display = 'none';
-    recordingComplete.style.display = 'flex';
+    exportTutorial.style.display = 'inline-block';
     
-    if (recordingInterval) {
-      clearInterval(recordingInterval);
-      recordingInterval = null;
+    detachListeners();
+    
+    console.log('⏹ Recording stopped. Captured ' + recordedEvents.length + ' events');
+  });
+  
+  function getElementSelector(element) {
+    // Try ID first
+    if (element.id) {
+      return '#' + element.id;
     }
     
-    detachIframeListeners();
+    // Try unique attribute combinations
+    const tag = element.tagName.toLowerCase();
     
-    // Create tutorial from recording
-    currentTutorial = {
-      version: '1.0',
-      appUrl: appFrame.src,
-      duration: recordedEvents.length > 0 ? recordedEvents[recordedEvents.length - 1].timestamp : 0,
-      events: recordedEvents,
-      annotations: []
+    // For buttons with text content
+    if (tag === 'button' && element.textContent.trim()) {
+      return {
+        type: 'button-text',
+        tagName: 'button',
+        text: element.textContent.trim()
+      };
+    }
+    
+    // Try name attribute
+    if (element.name) {
+      return tag + '[name="' + element.name + '"]';
+    }
+    
+    // Try class combinations
+    if (element.className && typeof element.className === 'string') {
+      const classes = element.className.split(' ').filter(c => c.trim());
+      if (classes.length > 0) {
+        return tag + '.' + classes.join('.');
+      }
+    }
+    
+    // Fallback to nth-of-type
+    let parent = element.parentElement;
+    if (parent) {
+      const siblings = Array.from(parent.children).filter(el => el.tagName === element.tagName);
+      const index = siblings.indexOf(element);
+      if (index >= 0) {
+        return tag + ':nth-of-type(' + (index + 1) + ')';
+      }
+    }
+    
+    return tag;
+  }
+  
+  function recordEvent(type, target, detail = {}) {
+    if (!isRecording) return;
+    
+    const timestamp = Date.now() - recordStartTime;
+    const selector = getElementSelector(target);
+    
+    const event = {
+      timestamp,
+      type,
+      target: selector,
+      detail
     };
     
-    console.log('Recording stopped. Captured', recordedEvents.length, 'events');
-    console.log('Tutorial ready:', currentTutorial);
-  });
+    recordedEvents.push(event);
+    console.log('📝 Recorded:', type, selector, detail);
+  }
   
-  // Test playback
-  testPlayback.addEventListener('click', () => {
-    if (!currentTutorial) {
-      alert('No recording available!');
-      return;
+  function handleClick(e) {
+    // Don't record if it's part of a drag
+    if (isDragging) return;
+    recordEvent('click', e.target);
+  }
+  
+  function handleInput(e) {
+    recordEvent('input', e.target, { value: e.target.value });
+  }
+  
+  function handleChange(e) {
+    recordEvent('change', e.target, { value: e.target.value });
+  }
+  
+  function handleMouseDown(e) {
+    // Check if this element or its ancestors are draggable
+    let element = e.target;
+    let draggable = null;
+    
+    // Look for elements with common draggable indicators
+    while (element && element !== e.currentTarget) {
+      const style = window.getComputedStyle(element);
+      const cursor = style.cursor;
+      
+      // Check for drag cursors or draggable attributes
+      if (cursor === 'grab' || cursor === 'move' || 
+          element.draggable || 
+          element.getAttribute('data-draggable') === 'true' ||
+          element.classList.contains('draggable')) {
+        draggable = element;
+        break;
+      }
+      element = element.parentElement;
     }
     
-    // Setup playback
-    const duration = currentTutorial.duration / 1000;
-    totalTimeEl.textContent = formatTime(duration);
-    timelineSlider.max = duration;
-    timelineSlider.value = 0;
-    currentTimeEl.textContent = '0:00';
-    playbackPausedAt = 0;
-    playbackStartTime = 0;
+    if (!draggable) return;
     
-    // Reload app and switch to playback
-    const url = appFrame.src;
-    appFrame.src = '';
-    setTimeout(() => {
-      appFrame.src = url;
-      setTimeout(() => {
-        switchMode('playback');
-        alert('Click Play (▶) to watch your recording!');
-      }, 500);
-    }, 100);
-  });
+    isDragging = true;
+    dragElement = draggable;
+    dragStartTime = Date.now() - recordStartTime;
+    dragStartPos = {
+      x: e.clientX,
+      y: e.clientY,
+      elementX: draggable.offsetLeft || 0,
+      elementY: draggable.offsetTop || 0
+    };
+    
+    console.log('🖱️ Drag started on', draggable);
+  }
   
-  function attachIframeListeners() {
+  function handleMouseMove(e) {
+    if (!isDragging || !dragElement) return;
+    
+    // Track the current position during drag
+    dragStartPos.currentX = e.clientX;
+    dragStartPos.currentY = e.clientY;
+  }
+  
+  function handleMouseUp(e) {
+    if (!isDragging || !dragElement) return;
+    
+    const endPos = {
+      x: e.clientX,
+      y: e.clientY
+    };
+    
+    const deltaX = endPos.x - dragStartPos.x;
+    const deltaY = endPos.y - dragStartPos.y;
+    
+    // Only record if there was significant movement
+    if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+      recordEvent('drag', dragElement, {
+        startX: dragStartPos.x,
+        startY: dragStartPos.y,
+        endX: endPos.x,
+        endY: endPos.y,
+        deltaX: deltaX,
+        deltaY: deltaY,
+        elementStartX: dragStartPos.elementX,
+        elementStartY: dragStartPos.elementY
+      });
+    }
+    
+    isDragging = false;
+    dragElement = null;
+    dragStartPos = null;
+    
+    console.log('🖱️ Drag ended');
+  }
+  
+  function attachListeners() {
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (!iframeDoc) {
-        alert('Warning: Cannot access app content (CORS restriction). Recording may not work properly. Make sure the app is on the same domain or use a local file.');
+        console.warn('Cannot access iframe document');
         return;
       }
-      iframeDoc.addEventListener('click', recordEvent, true);
-      iframeDoc.addEventListener('input', recordEvent, true);
-      iframeDoc.addEventListener('change', recordEvent, true);
-      console.log('Attached iframe listeners');
+      
+      // Click events
+      iframeDoc.addEventListener('click', handleClick, true);
+      
+      // Input events
+      const inputs = iframeDoc.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('input', handleInput);
+        input.addEventListener('change', handleChange);
+      });
+      
+      // Drag events
+      iframeDoc.addEventListener('mousedown', handleMouseDown, true);
+      iframeDoc.addEventListener('mousemove', handleMouseMove, true);
+      iframeDoc.addEventListener('mouseup', handleMouseUp, true);
+      
+      console.log('✓ Event listeners attached (including drag support)');
     } catch (e) {
-      console.error('Cannot attach listeners to iframe:', e);
-      alert('Warning: Cannot access app content. Recording may not work. Error: ' + e.message);
+      console.warn('Cannot attach listeners to iframe:', e);
     }
   }
   
-  function detachIframeListeners() {
+  function detachListeners() {
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (!iframeDoc) return;
-      iframeDoc.removeEventListener('click', recordEvent, true);
-      iframeDoc.removeEventListener('input', recordEvent, true);
-      iframeDoc.removeEventListener('change', recordEvent, true);
-      console.log('Detached iframe listeners');
+      
+      iframeDoc.removeEventListener('click', handleClick, true);
+      iframeDoc.removeEventListener('mousedown', handleMouseDown, true);
+      iframeDoc.removeEventListener('mousemove', handleMouseMove, true);
+      iframeDoc.removeEventListener('mouseup', handleMouseUp, true);
+      
+      const inputs = iframeDoc.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        input.removeEventListener('input', handleInput);
+        input.removeEventListener('change', handleChange);
+      });
+      
+      console.log('✓ Event listeners detached');
     } catch (e) {
       console.warn('Cannot detach listeners from iframe:', e);
     }
@@ -949,12 +1014,59 @@
           element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
         }
+      } else if (event.type === 'drag') {
+        // Replay drag event
+        replayDrag(element, event.detail);
       }
       
       console.log('Replayed event:', event.type, event.target);
     } catch (e) {
       console.warn('Cannot replay event:', e, event);
     }
+  }
+  
+  function replayDrag(element, detail) {
+    // Create and dispatch mouse events to simulate the drag
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    
+    // Dispatch mousedown
+    const mouseDownEvent = new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+      clientX: detail.startX,
+      clientY: detail.startY
+    });
+    element.dispatchEvent(mouseDownEvent);
+    
+    // Dispatch mousemove events (simulate smooth drag)
+    const steps = 10;
+    const deltaX = detail.deltaX / steps;
+    const deltaY = detail.deltaY / steps;
+    
+    for (let i = 1; i <= steps; i++) {
+      setTimeout(() => {
+        const mouseMoveEvent = new MouseEvent('mousemove', {
+          bubbles: true,
+          cancelable: true,
+          clientX: detail.startX + deltaX * i,
+          clientY: detail.startY + deltaY * i
+        });
+        element.dispatchEvent(mouseMoveEvent);
+      }, i * 20);
+    }
+    
+    // Dispatch mouseup
+    setTimeout(() => {
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+        cancelable: true,
+        clientX: detail.endX,
+        clientY: detail.endY
+      });
+      element.dispatchEvent(mouseUpEvent);
+      
+      console.log('Replayed drag:', detail);
+    }, steps * 20 + 20);
   }
   
   function findElement(doc, selector) {
