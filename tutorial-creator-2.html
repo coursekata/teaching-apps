@@ -442,6 +442,7 @@
           <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
         <button id="loadApp" class="primary">Load App</button>
+        <button id="reloadApp" class="primary" style="display:none;">🔄 Reload App</button>
         <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
         <button id="stopRecording" class="record" style="display:none;">⏹ Stop Recording</button>
         <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
@@ -451,6 +452,7 @@
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
         <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
+        <button id="recordAgain" class="record" style="display:none;">🔄 Record Again</button>
         <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
       </div>
       
@@ -632,6 +634,7 @@
   const appFrame = document.getElementById('appFrame');
   
   const loadApp = document.getElementById('loadApp');
+  const reloadApp = document.getElementById('reloadApp');
   const startRecording = document.getElementById('startRecording');
   const pauseRecording = document.getElementById('pauseRecording');
   const resumeRecording = document.getElementById('resumeRecording');
@@ -639,6 +642,7 @@
   const stopRecording = document.getElementById('stopRecording');
   const previewRecording = document.getElementById('previewRecording');
   const playPausePreview = document.getElementById('playPausePreview');
+  const recordAgain = document.getElementById('recordAgain');
   const exportRecording = document.getElementById('exportRecording');
   const recordingIndicator = document.getElementById('recordingIndicator');
   const pausedIndicator = document.getElementById('pausedIndicator');
@@ -737,10 +741,22 @@
     
     // Update UI
     loadApp.style.display = 'none';
+    reloadApp.style.display = 'inline-block';
     startRecording.style.display = 'inline-block';
     appUrl.disabled = true;
     
     console.log('✓ App loaded:', url);
+  });
+  
+  reloadApp.addEventListener('click', () => {
+    const url = appFrame.src;
+    if (url && url !== 'about:blank') {
+      appFrame.src = '';
+      setTimeout(() => {
+        appFrame.src = url;
+        console.log('🔄 App reloaded');
+      }, 100);
+    }
   });
   
   startRecording.addEventListener('click', () => {
@@ -823,10 +839,13 @@
     resumeRecording.style.display = 'none';
     addAnnotation.style.display = 'none';
     stopRecording.style.display = 'none';
+    startRecording.style.display = 'none';
     previewRecording.style.display = 'inline-block';
+    recordAgain.style.display = 'inline-block';
     exportRecording.style.display = 'inline-block';
     recordingIndicator.style.display = 'none';
     pausedIndicator.style.display = 'none';
+    // reloadApp stays visible
     
     // Build tutorial JSON
     const tutorial = {
@@ -841,6 +860,40 @@
     console.log('✓ Recording stopped. Duration:', duration, 'ms');
     console.log('  Events:', recordedEvents.length);
     console.log('  Annotations:', recordedAnnotations.length);
+  });
+  
+  recordAgain.addEventListener('click', () => {
+    // Stop any active playback
+    isPlaying = false;
+    
+    // Hide any visible annotations
+    annotationBox.classList.remove('visible');
+    currentAnnotationIndex = -1;
+    
+    // Reload the app to reset its state
+    const url = appFrame.src;
+    appFrame.src = '';
+    
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      // Reset recording UI
+      recordedEvents = [];
+      recordedAnnotations = [];
+      currentTutorial = null;
+      
+      reloadApp.style.display = 'inline-block';
+      startRecording.style.display = 'inline-block';
+      stopRecording.style.display = 'none';
+      recordingIndicator.style.display = 'none';
+      pausedIndicator.style.display = 'none';
+      previewRecording.style.display = 'none';
+      playPausePreview.style.display = 'none';
+      recordAgain.style.display = 'none';
+      exportRecording.style.display = 'none';
+      
+      console.log('🔄 Ready to record again');
+    }, 100);
   });
   
   exportRecording.addEventListener('click', () => {
@@ -1013,9 +1066,13 @@
       return;
     }
     
-    // Reload app to reset state
+    // Stop any active playback first
+    isPlaying = false;
+    
+    // CRITICAL: Reload app to reset to initial state BEFORE playback
     const url = appFrame.src;
     appFrame.src = '';
+    
     setTimeout(() => {
       appFrame.src = url;
       
@@ -1023,15 +1080,16 @@
       setTimeout(() => {
         previewRecording.style.display = 'none';
         playPausePreview.style.display = 'inline-block';
+        playPausePreview.textContent = '⏸ Pause Preview';
         
-        // Auto-start preview playback
+        // Auto-start preview playback with fresh app state
         isPlaying = true;
-        playbackStartTime = Date.now();
         playbackPausedAt = 0;
+        playbackStartTime = Date.now();
         eventQueue = [...currentTutorial.events];
         requestAnimationFrame(playbackLoop);
         
-        console.log('✓ Preview started');
+        console.log('✓ Preview started (app reloaded to initial state)');
       }, 500);
     }, 100);
   });
@@ -1533,6 +1591,7 @@
         playPausePreview.style.display = 'none';
         playPausePreview.textContent = '⏸ Pause Preview';
         previewRecording.style.display = 'inline-block';
+        recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
         
         // Reload app to restore full interactivity
