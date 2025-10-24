@@ -1281,13 +1281,14 @@
     }
     
     // Find the actual interactive element (button, input, etc.)
-    // Walk up the tree to find BUTTON or element with onclick
+    // Walk up the tree to find BUTTON or element with onclick or ID
     let targetElement = e.target;
     while (targetElement && targetElement !== e.currentTarget) {
       if (targetElement.tagName === 'BUTTON' || 
           targetElement.tagName === 'INPUT' ||
           targetElement.tagName === 'SELECT' ||
-          targetElement.tagName === 'A') {
+          targetElement.tagName === 'A' ||
+          targetElement.id) { // Stop if we find an element with an ID
         // Found the interactive element
         break;
       }
@@ -1308,7 +1309,7 @@
       target: selector
     });
     
-    console.log('Recorded click on:', targetElement.tagName, selector);
+    console.log('✓ Recorded click on:', targetElement.tagName, targetElement.id || targetElement.className, '→ selector:', selector);
   }
   
   function handleInput(e) {
@@ -1742,9 +1743,11 @@
       const element = findElement(iframeDoc, event.target);
       
       if (!element) {
-        console.warn('Element not found for replay:', event.target);
+        console.warn('❌ Element not found for replay:', event.target);
         return;
       }
+      
+      console.log('▶ Replaying', event.type, 'on:', element.tagName, element.id || element.className);
       
       // Visual feedback only for clicks (not drags - they have their own animation)
       if (event.type === 'click') {
@@ -1761,7 +1764,8 @@
           cancelable: true,
           view: iframeDoc.defaultView
         });
-        element.dispatchEvent(clickEvent);
+        const dispatched = element.dispatchEvent(clickEvent);
+        console.log('  Click dispatched, default prevented:', !dispatched);
       } else if (event.type === 'input' || event.type === 'change') {
         if (event.detail.value !== undefined) {
           element.value = event.detail.value;
