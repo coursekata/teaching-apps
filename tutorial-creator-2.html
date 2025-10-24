@@ -319,6 +319,8 @@
       </div>
       
       <div id="playbackControls" class="playback-controls" style="display:none;">
+        <button id="loadTutorial" class="primary">📂 Load Tutorial</button>
+        <button id="backToRecording" class="primary" style="display:none;">← Back to Recording</button>
         <button id="playBtn">▶ Play</button>
         <button id="pauseBtn" style="display:none;">⏸ Pause</button>
         <button id="restartBtn">⟲ Restart</button>
@@ -339,7 +341,6 @@
         </label>
       </div>
       
-      <button id="loadTutorial" class="primary">📂 Load Tutorial</button>
       <button id="helpBtn">❓ Help</button>
     </div>
   </div>
@@ -451,6 +452,7 @@
   const copyExport = document.getElementById('copyExport');
   const closeExportModal = document.getElementById('closeExportModal');
   const loadTutorial = document.getElementById('loadTutorial');
+  const backToRecording = document.getElementById('backToRecording');
   const loadModal = document.getElementById('loadModal');
   const loadTextarea = document.getElementById('loadTextarea');
   const loadFromFile = document.getElementById('loadFromFile');
@@ -534,6 +536,10 @@
     } else if (mode === 'playback') {
       modePlayback.classList.add('active');
       playbackControls.style.display = 'flex';
+      
+      // Show Load Tutorial button, hide Back to Recording
+      loadTutorial.style.display = 'inline-block';
+      backToRecording.style.display = 'none';
     }
   }
   
@@ -624,6 +630,31 @@
     }, 100);
   });
   
+  backToRecording.addEventListener('click', () => {
+    // Stop any active playback
+    isPlaying = false;
+    
+    // Reload app to reset state
+    const url = appFrame.src;
+    appFrame.src = '';
+    
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      // Show recording controls (post-recording state)
+      playbackControls.style.display = 'none';
+      recordingControls.style.display = 'flex';
+      startRecord.style.display = 'none';
+      stopRecord.style.display = 'none';
+      recordingIndicator.style.display = 'none';
+      previewRecording.style.display = 'inline-block';
+      exportTutorial.style.display = 'inline-block';
+      recordAgain.style.display = 'inline-block';
+      
+      console.log('← Back to recording controls');
+    }, 100);
+  });
+  
   previewRecording.addEventListener('click', () => {
     if (recordedEvents.length === 0) {
       alert('No events recorded to preview!');
@@ -639,7 +670,7 @@
       annotations: []
     };
     
-    // Setup playback
+    // Setup playback UI elements (but stay in record mode visually)
     const duration = currentTutorial.duration / 1000;
     totalTimeEl.textContent = formatTime(duration);
     timelineSlider.max = duration;
@@ -648,6 +679,16 @@
     playbackPausedAt = 0;
     playbackStartTime = 0;
     
+    // Show playback controls for preview, hide Load Tutorial, show Back button
+    playbackControls.style.display = 'flex';
+    recordingControls.style.display = 'none';
+    loadTutorial.style.display = 'none';
+    backToRecording.style.display = 'inline-block';
+    
+    // Keep Record mode button active
+    modeRecord.classList.add('active');
+    modePlayback.classList.remove('active');
+    
     // Reload the app to reset state
     const url = appFrame.src;
     appFrame.src = '';
@@ -655,23 +696,18 @@
     setTimeout(() => {
       appFrame.src = url;
       
-      // Wait for app to load, then switch to playback mode and start playing
+      // Wait for app to load, then auto-start playback
       setTimeout(() => {
-        setMode('playback');
+        isPlaying = true;
+        playBtn.style.display = 'none';
+        pauseBtn.style.display = 'inline-block';
+        playbackStartTime = Date.now();
+        eventQueue = [...currentTutorial.events];
+        requestAnimationFrame(playbackLoop);
         
-        // Auto-start playback after a brief delay
-        setTimeout(() => {
-          isPlaying = true;
-          playBtn.style.display = 'none';
-          pauseBtn.style.display = 'inline-block';
-          playbackStartTime = Date.now();
-          eventQueue = [...currentTutorial.events];
-          requestAnimationFrame(playbackLoop);
-        }, 500);
+        console.log('▶ Auto-playing preview...');
       }, 500);
     }, 100);
-    
-    console.log('▶ Previewing recording...');
   });
   
   function getElementSelector(element) {
@@ -1174,6 +1210,14 @@
       isPlaying = false;
       playBtn.style.display = 'inline-block';
       pauseBtn.style.display = 'none';
+      
+      // If this was a preview (backToRecording button visible), auto-return to recording controls
+      if (backToRecording.style.display !== 'none') {
+        setTimeout(() => {
+          backToRecording.click();
+        }, 1000); // Wait 1 second before returning
+      }
+      
       return;
     }
     
