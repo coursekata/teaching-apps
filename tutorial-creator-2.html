@@ -829,8 +829,9 @@
     pausedIndicator.style.display = 'none';
     recordingIndicator.style.display = 'inline-block';
     
-    // Show the most recent annotation (if any) for its duration
-    if (recordedAnnotations.length > 0) {
+    // If annotation is already visible (from save position), just keep it visible
+    // Otherwise show the most recent annotation
+    if (recordedAnnotations.length > 0 && !annotationBox.classList.contains('visible')) {
       const mostRecentAnn = recordedAnnotations[recordedAnnotations.length - 1];
       
       // Display the annotation
@@ -842,6 +843,14 @@
       }, mostRecentAnn.duration);
       
       console.log('▶ Recording resumed - showing annotation for', mostRecentAnn.duration, 'ms');
+    } else if (annotationBox.classList.contains('visible')) {
+      // Annotation already visible, set timer to hide it after duration
+      const mostRecentAnn = recordedAnnotations[recordedAnnotations.length - 1];
+      setTimeout(() => {
+        annotationBox.classList.remove('visible');
+      }, mostRecentAnn.duration);
+      
+      console.log('▶ Recording resumed - annotation already visible, will hide after', mostRecentAnn.duration, 'ms');
     } else {
       console.log('▶ Recording resumed (paused for', pauseDuration, 'ms)');
     }
@@ -1097,9 +1106,9 @@
     
     console.log('✓ Annotation saved:', pendingAnnotation);
     
-    // Clean up
+    // Clean up positioning overlay but KEEP annotation visible
     positionEditorOverlay.style.display = 'none';
-    annotationBox.classList.remove('visible', 'draggable');
+    annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
     pendingAnnotation = null;
     
     // Keep showing Resume button (don't auto-resume)
@@ -1239,7 +1248,37 @@
   function handleClick(e) {
     if (!isRecording || isPaused) return;
     
-    const selector = generateSelector(e.target);
+    // Check if this click is on a draggable element - if so, skip it (mousedown handles drags)
+    let element = e.target;
+    while (element && element !== e.currentTarget) {
+      if (element.draggable || 
+          element.classList.contains('draggable-veil') ||
+          element.tagName === 'circle' || 
+          element.tagName === 'rect' || 
+          element.tagName === 'line' ||
+          element.tagName === 'path' ||
+          (element.tagName === 'g' && (window.getComputedStyle(element).cursor === 'grab' || 
+                                        window.getComputedStyle(element).cursor === 'move' || 
+                                        window.getComputedStyle(element).cursor === 'pointer'))) {
+        console.log('Skipping click on draggable element:', element.tagName);
+        return; // Skip - this will be handled by drag recording
+      }
+      element = element.parentElement;
+    }
+    
+    // Find the actual clickable element (button, link, etc.) not a child text/span
+    let clickTarget = e.target;
+    while (clickTarget && clickTarget !== e.currentTarget) {
+      if (clickTarget.tagName === 'BUTTON' || 
+          clickTarget.tagName === 'A' || 
+          clickTarget.onclick ||
+          clickTarget.getAttribute('onclick')) {
+        break; // Found the actual clickable element
+      }
+      clickTarget = clickTarget.parentElement;
+    }
+    
+    const selector = generateSelector(clickTarget);
     if (!selector) return;
     
     recordedEvents.push({
