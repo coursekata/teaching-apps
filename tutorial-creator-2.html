@@ -744,12 +744,28 @@
       dragElement = draggable;
       dragStartTime = Date.now() - recordStartTime;
       
-      // Take a snapshot of the ENTIRE document body
+      // Take snapshots at regular intervals during the drag
       dragStartSnapshot = {
-        html: iframeDoc.body.innerHTML
+        frames: [
+          {
+            time: 0,
+            html: iframeDoc.body.innerHTML
+          }
+        ]
       };
       
-      console.log('🖱️ Drag started - snapshot captured');
+      // Sample the DOM every 100ms during drag for smooth replay
+      dragCheckInterval = setInterval(() => {
+        if (isDragging) {
+          const currentTime = Date.now() - recordStartTime - dragStartTime;
+          dragStartSnapshot.frames.push({
+            time: currentTime,
+            html: iframeDoc.body.innerHTML
+          });
+        }
+      }, 100);
+      
+      console.log('🖱️ Drag started - capturing animation frames...');
       
     } catch (e) {
       console.warn('Cannot handle mousedown:', e);
@@ -759,24 +775,36 @@
   function handleMouseUp(e) {
     if (!isDragging || !dragElement) return;
     
+    // Stop capturing frames
+    if (dragCheckInterval) {
+      clearInterval(dragCheckInterval);
+      dragCheckInterval = null;
+    }
+    
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (!iframeDoc) return;
       
-      // Wait a moment for the app to finish updating, then take snapshot
+      // Wait a moment for the app to finish updating, then take final snapshot
       setTimeout(() => {
-        const dragEndSnapshot = {
-          html: iframeDoc.body.innerHTML
-        };
+        const currentTime = Date.now() - recordStartTime - dragStartTime;
         
-        // Only record if something actually changed
-        if (dragStartSnapshot.html !== dragEndSnapshot.html) {
+        // Add final frame
+        dragStartSnapshot.frames.push({
+          time: currentTime,
+          html: iframeDoc.body.innerHTML
+        });
+        
+        // Check if anything actually changed
+        const firstFrame = dragStartSnapshot.frames[0].html;
+        const lastFrame = dragStartSnapshot.frames[dragStartSnapshot.frames.length - 1].html;
+        
+        if (firstFrame !== lastFrame) {
           recordEvent('drag', dragElement, {
-            snapshotBefore: dragStartSnapshot.html,
-            snapshotAfter: dragEndSnapshot.html
+            animationFrames: dragStartSnapshot.frames
           });
           
-          console.log('📊 Drag recorded with full page snapshots');
+          console.log('📊 Drag recorded with', dragStartSnapshot.frames.length, 'animation frames');
         }
         
         isDragging = false;
@@ -790,6 +818,10 @@
       isDragging = false;
       dragElement = null;
       dragStartSnapshot = null;
+      if (dragCheckInterval) {
+        clearInterval(dragCheckInterval);
+        dragCheckInterval = null;
+      }
     }
   }
   
@@ -835,6 +867,15 @@
         input.removeEventListener('input', handleInput);
         input.removeEventListener('change', handleChange);
       });
+      
+      // Clean up any active drag sampling
+      if (dragCheckInterval) {
+        clearInterval(dragCheckInterval);
+        dragCheckInterval = null;
+      }
+      isDragging = false;
+      dragElement = null;
+      dragStartSnapshot = null;
       
       console.log('✓ Event listeners detached');
     } catch (e) {
@@ -1093,19 +1134,41 @@
   }
   
   function replayDrag(element, detail, iframeDoc) {
-    // Use snapshot method - replace entire body HTML
+    // Use animation frames method - replay each frame at its recorded time
+    if (detail.animationFrames && detail.animationFrames.length > 0) {
+      try {
+        console.log('🎬 Replaying drag with', detail.animationFrames.length, 'animation frames');
+        
+        // Play each frame at its recorded timestamp
+        detail.animationFrames.forEach((frame, index) => {
+          setTimeout(() => {
+            iframeDoc.body.innerHTML = frame.html;
+            
+            if (index === detail.animationFrames.length - 1) {
+              console.log('✓ Drag animation complete');
+            }
+          }, frame.time);
+        });
+        
+        return;
+      } catch (e) {
+        console.warn('Animation frame replay failed:', e);
+      }
+    }
+    
+    // Backward compatibility: handle old snapshot format
     if (detail.snapshotAfter) {
       try {
         iframeDoc.body.innerHTML = detail.snapshotAfter;
-        console.log('✓ Replayed drag using full page snapshot');
+        console.log('✓ Replayed drag using snapshot (legacy format)');
         return;
       } catch (e) {
         console.warn('Snapshot replay failed:', e);
       }
     }
     
-    // Fallback: can't replay drag without snapshot
-    console.warn('Cannot replay drag - no snapshot available');
+    // Fallback: can't replay drag
+    console.warn('Cannot replay drag - no animation data available');
   }
   
   function findElement(doc, selector) {
