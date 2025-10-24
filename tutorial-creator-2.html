@@ -487,6 +487,7 @@
   let dragStartPos = null;
   let dragElement = null;
   let dragStartTime = 0;
+  let dragTransformStart = null;
   
   // Mode switching
   function setMode(mode) {
@@ -581,6 +582,12 @@
     // Try unique attribute combinations
     const tag = element.tagName.toLowerCase();
     
+    // For SVG groups with specific classes (common in D3)
+    if (tag === 'g' && element.classList.length > 0) {
+      const classes = Array.from(element.classList);
+      return tag + '.' + classes.join('.');
+    }
+    
     // For buttons with text content
     if (tag === 'button' && element.textContent.trim()) {
       return {
@@ -601,6 +608,11 @@
       if (classes.length > 0) {
         return tag + '.' + classes.join('.');
       }
+    }
+    
+    // For SVG elements, try data attributes
+    if (element.hasAttribute('data-index')) {
+      return tag + '[data-index="' + element.getAttribute('data-index') + '"]';
     }
     
     // Fallback to nth-of-type
@@ -657,11 +669,13 @@
       const style = window.getComputedStyle(element);
       const cursor = style.cursor;
       
-      // Check for drag cursors or draggable attributes
+      // Check for drag cursors, draggable attributes, or SVG groups with transforms
       if (cursor === 'grab' || cursor === 'move' || 
           element.draggable || 
           element.getAttribute('data-draggable') === 'true' ||
-          element.classList.contains('draggable')) {
+          element.classList.contains('draggable') ||
+          element.classList.contains('draggable-veil') ||
+          (element.tagName === 'g' && element.hasAttribute('transform'))) {
         draggable = element;
         break;
       }
@@ -673,6 +687,14 @@
     isDragging = true;
     dragElement = draggable;
     dragStartTime = Date.now() - recordStartTime;
+    
+    // Capture initial transform if it's an SVG element
+    if (draggable.tagName === 'g' && draggable.hasAttribute('transform')) {
+      dragTransformStart = draggable.getAttribute('transform');
+    } else {
+      dragTransformStart = null;
+    }
+    
     dragStartPos = {
       x: e.clientX,
       y: e.clientY,
@@ -680,7 +702,7 @@
       elementY: draggable.offsetTop || 0
     };
     
-    console.log('🖱️ Drag started on', draggable);
+    console.log('🖱️ Drag started on', draggable, 'transform:', dragTransformStart);
   }
   
   function handleMouseMove(e) {
@@ -702,9 +724,15 @@
     const deltaX = endPos.x - dragStartPos.x;
     const deltaY = endPos.y - dragStartPos.y;
     
+    // Capture final transform if it's an SVG element
+    let dragTransformEnd = null;
+    if (dragElement.tagName === 'g' && dragElement.hasAttribute('transform')) {
+      dragTransformEnd = dragElement.getAttribute('transform');
+    }
+    
     // Only record if there was significant movement
     if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-      recordEvent('drag', dragElement, {
+      const eventDetail = {
         startX: dragStartPos.x,
         startY: dragStartPos.y,
         endX: endPos.x,
@@ -713,12 +741,23 @@
         deltaY: deltaY,
         elementStartX: dragStartPos.elementX,
         elementStartY: dragStartPos.elementY
-      });
+      };
+      
+      // Add transform info if available
+      if (dragTransformStart !== null) {
+        eventDetail.transformStart = dragTransformStart;
+      }
+      if (dragTransformEnd !== null) {
+        eventDetail.transformEnd = dragTransformEnd;
+      }
+      
+      recordEvent('drag', dragElement, eventDetail);
     }
     
     isDragging = false;
     dragElement = null;
     dragStartPos = null;
+    dragTransformStart = null;
     
     console.log('🖱️ Drag ended');
   }
@@ -1026,7 +1065,43 @@
   }
   
   function replayDrag(element, detail) {
-    // Create and dispatch mouse events to simulate the drag
+    // For SVG elements with transforms, apply the transform directly
+    if (detail.transformEnd && element.tagName === 'g') {
+      // Animate the transform change
+      const startTransform = detail.transformStart || 'translate(0,0)';
+      const endTransform = detail.transformEnd;
+      
+      // Parse translate values
+      const parseTranslate = (transform) => {
+        const match = transform.match(/translate\(([-\d.]+)[,\s]+([-\d.]+)\)/);
+        if (match) return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+        return { x: 0, y: 0 };
+      };
+      
+      const start = parseTranslate(startTransform);
+      const end = parseTranslate(endTransform);
+      
+      // Animate the translation
+      const steps = 15;
+      const deltaX = (end.x - start.x) / steps;
+      const deltaY = (end.y - start.y) / steps;
+      
+      for (let i = 1; i <= steps; i++) {
+        setTimeout(() => {
+          const newX = start.x + deltaX * i;
+          const newY = start.y + deltaY * i;
+          element.setAttribute('transform', `translate(${newX},${newY})`);
+          
+          if (i === steps) {
+            console.log('Replayed SVG drag:', startTransform, '→', endTransform);
+          }
+        }, i * 15);
+      }
+      
+      return;
+    }
+    
+    // Fallback: Create and dispatch mouse events to simulate the drag
     const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
     
     // Dispatch mousedown
@@ -1092,7 +1167,16 @@
     
     // Try direct querySelector
     try {
-      return doc.querySelector(selector);
+      const element = doc.querySelector(selector);
+      if (element) return element;
+      
+      // If not found and it's an SVG selector, try looking in SVG namespace
+      const svg = doc.querySelector('svg');
+      if (svg) {
+        return svg.querySelector(selector);
+      }
+      
+      return null;
     } catch (e) {
       console.warn('Invalid selector:', selector, e);
       return null;
