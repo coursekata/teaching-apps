@@ -1772,11 +1772,21 @@
       
       // Visual feedback only for clicks (not drags - they have their own animation)
       if (event.type === 'click') {
-        const originalOutline = element.style.outline;
-        element.style.outline = '3px solid #2563eb';
-        element.style.outlineOffset = '2px';
+        // Use box-shadow and background flash for more visible feedback
+        const originalBoxShadow = element.style.boxShadow;
+        const originalBackground = element.style.background;
+        const originalTransition = element.style.transition;
+        
+        element.style.transition = 'all 0.15s ease';
+        element.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.4)';
+        element.style.background = 'rgba(37, 99, 235, 0.1)';
+        
         setTimeout(() => {
-          element.style.outline = originalOutline;
+          element.style.boxShadow = originalBoxShadow;
+          element.style.background = originalBackground;
+          setTimeout(() => {
+            element.style.transition = originalTransition;
+          }, 150);
         }, 500);
         
         // Dispatch a proper MouseEvent to trigger all event listeners
