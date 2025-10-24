@@ -502,6 +502,10 @@
     const previousMode = currentMode;
     currentMode = mode;
     
+    // Hide any visible annotations when switching modes
+    annotationBox.classList.remove('visible');
+    currentAnnotationIndex = -1;
+    
     // Update button states
     [modeNormal, modeRecord, modePlayback].forEach(btn => btn.classList.remove('active'));
     
@@ -613,6 +617,10 @@
     // Stop any active playback
     isPlaying = false;
     
+    // Hide any visible annotations
+    annotationBox.classList.remove('visible');
+    currentAnnotationIndex = -1;
+    
     // Reload the app to reset its state
     const url = appFrame.src;
     appFrame.src = '';
@@ -640,6 +648,10 @@
     // Stop any active playback
     isPlaying = false;
     
+    // Hide any visible annotations
+    annotationBox.classList.remove('visible');
+    currentAnnotationIndex = -1;
+    
     // Go back to recording mode
     setMode('record');
     
@@ -658,6 +670,9 @@
       return;
     }
     
+    // Stop any active playback first
+    isPlaying = false;
+    
     // Create a temporary tutorial from the recorded events
     currentTutorial = {
       version: '1.0',
@@ -670,24 +685,26 @@
     // Hide Preview button, show Play/Pause button
     previewRecording.style.display = 'none';
     playPausePreview.style.display = 'inline-block';
+    playPausePreview.textContent = '⏸ Pause';
     
-    // Reload the app to reset state
+    // ALWAYS reload the app to reset state - critical for repeated previews
     const url = appFrame.src;
     appFrame.src = '';
     
     setTimeout(() => {
       appFrame.src = url;
       
-      // Wait for app to load, then auto-start playback
+      // Wait for app to load, then auto-start playback with fresh state
       setTimeout(() => {
-        isPlaying = true;
-        playbackStartTime = Date.now();
+        // Reset all playback state
         playbackPausedAt = 0;
+        playbackStartTime = Date.now();
         eventQueue = [...currentTutorial.events];
-        playPausePreview.textContent = '⏸ Pause';
+        isPlaying = true;
+        
         requestAnimationFrame(playbackLoop);
         
-        console.log('▶ Playing preview...');
+        console.log('▶ Playing preview... (fresh start)');
       }, 500);
     }, 100);
   });
@@ -1210,6 +1227,10 @@
     
     if (elapsed >= duration) {
       isPlaying = false;
+      
+      // Hide any visible annotations
+      annotationBox.classList.remove('visible');
+      currentAnnotationIndex = -1;
       
       // If this was a simple preview (playPausePreview visible), reset to preview button
       if (playPausePreview.style.display !== 'none') {
