@@ -1164,6 +1164,23 @@
     
     // Small delay to let DOM settle after restoration
     setTimeout(() => {
+      // CRITICAL: Initialize app state by triggering change events on all inputs
+      // This ensures the app's JavaScript variables are set from HTML default values
+      try {
+        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+        const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
+        inputs.forEach(input => {
+          if (input.value) {
+            // Trigger both input and change events to ensure all handlers fire
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        console.log('✓ Initialized', inputs.length, 'inputs by triggering change events');
+      } catch (e) {
+        console.warn('Could not initialize inputs:', e);
+      }
+      
       isPlaying = true;
       playbackPausedAt = 0;
       playbackStartTime = Date.now();
@@ -1636,6 +1653,21 @@
     } else {
       playbackStartTime = Date.now();
       eventQueue = [...currentTutorial.events];
+      
+      // Initialize app state by triggering change events on all inputs with values
+      try {
+        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+        const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
+        inputs.forEach(input => {
+          if (input.value) {
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        console.log('✓ Initialized', inputs.length, 'inputs for playback');
+      } catch (e) {
+        console.warn('Could not initialize inputs:', e);
+      }
     }
     
     requestAnimationFrame(playbackLoop);
