@@ -313,6 +313,7 @@
         <button id="startRecord" class="record">● Start Recording</button>
         <button id="stopRecord" class="record" style="display:none;">■ Stop Recording</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">● REC <span id="recordingTime">0:00</span></span>
+        <button id="previewRecording" class="primary" style="display:none;">▶ Preview Recording</button>
         <button id="exportTutorial" class="success" style="display:none;">📥 Export Tutorial</button>
       </div>
       
@@ -441,6 +442,7 @@
   const stopRecord = document.getElementById('stopRecord');
   const recordingIndicator = document.getElementById('recordingIndicator');
   const recordingTime = document.getElementById('recordingTime');
+  const previewRecording = document.getElementById('previewRecording');
   const exportTutorial = document.getElementById('exportTutorial');
   const exportModal = document.getElementById('exportModal');
   const exportTextarea = document.getElementById('exportTextarea');
@@ -546,6 +548,8 @@
     startRecord.style.display = 'none';
     stopRecord.style.display = 'inline-block';
     recordingIndicator.style.display = 'inline-block';
+    previewRecording.style.display = 'none';
+    exportTutorial.style.display = 'none';
     
     attachListeners();
     
@@ -566,11 +570,62 @@
     stopRecord.style.display = 'none';
     startRecord.style.display = 'inline-block';
     recordingIndicator.style.display = 'none';
+    previewRecording.style.display = 'inline-block';
     exportTutorial.style.display = 'inline-block';
     
     detachListeners();
     
     console.log('⏹ Recording stopped. Captured ' + recordedEvents.length + ' events');
+  });
+  
+  previewRecording.addEventListener('click', () => {
+    if (recordedEvents.length === 0) {
+      alert('No events recorded to preview!');
+      return;
+    }
+    
+    // Create a temporary tutorial from the recorded events
+    currentTutorial = {
+      version: '1.0',
+      appUrl: appFrame.src,
+      duration: recordedEvents[recordedEvents.length - 1].timestamp,
+      events: recordedEvents,
+      annotations: []
+    };
+    
+    // Setup playback
+    const duration = currentTutorial.duration / 1000;
+    totalTimeEl.textContent = formatTime(duration);
+    timelineSlider.max = duration;
+    timelineSlider.value = 0;
+    currentTimeEl.textContent = '0:00';
+    playbackPausedAt = 0;
+    playbackStartTime = 0;
+    
+    // Reload the app to reset state
+    const url = appFrame.src;
+    appFrame.src = '';
+    
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      // Wait for app to load, then switch to playback mode and start playing
+      setTimeout(() => {
+        setMode('playback');
+        
+        // Auto-start playback after a brief delay
+        setTimeout(() => {
+          isPlaying = true;
+          playBtn.style.display = 'none';
+          pauseBtn.style.display = 'inline-block';
+          playbackStartTime = Date.now();
+          eventQueue = [...currentTutorial.events];
+          requestAnimationFrame(playbackLoop);
+        }, 500);
+      }, 500);
+    }, 100);
+    
+    console.log('▶ Previewing recording...');
   });
   
   function getElementSelector(element) {
