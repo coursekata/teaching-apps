@@ -1014,8 +1014,9 @@
       return;
     }
     
-    // Calculate timestamp (current recording time minus paused duration)
-    const timestamp = Date.now() - recordingStartTime - totalPausedDuration;
+    // Calculate timestamp at the moment PAUSE was clicked (not now)
+    // This is: pausedTime - recordingStartTime - totalPausedDuration
+    const timestamp = pausedTime - recordingStartTime - totalPausedDuration;
     
     // Create pending annotation
     pendingAnnotation = {
@@ -1043,7 +1044,7 @@
     // Enable dragging
     makeDraggable();
     
-    console.log('✓ Annotation created, now position it...');
+    console.log('✓ Annotation created at timestamp:', timestamp, 'ms - now position it...');
   });
   
   cancelAnnotation.addEventListener('click', () => {
@@ -1072,22 +1073,10 @@
     annotationBox.classList.remove('visible', 'draggable');
     pendingAnnotation = null;
     
-    // Auto-resume recording after saving annotation
-    if (isPaused && isRecording) {
-      const pauseDuration = Date.now() - pausedTime;
-      totalPausedDuration += pauseDuration;
-      isPaused = false;
-      
-      resumeRecording.style.display = 'none';
-      pauseRecording.style.display = 'inline-block';
-      addAnnotation.style.display = 'none';
-      pausedIndicator.style.display = 'none';
-      recordingIndicator.style.display = 'inline-block';
-      
-      console.log('▶ Recording auto-resumed after annotation save');
-    }
+    // Keep showing Resume button (don't auto-resume)
+    // User can click Resume when ready
     
-    alert(`✓ Annotation "${recordedAnnotations[recordedAnnotations.length - 1].title}" saved! Recording resumed.`);
+    alert(`✓ Annotation "${recordedAnnotations[recordedAnnotations.length - 1].title}" saved! Click Resume to continue recording.`);
   });
   
   cancelPosition.addEventListener('click', () => {
