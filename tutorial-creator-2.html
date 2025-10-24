@@ -490,6 +490,8 @@
   let dragElement = null;
   let dragStartTime = 0;
   let dragTransformStart = null;
+  let dragObserver = null;
+  let activeTransformWatchers = [];
   
   // Mode switching
   function setMode(mode) {
@@ -817,6 +819,121 @@
     console.log('🖱️ Drag ended');
   }
   
+  // Transform watchers for D3 drag behavior
+  function setupTransformWatcher() {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (!iframeDoc) return;
+      
+      // Find all SVG groups that might be draggable
+      const svgGroups = iframeDoc.querySelectorAll('svg g[transform]');
+      
+      svgGroups.forEach(group => {
+        // Check if this group or its children have draggable styling
+        const style = window.getComputedStyle(group);
+        const cursor = style.cursor;
+        
+        // Also check if any child has grab cursor
+        let hasGrabCursor = cursor === 'grab' || cursor === 'move';
+        if (!hasGrabCursor) {
+          const children = group.querySelectorAll('*');
+          for (let child of children) {
+            const childStyle = window.getComputedStyle(child);
+            if (childStyle.cursor === 'grab' || childStyle.cursor === 'move') {
+              hasGrabCursor = true;
+              break;
+            }
+          }
+        }
+        
+        if (hasGrabCursor || group.classList.contains('draggable-veil') || group.classList.contains('axis')) {
+          
+          const initialTransform = group.getAttribute('transform');
+          let watchingDrag = false;
+          let dragStartTransform = null;
+          let dragStartTimestamp = 0;
+          
+          const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+              if (mutation.type === 'attributes' && mutation.attributeName === 'transform') {
+                const currentTransform = group.getAttribute('transform');
+                
+                // Start of drag - first transform change
+                if (!watchingDrag && currentTransform !== dragStartTransform) {
+                  watchingDrag = true;
+                  dragStartTransform = mutation.oldValue || initialTransform;
+                  dragStartTimestamp = Date.now() - recordStartTime;
+                  console.log('🔍 Watching drag on', group, 'start:', dragStartTransform);
+                }
+              }
+            });
+          });
+          
+          // Watch for mouseup on the document to capture the end of drag
+          const mouseUpHandler = () => {
+            if (watchingDrag) {
+              const finalTransform = group.getAttribute('transform');
+              
+              if (dragStartTransform !== finalTransform) {
+                console.log('🎯 Drag completed:', dragStartTransform, '→', finalTransform);
+                
+                recordEvent('drag', group, {
+                  transformStart: dragStartTransform,
+                  transformEnd: finalTransform,
+                  startX: 0,
+                  startY: 0,
+                  endX: 0,
+                  endY: 0,
+                  deltaX: 0,
+                  deltaY: 0
+                });
+              }
+              
+              watchingDrag = false;
+              dragStartTransform = group.getAttribute('transform');
+            }
+          };
+          
+          iframeDoc.addEventListener('mouseup', mouseUpHandler);
+          
+          observer.observe(group, {
+            attributes: true,
+            attributeFilter: ['transform'],
+            attributeOldValue: true
+          });
+          
+          activeTransformWatchers.push({
+            observer: observer,
+            handler: mouseUpHandler,
+            element: group
+          });
+        }
+      });
+      
+      console.log('✓ Transform watchers set up for', activeTransformWatchers.length, 'elements');
+    } catch (e) {
+      console.warn('Cannot setup transform watchers:', e);
+    }
+  }
+  
+  function cleanupTransformWatchers() {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      
+      activeTransformWatchers.forEach(watcher => {
+        watcher.observer.disconnect();
+        if (iframeDoc) {
+          iframeDoc.removeEventListener('mouseup', watcher.handler);
+        }
+      });
+      
+      activeTransformWatchers = [];
+      console.log('✓ Transform watchers cleaned up');
+    } catch (e) {
+      console.warn('Cannot cleanup transform watchers:', e);
+    }
+  }
+  
   function attachListeners() {
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
@@ -840,6 +957,9 @@
       iframeDoc.addEventListener('mousemove', handleMouseMove, true);
       iframeDoc.addEventListener('mouseup', handleMouseUp, true);
       
+      // Transform watchers for D3 drag behavior
+      setupTransformWatcher();
+      
       console.log('✓ Event listeners attached (including drag support)');
     } catch (e) {
       console.warn('Cannot attach listeners to iframe:', e);
@@ -861,6 +981,9 @@
         input.removeEventListener('input', handleInput);
         input.removeEventListener('change', handleChange);
       });
+      
+      // Clean up transform watchers
+      cleanupTransformWatchers();
       
       console.log('✓ Event listeners detached');
     } catch (e) {
