@@ -571,7 +571,8 @@
       <h3>Recording Mode:</h3>
       <ol class="help-text">
         <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
-        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" to begin</li>
+        <li><strong>Load App</strong> - Click "📱 Load App" to load the app in the iframe</li>
+        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" to begin capturing interactions</li>
         <li><strong>Interact Normally</strong> - Click, type, and drag in your app. All interactions are captured</li>
         <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations</li>
         <li><strong>Add Annotations</strong> - While paused:
@@ -586,7 +587,8 @@
         <li><strong>Resume Recording</strong> - Click "▶ Resume" to continue recording</li>
         <li><strong>Add More Annotations</strong> - Pause again to add additional annotations</li>
         <li><strong>Stop & Export</strong> - Click "⏹ Stop & Export" when done</li>
-        <li><strong>Copy JSON</strong> - Copy the generated JSON to save your tutorial</li>
+        <li><strong>Preview</strong> - Click "👁 Preview" to watch your recording before exporting</li>
+        <li><strong>Copy JSON</strong> - Copy the generated JSON from the export modal to save your tutorial</li>
       </ol>
       
       <h3>Playback Mode:</h3>
@@ -963,6 +965,50 @@
     console.log('Annotation positioning cancelled');
   });
   
+  // Preview functionality
+  previewRecording.addEventListener('click', () => {
+    if (!currentTutorial) {
+      alert('No recording to preview!');
+      return;
+    }
+    
+    // Reload app to reset state
+    const url = appFrame.src;
+    appFrame.src = '';
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      // Wait for app to load, then start preview
+      setTimeout(() => {
+        previewRecording.style.display = 'none';
+        playPausePreview.style.display = 'inline-block';
+        
+        // Auto-start preview playback
+        isPlaying = true;
+        playbackStartTime = Date.now();
+        eventQueue = [...currentTutorial.events];
+        requestAnimationFrame(playbackLoop);
+        
+        console.log('✓ Preview started');
+      }, 500);
+    }, 100);
+  });
+  
+  playPausePreview.addEventListener('click', () => {
+    if (isPlaying) {
+      // Pause preview
+      isPlaying = false;
+      playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+      console.log('⏸ Preview paused');
+    } else {
+      // Resume preview
+      isPlaying = true;
+      playbackStartTime = Date.now() - playbackPausedAt * 1000;
+      requestAnimationFrame(playbackLoop);
+      console.log('▶ Preview resumed');
+    }
+  });
+  
   // Dragging functionality
   function makeDraggable() {
     annotationBox.addEventListener('mousedown', startDrag);
@@ -1307,8 +1353,11 @@
     const elapsed = (Date.now() - playbackStartTime) / 1000;
     const duration = currentTutorial.duration / 1000;
     
-    timelineSlider.value = elapsed;
-    currentTimeEl.textContent = formatTime(elapsed);
+    // Update timeline only if in full playback mode (not preview)
+    if (playbackControls.style.display !== 'none') {
+      timelineSlider.value = elapsed;
+      currentTimeEl.textContent = formatTime(elapsed);
+    }
     
     // Process events
     while (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 <= elapsed) {
