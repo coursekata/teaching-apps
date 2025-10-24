@@ -261,12 +261,14 @@
   .modal textarea{
     width:100%;
     min-height:300px;
+    max-height:400px;
     font-family:monospace;
     font-size:12px;
     padding:12px;
     border:1px solid #ddd;
     border-radius:8px;
     resize:vertical;
+    overflow-y:auto;
   }
   
   .modal input[type=text]{
@@ -825,6 +827,14 @@
     isRecording = false;
     isPaused = false;
     
+    // Close annotation positioning overlay if active (don't save incomplete annotation)
+    if (positionEditorOverlay.style.display !== 'none') {
+      positionEditorOverlay.style.display = 'none';
+      annotationBox.classList.remove('visible', 'draggable');
+      pendingAnnotation = null;
+      console.log('⚠ Discarded unsaved annotation due to stop recording');
+    }
+    
     // Clean up any active drag capture
     if (isDragging) {
       isDragging = false;
@@ -1062,7 +1072,22 @@
     annotationBox.classList.remove('visible', 'draggable');
     pendingAnnotation = null;
     
-    alert(`✓ Annotation "${recordedAnnotations[recordedAnnotations.length - 1].title}" saved!`);
+    // Auto-resume recording after saving annotation
+    if (isPaused && isRecording) {
+      const pauseDuration = Date.now() - pausedTime;
+      totalPausedDuration += pauseDuration;
+      isPaused = false;
+      
+      resumeRecording.style.display = 'none';
+      pauseRecording.style.display = 'inline-block';
+      addAnnotation.style.display = 'none';
+      pausedIndicator.style.display = 'none';
+      recordingIndicator.style.display = 'inline-block';
+      
+      console.log('▶ Recording auto-resumed after annotation save');
+    }
+    
+    alert(`✓ Annotation "${recordedAnnotations[recordedAnnotations.length - 1].title}" saved! Recording resumed.`);
   });
   
   cancelPosition.addEventListener('click', () => {
