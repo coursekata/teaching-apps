@@ -408,54 +408,6 @@
   }
   
   .form-group{
-    margin-bottom:16px;
-  }
-  
-  .form-group label{
-    display:block;
-    margin-bottom:6px;
-    font-weight:600;
-    color:#374151;
-  }
-  
-  .form-group textarea{
-    width:100%;
-    min-height:100px;
-    padding:8px 12px;
-    border:1px solid #ddd;
-    border-radius:8px;
-    font-size:14px;
-    font-family:inherit;
-    resize:vertical;
-  }
-  
-  .position-grid{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:8px;
-    margin-top:8px;
-  }
-  
-  .position-option{
-    padding:8px;
-    border:2px solid #e5e7eb;
-    border-radius:6px;
-    text-align:center;
-    cursor:pointer;
-    font-size:11px;
-    transition:all 0.2s;
-  }
-  
-  .position-option:hover{
-    border-color:#9ca3af;
-  }
-  
-  .position-option.selected{
-    border-color:var(--accent);
-    background:#eff6ff;
-    font-weight:600;
-  }
-</style>
 </head>
 <body>
   <div class="tutorial-header">
@@ -470,7 +422,8 @@
           App URL:
           <input type="text" id="appUrl" placeholder="https://example.com/app.html" value=""/>
         </label>
-        <button id="startRecording" class="record">⏺ Start Recording</button>
+        <button id="loadApp" class="primary">📱 Load App</button>
+        <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
         <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
         <button id="resumeRecording" class="success" style="display:none;">▶ Resume</button>
         <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
@@ -530,7 +483,7 @@
       <h2>Add Annotation</h2>
       
       <div class="info-box">
-        <strong>📝 Instructions:</strong> Type your annotation, then drag the preview box to position it exactly where you want. Click "Save Annotation" when ready.
+        <strong>📝 Instructions:</strong> Fill in the fields below and click "Create Annotation". The annotation will appear on screen where you can drag it to position it perfectly.
       </div>
       
       <div class="form-group">
@@ -548,24 +501,21 @@
         <input type="number" id="annDuration" value="5" min="1" max="60" style="width:100px;"/>
       </div>
       
-      <div class="form-group">
-        <label>Position Preset (or drag the box above)</label>
-        <div class="position-grid">
-          <div class="position-option" data-position="top-left">↖<br>Top Left</div>
-          <div class="position-option selected" data-position="top">↑<br>Top</div>
-          <div class="position-option" data-position="top-right">↗<br>Top Right</div>
-          <div class="position-option" data-position="left">←<br>Left</div>
-          <div class="position-option" data-position="center">•<br>Center</div>
-          <div class="position-option" data-position="right">→<br>Right</div>
-          <div class="position-option" data-position="bottom-left">↙<br>Bottom Left</div>
-          <div class="position-option" data-position="bottom">↓<br>Bottom</div>
-          <div class="position-option" data-position="bottom-right">↘<br>Bottom Right</div>
-        </div>
-      </div>
-      
       <div class="modal-buttons">
         <button id="cancelAnnotation">Cancel</button>
-        <button id="saveAnnotation" class="success">💾 Save Annotation</button>
+        <button id="createAnnotation" class="primary">✨ Create Annotation</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Position Editor Overlay -->
+  <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:99;pointer-events:none;">
+    <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
+      <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag the annotation box to where you want it, then click Save Position</div>
+      <div style="display:flex;gap:8px;">
+        <button id="savePosition" class="success">💾 Save Position</button>
+        <button id="cancelPosition">Cancel</button>
       </div>
     </div>
   </div>
@@ -624,15 +574,17 @@
         <li><strong>Start Recording</strong> - Click "⏺ Start Recording" to begin</li>
         <li><strong>Interact Normally</strong> - Click, type, and drag in your app. All interactions are captured</li>
         <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations</li>
-        <li><strong>Add Annotations</strong> - While paused, click "➕ Add Annotation" to create a tutorial callout
+        <li><strong>Add Annotations</strong> - While paused:
           <ul style="margin-left:20px;">
-            <li>Type your annotation text</li>
-            <li>Drag the preview box to position it exactly where you want</li>
-            <li>Set duration and save</li>
+            <li>Click "➕ Add Annotation"</li>
+            <li>Enter title, text, and duration</li>
+            <li>Click "✨ Create Annotation"</li>
+            <li>Drag the annotation box to position it exactly where you want</li>
+            <li>Click "💾 Save Position" when ready</li>
           </ul>
         </li>
         <li><strong>Resume Recording</strong> - Click "▶ Resume" to continue recording</li>
-        <li><strong>Toggle Annotations</strong> - Pause again to edit or toggle annotation visibility</li>
+        <li><strong>Add More Annotations</strong> - Pause again to add additional annotations</li>
         <li><strong>Stop & Export</strong> - Click "⏹ Stop & Export" when done</li>
         <li><strong>Copy JSON</strong> - Copy the generated JSON to save your tutorial</li>
       </ol>
@@ -663,6 +615,7 @@
   const appUrl = document.getElementById('appUrl');
   const appFrame = document.getElementById('appFrame');
   
+  const loadApp = document.getElementById('loadApp');
   const startRecording = document.getElementById('startRecording');
   const pauseRecording = document.getElementById('pauseRecording');
   const resumeRecording = document.getElementById('resumeRecording');
@@ -681,8 +634,12 @@
   const annTitle = document.getElementById('annTitle');
   const annText = document.getElementById('annText');
   const annDuration = document.getElementById('annDuration');
-  const saveAnnotation = document.getElementById('saveAnnotation');
+  const createAnnotation = document.getElementById('createAnnotation');
   const cancelAnnotation = document.getElementById('cancelAnnotation');
+  
+  const positionEditorOverlay = document.getElementById('positionEditorOverlay');
+  const savePosition = document.getElementById('savePosition');
+  const cancelPosition = document.getElementById('cancelPosition');
   
   const exportModal = document.getElementById('exportModal');
   const exportTextarea = document.getElementById('exportTextarea');
@@ -724,7 +681,6 @@
   let draggingAnnotation = false;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
-  let customPosition = null;
   
   let currentTutorial = null;
   let isPlaying = false;
@@ -752,13 +708,25 @@
   });
   
   // Recording controls
-  startRecording.addEventListener('click', () => {
+  loadApp.addEventListener('click', () => {
     const url = appUrl.value.trim();
     if (!url) {
       alert('Please enter an app URL first!');
       return;
     }
     
+    // Load the app
+    appFrame.src = url;
+    
+    // Update UI
+    loadApp.style.display = 'none';
+    startRecording.style.display = 'inline-block';
+    appUrl.disabled = true;
+    
+    console.log('✓ App loaded:', url);
+  });
+  
+  startRecording.addEventListener('click', () => {
     // Reset state
     recordedEvents = [];
     recordedAnnotations = [];
@@ -772,10 +740,6 @@
     pauseRecording.style.display = 'inline-block';
     stopRecording.style.display = 'inline-block';
     recordingIndicator.style.display = 'inline-block';
-    appUrl.disabled = true;
-    
-    // Load app
-    appFrame.src = url;
     
     setTimeout(() => {
       setupEventListeners();
@@ -817,7 +781,8 @@
     
     const duration = Date.now() - recordingStartTime - totalPausedDuration;
     
-    startRecording.style.display = 'inline-block';
+    loadApp.style.display = 'inline-block';
+    startRecording.style.display = 'none';
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'none';
     addAnnotation.style.display = 'none';
@@ -850,10 +815,11 @@
       recordedAnnotations.forEach((ann, idx) => {
         const item = document.createElement('div');
         item.className = 'annotation-item';
+        const posText = ann.position ? `(${Math.round(ann.position.left)}, ${Math.round(ann.position.top)})` : 'custom';
         item.innerHTML = `
           <div class="annotation-item-info">
             <div class="annotation-item-title">${ann.title}</div>
-            <div class="annotation-item-meta">At ${formatTime(ann.timestamp / 1000)} • ${ann.duration / 1000}s • ${ann.position}</div>
+            <div class="annotation-item-meta">At ${formatTime(ann.timestamp / 1000)} • ${ann.duration / 1000}s • Position ${posText}</div>
           </div>
         `;
         annotationsList.appendChild(item);
@@ -870,52 +836,56 @@
   });
   
   // Annotation authoring
+  let pendingAnnotation = null;
+  
+  // Preview functionality
+  previewRecording.addEventListener('click', () => {
+    if (!currentTutorial) {
+      alert('No recording to preview!');
+      return;
+    }
+    
+    // Hide preview button, show play/pause
+    previewRecording.style.display = 'none';
+    playPausePreview.style.display = 'inline-block';
+    
+    console.log('✓ Preview mode ready');
+  });
+  
+  playPausePreview.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    if (!isPlaying) {
+      // Start/resume playback
+      isPlaying = true;
+      
+      if (playbackPausedAt > 0) {
+        playbackStartTime = Date.now() - playbackPausedAt * 1000;
+      } else {
+        playbackStartTime = Date.now();
+        eventQueue = [...currentTutorial.events];
+      }
+      
+      requestAnimationFrame(playbackLoop);
+      console.log('▶ Preview playing');
+    } else {
+      // Pause playback
+      isPlaying = false;
+      playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+      console.log('⏸ Preview paused');
+    }
+  });
+  
   addAnnotation.addEventListener('click', () => {
     // Reset form
     annTitle.value = '';
     annText.value = '';
     annDuration.value = '5';
-    customPosition = null;
-    
-    // Select default position
-    document.querySelectorAll('.position-option').forEach(el => el.classList.remove('selected'));
-    document.querySelector('[data-position="top"]').classList.add('selected');
-    
-    // Show preview annotation
-    annotationBox.className = 'annotation-box visible pos-top draggable';
-    annotationTitle.textContent = 'Preview: Drag me to position!';
-    annotationText.textContent = 'Type your annotation text, then drag this box to exactly where you want it to appear. You can also use the position presets below.';
-    
-    // Enable dragging
-    makeDraggable();
     
     annotationEditorModal.classList.add('visible');
   });
   
-  // Position presets
-  document.querySelectorAll('.position-option').forEach(option => {
-    option.addEventListener('click', () => {
-      document.querySelectorAll('.position-option').forEach(el => el.classList.remove('selected'));
-      option.classList.add('selected');
-      
-      const position = option.dataset.position;
-      customPosition = null;
-      annotationBox.className = 'annotation-box visible pos-' + position + ' draggable';
-      annotationBox.style.left = '';
-      annotationBox.style.top = '';
-    });
-  });
-  
-  // Live preview of annotation text
-  annTitle.addEventListener('input', () => {
-    annotationTitle.textContent = annTitle.value || 'Preview: Drag me to position!';
-  });
-  
-  annText.addEventListener('input', () => {
-    annotationText.textContent = annText.value || 'Type your annotation text, then drag this box to exactly where you want it to appear.';
-  });
-  
-  saveAnnotation.addEventListener('click', () => {
+  createAnnotation.addEventListener('click', () => {
     const title = annTitle.value.trim();
     const text = annText.value.trim();
     const duration = parseInt(annDuration.value) * 1000;
@@ -925,41 +895,72 @@
       return;
     }
     
-    // Determine position
-    let position;
-    if (customPosition) {
-      position = customPosition;
-    } else {
-      const selected = document.querySelector('.position-option.selected');
-      position = selected ? selected.dataset.position : 'top';
-    }
-    
     // Calculate timestamp (current recording time minus paused duration)
     const timestamp = Date.now() - recordingStartTime - totalPausedDuration;
     
-    const annotation = {
+    // Create pending annotation
+    pendingAnnotation = {
       timestamp: timestamp,
       title: title,
       text: text,
       duration: duration,
-      position: position
+      position: null
     };
-    
-    recordedAnnotations.push(annotation);
-    
-    console.log('✓ Annotation saved:', annotation);
     
     // Close modal
     annotationEditorModal.classList.remove('visible');
-    annotationBox.classList.remove('visible', 'draggable');
     
-    // Show feedback
-    alert(`✓ Annotation "${title}" added at ${formatTime(timestamp / 1000)}`);
+    // Show annotation in center of screen for positioning
+    annotationBox.className = 'annotation-box visible draggable custom-position';
+    annotationBox.style.left = '50%';
+    annotationBox.style.top = '50%';
+    annotationBox.style.transform = 'translate(-50%, -50%)';
+    annotationTitle.textContent = title;
+    annotationText.textContent = text;
+    
+    // Show positioning overlay
+    positionEditorOverlay.style.display = 'block';
+    
+    // Enable dragging
+    makeDraggable();
+    
+    console.log('✓ Annotation created, now position it...');
   });
   
   cancelAnnotation.addEventListener('click', () => {
     annotationEditorModal.classList.remove('visible');
+  });
+  
+  savePosition.addEventListener('click', () => {
+    if (!pendingAnnotation) return;
+    
+    // Get current position
+    const containerRect = appFrame.getBoundingClientRect();
+    const rect = annotationBox.getBoundingClientRect();
+    
+    pendingAnnotation.position = {
+      left: rect.left - containerRect.left,
+      top: rect.top - containerRect.top
+    };
+    
+    // Save to recordings
+    recordedAnnotations.push(pendingAnnotation);
+    
+    console.log('✓ Annotation saved:', pendingAnnotation);
+    
+    // Clean up
+    positionEditorOverlay.style.display = 'none';
     annotationBox.classList.remove('visible', 'draggable');
+    pendingAnnotation = null;
+    
+    alert(`✓ Annotation "${recordedAnnotations[recordedAnnotations.length - 1].title}" saved!`);
+  });
+  
+  cancelPosition.addEventListener('click', () => {
+    positionEditorOverlay.style.display = 'none';
+    annotationBox.classList.remove('visible', 'draggable');
+    pendingAnnotation = null;
+    console.log('Annotation positioning cancelled');
   });
   
   // Dragging functionality
@@ -992,29 +993,14 @@
     x = Math.max(0, Math.min(x, containerRect.width - annotationBox.offsetWidth));
     y = Math.max(0, Math.min(y, containerRect.height - annotationBox.offsetHeight));
     
-    annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.left = x + 'px';
     annotationBox.style.top = y + 'px';
-    
-    // Deselect all position presets
-    document.querySelectorAll('.position-option').forEach(el => el.classList.remove('selected'));
+    annotationBox.style.transform = 'none';
     
     e.preventDefault();
   }
   
   function stopDrag(e) {
-    if (draggingAnnotation) {
-      // Save custom position
-      const containerRect = appFrame.getBoundingClientRect();
-      const rect = annotationBox.getBoundingClientRect();
-      customPosition = {
-        left: rect.left - containerRect.left,
-        top: rect.top - containerRect.top
-      };
-      
-      console.log('Custom position set:', customPosition);
-    }
-    
     draggingAnnotation = false;
     document.removeEventListener('mousemove', doDrag);
     document.removeEventListener('mouseup', stopDrag);
@@ -1348,10 +1334,29 @@
     
     if (elapsed >= duration) {
       isPlaying = false;
-      playBtn.style.display = 'inline-block';
-      pauseBtn.style.display = 'none';
+      
+      // Hide any visible annotations
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
+      
+      // If this was a preview (playPausePreview visible), reload app
+      if (playPausePreview.style.display !== 'none') {
+        playPausePreview.style.display = 'none';
+        previewRecording.style.display = 'inline-block';
+        
+        // Reload app to restore full interactivity
+        const url = appFrame.src;
+        appFrame.src = '';
+        setTimeout(() => {
+          appFrame.src = url;
+          console.log('✓ Preview finished - app reloaded');
+        }, 100);
+      } else {
+        // Normal playback mode
+        playBtn.style.display = 'inline-block';
+        pauseBtn.style.display = 'none';
+      }
+      
       return;
     }
     
@@ -1465,18 +1470,11 @@
   }
   
   function showAnnotation(ann) {
-    // Handle both preset and custom positions
-    if (typeof ann.position === 'object') {
-      // Custom position with left/top coordinates
-      annotationBox.className = 'annotation-box visible custom-position';
-      annotationBox.style.left = ann.position.left + 'px';
-      annotationBox.style.top = ann.position.top + 'px';
-    } else {
-      // Preset position
-      annotationBox.className = 'annotation-box visible pos-' + ann.position;
-      annotationBox.style.left = '';
-      annotationBox.style.top = '';
-    }
+    // All annotations now use custom position with left/top coordinates
+    annotationBox.className = 'annotation-box visible custom-position';
+    annotationBox.style.left = ann.position.left + 'px';
+    annotationBox.style.top = ann.position.top + 'px';
+    annotationBox.style.transform = 'none';
     
     annotationTitle.textContent = ann.title;
     annotationText.textContent = ann.text;
@@ -1503,10 +1501,24 @@
       if (e.target === modal) {
         modal.classList.remove('visible');
         if (modal === annotationEditorModal) {
-          annotationBox.classList.remove('visible', 'draggable');
+          // If closing annotation editor, also cancel positioning if active
+          if (positionEditorOverlay.style.display !== 'none') {
+            positionEditorOverlay.style.display = 'none';
+            annotationBox.classList.remove('visible', 'draggable');
+            pendingAnnotation = null;
+          }
         }
       }
     });
+  });
+  
+  // Also allow clicking the overlay to cancel positioning
+  positionEditorOverlay.addEventListener('click', (e) => {
+    if (e.target === positionEditorOverlay) {
+      positionEditorOverlay.style.display = 'none';
+      annotationBox.classList.remove('visible', 'draggable');
+      pendingAnnotation = null;
+    }
   });
 })();
 </script>
