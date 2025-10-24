@@ -783,7 +783,13 @@
     
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      if (!iframeDoc) return;
+      if (!iframeDoc) {
+        console.warn('Cannot access iframe document on mouseup');
+        isDragging = false;
+        dragElement = null;
+        dragStartSnapshot = null;
+        return;
+      }
       
       // Wait a moment for the app to finish updating, then take final snapshot
       setTimeout(() => {
@@ -795,16 +801,19 @@
           html: iframeDoc.body.innerHTML
         });
         
-        // Check if anything actually changed
-        const firstFrame = dragStartSnapshot.frames[0].html;
-        const lastFrame = dragStartSnapshot.frames[dragStartSnapshot.frames.length - 1].html;
+        console.log('📸 Captured', dragStartSnapshot.frames.length, 'total frames');
         
-        if (firstFrame !== lastFrame) {
+        // Always record the drag if we have multiple frames (even if HTML looks the same)
+        // because some visual changes might not show up in innerHTML comparison
+        if (dragStartSnapshot.frames.length > 1) {
           recordEvent('drag', dragElement, {
-            animationFrames: dragStartSnapshot.frames
+            animationFrames: dragStartSnapshot.frames,
+            duration: currentTime
           });
           
-          console.log('📊 Drag recorded with', dragStartSnapshot.frames.length, 'animation frames');
+          console.log('✅ Drag recorded successfully with', dragStartSnapshot.frames.length, 'animation frames');
+        } else {
+          console.warn('⚠️ Drag had only 1 frame - not recording');
         }
         
         isDragging = false;
@@ -1134,20 +1143,33 @@
   }
   
   function replayDrag(element, detail, iframeDoc) {
-    // Use animation frames method - replay each frame at its recorded time
+    // Use animation frames method - replay each frame with proper timing
     if (detail.animationFrames && detail.animationFrames.length > 0) {
       try {
-        console.log('🎬 Replaying drag with', detail.animationFrames.length, 'animation frames');
+        console.log('🎬 Replaying drag with', detail.animationFrames.length, 'animation frames at speed', playbackSpeed + 'x');
         
-        // Play each frame at its recorded timestamp
+        // Play frames using cumulative timing (not just frame.time directly)
+        let cumulativeDelay = 0;
         detail.animationFrames.forEach((frame, index) => {
+          // For first frame, delay is 0
+          // For subsequent frames, delay is based on time since previous frame
+          if (index > 0) {
+            const intervalSinceLast = frame.time - detail.animationFrames[index - 1].time;
+            cumulativeDelay += intervalSinceLast / playbackSpeed;
+          }
+          
           setTimeout(() => {
-            iframeDoc.body.innerHTML = frame.html;
-            
-            if (index === detail.animationFrames.length - 1) {
-              console.log('✓ Drag animation complete');
+            try {
+              iframeDoc.body.innerHTML = frame.html;
+              console.log('  Frame', index + 1, '/', detail.animationFrames.length);
+              
+              if (index === detail.animationFrames.length - 1) {
+                console.log('✓ Drag animation complete');
+              }
+            } catch (e) {
+              console.warn('Failed to apply frame', index, ':', e);
             }
-          }, frame.time);
+          }, cumulativeDelay);
         });
         
         return;
