@@ -1157,11 +1157,17 @@
       let draggable = null;
       
       while (element && element !== iframeDoc.body) {
+        // Check for various draggable indicators
+        const computedStyle = window.getComputedStyle(element);
+        const cursor = computedStyle.cursor;
+        
         if (element.draggable || 
+            element.classList.contains('draggable-veil') ||
             element.tagName === 'circle' || 
             element.tagName === 'rect' || 
             element.tagName === 'line' ||
-            element.tagName === 'path') {
+            element.tagName === 'path' ||
+            element.tagName === 'g' && (cursor === 'grab' || cursor === 'move' || cursor === 'pointer')) {
           draggable = element;
           break;
         }
@@ -1195,7 +1201,7 @@
         }
       }, 100);
       
-      console.log('🖱️ Drag started - capturing animation frames...');
+      console.log('🖱️ Drag started on', dragElement.tagName, dragElement.className, '- capturing animation frames...');
       
       // Add mouseup listener to iframe
       function handleMouseUp() {
@@ -1263,6 +1269,21 @@
       return '#' + element.id;
     }
     
+    // For elements with specific classes, use class selector
+    if (element.className && typeof element.className === 'string') {
+      const classes = element.className.trim().split(/\s+/).filter(c => c);
+      if (classes.length > 0) {
+        // For SVG elements with meaningful class names, use tag + class
+        return element.tagName.toLowerCase() + '.' + classes.join('.');
+      }
+    } else if (element.className && element.className.baseVal) {
+      // SVG elements have className as an object
+      const classes = element.className.baseVal.trim().split(/\s+/).filter(c => c);
+      if (classes.length > 0) {
+        return element.tagName.toLowerCase() + '.' + classes.join('.');
+      }
+    }
+    
     if (element.tagName === 'BUTTON' && element.textContent) {
       return {
         type: 'button-text',
@@ -1277,9 +1298,14 @@
     while (current && current !== document.body) {
       let selector = current.tagName.toLowerCase();
       
-      if (current.className && typeof current.className === 'string') {
-        const classes = current.className.split(' ').filter(c => c);
-        if (classes.length > 0) {
+      if (current.className) {
+        let classes;
+        if (typeof current.className === 'string') {
+          classes = current.className.split(' ').filter(c => c);
+        } else if (current.className.baseVal) {
+          classes = current.className.baseVal.split(' ').filter(c => c);
+        }
+        if (classes && classes.length > 0) {
           selector += '.' + classes.join('.');
         }
       }
