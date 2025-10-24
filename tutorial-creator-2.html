@@ -247,6 +247,15 @@
     line-height:1.5;
   }
   
+  ol.help-text{
+    margin-left:20px;
+    padding-left:0;
+  }
+  
+  ol.help-text li{
+    margin:6px 0;
+  }
+  
   select{
     padding:6px 10px;
     border-radius:6px;
@@ -296,21 +305,18 @@
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
-        <button id="modeNormal" class="active">Normal</button>
-        <button id="modeRecord">Record</button>
+        <button id="modeRecord" class="active">Record</button>
         <button id="modePlayback">Playback</button>
       </div>
       
-      <div id="normalControls" class="control-group">
+      <div id="recordingControls" class="control-group">
         <label>
           App URL:
           <input type="text" id="appUrl" placeholder="Enter your app URL">
         </label>
         <button id="loadApp" class="primary">Load App</button>
-      </div>
-      
-      <div id="recordingControls" class="control-group" style="display:none;">
-        <button id="startRecord" class="record">● Start Recording</button>
+        <button id="reloadApp" class="primary" style="display:none;">🔄 Reload App</button>
+        <button id="startRecord" class="record" style="display:none;">● Start Recording</button>
         <button id="stopRecord" class="record" style="display:none;">■ Stop Recording</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">● REC <span id="recordingTime">0:00</span></span>
         <button id="previewRecording" class="primary" style="display:none;">▶ Preview Recording</button>
@@ -392,21 +398,27 @@
     <div class="modal">
       <h2>How to Use This Tutorial System</h2>
       
-      <h3>1. Normal Mode</h3>
+      <h3>Record Mode (Default)</h3>
       <p class="help-text">
-        Enter the URL of your web app and click "Load App" to view it normally.
+        Enter your app URL and click "Load App". You can now use your app normally. When you're ready to create a tutorial:
+      </p>
+      <ol class="help-text">
+        <li>Click "Start Recording"</li>
+        <li>Interact with your app (clicks, inputs, drags, etc.)</li>
+        <li>Click "Stop Recording"</li>
+        <li>Click "Preview Recording" to see it play back</li>
+        <li>Click "Export Tutorial" to get the JSON</li>
+        <li>Click "Record Again" to create a new recording</li>
+      </ol>
+      <p class="help-text">
+        <strong>Note:</strong> Your app remains fully interactive between recordings and after previews. 
+        Use "Reload App" if you need to reset the app state.
       </p>
       
-      <h3>2. Record Mode</h3>
+      <h3>Playback Mode</h3>
       <p class="help-text">
-        Load your app, then click "Start Recording". Interact with your app (click buttons, fill inputs, drag elements, etc.). 
-        Click "Stop Recording" when done, then "Preview Recording" to test, or "Export Tutorial" to get the JSON.
-      </p>
-      
-      <h3>3. Playback Mode</h3>
-      <p class="help-text">
-        Click "Load Tutorial" and paste your JSON. The app will load and you can click "Play" to watch 
-        the recorded interactions. Use the timeline to skip around.
+        This mode is for loading and viewing tutorial JSON files created by others. 
+        Click "Load Tutorial", paste the JSON, and use the playback controls to watch the tutorial.
       </p>
       
       <h3>Adding Annotations</h3>
@@ -432,14 +444,13 @@
   'use strict';
   
   // Elements
-  const modeNormal = document.getElementById('modeNormal');
   const modeRecord = document.getElementById('modeRecord');
   const modePlayback = document.getElementById('modePlayback');
-  const normalControls = document.getElementById('normalControls');
   const recordingControls = document.getElementById('recordingControls');
   const playbackControls = document.getElementById('playbackControls');
   const appUrl = document.getElementById('appUrl');
   const loadApp = document.getElementById('loadApp');
+  const reloadApp = document.getElementById('reloadApp');
   const appFrame = document.getElementById('appFrame');
   const startRecord = document.getElementById('startRecord');
   const stopRecord = document.getElementById('stopRecord');
@@ -477,7 +488,7 @@
   const closeHelpModal = document.getElementById('closeHelpModal');
   
   // State
-  let currentMode = 'normal';
+  let currentMode = 'record';
   let isRecording = false;
   let recordStartTime = 0;
   let recordedEvents = [];
@@ -507,17 +518,13 @@
     currentAnnotationIndex = -1;
     
     // Update button states
-    [modeNormal, modeRecord, modePlayback].forEach(btn => btn.classList.remove('active'));
+    [modeRecord, modePlayback].forEach(btn => btn.classList.remove('active'));
     
     // Hide all control groups
-    normalControls.style.display = 'none';
     recordingControls.style.display = 'none';
     playbackControls.style.display = 'none';
     
-    if (mode === 'normal') {
-      modeNormal.classList.add('active');
-      normalControls.style.display = 'flex';
-    } else if (mode === 'record') {
+    if (mode === 'record') {
       modeRecord.classList.add('active');
       recordingControls.style.display = 'flex';
       
@@ -527,16 +534,7 @@
         appFrame.src = '';
         setTimeout(() => {
           appFrame.src = url;
-          
-          // Show start recording button
-          startRecord.style.display = 'inline-block';
-          stopRecord.style.display = 'none';
-          recordingIndicator.style.display = 'none';
-          previewRecording.style.display = 'none';
-          exportTutorial.style.display = 'none';
-          recordAgain.style.display = 'none';
-          
-          console.log('🔄 App reloaded for new recording');
+          console.log('🔄 App reloaded for record mode');
         }, 100);
       }
     } else if (mode === 'playback') {
@@ -549,7 +547,6 @@
     }
   }
   
-  modeNormal.addEventListener('click', () => setMode('normal'));
   modeRecord.addEventListener('click', () => setMode('record'));
   modePlayback.addEventListener('click', () => setMode('playback'));
   
@@ -566,6 +563,25 @@
     }
     
     appFrame.src = appUrl.value;
+    
+    // Show recording controls after loading
+    setTimeout(() => {
+      loadApp.style.display = 'none';
+      reloadApp.style.display = 'inline-block';
+      startRecord.style.display = 'inline-block';
+    }, 500);
+  });
+  
+  // Reload app
+  reloadApp.addEventListener('click', () => {
+    const url = appFrame.src;
+    if (url && url !== 'about:blank') {
+      appFrame.src = '';
+      setTimeout(() => {
+        appFrame.src = url;
+        console.log('🔄 App reloaded');
+      }, 100);
+    }
   });
   
   // Recording
@@ -628,10 +644,11 @@
     setTimeout(() => {
       appFrame.src = url;
       
-      // Reset recording UI
+      // Reset recording UI - keep app controls visible
       recordedEvents = [];
       currentTutorial = null;
       
+      reloadApp.style.display = 'inline-block';
       startRecord.style.display = 'inline-block';
       stopRecord.style.display = 'none';
       recordingIndicator.style.display = 'none';
@@ -1236,7 +1253,10 @@
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.style.display = 'none';
         previewRecording.style.display = 'inline-block';
-        console.log('✓ Preview finished');
+        
+        // App remains interactive - no reload needed
+        // User can continue using the app normally
+        console.log('✓ Preview finished - app remains interactive');
       } else {
         // Normal playback mode
         playBtn.style.display = 'inline-block';
