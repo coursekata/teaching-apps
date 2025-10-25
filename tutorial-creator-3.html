@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.4-pause-timeline-during-drag</div>
+  <div class="version-number">v5.5-fix-targetDuration-order</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2358,6 +2358,9 @@
         console.log('  First frame time:', sampledFrames[0].time, 'shift:', sampledFrames[0].tutorialState.shift);
         console.log('  Last frame time:', sampledFrames[sampledFrames.length-1].time, 'shift:', sampledFrames[sampledFrames.length-1].tutorialState.shift);
         
+        // Calculate target duration for playback
+        const targetDuration = originalDuration / playbackSpeed;
+        
         // CRITICAL: Pause the playback timeline while drag animation plays
         dragAnimationPauseTime = (Date.now() - playbackStartTime) / 1000;
         dragAnimationDuration = targetDuration / 1000; // Convert to seconds
@@ -2366,7 +2369,6 @@
         // CRITICAL: When replayEvent is called, the playback timeline has already advanced to this event's time.
         // So we need to replay the drag animation quickly from NOW, not spread over the original duration.
         // Calculate delay for each frame proportionally within the target playback duration
-        const targetDuration = originalDuration / playbackSpeed;
         
         sampledFrames.forEach((frame, index) => {
           // Map frame.time (0 to originalDuration) to delay (0 to targetDuration)
