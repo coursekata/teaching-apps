@@ -458,7 +458,7 @@
           <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
         <button id="loadApp" class="primary">Load App</button>
-        <button id="reloadApp" class="primary" style="display:none;">🔄 Reload App</button>
+        <!-- Record Again button reloads the app completely -->
         <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
         <button id="stopRecording" class="record" style="display:none;">⏹ Stop Recording</button>
         <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
@@ -659,7 +659,6 @@
   const appFrame = document.getElementById('appFrame');
   
   const loadApp = document.getElementById('loadApp');
-  const reloadApp = document.getElementById('reloadApp');
   const startRecording = document.getElementById('startRecording');
   const pauseRecording = document.getElementById('pauseRecording');
   const resumeRecording = document.getElementById('resumeRecording');
@@ -786,80 +785,12 @@
     
     // Update UI
     loadApp.style.display = 'none';
-    reloadApp.style.display = 'inline-block';
     startRecording.style.display = 'inline-block';
     appUrl.disabled = true;
     
     console.log('✓ Loading app:', url);
   });
   
-  reloadApp.addEventListener('click', () => {
-    console.log('🔄 Reload App clicked');
-    const url = appFrame.src;
-    console.log('  Current URL:', url);
-    
-    if (!url || url === 'about:blank') {
-      console.warn('  No URL to reload');
-      return;
-    }
-    
-    // Stop any active recording
-    if (isRecording) {
-      isRecording = false;
-      isPaused = false;
-      alwaysRecording = false;
-      
-      // Reset recording UI
-      pauseRecording.style.display = 'none';
-      resumeRecording.style.display = 'none';
-      addAnnotation.style.display = 'none';
-      stopRecording.style.display = 'none';
-      startRecording.style.display = 'inline-block';
-      recordingIndicator.style.display = 'none';
-      pausedIndicator.style.display = 'none';
-      
-      console.log('  Recording stopped');
-    }
-    
-    // Stop any active playback/preview
-    isPlaying = false;
-    playbackPausedAt = 0;
-    
-    // Clear all recorded data and tutorial state
-    alwaysRecordedEvents = [];
-    recordedAnnotations = [];
-    currentTutorial = null;
-    
-    // Hide all preview/export/recording buttons except Start Recording
-    previewRecording.style.display = 'none';
-    playPausePreview.style.display = 'none';
-    recordAgain.style.display = 'none';
-    exportRecording.style.display = 'none';
-    startRecording.style.display = 'inline-block';
-    
-    // Hide any visible annotations
-    annotationBox.classList.remove('visible');
-    
-    console.log('  Reloading iframe...');
-    
-    // Reload the iframe
-    appFrame.src = '';
-    setTimeout(() => {
-      appFrame.src = url;
-      
-      // Setup onload handler to restart always-on recording
-      appFrame.onload = () => {
-        appLoadTime = Date.now();
-        alwaysRecordedEvents = [];
-        alwaysRecording = true;
-        
-        setTimeout(() => {
-          setupEventListeners();
-          console.log('✓ App reloaded - background recording restarted');
-        }, 500);
-      };
-    }, 100);
-  });
   
   startRecording.addEventListener('click', () => {
     if (!alwaysRecording) {
@@ -1054,7 +985,6 @@
     }, 100);
     
     // Reset UI for new recording
-    reloadApp.style.display = 'inline-block';
     startRecording.style.display = 'inline-block';
     stopRecording.style.display = 'none';
     pauseRecording.style.display = 'none';
@@ -1585,6 +1515,11 @@
             html: iframeDoc.body.innerHTML
           });
           
+          console.log('  📊 Drag captured:', capturedSnapshot.frames.length, 'frames');
+          console.log('    Start:', capturedSnapshot.frames[0].x, capturedSnapshot.frames[0].y);
+          console.log('    End:', capturedSnapshot.frames[capturedSnapshot.frames.length - 1].x, 
+                                 capturedSnapshot.frames[capturedSnapshot.frames.length - 1].y);
+          
           const selector = generateSelector(capturedDragElement);
           const dragDuration = Date.now() - capturedStartTime;
           
@@ -2044,7 +1979,7 @@
       // For normal playback, animate the drag smoothly
       console.log('  Animated drag');
       const totalDuration = detail.duration || (lastFrame.time - firstFrame.time);
-      const numSteps = Math.min(30, Math.max(10, Math.floor(totalDuration / 16))); // ~60fps worth of steps
+      const numSteps = Math.min(60, Math.max(20, Math.floor(totalDuration / 8))); // More steps for smoother animation
       
       for (let i = 0; i <= numSteps; i++) {
         const progress = i / numSteps;
