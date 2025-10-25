@@ -1444,10 +1444,17 @@
             const pt = svgElement.createSVGPoint();
             pt.x = clientX;
             pt.y = clientY;
-            const svgPt = pt.matrixTransform(svgElement.getScreenCTM().inverse());
-            return { x: svgPt.x, y: svgPt.y };
+            const ctm = svgElement.getScreenCTM();
+            if (ctm) {
+              const svgPt = pt.matrixTransform(ctm.inverse());
+              console.log('  🔄 Converted screen (', clientX, ',', clientY, ') → SVG (', svgPt.x, ',', svgPt.y, ')');
+              return { x: svgPt.x, y: svgPt.y };
+            } else {
+              console.warn('⚠️ getScreenCTM() returned null - SVG not ready, using screen coords');
+              return { x: clientX, y: clientY };
+            }
           } catch (err) {
-            console.warn('SVG coord conversion failed:', err);
+            console.warn('⚠️ SVG coord conversion failed:', err);
             return { x: clientX, y: clientY };
           }
         }
@@ -1455,7 +1462,7 @@
       };
       
       const startCoords = getSVGCoords(e.clientX, e.clientY);
-      console.log('📍 SVG coords:', startCoords.x, startCoords.y);
+      console.log('📍 Start SVG coords:', startCoords.x, startCoords.y);
       
       dragStartSnapshot = {
         startX: startCoords.x,
@@ -1545,7 +1552,7 @@
           // Add final frame with mouseup position
           console.log('📍 Drag end: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
           
-          // Get SVG coords if needed
+          // Get SVG coords if needed - use same approach as drag start
           const getSVGCoordsForUp = (clientX, clientY) => {
             if (capturedSnapshot.useSVGCoords) {
               try {
@@ -1555,18 +1562,29 @@
                   const pt = svg.createSVGPoint();
                   pt.x = clientX;
                   pt.y = clientY;
-                  const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
-                  return { x: svgPt.x, y: svgPt.y };
+                  const ctm = svg.getScreenCTM();
+                  if (ctm) {
+                    const svgPt = pt.matrixTransform(ctm.inverse());
+                    console.log('  🔄 Converted screen (', clientX, ',', clientY, ') → SVG (', svgPt.x, ',', svgPt.y, ')');
+                    return { x: svgPt.x, y: svgPt.y };
+                  } else {
+                    console.warn('⚠️ getScreenCTM() returned null at mouseup - using screen coords');
+                    return { x: clientX, y: clientY };
+                  }
+                } else {
+                  console.warn('⚠️ SVG element not found at mouseup - using screen coords');
+                  return { x: clientX, y: clientY };
                 }
               } catch (err) {
-                console.warn('SVG coord conversion failed on mouseup:', err);
+                console.warn('⚠️ SVG coord conversion failed on mouseup:', err);
+                return { x: clientX, y: clientY };
               }
             }
             return { x: clientX, y: clientY };
           };
           
           const endCoords = getSVGCoordsForUp(upEvent.clientX, upEvent.clientY);
-          console.log('📍 SVG end coords:', endCoords.x, endCoords.y);
+          console.log('📍 End SVG coords:', endCoords.x, endCoords.y);
           
           capturedSnapshot.frames.push({
             time: Date.now() - capturedStartTime,
@@ -1589,9 +1607,9 @@
             target: selector,
             detail: {
               duration: dragDuration,
-              animationFrames: capturedSnapshot.frames
-            ,
-              useSVGCoords: capturedSnapshot.useSVGCoords}
+              animationFrames: capturedSnapshot.frames,
+              useSVGCoords: capturedSnapshot.useSVGCoords
+            }
           });
           
           console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames, duration:', dragDuration, 'ms');
@@ -1993,7 +2011,7 @@
       
       // If these are SVG coordinates, convert back to screen coordinates
       const convertToScreen = (svgX, svgY) => {
-        if (detail.useSVGCoords) {
+        if (detail.animationFrames[0]?.useSVGCoords !== undefined ? detail.animationFrames[0].useSVGCoords : detail.useSVGCoords) {
           try {
             // Find the SVG element in the iframe
             const svg = element.ownerSVGElement || iframeDoc.querySelector('svg');
