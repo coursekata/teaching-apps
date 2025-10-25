@@ -1540,6 +1540,17 @@
       return '#' + element.id;
     }
     
+    // For buttons with data attributes (like data-curve, data-power), use those for identification
+    if (element.tagName === 'BUTTON') {
+      const dataAttrs = Array.from(element.attributes)
+        .filter(attr => attr.name.startsWith('data-'))
+        .map(attr => `[${attr.name}="${attr.value}"]`);
+      
+      if (dataAttrs.length > 0) {
+        return 'button' + dataAttrs.join('');
+      }
+    }
+    
     // For elements with specific classes, use class selector
     if (element.className && typeof element.className === 'string') {
       const classes = element.className.trim().split(/\s+/).filter(c => c);
