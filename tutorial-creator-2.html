@@ -604,9 +604,10 @@
       <h3>Recording Mode:</h3>
       <ol class="help-text">
         <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
-        <li><strong>Load App</strong> - Click "Load App" to load the app in the iframe</li>
-        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" to begin capturing interactions</li>
-        <li><strong>Interact Normally</strong> - Click, type, and drag in your app. All interactions are captured</li>
+        <li><strong>Load App</strong> - Click "Load App" to load the app in the iframe. Background recording starts automatically!</li>
+        <li><strong>Set Up Your Demo</strong> - Interact with the app normally to get it ready for your tutorial (e.g., click "Simulate", set parameters, etc.). All actions are being captured!</li>
+        <li><strong>Start Recording</strong> - When you're ready to begin the tutorial portion, click "⏺ Start Recording". This marks where the tutorial begins.</li>
+        <li><strong>Interact Normally</strong> - Continue using your app. All interactions continue to be captured</li>
         <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations</li>
         <li><strong>Add Annotations</strong> - While paused:
           <ul style="margin-left:20px;">
@@ -620,7 +621,7 @@
         <li><strong>Resume Recording</strong> - Click "▶ Resume" to continue recording</li>
         <li><strong>Add More Annotations</strong> - Pause again to add additional annotations as needed</li>
         <li><strong>Stop Recording</strong> - Click "⏹ Stop Recording" when done</li>
-        <li><strong>Preview</strong> - Click "👁 Preview" to watch your recording play back with annotations</li>
+        <li><strong>Preview</strong> - Click "👁 Preview" to watch the full replay (including setup actions) with annotations</li>
         <li><strong>Export</strong> - Click "💾 Export Tutorial" to get the JSON, then copy it to save</li>
       </ol>
       
@@ -631,6 +632,14 @@
         <li><strong>Play</strong> - Click "▶ Play" to watch the tutorial replay with all interactions and annotations</li>
         <li><strong>Controls</strong> - Use pause, restart, timeline, and speed controls as needed</li>
       </ol>
+      
+      <h3>⭐ Best Practices:</h3>
+      <ul class="help-text" style="background:#fffbeb;padding:12px;border-radius:8px;border:1px solid #fbbf24;">
+        <li><strong>Set Up First:</strong> After loading the app, set it up how you want it (run simulations, set parameters, etc.) BEFORE clicking "Start Recording"</li>
+        <li><strong>Mark Tutorial Start:</strong> Click "Start Recording" when you're ready to begin the instructional portion of your tutorial</li>
+        <li><strong>Everything is Captured:</strong> All interactions from "Load App" onward are recorded, so your preview will show the complete workflow including setup</li>
+        <li><strong>Test Your Preview:</strong> Always use "👁 Preview" to verify your recording plays back correctly before exporting</li>
+      </ul>
       
       <div class="modal-buttons">
         <button id="closeHelpModal" class="primary">Got it!</button>
@@ -721,6 +730,12 @@
   let dragOffsetY = 0;
   let initialInputValues = {}; // Capture input values at start of recording
   
+  // Always-on recording state
+  let alwaysRecording = false;
+  let alwaysRecordedEvents = [];
+  let appLoadTime = 0;
+  let tutorialStartTime = 0; // When user clicks "Start Recording"
+  
   let currentTutorial = null;
   let isPlaying = false;
   let playbackStartTime = 0;
@@ -757,13 +772,26 @@
     // Load the app
     appFrame.src = url;
     
+    // Wait for iframe to load, then start always-on recording
+    appFrame.onload = () => {
+      appLoadTime = Date.now();
+      alwaysRecordedEvents = [];
+      alwaysRecording = true;
+      
+      // Start capturing events immediately
+      setTimeout(() => {
+        setupEventListeners();
+        console.log('✓ App loaded - background recording started');
+      }, 500);
+    };
+    
     // Update UI
     loadApp.style.display = 'none';
     reloadApp.style.display = 'inline-block';
     startRecording.style.display = 'inline-block';
     appUrl.disabled = true;
     
-    console.log('✓ App loaded:', url);
+    console.log('✓ Loading app:', url);
   });
   
   reloadApp.addEventListener('click', () => {
@@ -807,53 +835,44 @@
       annotationBox.classList.remove('visible');
       
       // Clear any onload handlers from previous preview/playback
-      appFrame.onload = null;
+      appFrame.onload = () => {
+        // Restart always-on recording after reload
+        appLoadTime = Date.now();
+        alwaysRecordedEvents = [];
+        alwaysRecording = true;
+        
+        setTimeout(() => {
+          setupEventListeners();
+          console.log('🔄 App reloaded - background recording restarted');
+        }, 500);
+      };
       
       // Reload the iframe for a completely fresh start
       appFrame.src = '';
       setTimeout(() => {
         appFrame.src = url;
-        console.log('🔄 App reloaded - completely fresh start');
       }, 100);
     }
   });
   
   startRecording.addEventListener('click', () => {
-    // Reset state
-    recordedEvents = [];
+    if (!alwaysRecording) {
+      alert('Please load an app first!');
+      return;
+    }
+    
+    // Mark this as the tutorial start point
+    tutorialStartTime = Date.now();
+    
+    // Reset tutorial-specific state
     recordedAnnotations = [];
     totalPausedDuration = 0;
     isRecording = true;
     isPaused = false;
-    recordingStartTime = Date.now();
+    recordingStartTime = tutorialStartTime;
     
-    // CAPTURE INITIAL INPUT VALUES AND CHECK FOR EXISTING SAMPLES
-    initialInputValues = {};
-    let needsSimulation = false;
-    try {
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      if (iframeDoc) {
-        // Capture input values
-        const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
-        inputs.forEach(input => {
-          const selector = getElementSelector(input);
-          initialInputValues[selector] = input.value;
-        });
-        
-        // Check if there are already samples rendered (histogram bars exist)
-        const histBars = iframeDoc.querySelectorAll('.hist-bar');
-        if (histBars && histBars.length > 0) {
-          needsSimulation = true;
-          initialInputValues._needsSimulation = true;
-          console.log('✓ Detected', histBars.length, 'histogram bars - will inject Simulate event');
-        }
-        
-        console.log('✓ Captured', Object.keys(initialInputValues).length - (needsSimulation ? 2 : 1), 'input values');
-      }
-    } catch (e) {
-      console.warn('Could not capture initial state:', e);
-      initialInputValues = {};
-    }
+    console.log('✓ Tutorial start marked -', alwaysRecordedEvents.length, 'events already captured');
+    console.log('  Time since app load:', (tutorialStartTime - appLoadTime) / 1000, 'seconds');
     
     // Update UI
     startRecording.style.display = 'none';
@@ -861,10 +880,7 @@
     stopRecording.style.display = 'inline-block';
     recordingIndicator.style.display = 'inline-block';
     
-    setTimeout(() => {
-      setupEventListeners();
-      console.log('✓ Recording started');
-    }, 500);
+    console.log('✓ Tutorial recording started (annotations and pauses will be tracked from here)');
   });
   
   pauseRecording.addEventListener('click', () => {
@@ -922,6 +938,7 @@
   stopRecording.addEventListener('click', () => {
     isRecording = false;
     isPaused = false;
+    alwaysRecording = false; // Stop capturing new events
     
     // Close annotation positioning overlay if active (don't save incomplete annotation)
     if (positionEditorOverlay.style.display !== 'none') {
@@ -952,7 +969,11 @@
       dragStartSnapshot = null;
     }
     
-    const duration = Date.now() - recordingStartTime - totalPausedDuration;
+    // Calculate tutorial start offset (time from app load to "Start Recording" click)
+    const tutorialStartOffset = tutorialStartTime - appLoadTime;
+    
+    // Calculate tutorial duration (from "Start Recording" to "Stop Recording")
+    const tutorialDuration = Date.now() - tutorialStartTime - totalPausedDuration;
     
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'none';
@@ -966,19 +987,22 @@
     pausedIndicator.style.display = 'none';
     // reloadApp stays visible
     
-    // Build tutorial JSON
+    // Build tutorial JSON with ALL events (from app load) and tutorial start marker
     const tutorial = {
       appUrl: appUrl.value.trim(),
-      duration: duration,
-      events: recordedEvents,
-      annotations: recordedAnnotations,
-      initialInputValues: initialInputValues  // Add the captured input values
+      tutorialStartOffset: tutorialStartOffset,  // When to start showing annotations
+      duration: tutorialDuration,  // Duration from Start to Stop
+      events: alwaysRecordedEvents,  // ALL events from app load
+      annotations: recordedAnnotations
     };
     
     currentTutorial = tutorial;
     
-    console.log('✓ Recording stopped. Duration:', duration, 'ms');
-    console.log('  Events:', recordedEvents.length);
+    console.log('✓ Recording stopped.');
+    console.log('  Total events captured:', alwaysRecordedEvents.length);
+    console.log('  Events before tutorial start:', alwaysRecordedEvents.filter(e => e.timestamp < tutorialStartOffset).length);
+    console.log('  Tutorial start offset:', tutorialStartOffset, 'ms');
+    console.log('  Tutorial duration:', tutorialDuration, 'ms');
     console.log('  Annotations:', recordedAnnotations.length);
   });
   
@@ -1099,9 +1123,9 @@
       return;
     }
     
-    // Calculate timestamp at the moment PAUSE was clicked (not now)
-    // This is: pausedTime - recordingStartTime - totalPausedDuration
-    const timestamp = pausedTime - recordingStartTime - totalPausedDuration;
+    // Calculate timestamp relative to tutorial start
+    // This is: pausedTime - tutorialStartTime - totalPausedDuration
+    const timestamp = pausedTime - tutorialStartTime - totalPausedDuration;
     
     // Create pending annotation
     pendingAnnotation = {
@@ -1215,45 +1239,17 @@
           // Wait for app to initialize
           await new Promise(r => setTimeout(r, 500));
           
-          try {
-            const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-            
-            // Set initial input values (without triggering change events)
-            if (currentTutorial.initialInputValues) {
-              for (const [selector, value] of Object.entries(currentTutorial.initialInputValues)) {
-                if (selector.startsWith('_')) continue; // Skip metadata like _needsSimulation
-                const element = findElement(iframeDoc, selector);
-                if (element) {
-                  element.value = value;
-                }
-              }
-              console.log('✓ Set initial input values');
-            }
-            
-            // If simulation is needed, click the Simulate button
-            if (currentTutorial.initialInputValues && currentTutorial.initialInputValues._needsSimulation) {
-              const simulateBtn = iframeDoc.getElementById('regenBtn');
-              if (simulateBtn) {
-                console.log('✓ Clicking Simulate button to regenerate samples...');
-                simulateBtn.click();
-                // Wait for simulation to complete
-                await new Promise(r => setTimeout(r, 300));
-                console.log('✓ Simulation complete');
-              }
-            }
-            
-          } catch (e) {
-            console.warn('Could not initialize preview state:', e);
-          }
+          console.log('✓ Starting preview - will replay ALL', currentTutorial.events.length, 'events from app load');
+          console.log('  Tutorial starts at:', currentTutorial.tutorialStartOffset, 'ms');
+          console.log('  Annotations will appear from that point forward');
           
-          // Start playback
+          // Start playback of ALL events from beginning
           isPlaying = true;
           playbackPausedAt = 0;
           playbackStartTime = Date.now();
           eventQueue = [...currentTutorial.events];
           requestAnimationFrame(playbackLoop);
           
-          console.log('✓ Preview started - replaying', eventQueue.length, 'events');
           resolve();
         };
       }, 100);
@@ -1338,11 +1334,11 @@
   }
   
   function getTimestamp() {
-    return Date.now() - recordingStartTime - totalPausedDuration;
+    return Date.now() - appLoadTime;
   }
   
   function handleClick(e) {
-    if (!isRecording || isPaused) return;
+    if (!alwaysRecording) return;
     
     // Skip clicks that will be handled by drag - check if this is on a draggable SVG element
     let element = e.target;
@@ -1389,7 +1385,7 @@
     const selector = generateSelector(targetElement);
     if (!selector) return;
     
-    recordedEvents.push({
+    alwaysRecordedEvents.push({
       type: 'click',
       timestamp: getTimestamp(),
       target: selector
@@ -1399,12 +1395,12 @@
   }
   
   function handleInput(e) {
-    if (!isRecording || isPaused) return;
+    if (!alwaysRecording) return;
     
     const selector = generateSelector(e.target);
     if (!selector) return;
     
-    recordedEvents.push({
+    alwaysRecordedEvents.push({
       type: 'input',
       timestamp: getTimestamp(),
       target: selector,
@@ -1413,12 +1409,12 @@
   }
   
   function handleChange(e) {
-    if (!isRecording || isPaused) return;
+    if (!alwaysRecording) return;
     
     const selector = generateSelector(e.target);
     if (!selector) return;
     
-    recordedEvents.push({
+    alwaysRecordedEvents.push({
       type: 'change',
       timestamp: getTimestamp(),
       target: selector,
@@ -1434,7 +1430,7 @@
   let mouseUpHandler = null;
   
   function handleMouseDown(e) {
-    if (!isRecording || isPaused) return;
+    if (!alwaysRecording) return;
     
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
@@ -1541,7 +1537,7 @@
           const selector = generateSelector(capturedDragElement);
           const dragDuration = Date.now() - capturedStartTime;
           
-          recordedEvents.push({
+          alwaysRecordedEvents.push({
             type: 'drag',
             timestamp: getTimestamp() - dragDuration,
             target: selector,
@@ -1733,35 +1729,7 @@
     } else {
       playbackStartTime = Date.now();
       eventQueue = [...currentTutorial.events];
-      
-      // Set initial input values and simulate if needed
-      if (currentTutorial.initialInputValues) {
-        try {
-          const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-          
-          // Set initial input values (without triggering change events)
-          for (const [selector, value] of Object.entries(currentTutorial.initialInputValues)) {
-            if (selector.startsWith('_')) continue; // Skip metadata
-            const element = findElement(iframeDoc, selector);
-            if (element) {
-              element.value = value;
-            }
-          }
-          
-          // If simulation is needed, click the Simulate button
-          if (currentTutorial.initialInputValues._needsSimulation) {
-            const simulateBtn = iframeDoc.getElementById('regenBtn');
-            if (simulateBtn) {
-              console.log('✓ Clicking Simulate button for playback...');
-              simulateBtn.click();
-            }
-          }
-          
-          console.log('✓ Initial state restored for playback');
-        } catch (e) {
-          console.warn('Could not restore initial state:', e);
-        }
-      }
+      console.log('✓ Starting playback with', eventQueue.length, 'events');
     }
     
     requestAnimationFrame(playbackLoop);
@@ -1805,7 +1773,11 @@
     if (!isPlaying) return;
     
     const elapsed = (Date.now() - playbackStartTime) / 1000;
-    const duration = currentTutorial.duration / 1000;
+    
+    // Calculate total duration (tutorial start offset + tutorial duration)
+    const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
+    const tutorialDurationSec = currentTutorial.duration / 1000;
+    const totalDuration = tutorialStartSec + tutorialDurationSec;
     
     // Update timeline only if in full playback mode (not preview)
     if (playbackControls.style.display !== 'none') {
@@ -1819,23 +1791,25 @@
       replayEvent(event);
     }
     
-    // Handle annotations
-    if (currentTutorial.annotations) {
+    // Handle annotations - only show after tutorial start offset
+    if (currentTutorial.annotations && elapsed >= tutorialStartSec) {
+      const elapsedSinceTutorialStart = elapsed - tutorialStartSec;
+      
       currentTutorial.annotations.forEach((ann, idx) => {
         const annStart = ann.timestamp / 1000;
         const annEnd = annStart + (ann.duration || 5000) / 1000;
         
-        if (elapsed >= annStart && elapsed < annEnd && currentAnnotationIndex !== idx) {
+        if (elapsedSinceTutorialStart >= annStart && elapsedSinceTutorialStart < annEnd && currentAnnotationIndex !== idx) {
           currentAnnotationIndex = idx;
           showAnnotation(ann);
-        } else if (elapsed >= annEnd && currentAnnotationIndex === idx) {
+        } else if (elapsedSinceTutorialStart >= annEnd && currentAnnotationIndex === idx) {
           annotationBox.classList.remove('visible');
           currentAnnotationIndex = -1;
         }
       });
     }
     
-    if (elapsed >= duration) {
+    if (elapsed >= totalDuration) {
       isPlaying = false;
       
       // Hide any visible annotations
@@ -1854,6 +1828,14 @@
       } else {
         // Normal playback mode
         playBtn.style.display = 'inline-block';
+        pauseBtn.style.display = 'none';
+      }
+      
+      return;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  }
         pauseBtn.style.display = 'none';
       }
       
