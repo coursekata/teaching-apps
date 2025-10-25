@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.7-debug-playback-timing</div>
+  <div class="version-number">v5.8-timestamp-drag-at-start</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1766,7 +1766,7 @@
           
           alwaysRecordedEvents.push({
             type: 'drag',
-            timestamp: getTimestamp(),  // Use current time (end of drag), not backdated
+            timestamp: getTimestamp() - dragDuration,  // Timestamp at START of drag, not end
             target: selector,
             detail: {
               duration: dragDuration,
