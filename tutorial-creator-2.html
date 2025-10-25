@@ -806,6 +806,9 @@
       // Hide any visible annotations
       annotationBox.classList.remove('visible');
       
+      // Clear any onload handlers from previous preview/playback
+      appFrame.onload = null;
+      
       // Reload the iframe for a completely fresh start
       appFrame.src = '';
       setTimeout(() => {
