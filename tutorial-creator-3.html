@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v3.1-tutorial-api</div>
+  <div class="version-number">v3.2-syntax-fix</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2242,8 +2242,7 @@
         console.log('  Fast-forward drag');
         
         // Check if we can use tutorialAPI
-        const firstFrame = detail.animationFrames[0];
-        const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
+        // firstFrame and lastFrame already declared earlier in function
         const iframeWindow = iframeDoc.defaultView;
         
         if (firstFrame.tutorialState && lastFrame.tutorialState && iframeWindow.tutorialAPI) {
@@ -2287,8 +2286,7 @@
       console.log('  Animated drag');
       
       // Check if we have tutorial API state data (most preferred method)
-      const firstFrame = detail.animationFrames[0];
-      const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
+      // firstFrame and lastFrame already declared earlier in function
       const iframeWindow = iframeDoc.defaultView;
       
       if (firstFrame.tutorialState && lastFrame.tutorialState && iframeWindow.tutorialAPI) {
