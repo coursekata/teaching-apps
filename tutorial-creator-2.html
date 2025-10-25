@@ -1020,13 +1020,40 @@
     annotationBox.classList.remove('visible');
     currentAnnotationIndex = -1;
     
-    // Don't reload - just reset to the state after clicking "Start Recording"
-    // Keep all the alwaysRecordedEvents, just clear tutorial-specific data
+    // Reload the app to go back to clean state
+    const url = appFrame.src;
+    if (!url || url === 'about:blank') {
+      console.warn('No URL to reload');
+      return;
+    }
+    
+    console.log('🔄 Record Again - reloading app to start fresh');
+    
+    // Clear tutorial-specific data
     recordedAnnotations = [];
     currentTutorial = null;
     totalPausedDuration = 0;
     
-    // Keep the app in its current state and reset UI for new recording
+    // Reload iframe
+    appFrame.src = '';
+    
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      // Setup onload to restart always-on recording
+      appFrame.onload = () => {
+        appLoadTime = Date.now();
+        alwaysRecordedEvents = [];
+        alwaysRecording = true;
+        
+        setTimeout(() => {
+          setupEventListeners();
+          console.log('✓ App reloaded - ready to record again from beginning');
+        }, 500);
+      };
+    }, 100);
+    
+    // Reset UI for new recording
     reloadApp.style.display = 'inline-block';
     startRecording.style.display = 'inline-block';
     stopRecording.style.display = 'none';
@@ -1039,9 +1066,6 @@
     playPausePreview.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none';
-    
-    console.log('🔄 Ready to record again from current app state');
-    console.log('  Background recording continues with', alwaysRecordedEvents.length, 'events captured so far');
   });
   
   exportRecording.addEventListener('click', () => {
@@ -1949,24 +1973,20 @@
     }
     
     try {
-      // Get start and end positions from animation frames
+      // Get start and end positions from RECORDED coordinates
       const firstFrame = detail.animationFrames[0];
       const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
       
-      // Calculate total drag movement
-      const deltaX = lastFrame.x - firstFrame.x;
-      const deltaY = lastFrame.y - firstFrame.y;
+      const startX = firstFrame.x;
+      const startY = firstFrame.y;
+      const endX = lastFrame.x;
+      const endY = lastFrame.y;
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
       
-      console.log('  Replaying drag: deltaX =', deltaX, ', deltaY =', deltaY);
+      console.log('  Replaying drag from (', startX, ',', startY, ') to (', endX, ',', endY, ')');
       
-      // Get element's bounding rect to calculate starting position
-      const rect = element.getBoundingClientRect();
-      const startX = rect.left + rect.width / 2;
-      const startY = rect.top + rect.height / 2;
-      const endX = startX + deltaX;
-      const endY = startY + deltaY;
-      
-      // Dispatch mousedown at start position
+      // Dispatch mousedown at recorded start position
       const mousedownEvent = new MouseEvent('mousedown', {
         bubbles: true,
         cancelable: true,
@@ -1979,11 +1999,25 @@
       
       // For fast-forward (events before tutorial start), do instant drag
       const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
-      const eventTimeSec = detail.animationFrames[0].time / 1000 || 0;
-      const isFastForward = eventTimeSec < tutorialStartSec;
+      const dragStartTime = detail.animationFrames[0].timestamp || 0;
+      
+      // Check if this drag is in fast-forward region
+      // We need to look at the drag event's timestamp, not the frame time
+      let isFastForward = false;
+      if (currentTutorial && currentTutorial.events) {
+        // Find this drag event in the events list
+        const dragEvent = currentTutorial.events.find(e => 
+          e.type === 'drag' && e.detail === detail
+        );
+        if (dragEvent) {
+          isFastForward = (dragEvent.timestamp / 1000) < tutorialStartSec;
+        }
+      }
       
       if (isFastForward) {
-        // Instant drag for fast-forward: just dispatch mousedown, one mousemove to end, then mouseup
+        // Instant drag for fast-forward: mousedown → mousemove to end → mouseup
+        console.log('  Fast-forward drag');
+        
         const mousemoveEvent = new MouseEvent('mousemove', {
           bubbles: true,
           cancelable: true,
@@ -2007,17 +2041,14 @@
         return;
       }
       
-      // For normal playback, animate the drag
-      const steps = Math.min(10, detail.animationFrames.length); // Use up to 10 steps
-      let cumulativeDelay = 0;
+      // For normal playback, animate the drag smoothly
+      console.log('  Animated drag');
+      const totalDuration = detail.duration || (lastFrame.time - firstFrame.time);
+      const numSteps = Math.min(30, Math.max(10, Math.floor(totalDuration / 16))); // ~60fps worth of steps
       
-      for (let i = 0; i <= steps; i++) {
-        const progress = i / steps;
-        
-        if (i > 0) {
-          const intervalSinceLast = 16; // 16ms per step (~60fps)
-          cumulativeDelay += intervalSinceLast / playbackSpeed;
-        }
+      for (let i = 0; i <= numSteps; i++) {
+        const progress = i / numSteps;
+        const delay = (totalDuration / numSteps) * i / playbackSpeed;
         
         setTimeout(() => {
           const currentX = startX + (deltaX * progress);
@@ -2034,19 +2065,19 @@
           iframeDoc.dispatchEvent(mousemoveEvent);
           
           // If this is the last step, dispatch mouseup
-          if (i === steps) {
+          if (i === numSteps) {
             const mouseupEvent = new MouseEvent('mouseup', {
               bubbles: true,
               cancelable: true,
               view: iframeDoc.defaultView,
-              clientX: currentX,
-              clientY: currentY,
+              clientX: endX,
+              clientY: endY,
               button: 0
             });
             iframeDoc.dispatchEvent(mouseupEvent);
-            console.log('  ✓ Drag complete (animated)');
+            console.log('  ✓ Drag complete at (', endX, ',', endY, ')');
           }
-        }, cumulativeDelay);
+        }, delay);
       }
       
     } catch (e) {
