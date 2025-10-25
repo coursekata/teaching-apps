@@ -1921,40 +1921,87 @@
   }
   
   function replayDrag(element, detail, iframeDoc) {
-    if (detail.animationFrames && detail.animationFrames.length > 0) {
-      try {
-        let cumulativeDelay = 0;
-        detail.animationFrames.forEach((frame, index) => {
-          if (index > 0) {
-            const intervalSinceLast = frame.time - detail.animationFrames[index - 1].time;
-            cumulativeDelay += intervalSinceLast / playbackSpeed;
-          }
-          
-          setTimeout(() => {
-            try {
-              iframeDoc.body.innerHTML = frame.html;
-            } catch (e) {
-              console.warn('Failed to apply frame', index, ':', e);
-            }
-          }, cumulativeDelay);
-        });
+    if (!detail.animationFrames || detail.animationFrames.length === 0) {
+      console.warn('Cannot replay drag - no animation data available');
+      return;
+    }
+    
+    try {
+      // Get start and end positions from animation frames
+      const firstFrame = detail.animationFrames[0];
+      const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
+      
+      // Calculate total drag movement
+      const deltaX = lastFrame.x - firstFrame.x;
+      const deltaY = lastFrame.y - firstFrame.y;
+      
+      console.log('  Replaying drag: deltaX =', deltaX, ', deltaY =', deltaY);
+      
+      // Get element's bounding rect to calculate starting position
+      const rect = element.getBoundingClientRect();
+      const startX = rect.left + rect.width / 2;
+      const startY = rect.top + rect.height / 2;
+      
+      // Dispatch mousedown at start position
+      const mousedownEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        view: iframeDoc.defaultView,
+        clientX: startX,
+        clientY: startY,
+        button: 0
+      });
+      element.dispatchEvent(mousedownEvent);
+      
+      // Dispatch a series of mousemove events to animate the drag
+      const steps = Math.min(10, detail.animationFrames.length); // Use up to 10 steps
+      let cumulativeDelay = 0;
+      
+      for (let i = 0; i <= steps; i++) {
+        const progress = i / steps;
+        const frameIndex = Math.floor(progress * (detail.animationFrames.length - 1));
+        const frame = detail.animationFrames[frameIndex];
         
-        return;
-      } catch (e) {
-        console.warn('Animation frame replay failed:', e);
+        if (i > 0) {
+          const intervalSinceLast = i === 1 ? 16 : 16; // 16ms per step (~60fps)
+          cumulativeDelay += intervalSinceLast / playbackSpeed;
+        }
+        
+        setTimeout(() => {
+          const currentX = startX + (deltaX * progress);
+          const currentY = startY + (deltaY * progress);
+          
+          const mousemoveEvent = new MouseEvent('mousemove', {
+            bubbles: true,
+            cancelable: true,
+            view: iframeDoc.defaultView,
+            clientX: currentX,
+            clientY: currentY,
+            button: 0
+          });
+          iframeDoc.dispatchEvent(mousemoveEvent);
+          
+          // If this is the last step, dispatch mouseup
+          if (i === steps) {
+            setTimeout(() => {
+              const mouseupEvent = new MouseEvent('mouseup', {
+                bubbles: true,
+                cancelable: true,
+                view: iframeDoc.defaultView,
+                clientX: currentX,
+                clientY: currentY,
+                button: 0
+              });
+              iframeDoc.dispatchEvent(mouseupEvent);
+              console.log('  ✓ Drag complete');
+            }, 10);
+          }
+        }, cumulativeDelay);
       }
+      
+    } catch (e) {
+      console.warn('Drag replay failed:', e);
     }
-    
-    if (detail.snapshotAfter) {
-      try {
-        iframeDoc.body.innerHTML = detail.snapshotAfter;
-        return;
-      } catch (e) {
-        console.warn('Snapshot replay failed:', e);
-      }
-    }
-    
-    console.warn('Cannot replay drag - no animation data available');
   }
   
   function findElement(doc, selector) {
