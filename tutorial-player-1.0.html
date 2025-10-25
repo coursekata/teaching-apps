@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tutorial Player v1.0</title>
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$']],
+      displayMath: [['$$', '$$']]
+    },
+    startup: {
+      ready: () => {
+        MathJax.startup.defaultReady();
+      }
+    }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+  :root{
+    --accent:#2563eb;
+  }
+  body{
+    margin:0;
+    font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:#111;
+    background:#f5f5f5;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+  }
+  
+  .player-header{
+    background:#fff;
+    border-bottom:2px solid #ddd;
+    padding:8px 16px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.05);
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  
+  button{
+    padding:8px 16px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    background:#fff;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+  }
+  
+  button:hover:not(:disabled){
+    background:#f9f9f9;
+  }
+  
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  
+  .timeline{
+    flex:1;
+    min-width:200px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  
+  .timeline input[type=range]{
+    flex:1;
+    accent-color:var(--accent);
+  }
+  
+  .time-display{
+    font-size:13px;
+    color:#666;
+    white-space:nowrap;
+    min-width:80px;
+  }
+  
+  .app-container{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+  }
+  
+  iframe{
+    width:100%;
+    height:100%;
+    border:none;
+  }
+  
+  iframe.playback-mode{
+    pointer-events:none;
+  }
+  
+  .annotation-box{
+    position:absolute;
+    max-width:500px;
+    background:rgba(255,255,255,0.98);
+    border:3px solid var(--accent);
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.15);
+    z-index:100;
+    display:none;
+  }
+  
+  .annotation-box.visible{
+    display:block;
+    animation:slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn{
+    from{opacity:0;}
+    to{opacity:1;}
+  }
+  
+  .annotation-box h3{
+    margin:0 0 12px;
+    color:var(--accent);
+    font-size:18px;
+  }
+  
+  .annotation-box p{
+    margin:0;
+    line-height:1.6;
+    font-size:15px;
+  }
+  
+  .loading{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100%;
+    font-size:18px;
+    color:#666;
+  }
+  
+  .error{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100%;
+    flex-direction:column;
+    gap:12px;
+    padding:20px;
+    text-align:center;
+  }
+  
+  .error-title{
+    font-size:24px;
+    font-weight:700;
+    color:#ef4444;
+  }
+  
+  .error-message{
+    font-size:16px;
+    color:#666;
+    max-width:600px;
+  }
+  
+  .replay-cursor{
+    position:absolute;
+    width:20px;
+    height:20px;
+    border:2px solid #ef4444;
+    border-radius:50%;
+    background:rgba(239,68,68,0.3);
+    pointer-events:none;
+    z-index:99;
+    display:none;
+    transform:translate(-50%, -50%);
+  }
+  
+  .version-number{
+    position:fixed;
+    top:8px;
+    right:8px;
+    font-size:11px;
+    color:#999;
+    background:rgba(255,255,255,0.9);
+    padding:4px 8px;
+    border-radius:4px;
+    z-index:1000;
+  }
+  
+  .continue-message{
+    position:absolute;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(16,185,129,0.95);
+    color:#fff;
+    padding:16px 24px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    font-size:16px;
+    font-weight:600;
+    display:none;
+    z-index:101;
+    animation:slideUp 0.3s ease-out;
+  }
+  
+  .continue-message.visible{
+    display:block;
+  }
+  
+  @keyframes slideUp{
+    from{
+      opacity:0;
+      transform:translate(-50%, 20px);
+    }
+    to{
+      opacity:1;
+      transform:translate(-50%, 0);
+    }
+  }
+  
+  /* LaTeX rendering */
+  .katex { font-size: 1.15em; color: #111; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="version-number">v1.0</div>
+  
+  <div class="player-header">
+    <button id="playBtn" class="primary">▶ Play</button>
+    <button id="pauseBtn" style="display:none;">⏸ Pause</button>
+    <button id="restartBtn">↻ Restart</button>
+    
+    <div class="timeline">
+      <input type="range" id="timelineSlider" min="0" max="100" value="0"/>
+      <div class="time-display">
+        <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+      </div>
+    </div>
+    
+    <label>
+      Speed:
+      <select id="playbackSpeed">
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+    </label>
+  </div>
+  
+  <div class="app-container" id="appContainer">
+    <div class="loading" id="loading">Loading tutorial...</div>
+    <div class="error" id="error" style="display:none;">
+      <div class="error-title">⚠️ Error Loading Tutorial</div>
+      <div class="error-message" id="errorMessage"></div>
+    </div>
+    <iframe id="appFrame" style="display:none;"></iframe>
+    <div class="replay-cursor" id="replayCursor"></div>
+    <div class="annotation-box" id="annotationBox">
+      <h3 id="annotationTitle"></h3>
+      <p id="annotationText"></p>
+    </div>
+    <div class="continue-message" id="continueMessage">
+      ✨ Tutorial complete! Continue exploring the app below.
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+  
+  // DOM Elements
+  const appFrame = document.getElementById('appFrame');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const timelineSlider = document.getElementById('timelineSlider');
+  const currentTimeEl = document.getElementById('currentTime');
+  const totalTimeEl = document.getElementById('totalTime');
+  const playbackSpeedSelect = document.getElementById('playbackSpeed');
+  const annotationBox = document.getElementById('annotationBox');
+  const annotationTitle = document.getElementById('annotationTitle');
+  const annotationText = document.getElementById('annotationText');
+  const replayCursor = document.getElementById('replayCursor');
+  const loading = document.getElementById('loading');
+  const error = document.getElementById('error');
+  const errorMessage = document.getElementById('errorMessage');
+  const continueMessage = document.getElementById('continueMessage');
+  
+  // State
+  let tutorial = null;
+  let isPlaying = false;
+  let playbackStartTime = 0;
+  let playbackPausedAt = 0;
+  let playbackSpeed = 1;
+  let eventQueue = [];
+  let currentAnnotationIndex = -1;
+  let fastForwardComplete = false;
+  let activeDragAnimation = null;
+  let dragAnimationPauseTime = 0;
+  let dragAnimationDuration = 0;
+  
+  // Get tutorial URL from query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const tutorialUrl = urlParams.get('tutorial');
+  
+  if (!tutorialUrl) {
+    showError('No tutorial specified. Please provide a tutorial URL using the ?tutorial= parameter.');
+  } else {
+    loadTutorial(tutorialUrl);
+  }
+  
+  function showError(message) {
+    loading.style.display = 'none';
+    error.style.display = 'flex';
+    errorMessage.textContent = message;
+  }
+  
+  async function loadTutorial(url) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to load tutorial: ${response.status} ${response.statusText}`);
+      }
+      
+      tutorial = await response.json();
+      
+      // Validate tutorial structure
+      if (!tutorial.appUrl) throw new Error('Tutorial missing "appUrl" field');
+      if (!tutorial.events) throw new Error('Tutorial missing "events" field');
+      if (tutorial.duration === undefined) throw new Error('Tutorial missing "duration" field');
+      
+      // Set up UI
+      const duration = tutorial.duration / 1000;
+      totalTimeEl.textContent = formatTime(duration);
+      timelineSlider.max = duration;
+      
+      // Load the app
+      appFrame.src = tutorial.appUrl;
+      appFrame.style.display = 'block';
+      loading.style.display = 'none';
+      
+      console.log('✓ Tutorial loaded:', tutorial.events.length, 'events,', tutorial.annotations?.length || 0, 'annotations');
+      
+    } catch (e) {
+      showError(e.message);
+      console.error('Failed to load tutorial:', e);
+    }
+  }
+  
+  playBtn.addEventListener('click', () => {
+    if (!tutorial) return;
+    
+    isPlaying = true;
+    playBtn.style.display = 'none';
+    pauseBtn.style.display = 'inline-block';
+    appFrame.classList.add('playback-mode');
+    
+    if (playbackPausedAt > 0) {
+      playbackStartTime = Date.now() - playbackPausedAt * 1000;
+    } else {
+      playbackStartTime = Date.now();
+      eventQueue = [...tutorial.events];
+      fastForwardComplete = false;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  });
+  
+  pauseBtn.addEventListener('click', () => {
+    isPlaying = false;
+    playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+    playBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+  });
+  
+  restartBtn.addEventListener('click', () => {
+    isPlaying = false;
+    playBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+    playbackPausedAt = 0;
+    playbackStartTime = 0;
+    timelineSlider.value = 0;
+    currentTimeEl.textContent = '0:00';
+    currentAnnotationIndex = -1;
+    annotationBox.classList.remove('visible');
+    continueMessage.classList.remove('visible');
+    eventQueue = [];
+    appFrame.classList.add('playback-mode');
+    
+    // Reload app
+    const url = appFrame.src;
+    appFrame.src = '';
+    setTimeout(() => { appFrame.src = url; }, 100);
+  });
+  
+  playbackSpeedSelect.addEventListener('change', () => {
+    playbackSpeed = parseFloat(playbackSpeedSelect.value);
+  });
+  
+  timelineSlider.addEventListener('input', () => {
+    if (isPlaying) return;
+    playbackPausedAt = parseFloat(timelineSlider.value);
+    currentTimeEl.textContent = formatTime(playbackPausedAt);
+  });
+  
+  function playbackLoop() {
+    if (!isPlaying) return;
+    
+    let realElapsed = (Date.now() - playbackStartTime) / 1000;
+    
+    if (activeDragAnimation && dragAnimationPauseTime > 0) {
+      realElapsed = dragAnimationPauseTime;
+    }
+    
+    const tutorialStartSec = (tutorial.tutorialStartOffset || 0) / 1000;
+    const tutorialDurationSec = tutorial.duration / 1000;
+    const totalDuration = tutorialDurationSec;
+    const elapsed = realElapsed + tutorialStartSec;
+    
+    // Update timeline
+    timelineSlider.value = realElapsed;
+    currentTimeEl.textContent = formatTime(realElapsed);
+    
+    // Process events
+    let processedEventThisFrame = false;
+    while (eventQueue.length > 0) {
+      const event = eventQueue[0];
+      const eventTimeSec = event.timestamp / 1000;
+      
+      if (eventTimeSec < tutorialStartSec) {
+        eventQueue.shift();
+        replayEvent(event);
+        
+        if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
+          fastForwardComplete = true;
+          setTimeout(() => {
+            playbackStartTime = Date.now();
+            requestAnimationFrame(playbackLoop);
+          }, 100);
+          return;
+        }
+        continue;
+      }
+      
+      if (eventTimeSec <= elapsed) {
+        eventQueue.shift();
+        processedEventThisFrame = true;
+        replayEvent(event);
+      } else {
+        break;
+      }
+    }
+    
+    // Handle annotations
+    if (tutorial.annotations && realElapsed >= 0) {
+      tutorial.annotations.forEach((ann, idx) => {
+        const annStart = ann.timestamp / 1000;
+        const annEnd = annStart + (ann.duration || 5000) / 1000;
+        
+        if (realElapsed >= annStart && realElapsed < annEnd && currentAnnotationIndex !== idx) {
+          currentAnnotationIndex = idx;
+          showAnnotation(ann);
+        } else if (realElapsed >= annEnd && currentAnnotationIndex === idx) {
+          annotationBox.classList.remove('visible');
+          currentAnnotationIndex = -1;
+        }
+      });
+    }
+    
+    // Check if playback complete
+    const allEventsComplete = eventQueue.length === 0;
+    const lastAnnotation = tutorial.annotations?.[tutorial.annotations.length - 1];
+    const allAnnotationsComplete = !lastAnnotation || 
+      realElapsed >= (lastAnnotation.timestamp + (lastAnnotation.duration || 5000)) / 1000;
+    
+    if (realElapsed >= totalDuration || (allEventsComplete && allAnnotationsComplete)) {
+      if (activeDragAnimation) {
+        requestAnimationFrame(playbackLoop);
+        return;
+      }
+      
+      isPlaying = false;
+      playBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
+      replayCursor.style.display = 'none';
+      annotationBox.classList.remove('visible');
+      currentAnnotationIndex = -1;
+      
+      // Enable app interaction
+      appFrame.classList.remove('playback-mode');
+      continueMessage.classList.add('visible');
+      
+      // Hide continue message after 5 seconds
+      setTimeout(() => {
+        continueMessage.classList.remove('visible');
+      }, 5000);
+      
+      console.log('✓ Tutorial complete - app is now interactive');
+      return;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  }
+  
+  function replayEvent(event) {
+    console.log('Replaying event:', event.type);
+    
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    // For now, just log events - we'll add drag replay next
+    if (event.type === 'click') {
+      const element = findElement(iframeDoc, event.target);
+      if (element) {
+        element.click();
+      }
+    }
+  }
+  
+  function findElement(doc, selector) {
+    if (!selector) return null;
+    
+    if (typeof selector === 'object') {
+      if (selector.type === 'button-text') {
+        const buttons = doc.querySelectorAll(selector.tagName || 'button');
+        for (let btn of buttons) {
+          if (btn.textContent.trim() === selector.text) {
+            return btn;
+          }
+        }
+      }
+      return null;
+    }
+    
+    if (selector.startsWith('#')) {
+      return doc.getElementById(selector.substring(1));
+    }
+    
+    try {
+      const element = doc.querySelector(selector);
+      if (element) return element;
+      
+      const svg = doc.querySelector('svg');
+      if (svg) {
+        return svg.querySelector(selector);
+      }
+      
+      return null;
+    } catch (e) {
+      console.warn('Invalid selector:', selector, e);
+      return null;
+    }
+  }
+  
+  function showAnnotation(ann) {
+    annotationBox.className = 'annotation-box visible';
+    annotationBox.style.left = ann.position.left + 'px';
+    annotationBox.style.top = ann.position.top + 'px';
+    annotationBox.style.transform = 'none';
+    
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    if (typeof MathJax !== 'undefined') {
+      if (MathJax.typesetPromise) {
+        MathJax.typesetPromise([annotationBox]).catch((err) => console.warn('MathJax error:', err));
+      } else if (MathJax.typeset) {
+        MathJax.typeset([annotationBox]);
+      }
+    }
+  }
+  
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+  
+})();
+</script>
+</body>
+</html>
