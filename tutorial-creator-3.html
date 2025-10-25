@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.8-timestamp-drag-at-start</div>
+  <div class="version-number">v5.9-fix-elapsed-undefined</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2194,7 +2194,7 @@
           element.dispatchEvent(new Event('change', { bubbles: true }));
         }
       } else if (event.type === 'drag') {
-        console.log('  Drag event timestamp:', event.timestamp, 'ms, elapsed:', elapsed * 1000, 'ms');
+        console.log('  Drag event timestamp:', event.timestamp, 'ms');
         replayDrag(element, event.detail, iframeDoc);
       }
       
