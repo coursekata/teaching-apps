@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.1-prevent-overlapping-drags</div>
+  <div class="version-number">v5.2-replay-actual-shift-values</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2326,28 +2326,38 @@
         console.log('  Using tutorialAPI for replay');
         console.log('    Start shift:', firstFrame.tutorialState.shift);
         console.log('    End shift:', lastFrame.tutorialState.shift);
-        
-        const startShift = firstFrame.tutorialState.shift;
-        const endShift = lastFrame.tutorialState.shift;
-        const deltaShift = endShift - startShift;
+        console.log('    Total frames with tutorialState:', detail.animationFrames.filter(f => f.tutorialState).length);
         
         const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
-        const numSteps = 60;
         
         console.log('  Original duration:', originalDuration, 'ms');
         
         // Mark that we have an active drag animation
         activeDragAnimation = true;
         
-        for (let i = 0; i <= numSteps; i++) {
-          const progress = i / numSteps;
-          const delay = (originalDuration / numSteps) * i / playbackSpeed;
+        // Instead of interpolating, replay the actual captured shift values at their recorded times
+        const framesWithState = detail.animationFrames.filter(f => f.tutorialState);
+        
+        // Sample frames evenly to get smooth playback (use every Nth frame)
+        const sampleInterval = Math.max(1, Math.floor(framesWithState.length / 60));
+        const sampledFrames = framesWithState.filter((f, i) => i % sampleInterval === 0);
+        
+        // Always include the last frame
+        if (sampledFrames[sampledFrames.length - 1] !== framesWithState[framesWithState.length - 1]) {
+          sampledFrames.push(framesWithState[framesWithState.length - 1]);
+        }
+        
+        console.log('  Replaying', sampledFrames.length, 'shift values from', framesWithState.length, 'captured frames');
+        
+        sampledFrames.forEach((frame, index) => {
+          const delay = (frame.time / playbackSpeed);
           
           setTimeout(() => {
-            const currentShift = startShift + (deltaShift * progress);
-            iframeWindow.tutorialAPI.setShift(currentShift);
+            if (frame.tutorialState) {
+              iframeWindow.tutorialAPI.setShift(frame.tutorialState.shift);
+            }
             
-            if (i === numSteps) {
+            if (index === sampledFrames.length - 1) {
               // Dispatch mouseup to clean up D3's drag state
               const mouseupEvent = new MouseEvent('mouseup', {
                 bubbles: true,
@@ -2361,10 +2371,10 @@
               iframeDoc.dispatchEvent(mouseupEvent);
               
               activeDragAnimation = null;
-              console.log('  ✓ Drag complete - final shift:', endShift);
+              console.log('  ✓ Drag complete - final shift:', frame.tutorialState.shift);
             }
           }, delay);
-        }
+        });
         
         return;
       }
