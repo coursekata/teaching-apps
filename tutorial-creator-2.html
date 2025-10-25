@@ -1424,28 +1424,31 @@
       dragStartTime = Date.now();
       
       // Take snapshots continuously during the drag
+      // Get iframe offset for coordinate calculations
+      const iframeRect = appFrame.getBoundingClientRect();
+      
       dragStartSnapshot = {
-        startX: e.clientX,
-        startY: e.clientY,
+        startX: e.clientX - iframeRect.left,
+        startY: e.clientY - iframeRect.top,
         frames: [
           {
             time: 0,
-            x: e.clientX,
-            y: e.clientY,
+            x: e.clientX - iframeRect.left,
+            y: e.clientY - iframeRect.top,
             html: iframeDoc.body.innerHTML
           }
         ]
       };
       
       // Track mouse position during drag
-      let lastMouseX = e.clientX;
-      let lastMouseY = e.clientY;
+      let lastMouseX = e.clientX - iframeRect.left;
+      let lastMouseY = e.clientY - iframeRect.top;
       
       // Capture mousemove events to track position
       const trackMouseMove = (moveEvent) => {
         if (isDragging) {
-          lastMouseX = moveEvent.clientX;
-          lastMouseY = moveEvent.clientY;
+          lastMouseX = moveEvent.clientX - iframeRect.left;
+          lastMouseY = moveEvent.clientY - iframeRect.top;
         }
       };
       iframeDoc.addEventListener('mousemove', trackMouseMove, true);
@@ -1507,11 +1510,12 @@
         }
         
         try {
-          // Add final frame with mouseup position
+          // Add final frame with mouseup position (relative to iframe)
+          const iframeRect = appFrame.getBoundingClientRect();
           capturedSnapshot.frames.push({
             time: Date.now() - capturedStartTime,
-            x: upEvent.clientX,
-            y: upEvent.clientY,
+            x: upEvent.clientX - iframeRect.left,
+            y: upEvent.clientY - iframeRect.top,
             html: iframeDoc.body.innerHTML
           });
           
@@ -1928,14 +1932,24 @@
       const deltaY = endY - startY;
       
       console.log('  Replaying drag from (', startX, ',', startY, ') to (', endX, ',', endY, ')');
+      console.log('  Delta:', deltaX, ',', deltaY);
+      
+      // Get iframe offset for coordinate calculations
+      const iframeRect = appFrame.getBoundingClientRect();
+      
+      // Convert iframe-relative coordinates to viewport coordinates for mouse events
+      const viewportStartX = startX + iframeRect.left;
+      const viewportStartY = startY + iframeRect.top;
+      const viewportEndX = endX + iframeRect.left;
+      const viewportEndY = endY + iframeRect.top;
       
       // Dispatch mousedown at recorded start position
       const mousedownEvent = new MouseEvent('mousedown', {
         bubbles: true,
         cancelable: true,
         view: iframeDoc.defaultView,
-        clientX: startX,
-        clientY: startY,
+        clientX: viewportStartX,
+        clientY: viewportStartY,
         button: 0
       });
       element.dispatchEvent(mousedownEvent);
@@ -1965,8 +1979,8 @@
           bubbles: true,
           cancelable: true,
           view: iframeDoc.defaultView,
-          clientX: endX,
-          clientY: endY,
+          clientX: viewportEndX,
+          clientY: viewportEndY,
           button: 0
         });
         iframeDoc.dispatchEvent(mousemoveEvent);
@@ -1975,8 +1989,8 @@
           bubbles: true,
           cancelable: true,
           view: iframeDoc.defaultView,
-          clientX: endX,
-          clientY: endY,
+          clientX: viewportEndX,
+          clientY: viewportEndY,
           button: 0
         });
         iframeDoc.dispatchEvent(mouseupEvent);
@@ -2000,15 +2014,20 @@
         const delay = (originalDuration / numSteps) * i / playbackSpeed;
         
         setTimeout(() => {
+          // Calculate current position in iframe-relative coordinates
           const currentX = startX + (deltaX * progress);
           const currentY = startY + (deltaY * progress);
+          
+          // Convert to viewport coordinates for the event
+          const viewportX = currentX + iframeRect.left;
+          const viewportY = currentY + iframeRect.top;
           
           const mousemoveEvent = new MouseEvent('mousemove', {
             bubbles: true,
             cancelable: true,
             view: iframeDoc.defaultView,
-            clientX: currentX,
-            clientY: currentY,
+            clientX: viewportX,
+            clientY: viewportY,
             button: 0
           });
           iframeDoc.dispatchEvent(mousemoveEvent);
@@ -2019,8 +2038,8 @@
               bubbles: true,
               cancelable: true,
               view: iframeDoc.defaultView,
-              clientX: endX,
-              clientY: endY,
+              clientX: viewportEndX,
+              clientY: viewportEndY,
               button: 0
             });
             iframeDoc.dispatchEvent(mouseupEvent);
