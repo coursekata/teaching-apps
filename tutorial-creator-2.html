@@ -1437,20 +1437,9 @@
         console.log('📍 Detected SVG element - will use SVG coordinate system');
       }
       
-      // Function to convert screen coords to SVG coords
+      // Function to get coordinates - just use screen coords
       const getSVGCoords = (clientX, clientY) => {
-        if (useSVGCoords && svgElement) {
-          try {
-            const pt = svgElement.createSVGPoint();
-            pt.x = clientX;
-            pt.y = clientY;
-            const svgPt = pt.matrixTransform(svgElement.getScreenCTM().inverse());
-            return { x: svgPt.x, y: svgPt.y };
-          } catch (err) {
-            console.warn('SVG coord conversion failed:', err);
-            return { x: clientX, y: clientY };
-          }
-        }
+        // Don't convert - use screen coords directly
         return { x: clientX, y: clientY };
       };
       
@@ -1990,23 +1979,8 @@
       console.log('  Replaying drag from (', startX, ',', startY, ') to (', endX, ',', endY, ')');
       console.log('  Delta:', deltaX, ',', deltaY);
       
-      // If these are SVG coordinates, convert back to screen coordinates
+      // Don't convert - use SVG coords directly as mouse event coords
       const convertToScreen = (svgX, svgY) => {
-        if (detail.animationFrames[0]?.useSVGCoords !== undefined ? detail.animationFrames[0].useSVGCoords : detail.useSVGCoords) {
-          try {
-            // Find the SVG element in the iframe
-            const svg = element.ownerSVGElement || iframeDoc.querySelector('svg');
-            if (svg) {
-              const pt = svg.createSVGPoint();
-              pt.x = svgX;
-              pt.y = svgY;
-              const screenPt = pt.matrixTransform(svg.getScreenCTM());
-              return { x: screenPt.x, y: screenPt.y };
-            }
-          } catch (err) {
-            console.warn('SVG to screen conversion failed:', err);
-          }
-        }
         return { x: svgX, y: svgY };
       };
       
@@ -2082,7 +2056,7 @@
       activeDragAnimation = true;
       
       // Calculate deltas in screen space
-      const screenDeltaX = -(endScreen.x - startScreen.x); // Negate X to fix direction
+      const screenDeltaX = endScreen.x - startScreen.x; // Use delta as-is
       const screenDeltaY = endScreen.y - startScreen.y;
       
       for (let i = 0; i <= numSteps; i++) {
