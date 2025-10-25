@@ -955,7 +955,8 @@
       appUrl: appUrl.value.trim(),
       duration: duration,
       events: recordedEvents,
-      annotations: recordedAnnotations
+      annotations: recordedAnnotations,
+      initialState: initialAppState  // Add the captured initial state
     };
     
     currentTutorial = tutorial;
@@ -1191,19 +1192,17 @@
         
         // Start preview playback after a delay to ensure app is fully initialized
         setTimeout(() => {
-          // Initialize app state by triggering change events on all inputs with values
-          try {
-            const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-            const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
-            inputs.forEach(input => {
-              if (input.value) {
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-            });
-            console.log('✓ Initialized', inputs.length, 'inputs by triggering change events');
-          } catch (e) {
-            console.warn('Could not initialize inputs:', e);
+          // Restore the complete initial state from the snapshot
+          if (currentTutorial.initialState) {
+            try {
+              const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+              iframeDoc.body.innerHTML = currentTutorial.initialState;
+              console.log('✓ Restored complete initial state from snapshot');
+            } catch (e) {
+              console.warn('Could not restore initial state:', e);
+            }
+          } else {
+            console.warn('⚠ No initial state snapshot available');
           }
           
           isPlaying = true;
@@ -1212,7 +1211,7 @@
           eventQueue = [...currentTutorial.events];
           requestAnimationFrame(playbackLoop);
           
-          console.log('✓ Preview started from clean app state');
+          console.log('✓ Preview started from initial recording state');
         }, 500);
       };
       
@@ -1699,19 +1698,17 @@
       playbackStartTime = Date.now();
       eventQueue = [...currentTutorial.events];
       
-      // Initialize app state by triggering change events on all inputs with values
-      try {
-        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-        const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
-        inputs.forEach(input => {
-          if (input.value) {
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        });
-        console.log('✓ Initialized', inputs.length, 'inputs for playback');
-      } catch (e) {
-        console.warn('Could not initialize inputs:', e);
+      // Restore the complete initial state from the snapshot if available
+      if (currentTutorial.initialState) {
+        try {
+          const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+          iframeDoc.body.innerHTML = currentTutorial.initialState;
+          console.log('✓ Restored initial state for playback');
+        } catch (e) {
+          console.warn('Could not restore initial state:', e);
+        }
+      } else {
+        console.warn('⚠ No initial state snapshot available for playback');
       }
     }
     
