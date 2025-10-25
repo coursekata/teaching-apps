@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v2.3-lastframe</div>
+  <div class="version-number">v2.4-mouseup-debug</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1646,7 +1646,8 @@
       
       // Create mouseup handler function
       mouseUpHandler = function handleMouseUp(upEvent) {
-        console.log('🖱️ mouseup detected, isDragging:', isDragging);
+        const mouseupTime = Date.now() - dragStartTime;
+        console.log('🖱️ mouseup detected at', mouseupTime, 'ms, isDragging:', isDragging, 'position:', upEvent.clientX, upEvent.clientY);
         
         if (!isDragging || !dragElement) return;
         
@@ -1669,6 +1670,7 @@
         // Remove listeners
         iframeDoc.removeEventListener('mouseup', mouseUpHandler);
         document.removeEventListener('mouseup', mouseUpHandler);
+        window.removeEventListener('mouseup', mouseUpHandler);
         iframeDoc.removeEventListener('mousemove', trackMouseMove, true);
         document.removeEventListener('mousemove', trackMouseMove, true);
         window.removeEventListener('mousemove', trackMouseMove, true);
@@ -1728,10 +1730,13 @@
         }
       };
       
-      // Add mouseup listener to BOTH iframe document AND main document
+      // Add mouseup listener to BOTH iframe document AND main document AND window
       // This ensures we catch the mouseup even if D3 prevents bubbling
       iframeDoc.addEventListener('mouseup', mouseUpHandler, true); // Use capture phase
       document.addEventListener('mouseup', mouseUpHandler, true); // Backup listener
+      window.addEventListener('mouseup', mouseUpHandler, true); // Final backup
+      
+      console.log('✓ Mouseup listeners attached to iframe, document, and window');
       
     } catch (e) {
       console.warn('Cannot handle mousedown:', e);
