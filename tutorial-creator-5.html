@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v7.3</title>
+<title>Interactive Tutorial Creator - v7.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -231,84 +231,28 @@
     transform:none !important;
   }
   
-  /* Resize handles */
+  /* Simple resize handle - bottom-right corner only */
   .annotation-box.draggable .resize-handle{
     position:absolute;
+    bottom:0;
+    right:0;
+    width:20px;
+    height:20px;
     background:var(--warning);
-    z-index:10;
+    cursor:nwse-resize;
+    border-top-left-radius:4px;
+    border-bottom-right-radius:12px;
   }
   
-  /* Corner handles */
-  .annotation-box.draggable .resize-handle.corner{
-    width:12px;
-    height:12px;
-    border:2px solid #fff;
-    border-radius:2px;
-  }
-  
-  .annotation-box.draggable .resize-handle.nw{
-    top:-6px;
-    left:-6px;
-    cursor:nw-resize;
-  }
-  
-  .annotation-box.draggable .resize-handle.ne{
-    top:-6px;
-    right:-6px;
-    cursor:ne-resize;
-  }
-  
-  .annotation-box.draggable .resize-handle.sw{
-    bottom:-6px;
-    left:-6px;
-    cursor:sw-resize;
-  }
-  
-  .annotation-box.draggable .resize-handle.se{
-    bottom:-6px;
-    right:-6px;
-    cursor:se-resize;
-  }
-  
-  /* Edge handles */
-  .annotation-box.draggable .resize-handle.n{
-    top:-4px;
-    left:50%;
-    transform:translateX(-50%);
-    width:40px;
-    height:8px;
-    cursor:n-resize;
-    border-radius:4px;
-  }
-  
-  .annotation-box.draggable .resize-handle.s{
-    bottom:-4px;
-    left:50%;
-    transform:translateX(-50%);
-    width:40px;
-    height:8px;
-    cursor:s-resize;
-    border-radius:4px;
-  }
-  
-  .annotation-box.draggable .resize-handle.e{
-    right:-4px;
+  .annotation-box.draggable .resize-handle::after{
+    content:'⋰';
+    position:absolute;
     top:50%;
-    transform:translateY(-50%);
-    width:8px;
-    height:40px;
-    cursor:e-resize;
-    border-radius:4px;
-  }
-  
-  .annotation-box.draggable .resize-handle.w{
-    left:-4px;
-    top:50%;
-    transform:translateY(-50%);
-    width:8px;
-    height:40px;
-    cursor:w-resize;
-    border-radius:4px;
+    left:50%;
+    transform:translate(-50%, -50%);
+    color:#fff;
+    font-size:14px;
+    line-height:1;
   }
   
   @keyframes slideIn{
@@ -547,7 +491,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v7.3</div>
+  <div class="version-number">v7.4</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1362,67 +1306,43 @@
     }
   });
   
-  // Dragging functionality
+  // Dragging and resizing functionality
   let resizingAnnotation = false;
-  let resizeDirection = '';
   let resizeStartX = 0;
   let resizeStartY = 0;
   let resizeStartWidth = 0;
   let resizeStartHeight = 0;
-  let resizeStartLeft = 0;
-  let resizeStartTop = 0;
   
   function makeDraggable() {
     // Remove any existing resize handles
     const existingHandles = annotationBox.querySelectorAll('.resize-handle');
     existingHandles.forEach(h => h.remove());
     
-    // Add resize handles
-    const handles = [
-      { class: 'nw corner', cursor: 'nw-resize' },
-      { class: 'ne corner', cursor: 'ne-resize' },
-      { class: 'sw corner', cursor: 'sw-resize' },
-      { class: 'se corner', cursor: 'se-resize' },
-      { class: 'n', cursor: 'n-resize' },
-      { class: 's', cursor: 's-resize' },
-      { class: 'e', cursor: 'e-resize' },
-      { class: 'w', cursor: 'w-resize' }
-    ];
+    // Add single resize handle in bottom-right corner
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.addEventListener('mousedown', startResize);
+    annotationBox.appendChild(handle);
     
-    handles.forEach(({ class: className }) => {
-      const handle = document.createElement('div');
-      handle.className = 'resize-handle ' + className;
-      handle.addEventListener('mousedown', startResize);
-      annotationBox.appendChild(handle);
-    });
-    
+    // Add drag listener to the box itself (not the handle)
     annotationBox.addEventListener('mousedown', startDrag);
   }
   
   function startResize(e) {
-    if (!annotationBox.classList.contains('draggable')) return;
-    
     e.stopPropagation(); // Prevent drag from starting
+    e.preventDefault();
     
     resizingAnnotation = true;
-    resizeDirection = e.target.className.split(' ').find(c => 
-      ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w'].includes(c)
-    );
     
     const rect = annotationBox.getBoundingClientRect();
-    const containerRect = appFrame.getBoundingClientRect();
     
     resizeStartX = e.clientX;
     resizeStartY = e.clientY;
     resizeStartWidth = rect.width;
     resizeStartHeight = rect.height;
-    resizeStartLeft = rect.left - containerRect.left;
-    resizeStartTop = rect.top - containerRect.top;
     
     document.addEventListener('mousemove', doResize);
     document.addEventListener('mouseup', stopResize);
-    
-    e.preventDefault();
   }
   
   function doResize(e) {
@@ -1431,32 +1351,11 @@
     const dx = e.clientX - resizeStartX;
     const dy = e.clientY - resizeStartY;
     
-    let newWidth = resizeStartWidth;
-    let newHeight = resizeStartHeight;
-    let newLeft = resizeStartLeft;
-    let newTop = resizeStartTop;
+    const newWidth = Math.max(200, resizeStartWidth + dx);
+    const newHeight = Math.max(100, resizeStartHeight + dy);
     
-    // Apply resize based on direction
-    if (resizeDirection.includes('e')) {
-      newWidth = Math.max(200, resizeStartWidth + dx);
-    }
-    if (resizeDirection.includes('w')) {
-      newWidth = Math.max(200, resizeStartWidth - dx);
-      newLeft = resizeStartLeft + (resizeStartWidth - newWidth);
-    }
-    if (resizeDirection.includes('s')) {
-      newHeight = Math.max(100, resizeStartHeight + dy);
-    }
-    if (resizeDirection.includes('n')) {
-      newHeight = Math.max(100, resizeStartHeight - dy);
-      newTop = resizeStartTop + (resizeStartHeight - newHeight);
-    }
-    
-    // Apply new dimensions and position
     annotationBox.style.width = newWidth + 'px';
     annotationBox.style.height = newHeight + 'px';
-    annotationBox.style.left = newLeft + 'px';
-    annotationBox.style.top = newTop + 'px';
     
     e.preventDefault();
   }
@@ -1469,6 +1368,7 @@
   
   function startDrag(e) {
     if (!annotationBox.classList.contains('draggable')) return;
+    if (e.target.classList.contains('resize-handle')) return; // Don't drag if clicking resize handle
     
     draggingAnnotation = true;
     const rect = annotationBox.getBoundingClientRect();
