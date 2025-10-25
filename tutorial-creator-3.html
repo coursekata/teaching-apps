@@ -503,6 +503,9 @@
   <div class="app-container">
     <iframe id="appFrame" sandbox="allow-scripts allow-same-origin"></iframe>
     
+    <!-- Replay cursor - visible only during playback -->
+    <div id="replayCursor" style="position:absolute;width:16px;height:16px;border-radius:50%;background:rgba(255,59,48,0.9);border:3px solid white;pointer-events:none;z-index:10000;display:none;box-shadow:0 2px 12px rgba(0,0,0,0.4);transform:translate(-50%,-50%);"></div>
+    
     <div id="annotationBox" class="annotation-box">
       <h3 id="annotationTitle"></h3>
       <p id="annotationText"></p>
@@ -673,6 +676,21 @@
   
   const annotationBox = document.getElementById('annotationBox');
   const annotationTitle = document.getElementById('annotationTitle');
+  const replayCursor = document.getElementById('replayCursor');
+  
+  // Listen for cursor position messages from iframe
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'cursor-position') {
+      if (recordingCursor && tutorialStartTime > 0) {
+        const time = event.data.timestamp - tutorialStartTime;
+        cursorPositions.push({
+          time: time,
+          x: event.data.x,
+          y: event.data.y
+        });
+      }
+    }
+  });
   const annotationText = document.getElementById('annotationText');
   
   const annotationEditorModal = document.getElementById('annotationEditorModal');
@@ -734,6 +752,10 @@
   let appLoadTime = 0;
   let tutorialStartTime = 0; // When user clicks "Start Recording"
   
+  // Cursor position tracking
+  let cursorPositions = []; // Stores {time, x, y} relative to iframe
+  let recordingCursor = false;
+  
   let currentTutorial = null;
   let isPlaying = false;
   let playbackStartTime = 0;
@@ -776,6 +798,33 @@
       alwaysRecordedEvents = [];
       alwaysRecording = true;
       
+      // Inject cursor tracking script into iframe
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const script = iframeDoc.createElement('script');
+      script.textContent = `
+        // Cursor tracking - sends all mousemove events to parent
+        (function() {
+          let lastSendTime = 0;
+          const SEND_INTERVAL = 16; // ~60fps
+          
+          document.addEventListener('mousemove', function(e) {
+            const now = Date.now();
+            if (now - lastSendTime >= SEND_INTERVAL) {
+              window.parent.postMessage({
+                type: 'cursor-position',
+                x: e.clientX,
+                y: e.clientY,
+                timestamp: now
+              }, '*');
+              lastSendTime = now;
+            }
+          }, true);
+          
+          console.log('✓ Cursor tracking injected into iframe');
+        })();
+      `;
+      iframeDoc.head.appendChild(script);
+      
       // Start capturing events immediately
       setTimeout(() => {
         setupEventListeners();
@@ -807,6 +856,10 @@
     isRecording = true;
     isPaused = false;
     recordingStartTime = tutorialStartTime;
+    
+    // Start recording cursor positions
+    cursorPositions = [];
+    recordingCursor = true;
     
     console.log('✓ Tutorial start marked -', alwaysRecordedEvents.length, 'events already captured');
     console.log('  Time since app load:', (tutorialStartTime - appLoadTime) / 1000, 'seconds');
@@ -876,6 +929,7 @@
     isRecording = false;
     isPaused = false;
     alwaysRecording = false; // Stop capturing new events
+    recordingCursor = false; // Stop capturing cursor positions
     
     // Close annotation positioning overlay if active (don't save incomplete annotation)
     if (positionEditorOverlay.style.display !== 'none') {
@@ -930,7 +984,8 @@
       tutorialStartOffset: tutorialStartOffset,  // When to start showing annotations
       duration: tutorialDuration,  // Duration from Start to Stop
       events: alwaysRecordedEvents,  // ALL events from app load
-      annotations: recordedAnnotations
+      annotations: recordedAnnotations,
+      cursorPositions: cursorPositions  // Cursor movement data
     };
     
     currentTutorial = tutorial;
@@ -1880,6 +1935,33 @@
     // This makes the tutorial portion start immediately after fast-forward
     const elapsed = realElapsed + tutorialStartSec;
     
+    // Animate cursor position if we have cursor data
+    if (currentTutorial.cursorPositions && currentTutorial.cursorPositions.length > 0) {
+      // Find cursor position at current time
+      const cursorTime = realElapsed * 1000; // Convert to ms
+      let cursorPos = null;
+      
+      // Find the appropriate cursor position for this time
+      for (let i = 0; i < currentTutorial.cursorPositions.length; i++) {
+        if (currentTutorial.cursorPositions[i].time <= cursorTime) {
+          cursorPos = currentTutorial.cursorPositions[i];
+        } else {
+          break;
+        }
+      }
+      
+      if (cursorPos && fastForwardComplete) {
+        // Show cursor only after fast-forward
+        const iframeRect = appFrame.getBoundingClientRect();
+        replayCursor.style.display = 'block';
+        replayCursor.style.left = (iframeRect.left + cursorPos.x) + 'px';
+        replayCursor.style.top = (iframeRect.top + cursorPos.y) + 'px';
+      } else if (!fastForwardComplete) {
+        // Hide cursor during fast-forward
+        replayCursor.style.display = 'none';
+      }
+    }
+    
     // Update timeline only if in full playback mode (not preview)
     if (playbackControls.style.display !== 'none') {
       timelineSlider.value = realElapsed; // Show only tutorial time on timeline
@@ -1949,6 +2031,9 @@
       }
       
       isPlaying = false;
+      
+      // Hide replay cursor
+      replayCursor.style.display = 'none';
       
       // Hide any visible annotations
       annotationBox.classList.remove('visible');
