@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial System - Advanced</title>
+<title>Interactive Tutorial System - v6</title>
 <script>
   window.MathJax = {
     tex: {
@@ -2133,7 +2133,13 @@
       });
     }
     
-    if (realElapsed >= totalDuration) {
+    // Check if playback should end early (all events and annotations complete)
+    const allEventsComplete = eventQueue.length === 0;
+    const lastAnnotation = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+    const allAnnotationsComplete = !lastAnnotation || 
+      realElapsed >= (lastAnnotation.timestamp + (lastAnnotation.duration || 5000)) / 1000;
+    
+    if (realElapsed >= totalDuration || (allEventsComplete && allAnnotationsComplete)) {
       // Don't end yet if there's an active drag animation
       if (activeDragAnimation) {
         console.log('⏳ Waiting for drag animation to complete...');
