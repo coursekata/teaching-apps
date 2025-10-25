@@ -1543,31 +1543,43 @@
         ]
       };
       
-      // Watch for transform changes on the dragged element
+      // Watch for transform changes on the dragged element AND its parent
+      // (D3 often moves a parent <g> group instead of the clicked element)
       const draggedElement = element;
+      const parentElement = element.parentElement;
+      
       const mutationObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'attributes' && (mutation.attributeName === 'transform' || mutation.attributeName === 'style')) {
-            const transform = draggedElement.getAttribute('transform');
-            const style = draggedElement.getAttribute('style');
+            const targetEl = mutation.target;
+            const transform = targetEl.getAttribute('transform');
+            const style = targetEl.getAttribute('style');
             const time = Date.now() - dragStartTime;
             
             dragStartSnapshot.elementTransforms.push({
               time: time,
               transform: transform,
-              style: style
+              style: style,
+              isParent: targetEl === parentElement
             });
             
-            console.log('  🔄 Transform changed:', transform || style);
+            console.log('  🔄 Transform changed:', transform || style, targetEl === parentElement ? '(parent)' : '(element)');
           }
         });
       });
       
-      // Observe the dragged element
+      // Observe both the dragged element and its parent
       mutationObserver.observe(draggedElement, {
         attributes: true,
         attributeFilter: ['transform', 'style']
       });
+      
+      if (parentElement) {
+        mutationObserver.observe(parentElement, {
+          attributes: true,
+          attributeFilter: ['transform', 'style']
+        });
+      }
       
       // Track mouse position during drag
       let lastMouseX = e.clientX;
@@ -1595,18 +1607,6 @@
           const iframeRect = appFrame.getBoundingClientRect();
           const iframeRelativeX = lastMouseX - iframeRect.left;
           const iframeRelativeY = lastMouseY - iframeRect.top;
-          
-          // Track furthest extent (for histogram drags where user might pull back before releasing)
-          const startIframeX = dragStartSnapshot.frames[0].iframeX;
-          const currentDistanceFromStart = Math.abs(iframeRelativeX - startIframeX);
-          const maxDistanceFromStart = Math.abs((dragStartSnapshot.maxExtentIframeX || startIframeX) - startIframeX);
-          
-          if (currentDistanceFromStart > maxDistanceFromStart) {
-            dragStartSnapshot.maxExtentIframeX = iframeRelativeX;
-            dragStartSnapshot.maxExtentIframeY = iframeRelativeY;
-            dragStartSnapshot.maxExtentScreenX = lastMouseX;
-            dragStartSnapshot.maxExtentScreenY = lastMouseY;
-          }
           
           dragStartSnapshot.frames.push({
             time: currentTime,
@@ -1673,26 +1673,14 @@
         }
         
         try {
-          // Use max extent position if it exists (user dragged further and pulled back)
-          // Otherwise use mouseup position
-          let finalX, finalY, finalIframeX, finalIframeY;
+          // Use mouseup position as the end position
+          console.log('📍 Drag end: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
           
-          if (capturedSnapshot.maxExtentIframeX !== undefined) {
-            console.log('📍 Using max extent (not mouseup) - user pulled back before releasing');
-            console.log('  Max extent reached: iframeX:', capturedSnapshot.maxExtentIframeX);
-            console.log('  Mouseup position: iframeX:', upEvent.clientX - appFrame.getBoundingClientRect().left);
-            finalX = capturedSnapshot.maxExtentScreenX;
-            finalY = capturedSnapshot.maxExtentScreenY;
-            finalIframeX = capturedSnapshot.maxExtentIframeX;
-            finalIframeY = capturedSnapshot.maxExtentIframeY;
-          } else {
-            console.log('📍 Drag end: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
-            finalX = upEvent.clientX;
-            finalY = upEvent.clientY;
-            const iframeRect = appFrame.getBoundingClientRect();
-            finalIframeX = upEvent.clientX - iframeRect.left;
-            finalIframeY = upEvent.clientY - iframeRect.top;
-          }
+          const finalX = upEvent.clientX;
+          const finalY = upEvent.clientY;
+          const iframeRect = appFrame.getBoundingClientRect();
+          const finalIframeX = upEvent.clientX - iframeRect.left;
+          const finalIframeY = upEvent.clientY - iframeRect.top;
           
           // Get SVG coords for final position
           const getSVGCoordsForEnd = (clientX, clientY) => {
@@ -2279,11 +2267,16 @@
           const delay = transformData.time / playbackSpeed;
           
           setTimeout(() => {
-            if (transformData.transform) {
-              element.setAttribute('transform', transformData.transform);
-            }
-            if (transformData.style) {
-              element.setAttribute('style', transformData.style);
+            // Apply to parent if it was the parent that changed, otherwise apply to element
+            const targetElement = transformData.isParent ? element.parentElement : element;
+            
+            if (targetElement) {
+              if (transformData.transform) {
+                targetElement.setAttribute('transform', transformData.transform);
+              }
+              if (transformData.style) {
+                targetElement.setAttribute('style', transformData.style);
+              }
             }
             
             // If this is the last transform, clear the animation flag
