@@ -2495,6 +2495,30 @@
   data = [];
   data2 = [];
   draw();
+  
+  // Tutorial API - allows tutorial player to control the app state
+  window.tutorialAPI = {
+    // Set the main distribution shift
+    setShift: function(shift) {
+      shiftUnits = shift;
+      draw();
+    },
+    
+    // Set the second distribution shift (for comparison mode)
+    setShift2: function(shift) {
+      shiftUnits2 = shift;
+      draw();
+    },
+    
+    // Get current shift values (useful for recording)
+    getShift: function() {
+      return shiftUnits;
+    },
+    
+    getShift2: function() {
+      return shiftUnits2;
+    }
+  };
 })();
 </script>
 </body>
