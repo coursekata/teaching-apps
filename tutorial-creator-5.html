@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v7.0</title>
+<title>Interactive Tutorial Creator - v7.1</title>
 <script>
   window.MathJax = {
     tex: {
@@ -462,7 +462,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v7.0-recording-only</div>
+  <div class="version-number">v7.1</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -727,6 +727,10 @@
   let playbackSpeed = 1;
   let eventQueue = [];
   let currentAnnotationIndex = -1;
+  let fastForwardComplete = false;
+  let activeDragAnimation = null;
+  let dragAnimationPauseTime = 0;
+  let dragAnimationDuration = 0;
   
   // Mode switching
   
@@ -1844,6 +1848,213 @@
   closeExportModal.addEventListener('click', () => {
     exportModal.classList.remove('visible');
   });
+  
+  // Playback functions (used by preview)
+  function playbackLoop() {
+    if (!isPlaying) return;
+    
+    let realElapsed = (Date.now() - playbackStartTime) / 1000;
+    
+    if (activeDragAnimation && dragAnimationPauseTime > 0) {
+      realElapsed = dragAnimationPauseTime;
+    }
+    
+    const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
+    const tutorialDurationSec = currentTutorial.duration / 1000;
+    const totalDuration = tutorialDurationSec;
+    const elapsed = realElapsed + tutorialStartSec;
+    
+    // Process events
+    let processedEventThisFrame = false;
+    while (eventQueue.length > 0) {
+      const event = eventQueue[0];
+      const eventTimeSec = event.timestamp / 1000;
+      
+      if (eventTimeSec < tutorialStartSec) {
+        eventQueue.shift();
+        replayEvent(event);
+        
+        if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
+          fastForwardComplete = true;
+          console.log('⏩ Fast-forward complete - pausing 100ms for app to settle...');
+          setTimeout(() => {
+            playbackStartTime = Date.now();
+            requestAnimationFrame(playbackLoop);
+          }, 100);
+          return;
+        }
+        continue;
+      }
+      
+      if (eventTimeSec <= elapsed) {
+        eventQueue.shift();
+        processedEventThisFrame = true;
+        replayEvent(event);
+      } else {
+        break;
+      }
+    }
+    
+    // Handle annotations
+    if (currentTutorial.annotations && realElapsed >= 0) {
+      currentTutorial.annotations.forEach((ann, idx) => {
+        const annStart = ann.timestamp / 1000;
+        const annEnd = annStart + (ann.duration || 5000) / 1000;
+        
+        if (realElapsed >= annStart && realElapsed < annEnd && currentAnnotationIndex !== idx) {
+          currentAnnotationIndex = idx;
+          showAnnotation(ann);
+        } else if (realElapsed >= annEnd && currentAnnotationIndex === idx) {
+          annotationBox.classList.remove('visible');
+          currentAnnotationIndex = -1;
+        }
+      });
+    }
+    
+    // Check completion
+    const allEventsComplete = eventQueue.length === 0;
+    const lastAnnotation = currentTutorial.annotations?.[currentTutorial.annotations.length - 1];
+    const allAnnotationsComplete = !lastAnnotation || 
+      realElapsed >= (lastAnnotation.timestamp + (lastAnnotation.duration || 5000)) / 1000;
+    
+    if (realElapsed >= totalDuration || (allEventsComplete && allAnnotationsComplete)) {
+      if (activeDragAnimation) {
+        console.log('⏳ Waiting for drag animation to complete...');
+        requestAnimationFrame(playbackLoop);
+        return;
+      }
+      
+      isPlaying = false;
+      annotationBox.classList.remove('visible');
+      currentAnnotationIndex = -1;
+      
+      if (playPausePreview.style.display !== 'none') {
+        playPausePreview.style.display = 'none';
+        playPausePreview.textContent = '⏸ Pause Preview';
+        previewRecording.style.display = 'inline-block';
+        recordAgain.style.display = 'inline-block';
+        exportRecording.style.display = 'inline-block';
+        tutorialRecording = false;
+        appFrame.classList.remove('playback-mode');
+        console.log('✓ Preview finished - final state visible');
+      }
+      
+      return;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  }
+  
+  function replayEvent(event) {
+    try {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (!iframeDoc) return;
+      
+      if (event.type === 'click') {
+        const element = findElement(iframeDoc, event.target);
+        if (element) {
+          element.click();
+        }
+      } else if (event.type === 'drag') {
+        const element = findElement(iframeDoc, event.target);
+        if (!element) return;
+        
+        const detail = event.detail || {};
+        const frames = detail.animationFrames || [];
+        
+        if (frames.length === 0) return;
+        
+        const firstFrame = frames[0];
+        const lastFrame = frames[frames.length - 1];
+        const iframeWindow = appFrame.contentWindow;
+        
+        // Use tutorialAPI if available for fast replay
+        if (firstFrame.tutorialState && lastFrame.tutorialState && iframeWindow.tutorialAPI) {
+          const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
+          const sampledFrames = frames.filter((f, i) => i % 3 === 0 || i === frames.length - 1);
+          const targetDuration = originalDuration / playbackSpeed;
+          
+          dragAnimationPauseTime = (Date.now() - playbackStartTime) / 1000;
+          dragAnimationDuration = targetDuration / 1000;
+          
+          sampledFrames.forEach((frame, index) => {
+            const progress = frame.time / originalDuration;
+            const delay = progress * targetDuration;
+            
+            setTimeout(() => {
+              if (frame.tutorialState) {
+                iframeWindow.tutorialAPI.setShift(frame.tutorialState.shift);
+              }
+              
+              if (index === sampledFrames.length - 1) {
+                playbackStartTime = Date.now() - ((dragAnimationPauseTime + dragAnimationDuration) * 1000);
+                dragAnimationPauseTime = 0;
+                activeDragAnimation = null;
+                requestAnimationFrame(playbackLoop);
+              }
+            }, delay);
+          });
+          
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Replay error:', e);
+    }
+  }
+  
+  function findElement(doc, selector) {
+    if (!selector) return null;
+    
+    if (typeof selector === 'object') {
+      if (selector.type === 'button-text') {
+        const buttons = doc.querySelectorAll(selector.tagName || 'button');
+        for (let btn of buttons) {
+          if (btn.textContent.trim() === selector.text) {
+            return btn;
+          }
+        }
+      }
+      return null;
+    }
+    
+    if (selector.startsWith('#')) {
+      return doc.getElementById(selector.substring(1));
+    }
+    
+    try {
+      const element = doc.querySelector(selector);
+      if (element) return element;
+      
+      const svg = doc.querySelector('svg');
+      if (svg) {
+        return svg.querySelector(selector);
+      }
+      
+      return null;
+    } catch (e) {
+      console.warn('Invalid selector:', selector, e);
+      return null;
+    }
+  }
+  
+  function showAnnotation(ann) {
+    annotationBox.className = 'annotation-box visible custom-position';
+    annotationBox.style.left = ann.position.left + 'px';
+    annotationBox.style.top = ann.position.top + 'px';
+    annotationBox.style.transform = 'none';
+    
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    if (typeof MathJax !== 'undefined') {
+      if (MathJax.typesetPromise) {
+        MathJax.typesetPromise([annotationBox]).catch((err) => console.warn('MathJax error:', err));
+      } else if (MathJax.typeset) {
+        MathJax.typeset([annotationBox]);
+      }
+    }
+  }
   
   function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
