@@ -12,7 +12,6 @@
     },
     startup: {
       ready: () => {
-        console.log('MathJax is loaded and ready');
         MathJax.startup.defaultReady();
       }
     }
@@ -795,64 +794,71 @@
   });
   
   reloadApp.addEventListener('click', () => {
+    console.log('🔄 Reload App clicked');
     const url = appFrame.src;
-    if (url && url !== 'about:blank') {
-      // Stop any active recording
-      if (isRecording) {
-        isRecording = false;
-        isPaused = false;
-        
-        // Reset recording UI
-        pauseRecording.style.display = 'none';
-        resumeRecording.style.display = 'none';
-        addAnnotation.style.display = 'none';
-        stopRecording.style.display = 'none';
-        startRecording.style.display = 'inline-block';
-        recordingIndicator.style.display = 'none';
-        pausedIndicator.style.display = 'none';
-        
-        console.log('⏹ Recording stopped due to app reload');
-      }
+    console.log('  Current URL:', url);
+    
+    if (!url || url === 'about:blank') {
+      console.warn('  No URL to reload');
+      return;
+    }
+    
+    // Stop any active recording
+    if (isRecording) {
+      isRecording = false;
+      isPaused = false;
+      alwaysRecording = false;
       
-      // Stop any active playback/preview
-      isPlaying = false;
-      playbackPausedAt = 0;
-      
-      // Clear all recorded data and tutorial state
-      recordedEvents = [];
-      recordedAnnotations = [];
-      currentTutorial = null;
-      initialAppState = null;
-      
-      // Hide all preview/export/recording buttons except Start Recording
-      previewRecording.style.display = 'none';
-      playPausePreview.style.display = 'none';
-      recordAgain.style.display = 'none';
-      exportRecording.style.display = 'none';
+      // Reset recording UI
+      pauseRecording.style.display = 'none';
+      resumeRecording.style.display = 'none';
+      addAnnotation.style.display = 'none';
+      stopRecording.style.display = 'none';
       startRecording.style.display = 'inline-block';
+      recordingIndicator.style.display = 'none';
+      pausedIndicator.style.display = 'none';
       
-      // Hide any visible annotations
-      annotationBox.classList.remove('visible');
+      console.log('  Recording stopped');
+    }
+    
+    // Stop any active playback/preview
+    isPlaying = false;
+    playbackPausedAt = 0;
+    
+    // Clear all recorded data and tutorial state
+    alwaysRecordedEvents = [];
+    recordedAnnotations = [];
+    currentTutorial = null;
+    
+    // Hide all preview/export/recording buttons except Start Recording
+    previewRecording.style.display = 'none';
+    playPausePreview.style.display = 'none';
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none';
+    startRecording.style.display = 'inline-block';
+    
+    // Hide any visible annotations
+    annotationBox.classList.remove('visible');
+    
+    console.log('  Reloading iframe...');
+    
+    // Reload the iframe
+    appFrame.src = '';
+    setTimeout(() => {
+      appFrame.src = url;
       
-      // Clear any onload handlers from previous preview/playback
+      // Setup onload handler to restart always-on recording
       appFrame.onload = () => {
-        // Restart always-on recording after reload
         appLoadTime = Date.now();
         alwaysRecordedEvents = [];
         alwaysRecording = true;
         
         setTimeout(() => {
           setupEventListeners();
-          console.log('🔄 App reloaded - background recording restarted');
+          console.log('✓ App reloaded - background recording restarted');
         }, 500);
       };
-      
-      // Reload the iframe for a completely fresh start
-      appFrame.src = '';
-      setTimeout(() => {
-        appFrame.src = url;
-      }, 100);
-    }
+    }, 100);
   });
   
   startRecording.addEventListener('click', () => {
@@ -1794,13 +1800,7 @@
       if (eventTimeSec < tutorialStartSec) {
         eventQueue.shift();
         replayEvent(event);
-        // Small delay to let app JavaScript state update (10ms per event)
-        // This is much faster than real-time but allows state to settle
-        if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 < tutorialStartSec) {
-          setTimeout(() => requestAnimationFrame(playbackLoop), 10);
-          return;
-        }
-        continue;
+        continue; // Process next event immediately
       }
       
       // If event is after tutorial start, check if it's time to replay it
@@ -1880,7 +1880,12 @@
           view: iframeDoc.defaultView
         });
         const dispatched = element.dispatchEvent(clickEvent);
-        console.log('  Click dispatched on:', element.tagName, element.id || element.className);
+        console.log('  ✓ Click dispatched on:', element.tagName, element.id || element.className || element.getAttribute('data-curve'));
+        
+        // If this is a button with data-curve, log which one
+        if (element.tagName === 'BUTTON' && element.hasAttribute('data-curve')) {
+          console.log('    Curve button clicked:', element.getAttribute('data-curve'));
+        }
       } else if (event.type === 'input' || event.type === 'change') {
         if (event.detail.value !== undefined) {
           element.value = event.detail.value;
