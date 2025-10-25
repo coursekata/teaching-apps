@@ -827,9 +827,9 @@
     isPaused = false;
     recordingStartTime = Date.now();
     
-    // CAPTURE INITIAL INPUT VALUES AND HTML STATE
+    // CAPTURE INITIAL INPUT VALUES AND CHECK FOR EXISTING SAMPLES
     initialInputValues = {};
-    let initialHTMLState = null;
+    let needsSimulation = false;
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (iframeDoc) {
@@ -840,13 +840,15 @@
           initialInputValues[selector] = input.value;
         });
         
-        // Capture the full HTML state (includes the histogram with samples)
-        initialHTMLState = iframeDoc.body.innerHTML;
+        // Check if there are already samples rendered (histogram bars exist)
+        const histBars = iframeDoc.querySelectorAll('.hist-bar');
+        if (histBars && histBars.length > 0) {
+          needsSimulation = true;
+          initialInputValues._needsSimulation = true;
+          console.log('✓ Detected', histBars.length, 'histogram bars - will inject Simulate event');
+        }
         
-        // Store both
-        initialInputValues._htmlState = initialHTMLState;
-        
-        console.log('✓ Captured', Object.keys(initialInputValues).length - 1, 'input values + HTML state');
+        console.log('✓ Captured', Object.keys(initialInputValues).length - (needsSimulation ? 2 : 1), 'input values');
       }
     } catch (e) {
       console.warn('Could not capture initial state:', e);
@@ -1179,7 +1181,7 @@
   });
   
   // Preview functionality
-  previewRecording.addEventListener('click', () => {
+  previewRecording.addEventListener('click', async () => {
     if (!currentTutorial) {
       alert('No recording to preview!');
       return;
@@ -1192,57 +1194,70 @@
     annotationBox.classList.remove('visible');
     currentAnnotationIndex = -1;
     
-    // Reload the iframe to reset app to initial state
-    // This is better than restoring HTML because it ensures proper initialization
+    // Show preview controls
+    previewRecording.style.display = 'none';
+    playPausePreview.style.display = 'inline-block';
+    playPausePreview.textContent = '⏸ Pause Preview';
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none';
+    
+    // Reload the iframe to reset to clean state
     const appUrl = currentTutorial.appUrl;
     appFrame.src = '';
     
-    setTimeout(() => {
-      appFrame.src = appUrl;
-      
-      // Wait for iframe to load
-      appFrame.onload = () => {
-        console.log('✓ App reloaded for preview');
+    await new Promise(resolve => {
+      setTimeout(() => {
+        appFrame.src = appUrl;
         
-        // Start preview playback after a delay to ensure app is fully initialized
-        setTimeout(() => {
-          // Restore the HTML state if available (includes histogram with samples)
-          if (currentTutorial.initialInputValues && currentTutorial.initialInputValues._htmlState) {
-            try {
-              const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-              
-              // Store references to elements that have event listeners before replacing HTML
-              // This is a safer approach - we restore the HTML and let the app re-initialize
-              iframeDoc.body.innerHTML = currentTutorial.initialInputValues._htmlState;
-              
-              console.log('✓ Restored initial HTML state (including histogram samples)');
-            } catch (e) {
-              console.warn('Could not restore initial HTML state:', e);
+        appFrame.onload = async () => {
+          console.log('✓ App reloaded for preview');
+          
+          // Wait for app to initialize
+          await new Promise(r => setTimeout(r, 500));
+          
+          try {
+            const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+            
+            // Set initial input values (without triggering change events)
+            if (currentTutorial.initialInputValues) {
+              for (const [selector, value] of Object.entries(currentTutorial.initialInputValues)) {
+                if (selector.startsWith('_')) continue; // Skip metadata like _needsSimulation
+                const element = findElement(iframeDoc, selector);
+                if (element) {
+                  element.value = value;
+                }
+              }
+              console.log('✓ Set initial input values');
             }
-          } else {
-            console.warn('⚠ No initial HTML state available');
+            
+            // If simulation is needed, click the Simulate button
+            if (currentTutorial.initialInputValues && currentTutorial.initialInputValues._needsSimulation) {
+              const simulateBtn = iframeDoc.getElementById('regenBtn');
+              if (simulateBtn) {
+                console.log('✓ Clicking Simulate button to regenerate samples...');
+                simulateBtn.click();
+                // Wait for simulation to complete
+                await new Promise(r => setTimeout(r, 300));
+                console.log('✓ Simulation complete');
+              }
+            }
+            
+          } catch (e) {
+            console.warn('Could not initialize preview state:', e);
           }
           
-          // Small delay to allow the restored HTML to settle
-          setTimeout(() => {
-            isPlaying = true;
-            playbackPausedAt = 0;
-            playbackStartTime = Date.now();
-            eventQueue = [...currentTutorial.events];
-            requestAnimationFrame(playbackLoop);
-            
-            console.log('✓ Preview started - ready to replay events');
-          }, 100);
-        }, 500);
-      };
-      
-      // Show preview controls
-      previewRecording.style.display = 'none';
-      playPausePreview.style.display = 'inline-block';
-      playPausePreview.textContent = '⏸ Pause Preview';
-      
-      console.log('✓ Reloading app for preview...');
-    }, 100);
+          // Start playback
+          isPlaying = true;
+          playbackPausedAt = 0;
+          playbackStartTime = Date.now();
+          eventQueue = [...currentTutorial.events];
+          requestAnimationFrame(playbackLoop);
+          
+          console.log('✓ Preview started - replaying', eventQueue.length, 'events');
+          resolve();
+        };
+      }, 100);
+    });
   });
   
   playPausePreview.addEventListener('click', () => {
@@ -1719,17 +1734,33 @@
       playbackStartTime = Date.now();
       eventQueue = [...currentTutorial.events];
       
-      // Restore the HTML state if available
-      if (currentTutorial.initialInputValues && currentTutorial.initialInputValues._htmlState) {
+      // Set initial input values and simulate if needed
+      if (currentTutorial.initialInputValues) {
         try {
           const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-          iframeDoc.body.innerHTML = currentTutorial.initialInputValues._htmlState;
-          console.log('✓ Restored initial HTML state for playback');
+          
+          // Set initial input values (without triggering change events)
+          for (const [selector, value] of Object.entries(currentTutorial.initialInputValues)) {
+            if (selector.startsWith('_')) continue; // Skip metadata
+            const element = findElement(iframeDoc, selector);
+            if (element) {
+              element.value = value;
+            }
+          }
+          
+          // If simulation is needed, click the Simulate button
+          if (currentTutorial.initialInputValues._needsSimulation) {
+            const simulateBtn = iframeDoc.getElementById('regenBtn');
+            if (simulateBtn) {
+              console.log('✓ Clicking Simulate button for playback...');
+              simulateBtn.click();
+            }
+          }
+          
+          console.log('✓ Initial state restored for playback');
         } catch (e) {
-          console.warn('Could not restore initial HTML state:', e);
+          console.warn('Could not restore initial state:', e);
         }
-      } else {
-        console.warn('⚠ No initial HTML state available for playback');
       }
     }
     
