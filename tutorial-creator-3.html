@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v2.2-simplified</div>
+  <div class="version-number">v2.3-lastframe</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1687,52 +1687,19 @@
         }
         
         try {
-          // Use mouseup position as the end position
-          console.log('📍 Drag end: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
+          // IMPORTANT: Use the LAST CAPTURED FRAME position, not mouseup position
+          // The app may move the element after mouseup (snapping/validation), 
+          // so we want the position where the user actually dragged to
           
-          const finalX = upEvent.clientX;
-          const finalY = upEvent.clientY;
-          const iframeRect = appFrame.getBoundingClientRect();
-          const finalIframeX = upEvent.clientX - iframeRect.left;
-          const finalIframeY = upEvent.clientY - iframeRect.top;
+          if (capturedSnapshot.frames.length === 0) {
+            console.log('⚠️ No frames captured - drag was too short');
+            return;
+          }
           
-          // Get SVG coords for final position
-          const getSVGCoordsForEnd = (clientX, clientY) => {
-            if (capturedSnapshot.useSVGCoords) {
-              try {
-                const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-                const svg = iframeDoc.querySelector('svg');
-                if (svg) {
-                  const pt = svg.createSVGPoint();
-                  pt.x = clientX;
-                  pt.y = clientY;
-                  const ctm = svg.getScreenCTM();
-                  if (ctm) {
-                    const svgPt = pt.matrixTransform(ctm.inverse());
-                    console.log('  🔄 Converted screen (', clientX, ',', clientY, ') → SVG (', svgPt.x, ',', svgPt.y, ')');
-                    return { x: svgPt.x, y: svgPt.y };
-                  }
-                }
-              } catch (err) {
-                console.warn('⚠️ SVG coord conversion failed:', err);
-              }
-            }
-            return { x: clientX, y: clientY };
-          };
-          
-          const endCoords = getSVGCoordsForEnd(finalX, finalY);
-          console.log('📍 End SVG coords:', endCoords.x, endCoords.y);
-          
-          capturedSnapshot.frames.push({
-            time: Date.now() - capturedStartTime,
-            x: endCoords.x,
-            y: endCoords.y,
-            screenX: finalX,
-            screenY: finalY,
-            iframeX: finalIframeX,
-            iframeY: finalIframeY,
-            html: iframeDoc.body.innerHTML
-          });
+          const lastCapturedFrame = capturedSnapshot.frames[capturedSnapshot.frames.length - 1];
+          console.log('📍 Using last captured frame position (not mouseup)');
+          console.log('  Last mousemove: clientX:', lastCapturedFrame.screenX, 'clientY:', lastCapturedFrame.screenY);
+          console.log('  Mouseup position: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
           
           console.log('  📊 Drag captured:', capturedSnapshot.frames.length, 'frames');
           console.log('    Start:', capturedSnapshot.frames[0].x, capturedSnapshot.frames[0].y);
