@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v3.5-mouseup-cleanup</div>
+  <div class="version-number">v5-drag-timestamp-fix</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1471,6 +1471,12 @@
       return;
     }
     
+    // Prevent starting a new drag if one is already in progress
+    if (isDragging) {
+      console.log('⚠️ Ignoring mousedown - drag already in progress');
+      return;
+    }
+    
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       if (!iframeDoc) return;
@@ -1691,9 +1697,12 @@
       // Create mouseup handler function
       mouseUpHandler = function handleMouseUp(upEvent) {
         const mouseupTime = Date.now() - dragStartTime;
-        console.log('🖱️ mouseup detected at', mouseupTime, 'ms, isDragging:', isDragging, 'position:', upEvent.clientX, upEvent.clientY);
+        console.log('🖱️ mouseup detected at', mouseupTime, 'ms, isDragging:', isDragging, 'dragElement:', !!dragElement, 'position:', upEvent.clientX, upEvent.clientY);
         
-        if (!isDragging || !dragElement) return;
+        if (!isDragging || !dragElement) {
+          console.log('  ⚠️ Skipping mouseup - isDragging:', isDragging, 'dragElement:', !!dragElement);
+          return;
+        }
         
         // Stop capturing frames - cancel the animation frame
         if (dragCheckInterval) {
