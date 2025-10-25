@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v2.5-mouseup-fix</div>
+  <div class="version-number">v2.6-d3-drag-fix</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2220,7 +2220,8 @@
           clientY: endY,
           button: 0
         });
-        iframeDoc.dispatchEvent(mousemoveEvent);
+        // Dispatch to element for D3 drag handlers
+        element.dispatchEvent(mousemoveEvent);
         
         const mouseupEvent = new MouseEvent('mouseup', {
           bubbles: true,
@@ -2310,7 +2311,8 @@
             clientY: currentY,
             button: 0
           });
-          iframeDoc.dispatchEvent(mousemoveEvent);
+          // Dispatch to element first for D3 drag handlers, then let it bubble
+          element.dispatchEvent(mousemoveEvent);
           
           // If this is the last step, dispatch mouseup
           if (i === numSteps) {
