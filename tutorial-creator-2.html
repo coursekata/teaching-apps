@@ -1992,7 +1992,21 @@
       
       // If these are SVG coordinates, convert back to screen coordinates
       const convertToScreen = (svgX, svgY) => {
-        // Just return the SVG coordinates directly - they work as mouse event coords
+        if (detail.animationFrames[0]?.useSVGCoords !== undefined ? detail.animationFrames[0].useSVGCoords : detail.useSVGCoords) {
+          try {
+            // Find the SVG element in the iframe
+            const svg = element.ownerSVGElement || iframeDoc.querySelector('svg');
+            if (svg) {
+              const pt = svg.createSVGPoint();
+              pt.x = svgX;
+              pt.y = svgY;
+              const screenPt = pt.matrixTransform(svg.getScreenCTM());
+              return { x: screenPt.x, y: screenPt.y };
+            }
+          } catch (err) {
+            console.warn('SVG to screen conversion failed:', err);
+          }
+        }
         return { x: svgX, y: svgY };
       };
       
@@ -2068,7 +2082,7 @@
       activeDragAnimation = true;
       
       // Calculate deltas in screen space
-      const screenDeltaX = endScreen.x - startScreen.x;
+      const screenDeltaX = -(endScreen.x - startScreen.x); // Negate X to fix direction
       const screenDeltaY = endScreen.y - startScreen.y;
       
       for (let i = 0; i <= numSteps; i++) {
