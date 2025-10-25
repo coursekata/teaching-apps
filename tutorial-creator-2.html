@@ -1471,13 +1471,30 @@
       
       // Take snapshots continuously during the drag
       dragStartSnapshot = {
+        startX: e.clientX,
+        startY: e.clientY,
         frames: [
           {
             time: 0,
+            x: e.clientX,
+            y: e.clientY,
             html: iframeDoc.body.innerHTML
           }
         ]
       };
+      
+      // Track mouse position during drag
+      let lastMouseX = e.clientX;
+      let lastMouseY = e.clientY;
+      
+      // Capture mousemove events to track position
+      const trackMouseMove = (moveEvent) => {
+        if (isDragging) {
+          lastMouseX = moveEvent.clientX;
+          lastMouseY = moveEvent.clientY;
+        }
+      };
+      iframeDoc.addEventListener('mousemove', trackMouseMove, true);
       
       // Use requestAnimationFrame to capture smooth continuous frames during drag
       let animationFrameId;
@@ -1486,6 +1503,8 @@
           const currentTime = Date.now() - dragStartTime;
           dragStartSnapshot.frames.push({
             time: currentTime,
+            x: lastMouseX,
+            y: lastMouseY,
             html: iframeDoc.body.innerHTML
           });
           animationFrameId = requestAnimationFrame(captureFrame);
@@ -1525,6 +1544,7 @@
         // Remove listeners
         iframeDoc.removeEventListener('mouseup', mouseUpHandler);
         document.removeEventListener('mouseup', mouseUpHandler);
+        iframeDoc.removeEventListener('mousemove', trackMouseMove, true);
         mouseUpHandler = null;
         
         if (!capturedSnapshot) {
@@ -1533,9 +1553,11 @@
         }
         
         try {
-          // Add final frame
+          // Add final frame with mouseup position
           capturedSnapshot.frames.push({
             time: Date.now() - capturedStartTime,
+            x: upEvent.clientX,
+            y: upEvent.clientY,
             html: iframeDoc.body.innerHTML
           });
           
@@ -1941,6 +1963,8 @@
       const rect = element.getBoundingClientRect();
       const startX = rect.left + rect.width / 2;
       const startY = rect.top + rect.height / 2;
+      const endX = startX + deltaX;
+      const endY = startY + deltaY;
       
       // Dispatch mousedown at start position
       const mousedownEvent = new MouseEvent('mousedown', {
@@ -1953,17 +1977,45 @@
       });
       element.dispatchEvent(mousedownEvent);
       
-      // Dispatch a series of mousemove events to animate the drag
+      // For fast-forward (events before tutorial start), do instant drag
+      const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
+      const eventTimeSec = detail.animationFrames[0].time / 1000 || 0;
+      const isFastForward = eventTimeSec < tutorialStartSec;
+      
+      if (isFastForward) {
+        // Instant drag for fast-forward: just dispatch mousedown, one mousemove to end, then mouseup
+        const mousemoveEvent = new MouseEvent('mousemove', {
+          bubbles: true,
+          cancelable: true,
+          view: iframeDoc.defaultView,
+          clientX: endX,
+          clientY: endY,
+          button: 0
+        });
+        iframeDoc.dispatchEvent(mousemoveEvent);
+        
+        const mouseupEvent = new MouseEvent('mouseup', {
+          bubbles: true,
+          cancelable: true,
+          view: iframeDoc.defaultView,
+          clientX: endX,
+          clientY: endY,
+          button: 0
+        });
+        iframeDoc.dispatchEvent(mouseupEvent);
+        console.log('  ✓ Drag complete (fast-forward)');
+        return;
+      }
+      
+      // For normal playback, animate the drag
       const steps = Math.min(10, detail.animationFrames.length); // Use up to 10 steps
       let cumulativeDelay = 0;
       
       for (let i = 0; i <= steps; i++) {
         const progress = i / steps;
-        const frameIndex = Math.floor(progress * (detail.animationFrames.length - 1));
-        const frame = detail.animationFrames[frameIndex];
         
         if (i > 0) {
-          const intervalSinceLast = i === 1 ? 16 : 16; // 16ms per step (~60fps)
+          const intervalSinceLast = 16; // 16ms per step (~60fps)
           cumulativeDelay += intervalSinceLast / playbackSpeed;
         }
         
@@ -1983,24 +2035,34 @@
           
           // If this is the last step, dispatch mouseup
           if (i === steps) {
-            setTimeout(() => {
-              const mouseupEvent = new MouseEvent('mouseup', {
-                bubbles: true,
-                cancelable: true,
-                view: iframeDoc.defaultView,
-                clientX: currentX,
-                clientY: currentY,
-                button: 0
-              });
-              iframeDoc.dispatchEvent(mouseupEvent);
-              console.log('  ✓ Drag complete');
-            }, 10);
+            const mouseupEvent = new MouseEvent('mouseup', {
+              bubbles: true,
+              cancelable: true,
+              view: iframeDoc.defaultView,
+              clientX: currentX,
+              clientY: currentY,
+              button: 0
+            });
+            iframeDoc.dispatchEvent(mouseupEvent);
+            console.log('  ✓ Drag complete (animated)');
           }
         }, cumulativeDelay);
       }
       
     } catch (e) {
       console.warn('Drag replay failed:', e);
+      // Emergency cleanup: dispatch mouseup to unstick any drag
+      try {
+        const mouseupEvent = new MouseEvent('mouseup', {
+          bubbles: true,
+          cancelable: true,
+          view: iframeDoc.defaultView,
+          button: 0
+        });
+        iframeDoc.dispatchEvent(mouseupEvent);
+      } catch (cleanup) {
+        console.warn('Cleanup mouseup failed:', cleanup);
+      }
     }
   }
   
