@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial System - v6.3</title>
+<title>Interactive Tutorial System - v6.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -462,7 +462,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v6.3</div>
+  <div class="version-number">v6.4</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -588,6 +588,11 @@
       </div>
       
       <p class="help-text">Copy the JSON below to save your tutorial. You can load it later using the "Load Tutorial" button.</p>
+      
+      <div id="exportLoading" style="display:none;padding:20px;text-align:center;color:#666;">
+        <strong>⏳ Generating JSON...</strong><br>
+        <small>This may take a moment for large tutorials</small>
+      </div>
       
       <textarea id="exportTextarea" readonly></textarea>
       
@@ -797,6 +802,10 @@
     modeRecord.classList.remove('active');
     recordingControls.style.display = 'none';
     playbackControls.style.display = 'flex';
+    
+    // Hide any visible annotations from recording mode
+    annotationBox.classList.remove('visible', 'draggable');
+    currentAnnotationIndex = -1;
   });
   
   // Recording controls
@@ -1079,9 +1088,13 @@
       return;
     }
     
-    // Show export modal
-    const json = JSON.stringify(currentTutorial, null, 2);
-    exportTextarea.value = json;
+    // Show export modal with loading state
+    exportModal.classList.add('visible');
+    const exportLoading = document.getElementById('exportLoading');
+    exportLoading.style.display = 'block';
+    exportTextarea.style.display = 'none';
+    document.getElementById('copyExport').style.display = 'none';
+    
     eventCount.textContent = currentTutorial.events.length;
     annotationCount.textContent = currentTutorial.annotations.length;
     
@@ -1105,14 +1118,23 @@
       annotationsList.style.display = 'none';
     }
     
-    exportModal.classList.add('visible');
-    
-    // Scroll to bottom of modal to ensure Copy button is visible
+    // Generate JSON asynchronously to avoid blocking UI
     setTimeout(() => {
-      const modalContent = exportModal.querySelector('.modal');
-      if (modalContent) {
-        modalContent.scrollTop = modalContent.scrollHeight;
-      }
+      const json = JSON.stringify(currentTutorial, null, 2);
+      exportTextarea.value = json;
+      
+      // Hide loading, show content
+      exportLoading.style.display = 'none';
+      exportTextarea.style.display = 'block';
+      document.getElementById('copyExport').style.display = 'inline-block';
+      
+      // Scroll to bottom of modal to ensure Copy button is visible
+      setTimeout(() => {
+        const modalContent = exportModal.querySelector('.modal');
+        if (modalContent) {
+          modalContent.scrollTop = modalContent.scrollHeight;
+        }
+      }, 100);
     }, 100);
   });
   
@@ -1915,49 +1937,69 @@
       return;
     }
     
-    try {
-      currentTutorial = JSON.parse(jsonText);
-      
-      if (!currentTutorial.appUrl) {
-        throw new Error('Missing "appUrl" field');
+    // Show loading state
+    loadTutorialSubmit.textContent = '⏳ Loading...';
+    loadTutorialSubmit.disabled = true;
+    loadError.style.display = 'none';
+    
+    // Parse JSON asynchronously to avoid blocking UI
+    setTimeout(() => {
+      try {
+        currentTutorial = JSON.parse(jsonText);
+        
+        if (!currentTutorial.appUrl) {
+          throw new Error('Missing "appUrl" field');
+        }
+        if (!currentTutorial.events) {
+          throw new Error('Missing "events" field');
+        }
+        if (currentTutorial.duration === undefined) {
+          throw new Error('Missing "duration" field');
+        }
+        
+        // CRITICAL: Clear any existing onload handlers to prevent auto-play
+        appFrame.onload = null;
+        
+        // CRITICAL: Hide any visible annotations from recording mode
+        annotationBox.classList.remove('visible', 'draggable');
+        currentAnnotationIndex = -1;
+        
+        appFrame.src = currentTutorial.appUrl;
+        
+        const duration = currentTutorial.duration / 1000;
+        totalTimeEl.textContent = formatTime(duration);
+        timelineSlider.max = duration;
+        timelineSlider.value = 0;
+        currentTimeEl.textContent = '0:00';
+        playbackPausedAt = 0;
+        playbackStartTime = 0;
+        
+        // Show playback controls
+        loadTutorialBtn.style.display = 'none';
+        playBtn.style.display = 'inline-block';
+        restartBtn.style.display = 'inline-block';
+        document.querySelector('.playback-timeline').style.display = 'flex';
+        document.querySelector('label[style*="display:none"]').style.display = 'flex';
+        
+        loadModal.classList.remove('visible');
+        loadTextarea.value = '';
+        
+        // Reset button state
+        loadTutorialSubmit.textContent = 'Load Tutorial';
+        loadTutorialSubmit.disabled = false;
+        
+        alert('✓ Tutorial loaded! Click Play (▶) to start.');
+        
+      } catch (e) {
+        loadError.textContent = 'Invalid JSON! Error: ' + e.message + '\n\nMake sure you copied the entire JSON correctly.';
+        loadError.style.display = 'block';
+        console.error('JSON parse error:', e);
+        
+        // Reset button state
+        loadTutorialSubmit.textContent = 'Load Tutorial';
+        loadTutorialSubmit.disabled = false;
       }
-      if (!currentTutorial.events) {
-        throw new Error('Missing "events" field');
-      }
-      if (currentTutorial.duration === undefined) {
-        throw new Error('Missing "duration" field');
-      }
-      
-      // CRITICAL: Clear any existing onload handlers to prevent auto-play
-      appFrame.onload = null;
-      
-      appFrame.src = currentTutorial.appUrl;
-      
-      const duration = currentTutorial.duration / 1000;
-      totalTimeEl.textContent = formatTime(duration);
-      timelineSlider.max = duration;
-      timelineSlider.value = 0;
-      currentTimeEl.textContent = '0:00';
-      playbackPausedAt = 0;
-      playbackStartTime = 0;
-      
-      // Show playback controls
-      loadTutorialBtn.style.display = 'none';
-      playBtn.style.display = 'inline-block';
-      restartBtn.style.display = 'inline-block';
-      document.querySelector('.playback-timeline').style.display = 'flex';
-      document.querySelector('label[style*="display:none"]').style.display = 'flex';
-      
-      loadModal.classList.remove('visible');
-      loadTextarea.value = '';
-      
-      alert('✓ Tutorial loaded! Click Play (▶) to start.');
-      
-    } catch (e) {
-      loadError.textContent = 'Invalid JSON! Error: ' + e.message + '\n\nMake sure you copied the entire JSON correctly.';
-      loadError.style.display = 'block';
-      console.error('JSON parse error:', e);
-    }
+    }, 100);
   });
   
   closeLoadModal.addEventListener('click', () => {
