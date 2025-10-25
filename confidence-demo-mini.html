@@ -2475,6 +2475,38 @@
   data = [];
   data2 = [];
   draw();
+
+  // ========================================
+  // Tutorial API - external control interface
+  // ========================================
+  
+  // Tutorial API for drag recording/playback
+  window.tutorialAPI = {
+    // Get current shift value (for recording drags)
+    getShift: function() {
+      return shiftUnits;
+    },
+    
+    // Get second distribution shift value
+    getShift2: function() {
+      return shiftUnits2;
+    },
+    
+    // Set shift value (for playback)
+    setShift: function(value) {
+      const numValue = parseFloat(value);
+      if(isNaN(numValue)) {
+        console.error('Invalid shift value:', value);
+        return false;
+      }
+      shiftUnits = numValue;
+      draw();
+      return true;
+    }
+  };
+
+  // Log API availability for tutorials
+  console.log('Tutorial API ready:', Object.keys(window.tutorialAPI));
 })();
 </script>
 </body>
