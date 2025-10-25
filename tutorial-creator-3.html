@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v2.4-mouseup-debug</div>
+  <div class="version-number">v2.5-mouseup-fix</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2230,6 +2230,8 @@
           clientY: endY,
           button: 0
         });
+        // Dispatch mouseup to BOTH the element AND the document for D3 compatibility
+        element.dispatchEvent(mouseupEvent);
         iframeDoc.dispatchEvent(mouseupEvent);
         console.log('  ✓ Drag complete (fast-forward)');
         return;
@@ -2320,6 +2322,8 @@
               clientY: endY,
               button: 0
             });
+            // Dispatch mouseup to BOTH the element AND the document for D3 compatibility
+            element.dispatchEvent(mouseupEvent);
             iframeDoc.dispatchEvent(mouseupEvent);
             activeDragAnimation = null;
             console.log('  ✓ Drag complete at (', endX, ',', endY, ')');
