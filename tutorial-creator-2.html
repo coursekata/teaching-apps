@@ -719,7 +719,7 @@
   let draggingAnnotation = false;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
-  let initialAppState = null; // Capture app state at start of recording
+  let initialInputValues = {}; // Capture input values at start of recording
   
   let currentTutorial = null;
   let isPlaying = false;
@@ -827,16 +827,30 @@
     isPaused = false;
     recordingStartTime = Date.now();
     
-    // CAPTURE INITIAL APP STATE
+    // CAPTURE INITIAL INPUT VALUES AND HTML STATE
+    initialInputValues = {};
+    let initialHTMLState = null;
     try {
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      if (iframeDoc && iframeDoc.body) {
-        initialAppState = iframeDoc.body.innerHTML;
-        console.log('✓ Captured initial app state');
+      if (iframeDoc) {
+        // Capture input values
+        const inputs = iframeDoc.querySelectorAll('input[type="number"], input[type="text"], input[type="range"], select');
+        inputs.forEach(input => {
+          const selector = getElementSelector(input);
+          initialInputValues[selector] = input.value;
+        });
+        
+        // Capture the full HTML state (includes the histogram with samples)
+        initialHTMLState = iframeDoc.body.innerHTML;
+        
+        // Store both
+        initialInputValues._htmlState = initialHTMLState;
+        
+        console.log('✓ Captured', Object.keys(initialInputValues).length - 1, 'input values + HTML state');
       }
     } catch (e) {
       console.warn('Could not capture initial state:', e);
-      initialAppState = null;
+      initialInputValues = {};
     }
     
     // Update UI
@@ -956,7 +970,7 @@
       duration: duration,
       events: recordedEvents,
       annotations: recordedAnnotations,
-      initialState: initialAppState  // Add the captured initial state
+      initialInputValues: initialInputValues  // Add the captured input values
     };
     
     currentTutorial = tutorial;
@@ -1192,26 +1206,33 @@
         
         // Start preview playback after a delay to ensure app is fully initialized
         setTimeout(() => {
-          // Restore the complete initial state from the snapshot
-          if (currentTutorial.initialState) {
+          // Restore the HTML state if available (includes histogram with samples)
+          if (currentTutorial.initialInputValues && currentTutorial.initialInputValues._htmlState) {
             try {
               const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-              iframeDoc.body.innerHTML = currentTutorial.initialState;
-              console.log('✓ Restored complete initial state from snapshot');
+              
+              // Store references to elements that have event listeners before replacing HTML
+              // This is a safer approach - we restore the HTML and let the app re-initialize
+              iframeDoc.body.innerHTML = currentTutorial.initialInputValues._htmlState;
+              
+              console.log('✓ Restored initial HTML state (including histogram samples)');
             } catch (e) {
-              console.warn('Could not restore initial state:', e);
+              console.warn('Could not restore initial HTML state:', e);
             }
           } else {
-            console.warn('⚠ No initial state snapshot available');
+            console.warn('⚠ No initial HTML state available');
           }
           
-          isPlaying = true;
-          playbackPausedAt = 0;
-          playbackStartTime = Date.now();
-          eventQueue = [...currentTutorial.events];
-          requestAnimationFrame(playbackLoop);
-          
-          console.log('✓ Preview started from initial recording state');
+          // Small delay to allow the restored HTML to settle
+          setTimeout(() => {
+            isPlaying = true;
+            playbackPausedAt = 0;
+            playbackStartTime = Date.now();
+            eventQueue = [...currentTutorial.events];
+            requestAnimationFrame(playbackLoop);
+            
+            console.log('✓ Preview started - ready to replay events');
+          }, 100);
         }, 500);
       };
       
@@ -1698,17 +1719,17 @@
       playbackStartTime = Date.now();
       eventQueue = [...currentTutorial.events];
       
-      // Restore the complete initial state from the snapshot if available
-      if (currentTutorial.initialState) {
+      // Restore the HTML state if available
+      if (currentTutorial.initialInputValues && currentTutorial.initialInputValues._htmlState) {
         try {
           const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-          iframeDoc.body.innerHTML = currentTutorial.initialState;
-          console.log('✓ Restored initial state for playback');
+          iframeDoc.body.innerHTML = currentTutorial.initialInputValues._htmlState;
+          console.log('✓ Restored initial HTML state for playback');
         } catch (e) {
-          console.warn('Could not restore initial state:', e);
+          console.warn('Could not restore initial HTML state:', e);
         }
       } else {
-        console.warn('⚠ No initial state snapshot available for playback');
+        console.warn('⚠ No initial HTML state available for playback');
       }
     }
     
