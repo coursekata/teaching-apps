@@ -1492,6 +1492,7 @@
       let lastMouseY = e.clientY;
       
       // Capture mousemove events to track position
+      // Listen on BOTH iframe and main window to catch D3 drags that prevent bubbling
       const trackMouseMove = (moveEvent) => {
         if (isDragging) {
           lastMouseX = moveEvent.clientX;
@@ -1499,6 +1500,8 @@
         }
       };
       iframeDoc.addEventListener('mousemove', trackMouseMove, true);
+      document.addEventListener('mousemove', trackMouseMove, true); // CRITICAL: Also listen on main document
+      window.addEventListener('mousemove', trackMouseMove, true); // CRITICAL: Also listen on window
       
       // Use requestAnimationFrame to capture smooth continuous frames during drag
       let animationFrameId;
@@ -1557,6 +1560,8 @@
         iframeDoc.removeEventListener('mouseup', mouseUpHandler);
         document.removeEventListener('mouseup', mouseUpHandler);
         iframeDoc.removeEventListener('mousemove', trackMouseMove, true);
+        document.removeEventListener('mousemove', trackMouseMove, true);
+        window.removeEventListener('mousemove', trackMouseMove, true);
         mouseUpHandler = null;
         
         if (!capturedSnapshot) {
@@ -1956,6 +1961,9 @@
         previewRecording.style.display = 'inline-block';
         recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
+        
+        // CRITICAL: Stop background recording after preview
+        alwaysRecording = false;
         
         console.log('✓ Preview finished - final state visible');
       } else {
