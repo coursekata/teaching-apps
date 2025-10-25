@@ -1986,15 +1986,18 @@
       
       // For normal playback, animate the drag smoothly
       console.log('  Animated drag');
-      const totalDuration = detail.duration || (lastFrame.time - firstFrame.time);
-      const numSteps = Math.min(60, Math.max(20, Math.floor(totalDuration / 8))); // More steps for smoother animation
+      // Use the original recorded duration
+      const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
+      const numSteps = 60; // Fixed number of steps for consistent smoothness
+      
+      console.log('  Original duration:', originalDuration, 'ms');
       
       // Mark that we have an active drag animation
       activeDragAnimation = true;
       
       for (let i = 0; i <= numSteps; i++) {
         const progress = i / numSteps;
-        const delay = (totalDuration / numSteps) * i / playbackSpeed;
+        const delay = (originalDuration / numSteps) * i / playbackSpeed;
         
         setTimeout(() => {
           const currentX = startX + (deltaX * progress);
