@@ -1,9 +1,9 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial System - v6</title>
+<title>Interactive Tutorial System - v6.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -462,7 +462,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v6.1-disable-cursor-during-playback</div>
+  <div class="version-number">v6.3</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1106,6 +1106,14 @@
     }
     
     exportModal.classList.add('visible');
+    
+    // Scroll to bottom of modal to ensure Copy button is visible
+    setTimeout(() => {
+      const modalContent = exportModal.querySelector('.modal');
+      if (modalContent) {
+        modalContent.scrollTop = modalContent.scrollHeight;
+      }
+    }, 100);
   });
   
   // Annotation authoring
@@ -1919,6 +1927,9 @@
       if (currentTutorial.duration === undefined) {
         throw new Error('Missing "duration" field');
       }
+      
+      // CRITICAL: Clear any existing onload handlers to prevent auto-play
+      appFrame.onload = null;
       
       appFrame.src = currentTutorial.appUrl;
       
