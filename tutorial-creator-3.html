@@ -1528,6 +1528,7 @@
         startX: startCoords.x,
         startY: startCoords.y,
         useSVGCoords: useSVGCoords,
+        elementTransforms: [],  // Store actual element transform changes
         frames: [
           {
             time: 0,
@@ -1542,9 +1543,36 @@
         ]
       };
       
+      // Watch for transform changes on the dragged element
+      const draggedElement = element;
+      const mutationObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && (mutation.attributeName === 'transform' || mutation.attributeName === 'style')) {
+            const transform = draggedElement.getAttribute('transform');
+            const style = draggedElement.getAttribute('style');
+            const time = Date.now() - dragStartTime;
+            
+            dragStartSnapshot.elementTransforms.push({
+              time: time,
+              transform: transform,
+              style: style
+            });
+            
+            console.log('  🔄 Transform changed:', transform || style);
+          }
+        });
+      });
+      
+      // Observe the dragged element
+      mutationObserver.observe(draggedElement, {
+        attributes: true,
+        attributeFilter: ['transform', 'style']
+      });
+      
       // Track mouse position during drag
       let lastMouseX = e.clientX;
       let lastMouseY = e.clientY;
+      let dragMutationObserver = mutationObserver;  // Store reference for cleanup
       
       // Capture mousemove events to track position
       // Listen on BOTH iframe and main window to catch D3 drags that prevent bubbling
@@ -1567,6 +1595,19 @@
           const iframeRect = appFrame.getBoundingClientRect();
           const iframeRelativeX = lastMouseX - iframeRect.left;
           const iframeRelativeY = lastMouseY - iframeRect.top;
+          
+          // Track furthest extent (for histogram drags where user might pull back before releasing)
+          const startIframeX = dragStartSnapshot.frames[0].iframeX;
+          const currentDistanceFromStart = Math.abs(iframeRelativeX - startIframeX);
+          const maxDistanceFromStart = Math.abs((dragStartSnapshot.maxExtentIframeX || startIframeX) - startIframeX);
+          
+          if (currentDistanceFromStart > maxDistanceFromStart) {
+            dragStartSnapshot.maxExtentIframeX = iframeRelativeX;
+            dragStartSnapshot.maxExtentIframeY = iframeRelativeY;
+            dragStartSnapshot.maxExtentScreenX = lastMouseX;
+            dragStartSnapshot.maxExtentScreenY = lastMouseY;
+          }
+          
           dragStartSnapshot.frames.push({
             time: currentTime,
             x: coords.x,
@@ -1617,6 +1658,13 @@
         iframeDoc.removeEventListener('mousemove', trackMouseMove, true);
         document.removeEventListener('mousemove', trackMouseMove, true);
         window.removeEventListener('mousemove', trackMouseMove, true);
+        
+        // Disconnect mutation observer
+        if (dragMutationObserver) {
+          dragMutationObserver.disconnect();
+          dragMutationObserver = null;
+        }
+        
         mouseUpHandler = null;
         
         if (!capturedSnapshot) {
@@ -1625,11 +1673,29 @@
         }
         
         try {
-          // Add final frame with mouseup position
-          console.log('📍 Drag end: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
+          // Use max extent position if it exists (user dragged further and pulled back)
+          // Otherwise use mouseup position
+          let finalX, finalY, finalIframeX, finalIframeY;
           
-          // Get SVG coords if needed - use same approach as drag start
-          const getSVGCoordsForUp = (clientX, clientY) => {
+          if (capturedSnapshot.maxExtentIframeX !== undefined) {
+            console.log('📍 Using max extent (not mouseup) - user pulled back before releasing');
+            console.log('  Max extent reached: iframeX:', capturedSnapshot.maxExtentIframeX);
+            console.log('  Mouseup position: iframeX:', upEvent.clientX - appFrame.getBoundingClientRect().left);
+            finalX = capturedSnapshot.maxExtentScreenX;
+            finalY = capturedSnapshot.maxExtentScreenY;
+            finalIframeX = capturedSnapshot.maxExtentIframeX;
+            finalIframeY = capturedSnapshot.maxExtentIframeY;
+          } else {
+            console.log('📍 Drag end: clientX:', upEvent.clientX, 'clientY:', upEvent.clientY);
+            finalX = upEvent.clientX;
+            finalY = upEvent.clientY;
+            const iframeRect = appFrame.getBoundingClientRect();
+            finalIframeX = upEvent.clientX - iframeRect.left;
+            finalIframeY = upEvent.clientY - iframeRect.top;
+          }
+          
+          // Get SVG coords for final position
+          const getSVGCoordsForEnd = (clientX, clientY) => {
             if (capturedSnapshot.useSVGCoords) {
               try {
                 const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
@@ -1643,37 +1709,26 @@
                     const svgPt = pt.matrixTransform(ctm.inverse());
                     console.log('  🔄 Converted screen (', clientX, ',', clientY, ') → SVG (', svgPt.x, ',', svgPt.y, ')');
                     return { x: svgPt.x, y: svgPt.y };
-                  } else {
-                    console.warn('⚠️ getScreenCTM() returned null at mouseup - using screen coords');
-                    return { x: clientX, y: clientY };
                   }
-                } else {
-                  console.warn('⚠️ SVG element not found at mouseup - using screen coords');
-                  return { x: clientX, y: clientY };
                 }
               } catch (err) {
-                console.warn('⚠️ SVG coord conversion failed on mouseup:', err);
-                return { x: clientX, y: clientY };
+                console.warn('⚠️ SVG coord conversion failed:', err);
               }
             }
             return { x: clientX, y: clientY };
           };
           
-          const endCoords = getSVGCoordsForUp(upEvent.clientX, upEvent.clientY);
+          const endCoords = getSVGCoordsForEnd(finalX, finalY);
           console.log('📍 End SVG coords:', endCoords.x, endCoords.y);
-          
-          const iframeRect = appFrame.getBoundingClientRect();
-          const iframeRelativeX = upEvent.clientX - iframeRect.left;
-          const iframeRelativeY = upEvent.clientY - iframeRect.top;
           
           capturedSnapshot.frames.push({
             time: Date.now() - capturedStartTime,
             x: endCoords.x,
             y: endCoords.y,
-            screenX: upEvent.clientX,
-            screenY: upEvent.clientY,
-            iframeX: iframeRelativeX,
-            iframeY: iframeRelativeY,
+            screenX: finalX,
+            screenY: finalY,
+            iframeX: finalIframeX,
+            iframeY: finalIframeY,
             html: iframeDoc.body.innerHTML
           });
           
@@ -1692,11 +1747,12 @@
             detail: {
               duration: dragDuration,
               animationFrames: capturedSnapshot.frames,
+              elementTransforms: capturedSnapshot.elementTransforms || [],  // Include transform changes
               useSVGCoords: capturedSnapshot.useSVGCoords
             }
           });
           
-          console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames, duration:', dragDuration, 'ms');
+          console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames,', capturedSnapshot.elementTransforms.length, 'transforms, duration:', dragDuration, 'ms');
           
         } catch (e) {
           console.warn('Error recording drag:', e);
@@ -2207,6 +2263,43 @@
       
       // For normal playback, animate the drag smoothly
       console.log('  Animated drag');
+      
+      // Check if we have element transform data (preferred method)
+      if (detail.elementTransforms && detail.elementTransforms.length > 0) {
+        console.log('  Using recorded element transforms (', detail.elementTransforms.length, 'transform changes)');
+        
+        const originalDuration = detail.duration || detail.elementTransforms[detail.elementTransforms.length - 1].time;
+        console.log('  Original duration:', originalDuration, 'ms');
+        
+        // Mark that we have an active drag animation
+        activeDragAnimation = true;
+        
+        // Apply each transform at its recorded time
+        detail.elementTransforms.forEach((transformData, index) => {
+          const delay = transformData.time / playbackSpeed;
+          
+          setTimeout(() => {
+            if (transformData.transform) {
+              element.setAttribute('transform', transformData.transform);
+            }
+            if (transformData.style) {
+              element.setAttribute('style', transformData.style);
+            }
+            
+            // If this is the last transform, clear the animation flag
+            if (index === detail.elementTransforms.length - 1) {
+              activeDragAnimation = null;
+              console.log('  ✓ Drag complete - applied', detail.elementTransforms.length, 'transforms');
+            }
+          }, delay);
+        });
+        
+        return;
+      }
+      
+      // Fallback: use mouse event replay (old method)
+      console.log('  Using mouse event replay (no transform data available)');
+      
       // Use the original recorded duration
       const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
       const numSteps = 60; // Fixed number of steps for consistent smoothness
