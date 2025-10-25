@@ -1248,6 +1248,7 @@
           console.log('  Annotations will appear from that point forward');
           
           // Start playback of ALL events from beginning
+          fastForwardComplete = false;
           isPlaying = true;
           playbackPausedAt = 0;
           playbackStartTime = Date.now();
@@ -1773,25 +1774,32 @@
     currentTimeEl.textContent = formatTime(playbackPausedAt);
   });
   
+  let fastForwardComplete = false;
+  
   function playbackLoop() {
     if (!isPlaying) return;
     
-    const elapsed = (Date.now() - playbackStartTime) / 1000;
+    const realElapsed = (Date.now() - playbackStartTime) / 1000;
     
     // Calculate tutorial start point and total duration
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
-    const totalDuration = tutorialStartSec + tutorialDurationSec;
+    const totalDuration = tutorialDurationSec; // Only count tutorial duration, not setup time
+    
+    // Adjusted elapsed time: skip the tutorial start offset
+    // This makes the tutorial portion start immediately after fast-forward
+    const elapsed = realElapsed + tutorialStartSec;
     
     // Update timeline only if in full playback mode (not preview)
     if (playbackControls.style.display !== 'none') {
-      timelineSlider.value = elapsed;
-      currentTimeEl.textContent = formatTime(elapsed);
+      timelineSlider.value = realElapsed; // Show only tutorial time on timeline
+      currentTimeEl.textContent = formatTime(realElapsed);
     }
     
     // Process events with fast-forward logic:
     // - Events before tutorial start: replay immediately (no waiting)
     // - Events after tutorial start: replay at normal speed
+    let justCompletedFastForward = false;
     while (eventQueue.length > 0) {
       const event = eventQueue[0];
       const eventTimeSec = event.timestamp / 1000;
@@ -1800,6 +1808,19 @@
       if (eventTimeSec < tutorialStartSec) {
         eventQueue.shift();
         replayEvent(event);
+        
+        // Check if this was the last fast-forward event
+        if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
+          justCompletedFastForward = true;
+          fastForwardComplete = true;
+          console.log('⏩ Fast-forward complete - pausing 100ms for app to settle...');
+          // Pause briefly to let the app's state settle
+          setTimeout(() => {
+            playbackStartTime = Date.now(); // Reset start time so tutorial plays from now
+            requestAnimationFrame(playbackLoop);
+          }, 100);
+          return;
+        }
         continue; // Process next event immediately
       }
       
@@ -1814,24 +1835,22 @@
     }
     
     // Handle annotations - only show after tutorial start offset
-    if (currentTutorial.annotations && elapsed >= tutorialStartSec) {
-      const elapsedSinceTutorialStart = elapsed - tutorialStartSec;
-      
+    if (realElapsed >= 0) { // Tutorial time (since we've already fast-forwarded setup)
       currentTutorial.annotations.forEach((ann, idx) => {
         const annStart = ann.timestamp / 1000;
         const annEnd = annStart + (ann.duration || 5000) / 1000;
         
-        if (elapsedSinceTutorialStart >= annStart && elapsedSinceTutorialStart < annEnd && currentAnnotationIndex !== idx) {
+        if (realElapsed >= annStart && realElapsed < annEnd && currentAnnotationIndex !== idx) {
           currentAnnotationIndex = idx;
           showAnnotation(ann);
-        } else if (elapsedSinceTutorialStart >= annEnd && currentAnnotationIndex === idx) {
+        } else if (realElapsed >= annEnd && currentAnnotationIndex === idx) {
           annotationBox.classList.remove('visible');
           currentAnnotationIndex = -1;
         }
       });
     }
     
-    if (elapsed >= totalDuration) {
+    if (realElapsed >= totalDuration) {
       isPlaying = false;
       
       // Hide any visible annotations
