@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v3.3-debug-api</div>
+  <div class="version-number">v3.4-api-timing-fix</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1549,6 +1549,23 @@
       const iframeRelativeX = e.clientX - iframeRect.left;
       const iframeRelativeY = e.clientY - iframeRect.top;
       
+      // Capture initial tutorial API state if available
+      let initialTutorialState = null;
+      try {
+        const iframeWindow = appFrame.contentWindow;
+        if (iframeWindow.tutorialAPI) {
+          initialTutorialState = {
+            shift: iframeWindow.tutorialAPI.getShift(),
+            shift2: iframeWindow.tutorialAPI.getShift2()
+          };
+          console.log('  ✓ Tutorial API detected - initial shift:', initialTutorialState.shift);
+        } else {
+          console.log('  ⚠️ Tutorial API not found in iframe');
+        }
+      } catch (e) {
+        console.log('  ⚠️ Error accessing tutorial API:', e.message);
+      }
+      
       dragStartSnapshot = {
         startX: startCoords.x,
         startY: startCoords.y,
@@ -1563,6 +1580,7 @@
             screenY: e.clientY,
             iframeX: iframeRelativeX,
             iframeY: iframeRelativeY,
+            tutorialState: initialTutorialState,
             html: iframeDoc.body.innerHTML
           }
         ]
@@ -1642,18 +1660,9 @@
                 shift: iframeWindow.tutorialAPI.getShift(),
                 shift2: iframeWindow.tutorialAPI.getShift2()
               };
-              // Debug: log once on first capture
-              if (dragStartSnapshot.frames.length === 0) {
-                console.log('  ✓ Tutorial API detected - capturing shift values');
-              }
-            } else if (dragStartSnapshot.frames.length === 0) {
-              console.log('  ⚠️ Tutorial API not found in iframe');
             }
           } catch (e) {
             // tutorialAPI not available or cross-origin
-            if (dragStartSnapshot.frames.length === 0) {
-              console.log('  ⚠️ Error accessing tutorial API:', e.message);
-            }
           }
           
           dragStartSnapshot.frames.push({
