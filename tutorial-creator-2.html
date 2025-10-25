@@ -1756,6 +1756,7 @@
   });
   
   let fastForwardComplete = false;
+  let activeDragAnimation = null; // Track if a drag animation is in progress
   
   function playbackLoop() {
     if (!isPlaying) return;
@@ -1832,6 +1833,13 @@
     }
     
     if (realElapsed >= totalDuration) {
+      // Don't end yet if there's an active drag animation
+      if (activeDragAnimation) {
+        console.log('⏳ Waiting for drag animation to complete...');
+        requestAnimationFrame(playbackLoop);
+        return;
+      }
+      
       isPlaying = false;
       
       // Hide any visible annotations
@@ -1981,6 +1989,9 @@
       const totalDuration = detail.duration || (lastFrame.time - firstFrame.time);
       const numSteps = Math.min(60, Math.max(20, Math.floor(totalDuration / 8))); // More steps for smoother animation
       
+      // Mark that we have an active drag animation
+      activeDragAnimation = true;
+      
       for (let i = 0; i <= numSteps; i++) {
         const progress = i / numSteps;
         const delay = (totalDuration / numSteps) * i / playbackSpeed;
@@ -1999,7 +2010,7 @@
           });
           iframeDoc.dispatchEvent(mousemoveEvent);
           
-          // If this is the last step, dispatch mouseup
+          // If this is the last step, dispatch mouseup and clear flag
           if (i === numSteps) {
             const mouseupEvent = new MouseEvent('mouseup', {
               bubbles: true,
@@ -2010,6 +2021,7 @@
               button: 0
             });
             iframeDoc.dispatchEvent(mouseupEvent);
+            activeDragAnimation = null; // Clear the flag
             console.log('  ✓ Drag complete at (', endX, ',', endY, ')');
           }
         }, delay);
