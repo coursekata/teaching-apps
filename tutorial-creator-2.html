@@ -769,10 +769,39 @@
   reloadApp.addEventListener('click', () => {
     const url = appFrame.src;
     if (url && url !== 'about:blank') {
+      // Stop any active recording
+      if (isRecording) {
+        isRecording = false;
+        isPaused = false;
+        
+        // Reset recording UI
+        pauseRecording.style.display = 'none';
+        resumeRecording.style.display = 'none';
+        addAnnotation.style.display = 'none';
+        stopRecording.style.display = 'none';
+        startRecording.style.display = 'inline-block';
+        recordingIndicator.style.display = 'none';
+        pausedIndicator.style.display = 'none';
+        
+        // Clear recorded data
+        recordedEvents = [];
+        recordedAnnotations = [];
+        currentTutorial = null;
+        
+        // Hide preview/export buttons
+        previewRecording.style.display = 'none';
+        playPausePreview.style.display = 'none';
+        recordAgain.style.display = 'none';
+        exportRecording.style.display = 'none';
+        
+        console.log('⏹ Recording stopped due to app reload');
+      }
+      
+      // Reload the iframe
       appFrame.src = '';
       setTimeout(() => {
         appFrame.src = url;
-        console.log('🔄 App reloaded');
+        console.log('🔄 App reloaded - fresh start');
       }, 100);
     }
   });
