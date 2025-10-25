@@ -783,25 +783,34 @@
         recordingIndicator.style.display = 'none';
         pausedIndicator.style.display = 'none';
         
-        // Clear recorded data
-        recordedEvents = [];
-        recordedAnnotations = [];
-        currentTutorial = null;
-        
-        // Hide preview/export buttons
-        previewRecording.style.display = 'none';
-        playPausePreview.style.display = 'none';
-        recordAgain.style.display = 'none';
-        exportRecording.style.display = 'none';
-        
         console.log('⏹ Recording stopped due to app reload');
       }
       
-      // Reload the iframe
+      // Stop any active playback/preview
+      isPlaying = false;
+      playbackPausedAt = 0;
+      
+      // Clear all recorded data and tutorial state
+      recordedEvents = [];
+      recordedAnnotations = [];
+      currentTutorial = null;
+      initialAppState = null;
+      
+      // Hide all preview/export/recording buttons except Start Recording
+      previewRecording.style.display = 'none';
+      playPausePreview.style.display = 'none';
+      recordAgain.style.display = 'none';
+      exportRecording.style.display = 'none';
+      startRecording.style.display = 'inline-block';
+      
+      // Hide any visible annotations
+      annotationBox.classList.remove('visible');
+      
+      // Reload the iframe for a completely fresh start
       appFrame.src = '';
       setTimeout(() => {
         appFrame.src = url;
-        console.log('🔄 App reloaded - fresh start');
+        console.log('🔄 App reloaded - completely fresh start');
       }, 100);
     }
   });
@@ -1160,6 +1169,10 @@
     
     // Stop any active playback
     isPlaying = false;
+    
+    // Hide any visible annotations and reset annotation state
+    annotationBox.classList.remove('visible');
+    currentAnnotationIndex = -1;
     
     // Reload the iframe to reset app to initial state
     // This is better than restoring HTML because it ensures proper initialization
