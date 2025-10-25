@@ -1464,6 +1464,11 @@
       const startCoords = getSVGCoords(e.clientX, e.clientY);
       console.log('📍 Start SVG coords:', startCoords.x, startCoords.y);
       
+      // Get iframe bounding rect to store iframe-relative coordinates
+      const iframeRect = appFrame.getBoundingClientRect();
+      const iframeRelativeX = e.clientX - iframeRect.left;
+      const iframeRelativeY = e.clientY - iframeRect.top;
+      
       dragStartSnapshot = {
         startX: startCoords.x,
         startY: startCoords.y,
@@ -1475,6 +1480,8 @@
             y: startCoords.y,
             screenX: e.clientX,
             screenY: e.clientY,
+            iframeX: iframeRelativeX,
+            iframeY: iframeRelativeY,
             html: iframeDoc.body.innerHTML
           }
         ]
@@ -1499,12 +1506,17 @@
         if (isDragging) {
           const currentTime = Date.now() - dragStartTime;
           const coords = getSVGCoords(lastMouseX, lastMouseY);
+          const iframeRect = appFrame.getBoundingClientRect();
+          const iframeRelativeX = lastMouseX - iframeRect.left;
+          const iframeRelativeY = lastMouseY - iframeRect.top;
           dragStartSnapshot.frames.push({
             time: currentTime,
             x: coords.x,
             y: coords.y,
             screenX: lastMouseX,
             screenY: lastMouseY,
+            iframeX: iframeRelativeX,
+            iframeY: iframeRelativeY,
             html: iframeDoc.body.innerHTML
           });
           animationFrameId = requestAnimationFrame(captureFrame);
@@ -1590,12 +1602,18 @@
           const endCoords = getSVGCoordsForUp(upEvent.clientX, upEvent.clientY);
           console.log('📍 End SVG coords:', endCoords.x, endCoords.y);
           
+          const iframeRect = appFrame.getBoundingClientRect();
+          const iframeRelativeX = upEvent.clientX - iframeRect.left;
+          const iframeRelativeY = upEvent.clientY - iframeRect.top;
+          
           capturedSnapshot.frames.push({
             time: Date.now() - capturedStartTime,
             x: endCoords.x,
             y: endCoords.y,
             screenX: upEvent.clientX,
             screenY: upEvent.clientY,
+            iframeX: iframeRelativeX,
+            iframeY: iframeRelativeY,
             html: iframeDoc.body.innerHTML
           });
           
@@ -2005,11 +2023,34 @@
       const firstFrame = detail.animationFrames[0];
       const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
       
-      // Use screen coordinates if available (new recordings), otherwise fall back to x/y
-      const startX = firstFrame.screenX !== undefined ? firstFrame.screenX : firstFrame.x;
-      const startY = firstFrame.screenY !== undefined ? firstFrame.screenY : firstFrame.y;
-      const endX = lastFrame.screenX !== undefined ? lastFrame.screenX : lastFrame.x;
-      const endY = lastFrame.screenY !== undefined ? lastFrame.screenY : lastFrame.y;
+      // Get current iframe position
+      const iframeRect = appFrame.getBoundingClientRect();
+      
+      // Prefer iframe-relative coordinates if available (new recordings)
+      // Convert them to current viewport coordinates
+      let startX, startY, endX, endY;
+      if (firstFrame.iframeX !== undefined && firstFrame.iframeY !== undefined) {
+        startX = firstFrame.iframeX + iframeRect.left;
+        startY = firstFrame.iframeY + iframeRect.top;
+        endX = lastFrame.iframeX + iframeRect.left;
+        endY = lastFrame.iframeY + iframeRect.top;
+        console.log('  Using iframe-relative coords');
+      } else if (firstFrame.screenX !== undefined) {
+        // Fall back to screen coordinates for old recordings
+        startX = firstFrame.screenX;
+        startY = firstFrame.screenY;
+        endX = lastFrame.screenX;
+        endY = lastFrame.screenY;
+        console.log('  Using screen coords (legacy)');
+      } else {
+        // Ultimate fallback to x/y
+        startX = firstFrame.x;
+        startY = firstFrame.y;
+        endX = lastFrame.x;
+        endY = lastFrame.y;
+        console.log('  Using x/y coords (legacy)');
+      }
+      
       const deltaX = endX - startX;
       const deltaY = endY - startY;
       
