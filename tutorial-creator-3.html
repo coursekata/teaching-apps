@@ -2292,55 +2292,63 @@
       
       // Fallback: use mouse event replay (old method)
       console.log('  Using mouse event replay (no transform data available)');
+      console.log('  Following recorded path with', detail.animationFrames.length, 'frames');
       
       // Use the original recorded duration
       const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
-      const numSteps = 60; // Fixed number of steps for consistent smoothness
       
       console.log('  Original duration:', originalDuration, 'ms');
       
       // Mark that we have an active drag animation
       activeDragAnimation = true;
       
-      // Calculate deltas in screen space
-      const screenDeltaX = endX - startX;
-      const screenDeltaY = endY - startY;
+      // iframeRect is already declared earlier in this function
       
-      for (let i = 0; i <= numSteps; i++) {
-        const progress = i / numSteps;
-        const delay = (originalDuration / numSteps) * i / playbackSpeed;
+      // Replay each captured frame at its recorded time
+      detail.animationFrames.forEach((frame, index) => {
+        const delay = frame.time / playbackSpeed;
         
         setTimeout(() => {
-          // Calculate current position in screen coords
-          const currentX = startX + (screenDeltaX * progress);
-          const currentY = startY + (screenDeltaY * progress);
+          // Use iframe-relative coordinates if available
+          let clientX, clientY;
+          if (frame.iframeX !== undefined && frame.iframeY !== undefined) {
+            clientX = frame.iframeX + iframeRect.left;
+            clientY = frame.iframeY + iframeRect.top;
+          } else if (frame.screenX !== undefined && frame.screenY !== undefined) {
+            clientX = frame.screenX;
+            clientY = frame.screenY;
+          } else {
+            // Fallback to x/y
+            clientX = frame.x;
+            clientY = frame.y;
+          }
           
           const mousemoveEvent = new MouseEvent('mousemove', {
             bubbles: true,
             cancelable: true,
             view: iframeDoc.defaultView,
-            clientX: currentX,
-            clientY: currentY,
+            clientX: clientX,
+            clientY: clientY,
             button: 0
           });
           iframeDoc.dispatchEvent(mousemoveEvent);
           
-          // If this is the last step, dispatch mouseup and clear flag
-          if (i === numSteps) {
+          // If this is the last frame, dispatch mouseup
+          if (index === detail.animationFrames.length - 1) {
             const mouseupEvent = new MouseEvent('mouseup', {
               bubbles: true,
               cancelable: true,
               view: iframeDoc.defaultView,
-              clientX: endX,
-              clientY: endY,
+              clientX: clientX,
+              clientY: clientY,
               button: 0
             });
             iframeDoc.dispatchEvent(mouseupEvent);
-            activeDragAnimation = null; // Clear the flag
-            console.log('  ✓ Drag complete at screen (', endX, ',', endY, ')');
+            activeDragAnimation = null;
+            console.log('  ✓ Drag complete at screen (', clientX, ',', clientY, ')');
           }
         }, delay);
-      }
+      });
       
     } catch (e) {
       console.warn('Drag replay failed:', e);
