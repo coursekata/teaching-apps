@@ -1757,7 +1757,7 @@
           
           alwaysRecordedEvents.push({
             type: 'drag',
-            timestamp: getTimestamp() - dragDuration,
+            timestamp: getTimestamp(),  // Use current time (end of drag), not backdated
             target: selector,
             detail: {
               duration: dragDuration,
