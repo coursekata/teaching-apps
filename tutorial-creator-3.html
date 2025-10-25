@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v3.2-syntax-fix</div>
+  <div class="version-number">v3.3-debug-api</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1642,9 +1642,18 @@
                 shift: iframeWindow.tutorialAPI.getShift(),
                 shift2: iframeWindow.tutorialAPI.getShift2()
               };
+              // Debug: log once on first capture
+              if (dragStartSnapshot.frames.length === 0) {
+                console.log('  ✓ Tutorial API detected - capturing shift values');
+              }
+            } else if (dragStartSnapshot.frames.length === 0) {
+              console.log('  ⚠️ Tutorial API not found in iframe');
             }
           } catch (e) {
             // tutorialAPI not available or cross-origin
+            if (dragStartSnapshot.frames.length === 0) {
+              console.log('  ⚠️ Error accessing tutorial API:', e.message);
+            }
           }
           
           dragStartSnapshot.frames.push({
@@ -2288,6 +2297,12 @@
       // Check if we have tutorial API state data (most preferred method)
       // firstFrame and lastFrame already declared earlier in function
       const iframeWindow = iframeDoc.defaultView;
+      
+      // Debug logging
+      console.log('  Checking for tutorial API replay:');
+      console.log('    firstFrame.tutorialState:', firstFrame.tutorialState);
+      console.log('    lastFrame.tutorialState:', lastFrame.tutorialState);
+      console.log('    iframeWindow.tutorialAPI:', iframeWindow.tutorialAPI);
       
       if (firstFrame.tutorialState && lastFrame.tutorialState && iframeWindow.tutorialAPI) {
         console.log('  Using tutorialAPI for replay');
