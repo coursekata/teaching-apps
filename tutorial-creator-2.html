@@ -1014,30 +1014,28 @@
     annotationBox.classList.remove('visible');
     currentAnnotationIndex = -1;
     
-    // Reload the app to reset its state
-    const url = appFrame.src;
-    appFrame.src = '';
+    // Don't reload - just reset to the state after clicking "Start Recording"
+    // Keep all the alwaysRecordedEvents, just clear tutorial-specific data
+    recordedAnnotations = [];
+    currentTutorial = null;
+    totalPausedDuration = 0;
     
-    setTimeout(() => {
-      appFrame.src = url;
-      
-      // Reset recording UI
-      recordedEvents = [];
-      recordedAnnotations = [];
-      currentTutorial = null;
-      
-      reloadApp.style.display = 'inline-block';
-      startRecording.style.display = 'inline-block';
-      stopRecording.style.display = 'none';
-      recordingIndicator.style.display = 'none';
-      pausedIndicator.style.display = 'none';
-      previewRecording.style.display = 'none';
-      playPausePreview.style.display = 'none';
-      recordAgain.style.display = 'none';
-      exportRecording.style.display = 'none';
-      
-      console.log('🔄 Ready to record again');
-    }, 100);
+    // Keep the app in its current state and reset UI for new recording
+    reloadApp.style.display = 'inline-block';
+    startRecording.style.display = 'inline-block';
+    stopRecording.style.display = 'none';
+    pauseRecording.style.display = 'none';
+    resumeRecording.style.display = 'none';
+    addAnnotation.style.display = 'none';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    previewRecording.style.display = 'none';
+    playPausePreview.style.display = 'none';
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none';
+    
+    console.log('🔄 Ready to record again from current app state');
+    console.log('  Background recording continues with', alwaysRecordedEvents.length, 'events captured so far');
   });
   
   exportRecording.addEventListener('click', () => {
@@ -1796,7 +1794,12 @@
       if (eventTimeSec < tutorialStartSec) {
         eventQueue.shift();
         replayEvent(event);
-        console.log('⏩ Fast-forwarded event at', eventTimeSec.toFixed(2), 's (before tutorial start)');
+        // Small delay to let app JavaScript state update (10ms per event)
+        // This is much faster than real-time but allows state to settle
+        if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 < tutorialStartSec) {
+          setTimeout(() => requestAnimationFrame(playbackLoop), 10);
+          return;
+        }
         continue;
       }
       
@@ -1804,7 +1807,6 @@
       if (eventTimeSec <= elapsed) {
         eventQueue.shift();
         replayEvent(event);
-        console.log('▶ Replayed event at', eventTimeSec.toFixed(2), 's');
       } else {
         // Event is in the future, wait for it
         break;
