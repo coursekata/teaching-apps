@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.2-replay-actual-shift-values</div>
+  <div class="version-number">v5.3-debug-shift-replay</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2348,6 +2348,8 @@
         }
         
         console.log('  Replaying', sampledFrames.length, 'shift values from', framesWithState.length, 'captured frames');
+        console.log('  First frame time:', sampledFrames[0].time, 'shift:', sampledFrames[0].tutorialState.shift);
+        console.log('  Last frame time:', sampledFrames[sampledFrames.length-1].time, 'shift:', sampledFrames[sampledFrames.length-1].tutorialState.shift);
         
         sampledFrames.forEach((frame, index) => {
           const delay = (frame.time / playbackSpeed);
@@ -2355,6 +2357,9 @@
           setTimeout(() => {
             if (frame.tutorialState) {
               iframeWindow.tutorialAPI.setShift(frame.tutorialState.shift);
+              if (index === 0 || index === sampledFrames.length - 1 || index % 10 === 0) {
+                console.log('  Setting shift to', frame.tutorialState.shift, 'at frame', index, '/', sampledFrames.length);
+              }
             }
             
             if (index === sampledFrames.length - 1) {
