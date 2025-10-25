@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v3.0-mouse-events</div>
+  <div class="version-number">v3.1-tutorial-api</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1633,6 +1633,20 @@
           const iframeRelativeX = lastMouseX - iframeRect.left;
           const iframeRelativeY = lastMouseY - iframeRect.top;
           
+          // Capture tutorial API state if available
+          let tutorialState = null;
+          try {
+            const iframeWindow = appFrame.contentWindow;
+            if (iframeWindow.tutorialAPI) {
+              tutorialState = {
+                shift: iframeWindow.tutorialAPI.getShift(),
+                shift2: iframeWindow.tutorialAPI.getShift2()
+              };
+            }
+          } catch (e) {
+            // tutorialAPI not available or cross-origin
+          }
+          
           dragStartSnapshot.frames.push({
             time: currentTime,
             x: coords.x,
@@ -1641,6 +1655,7 @@
             screenY: lastMouseY,
             iframeX: iframeRelativeX,
             iframeY: iframeRelativeY,
+            tutorialState: tutorialState,
             html: iframeDoc.body.innerHTML
           });
           animationFrameId = requestAnimationFrame(captureFrame);
@@ -2223,9 +2238,22 @@
       }
       
       if (isFastForward) {
-        // Instant drag for fast-forward: mousedown → mousemove to end → mouseup
+        // Instant drag for fast-forward
         console.log('  Fast-forward drag');
         
+        // Check if we can use tutorialAPI
+        const firstFrame = detail.animationFrames[0];
+        const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
+        const iframeWindow = iframeDoc.defaultView;
+        
+        if (firstFrame.tutorialState && lastFrame.tutorialState && iframeWindow.tutorialAPI) {
+          console.log('  Using tutorialAPI for fast-forward');
+          iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
+          console.log('  ✓ Drag complete (fast-forward via API)');
+          return;
+        }
+        
+        // Fallback: mousedown → mousemove to end → mouseup
         const mousemoveEvent = new MouseEvent('mousemove', {
           bubbles: true,
           cancelable: true,
@@ -2257,6 +2285,46 @@
       
       // For normal playback, animate the drag smoothly
       console.log('  Animated drag');
+      
+      // Check if we have tutorial API state data (most preferred method)
+      const firstFrame = detail.animationFrames[0];
+      const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
+      const iframeWindow = iframeDoc.defaultView;
+      
+      if (firstFrame.tutorialState && lastFrame.tutorialState && iframeWindow.tutorialAPI) {
+        console.log('  Using tutorialAPI for replay');
+        console.log('    Start shift:', firstFrame.tutorialState.shift);
+        console.log('    End shift:', lastFrame.tutorialState.shift);
+        
+        const startShift = firstFrame.tutorialState.shift;
+        const endShift = lastFrame.tutorialState.shift;
+        const deltaShift = endShift - startShift;
+        
+        const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
+        const numSteps = 60;
+        
+        console.log('  Original duration:', originalDuration, 'ms');
+        
+        // Mark that we have an active drag animation
+        activeDragAnimation = true;
+        
+        for (let i = 0; i <= numSteps; i++) {
+          const progress = i / numSteps;
+          const delay = (originalDuration / numSteps) * i / playbackSpeed;
+          
+          setTimeout(() => {
+            const currentShift = startShift + (deltaShift * progress);
+            iframeWindow.tutorialAPI.setShift(currentShift);
+            
+            if (i === numSteps) {
+              activeDragAnimation = null;
+              console.log('  ✓ Drag complete - final shift:', endShift);
+            }
+          }, delay);
+        }
+        
+        return;
+      }
       
       // Check if we have element transform data (preferred method)
       if (detail.elementTransforms && detail.elementTransforms.length > 0) {
