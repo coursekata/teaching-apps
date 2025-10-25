@@ -1774,7 +1774,7 @@
     
     const elapsed = (Date.now() - playbackStartTime) / 1000;
     
-    // Calculate total duration (tutorial start offset + tutorial duration)
+    // Calculate tutorial start point and total duration
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
     const totalDuration = tutorialStartSec + tutorialDurationSec;
@@ -1785,10 +1785,30 @@
       currentTimeEl.textContent = formatTime(elapsed);
     }
     
-    // Process events
-    while (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 <= elapsed) {
-      const event = eventQueue.shift();
-      replayEvent(event);
+    // Process events with fast-forward logic:
+    // - Events before tutorial start: replay immediately (no waiting)
+    // - Events after tutorial start: replay at normal speed
+    while (eventQueue.length > 0) {
+      const event = eventQueue[0];
+      const eventTimeSec = event.timestamp / 1000;
+      
+      // If event is before tutorial start, replay it immediately (fast-forward)
+      if (eventTimeSec < tutorialStartSec) {
+        eventQueue.shift();
+        replayEvent(event);
+        console.log('⏩ Fast-forwarded event at', eventTimeSec.toFixed(2), 's (before tutorial start)');
+        continue;
+      }
+      
+      // If event is after tutorial start, check if it's time to replay it
+      if (eventTimeSec <= elapsed) {
+        eventQueue.shift();
+        replayEvent(event);
+        console.log('▶ Replayed event at', eventTimeSec.toFixed(2), 's');
+      } else {
+        // Event is in the future, wait for it
+        break;
+      }
     }
     
     // Handle annotations - only show after tutorial start offset
