@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.3-debug-shift-replay</div>
+  <div class="version-number">v5.4-pause-timeline-during-drag</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2003,11 +2003,18 @@
   
   let fastForwardComplete = false;
   let activeDragAnimation = null; // Track if a drag animation is in progress
+  let dragAnimationPauseTime = 0; // When drag animation started (to pause timeline)
+  let dragAnimationDuration = 0; // How long the drag animation will take
   
   function playbackLoop() {
     if (!isPlaying) return;
     
-    const realElapsed = (Date.now() - playbackStartTime) / 1000;
+    let realElapsed = (Date.now() - playbackStartTime) / 1000;
+    
+    // If a drag animation is active, pause the timeline advancement
+    if (activeDragAnimation && dragAnimationPauseTime > 0) {
+      realElapsed = dragAnimationPauseTime;
+    }
     
     // Calculate tutorial start point and total duration
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
@@ -2351,8 +2358,20 @@
         console.log('  First frame time:', sampledFrames[0].time, 'shift:', sampledFrames[0].tutorialState.shift);
         console.log('  Last frame time:', sampledFrames[sampledFrames.length-1].time, 'shift:', sampledFrames[sampledFrames.length-1].tutorialState.shift);
         
+        // CRITICAL: Pause the playback timeline while drag animation plays
+        dragAnimationPauseTime = (Date.now() - playbackStartTime) / 1000;
+        dragAnimationDuration = targetDuration / 1000; // Convert to seconds
+        console.log('  Pausing playback timeline at', dragAnimationPauseTime, 'for', dragAnimationDuration, 'seconds');
+        
+        // CRITICAL: When replayEvent is called, the playback timeline has already advanced to this event's time.
+        // So we need to replay the drag animation quickly from NOW, not spread over the original duration.
+        // Calculate delay for each frame proportionally within the target playback duration
+        const targetDuration = originalDuration / playbackSpeed;
+        
         sampledFrames.forEach((frame, index) => {
-          const delay = (frame.time / playbackSpeed);
+          // Map frame.time (0 to originalDuration) to delay (0 to targetDuration)
+          const progress = frame.time / originalDuration;
+          const delay = progress * targetDuration;
           
           setTimeout(() => {
             if (frame.tutorialState) {
@@ -2375,8 +2394,11 @@
               element.dispatchEvent(mouseupEvent);
               iframeDoc.dispatchEvent(mouseupEvent);
               
+              // Resume playback timeline
+              playbackStartTime = Date.now() - ((dragAnimationPauseTime + dragAnimationDuration) * 1000);
+              dragAnimationPauseTime = 0;
               activeDragAnimation = null;
-              console.log('  ✓ Drag complete - final shift:', frame.tutorialState.shift);
+              console.log('  ✓ Drag complete - final shift:', frame.tutorialState.shift, '- resuming playback');
             }
           }, delay);
         });
