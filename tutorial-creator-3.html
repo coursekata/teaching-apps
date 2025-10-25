@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v5.5-fix-targetDuration-order</div>
+  <div class="version-number">v5.7-debug-playback-timing</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2062,9 +2062,15 @@
     // - Events before tutorial start: replay immediately (no waiting)
     // - Events after tutorial start: replay at normal speed
     let justCompletedFastForward = false;
+    let processedEventThisFrame = false;
     while (eventQueue.length > 0) {
       const event = eventQueue[0];
       const eventTimeSec = event.timestamp / 1000;
+      
+      // Debug: Log what we're waiting for (only occasionally to avoid spam)
+      if (!processedEventThisFrame && eventQueue.length > 0 && Math.random() < 0.01) {
+        console.log('  ⏱️ Playback: elapsed=', elapsed.toFixed(3), 's, next event at', eventTimeSec.toFixed(3), 's, type:', event.type);
+      }
       
       // If event is before tutorial start, replay it immediately (fast-forward)
       if (eventTimeSec < tutorialStartSec) {
@@ -2089,6 +2095,7 @@
       // If event is after tutorial start, check if it's time to replay it
       if (eventTimeSec <= elapsed) {
         eventQueue.shift();
+        processedEventThisFrame = true;
         replayEvent(event);
       } else {
         // Event is in the future, wait for it
@@ -2187,6 +2194,7 @@
           element.dispatchEvent(new Event('change', { bubbles: true }));
         }
       } else if (event.type === 'drag') {
+        console.log('  Drag event timestamp:', event.timestamp, 'ms, elapsed:', elapsed * 1000, 'ms');
         replayDrag(element, event.detail, iframeDoc);
       }
       
@@ -2359,12 +2367,14 @@
         console.log('  Last frame time:', sampledFrames[sampledFrames.length-1].time, 'shift:', sampledFrames[sampledFrames.length-1].tutorialState.shift);
         
         // Calculate target duration for playback
-        const targetDuration = originalDuration / playbackSpeed;
+        // Speed up drag animations by 3x to make them snappier during playback
+        const dragSpeedMultiplier = 3;
+        const targetDuration = originalDuration / (playbackSpeed * dragSpeedMultiplier);
         
         // CRITICAL: Pause the playback timeline while drag animation plays
         dragAnimationPauseTime = (Date.now() - playbackStartTime) / 1000;
         dragAnimationDuration = targetDuration / 1000; // Convert to seconds
-        console.log('  Pausing playback timeline at', dragAnimationPauseTime, 'for', dragAnimationDuration, 'seconds');
+        console.log('  Pausing playback timeline at', dragAnimationPauseTime, 'for', dragAnimationDuration, 'seconds (3x speed)');
         
         // CRITICAL: When replayEvent is called, the playback timeline has already advanced to this event's time.
         // So we need to replay the drag animation quickly from NOW, not spread over the original duration.
