@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v3.4-api-timing-fix</div>
+  <div class="version-number">v3.5-mouseup-cleanup</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -2339,6 +2339,18 @@
             iframeWindow.tutorialAPI.setShift(currentShift);
             
             if (i === numSteps) {
+              // Dispatch mouseup to clean up D3's drag state
+              const mouseupEvent = new MouseEvent('mouseup', {
+                bubbles: true,
+                cancelable: true,
+                view: iframeDoc.defaultView,
+                clientX: endX,
+                clientY: endY,
+                button: 0
+              });
+              element.dispatchEvent(mouseupEvent);
+              iframeDoc.dispatchEvent(mouseupEvent);
+              
               activeDragAnimation = null;
               console.log('  ✓ Drag complete - final shift:', endShift);
             }
