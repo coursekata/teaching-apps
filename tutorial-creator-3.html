@@ -1589,9 +1589,9 @@
             target: selector,
             detail: {
               duration: dragDuration,
-              animationFrames: capturedSnapshot.frames,
-              useSVGCoords: capturedSnapshot.useSVGCoords
-            }
+              animationFrames: capturedSnapshot.frames
+            ,
+              useSVGCoords: capturedSnapshot.useSVGCoords}
           });
           
           console.log('✓ Drag recorded:', selector, 'with', capturedSnapshot.frames.length, 'frames, duration:', dragDuration, 'ms');
