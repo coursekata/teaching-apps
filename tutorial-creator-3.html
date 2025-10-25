@@ -183,6 +183,10 @@
     border:none;
   }
   
+  iframe.playback-mode{
+    pointer-events:none;
+  }
+  
   .annotation-box{
     position:absolute;
     max-width:500px;
@@ -458,7 +462,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v6.0-realtime-drag-fix-end-delay</div>
+  <div class="version-number">v6.1-disable-cursor-during-playback</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -1275,6 +1279,9 @@
           // CRITICAL: Disable recording during playback to prevent interference
           tutorialRecording = false;
           
+          // Disable pointer events on iframe during playback
+          appFrame.classList.add('playback-mode');
+          
           // Start playback of ALL events from beginning
           fastForwardComplete = false;
           isPlaying = true;
@@ -1956,6 +1963,9 @@
     playBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
     
+    // Disable pointer events on iframe during playback
+    appFrame.classList.add('playback-mode');
+    
     if (playbackPausedAt > 0) {
       playbackStartTime = Date.now() - playbackPausedAt * 1000;
     } else {
@@ -1972,6 +1982,9 @@
     playBtn.style.display = 'inline-block';
     pauseBtn.style.display = 'none';
     playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+    
+    // Re-enable pointer events when paused
+    appFrame.classList.remove('playback-mode');
   });
   
   restartBtn.addEventListener('click', () => {
@@ -2147,11 +2160,17 @@
         // CRITICAL: Stop recording after preview
         tutorialRecording = false;
         
+        // Re-enable pointer events on iframe
+        appFrame.classList.remove('playback-mode');
+        
         console.log('✓ Preview finished - final state visible');
       } else {
         // Normal playback mode
         playBtn.style.display = 'inline-block';
         pauseBtn.style.display = 'none';
+        
+        // Re-enable pointer events on iframe
+        appFrame.classList.remove('playback-mode');
       }
       
       return;
