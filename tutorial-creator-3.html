@@ -1374,7 +1374,8 @@
   }
   
   function getTimestamp() {
-    return Date.now() - appLoadTime;
+    // Return time since app load, excluding any paused durations
+    return Date.now() - appLoadTime - totalPausedDuration;
   }
   
   function handleClick(e) {
