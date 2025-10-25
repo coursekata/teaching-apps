@@ -1473,6 +1473,8 @@
             time: 0,
             x: startCoords.x,
             y: startCoords.y,
+            screenX: e.clientX,
+            screenY: e.clientY,
             html: iframeDoc.body.innerHTML
           }
         ]
@@ -1501,6 +1503,8 @@
             time: currentTime,
             x: coords.x,
             y: coords.y,
+            screenX: lastMouseX,
+            screenY: lastMouseY,
             html: iframeDoc.body.innerHTML
           });
           animationFrameId = requestAnimationFrame(captureFrame);
@@ -1590,6 +1594,8 @@
             time: Date.now() - capturedStartTime,
             x: endCoords.x,
             y: endCoords.y,
+            screenX: upEvent.clientX,
+            screenY: upEvent.clientY,
             html: iframeDoc.body.innerHTML
           });
           
@@ -1999,48 +2005,24 @@
       const firstFrame = detail.animationFrames[0];
       const lastFrame = detail.animationFrames[detail.animationFrames.length - 1];
       
-      const startX = firstFrame.x;
-      const startY = firstFrame.y;
-      const endX = lastFrame.x;
-      const endY = lastFrame.y;
+      // Use screen coordinates if available (new recordings), otherwise fall back to x/y
+      const startX = firstFrame.screenX !== undefined ? firstFrame.screenX : firstFrame.x;
+      const startY = firstFrame.screenY !== undefined ? firstFrame.screenY : firstFrame.y;
+      const endX = lastFrame.screenX !== undefined ? lastFrame.screenX : lastFrame.x;
+      const endY = lastFrame.screenY !== undefined ? lastFrame.screenY : lastFrame.y;
       const deltaX = endX - startX;
       const deltaY = endY - startY;
       
       console.log('  Replaying drag from (', startX, ',', startY, ') to (', endX, ',', endY, ')');
       console.log('  Delta:', deltaX, ',', deltaY);
       
-      // If these are SVG coordinates, convert back to screen coordinates
-      const convertToScreen = (svgX, svgY) => {
-        if (detail.animationFrames[0]?.useSVGCoords !== undefined ? detail.animationFrames[0].useSVGCoords : detail.useSVGCoords) {
-          try {
-            // Find the SVG element in the iframe
-            const svg = element.ownerSVGElement || iframeDoc.querySelector('svg');
-            if (svg) {
-              const pt = svg.createSVGPoint();
-              pt.x = svgX;
-              pt.y = svgY;
-              const screenPt = pt.matrixTransform(svg.getScreenCTM());
-              return { x: screenPt.x, y: screenPt.y };
-            }
-          } catch (err) {
-            console.warn('SVG to screen conversion failed:', err);
-          }
-        }
-        return { x: svgX, y: svgY };
-      };
-      
-      const startScreen = convertToScreen(startX, startY);
-      const endScreen = convertToScreen(endX, endY);
-      
-      console.log('  Screen coords: from (', startScreen.x, ',', startScreen.y, ') to (', endScreen.x, ',', endScreen.y, ')');
-      
       // Dispatch mousedown at recorded start position
       const mousedownEvent = new MouseEvent('mousedown', {
         bubbles: true,
         cancelable: true,
         view: iframeDoc.defaultView,
-        clientX: startScreen.x,
-        clientY: startScreen.y,
+        clientX: startX,
+        clientY: startY,
         button: 0
       });
       element.dispatchEvent(mousedownEvent);
@@ -2070,8 +2052,8 @@
           bubbles: true,
           cancelable: true,
           view: iframeDoc.defaultView,
-          clientX: endScreen.x,
-          clientY: endScreen.y,
+          clientX: endX,
+          clientY: endY,
           button: 0
         });
         iframeDoc.dispatchEvent(mousemoveEvent);
@@ -2080,8 +2062,8 @@
           bubbles: true,
           cancelable: true,
           view: iframeDoc.defaultView,
-          clientX: endScreen.x,
-          clientY: endScreen.y,
+          clientX: endX,
+          clientY: endY,
           button: 0
         });
         iframeDoc.dispatchEvent(mouseupEvent);
@@ -2101,8 +2083,8 @@
       activeDragAnimation = true;
       
       // Calculate deltas in screen space
-      const screenDeltaX = endScreen.x - startScreen.x;
-      const screenDeltaY = endScreen.y - startScreen.y;
+      const screenDeltaX = endX - startX;
+      const screenDeltaY = endY - startY;
       
       for (let i = 0; i <= numSteps; i++) {
         const progress = i / numSteps;
@@ -2110,8 +2092,8 @@
         
         setTimeout(() => {
           // Calculate current position in screen coords
-          const currentX = startScreen.x + (screenDeltaX * progress);
-          const currentY = startScreen.y + (screenDeltaY * progress);
+          const currentX = startX + (screenDeltaX * progress);
+          const currentY = startY + (screenDeltaY * progress);
           
           const mousemoveEvent = new MouseEvent('mousemove', {
             bubbles: true,
@@ -2129,13 +2111,13 @@
               bubbles: true,
               cancelable: true,
               view: iframeDoc.defaultView,
-              clientX: endScreen.x,
-              clientY: endScreen.y,
+              clientX: endX,
+              clientY: endY,
               button: 0
             });
             iframeDoc.dispatchEvent(mouseupEvent);
             activeDragAnimation = null; // Clear the flag
-            console.log('  ✓ Drag complete at SVG (', endX, ',', endY, ') = screen (', endScreen.x, ',', endScreen.y, ')');
+            console.log('  ✓ Drag complete at screen (', endX, ',', endY, ')');
           }
         }, delay);
       }
