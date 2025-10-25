@@ -458,7 +458,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v2.8-recording-refactor</div>
+  <div class="version-number">v2.9-recording-fixed</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div class="mode-toggle">
@@ -760,8 +760,8 @@
   let dragOffsetY = 0;
   let initialInputValues = {}; // Capture input values at start of recording
   
-  // Always-on recording state
-  let alwaysRecording = false;
+  // Recording state
+  let tutorialRecording = false; // True when intentionally recording tutorial actions
   let alwaysRecordedEvents = [];
   let appLoadTime = 0;
   let tutorialStartTime = 0; // When user clicks "Start Recording"
@@ -810,7 +810,7 @@
     appFrame.onload = () => {
       appLoadTime = Date.now();
       alwaysRecordedEvents = [];
-      alwaysRecording = true;
+      tutorialRecording = true; // Enable recording from app load
       
       // Inject cursor tracking script into iframe
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
@@ -856,7 +856,7 @@
   
   
   startRecording.addEventListener('click', () => {
-    if (!alwaysRecording) {
+    if (!tutorialRecording) {
       alert('Please load an app first!');
       return;
     }
@@ -871,8 +871,7 @@
     isPaused = false;
     recordingStartTime = tutorialStartTime;
     
-    // Stop background recording - we have the setup state, now only record intentional tutorial actions
-    alwaysRecording = false;
+    // tutorialRecording stays TRUE - we keep recording tutorial actions
     
     // Start recording cursor positions
     cursorPositions = [];
@@ -880,7 +879,6 @@
     
     console.log('✓ Tutorial start marked -', alwaysRecordedEvents.length, 'events already captured');
     console.log('  Time since app load:', (tutorialStartTime - appLoadTime) / 1000, 'seconds');
-    console.log('  Background recording stopped - only tutorial actions will be recorded now');
     
     // Update UI
     startRecording.style.display = 'none';
@@ -946,7 +944,7 @@
   stopRecording.addEventListener('click', () => {
     isRecording = false;
     isPaused = false;
-    alwaysRecording = false; // Stop capturing new events
+    tutorialRecording = false; // Stop capturing new events
     recordingCursor = false; // Stop capturing cursor positions
     
     // Close annotation positioning overlay if active (don't save incomplete annotation)
@@ -1044,11 +1042,11 @@
     setTimeout(() => {
       appFrame.src = url;
       
-      // Setup onload to restart always-on recording
+      // Setup onload to restart recording
       appFrame.onload = () => {
         appLoadTime = Date.now();
         alwaysRecordedEvents = [];
-        alwaysRecording = true;
+        tutorialRecording = true; // Re-enable recording for new tutorial
         
         setTimeout(() => {
           setupEventListeners();
@@ -1275,7 +1273,7 @@
           console.log('  Annotations will appear from that point forward');
           
           // CRITICAL: Disable recording during playback to prevent interference
-          alwaysRecording = false;
+          tutorialRecording = false;
           
           // Start playback of ALL events from beginning
           fastForwardComplete = false;
@@ -1373,7 +1371,7 @@
   }
   
   function handleClick(e) {
-    if (!alwaysRecording) return;
+    if (!tutorialRecording) return;
     
     // Skip clicks that will be handled by drag - check if this is on a draggable SVG element
     let element = e.target;
@@ -1430,7 +1428,7 @@
   }
   
   function handleInput(e) {
-    if (!alwaysRecording) return;
+    if (!tutorialRecording) return;
     
     const selector = generateSelector(e.target);
     if (!selector) return;
@@ -1444,7 +1442,7 @@
   }
   
   function handleChange(e) {
-    if (!alwaysRecording) return;
+    if (!tutorialRecording) return;
     
     const selector = generateSelector(e.target);
     if (!selector) return;
@@ -1465,7 +1463,7 @@
   let mouseUpHandler = null;
   
   function handleMouseDown(e) {
-    if (!alwaysRecording) return;
+    if (!tutorialRecording) return;
     
     // Additional safety check during playback
     if (isPlaying) {
@@ -2090,8 +2088,8 @@
         recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
         
-        // CRITICAL: Stop background recording after preview
-        alwaysRecording = false;
+        // CRITICAL: Stop recording after preview
+        tutorialRecording = false;
         
         console.log('✓ Preview finished - final state visible');
       } else {
