@@ -1770,25 +1770,8 @@
       
       console.log('▶ Replaying', event.type, 'on:', element.tagName, element.id || element.className);
       
-      // Visual feedback only for clicks (not drags - they have their own animation)
+      // Replay clicks without visual feedback - let the app's actual changes be visible
       if (event.type === 'click') {
-        // Use box-shadow and background flash for more visible feedback
-        const originalBoxShadow = element.style.boxShadow;
-        const originalBackground = element.style.background;
-        const originalTransition = element.style.transition;
-        
-        element.style.transition = 'all 0.15s ease';
-        element.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.4)';
-        element.style.background = 'rgba(37, 99, 235, 0.1)';
-        
-        setTimeout(() => {
-          element.style.boxShadow = originalBoxShadow;
-          element.style.background = originalBackground;
-          setTimeout(() => {
-            element.style.transition = originalTransition;
-          }, 150);
-        }, 500);
-        
         // Dispatch a proper MouseEvent to trigger all event listeners
         const clickEvent = new MouseEvent('click', {
           bubbles: true,
@@ -1796,7 +1779,7 @@
           view: iframeDoc.defaultView
         });
         const dispatched = element.dispatchEvent(clickEvent);
-        console.log('  Click dispatched, default prevented:', !dispatched);
+        console.log('  Click dispatched on:', element.tagName, element.id || element.className);
       } else if (event.type === 'input' || event.type === 'change') {
         if (event.detail.value !== undefined) {
           element.value = event.detail.value;
