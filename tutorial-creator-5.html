@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.19</title>
+<title>Interactive Tutorial Creator - v10.20</title>
 <script>
   window.MathJax = {
     tex: {
@@ -283,7 +283,7 @@
   .timeline-container{
     background:#fff;
     border-top:2px solid #ddd;
-    padding:8px 20px;
+    padding:4px 20px 6px 20px;
     display:none;
     position:relative;
   }
@@ -292,23 +292,11 @@
     display:block;
   }
   
-  .timeline-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:6px;
-  }
-  
-  .timeline-header h3{
-    margin:0;
-    font-size:12px;
-    font-weight:600;
-  }
-  
   .timeline-ruler{
-    height:12px;
+    height:14px;
     position:relative;
-    margin-bottom:2px;
+    margin-bottom:0px;
+    margin-left:60px;
     overflow:hidden;
   }
   
@@ -320,24 +308,29 @@
   }
   
   .timeline-track{
-    height:32px;
+    height:26px;
     background:#fafafa;
     border:1px solid #ddd;
     border-radius:4px;
     position:relative;
-    margin-bottom:3px;
+    margin-bottom:2px;
     overflow:hidden;
+    padding-left:60px;
   }
   
   .timeline-track-label{
     position:absolute;
     left:4px;
-    top:2px;
+    top:50%;
+    transform:translateY(-50%);
     font-size:9px;
     font-weight:600;
-    color:#999;
+    color:#666;
     pointer-events:none;
     z-index:0;
+    width:55px;
+    text-align:right;
+    padding-right:5px;
   }
   
   .timeline-event{
@@ -419,13 +412,14 @@
   
   .timeline-playhead{
     position:absolute;
-    top:32px;
-    height:74px;
+    top:14px;
+    height:56px;
     width:3px;
     background:#ef4444;
     pointer-events:none;
     z-index:9999;
     box-shadow:0 0 8px rgba(239,68,68,0.5);
+    margin-left:60px;
   }
   
   .timeline-playhead::before{
@@ -668,7 +662,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.19</div>
+  <div class="version-number">v10.20</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -700,10 +694,6 @@
   
   <!-- Timeline Editor -->
   <div id="timelineContainer" class="timeline-container">
-    <div class="timeline-header">
-      <h3>Timeline</h3>
-    </div>
-    
     <div id="timelineRuler" class="timeline-ruler">
       <!-- Time ticks will be generated here -->
     </div>
