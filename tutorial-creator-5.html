@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.27.3</title>
+<title>Interactive Tutorial Creator - v10.27.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.27.3</div>
+    <div class="version-number">v10.27.4</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2448,6 +2448,7 @@
     // Log once at start
     if (realElapsed < 0.1) {
       console.log('🎬 Playback starting:');
+      console.log('  currentTutorial.duration:', currentTutorial.duration, 'ms (', tutorialDurationSec.toFixed(2), 's )');
       console.log('  totalDuration:', totalDuration.toFixed(2) + 's');
     }
     
@@ -2850,8 +2851,12 @@
     
     let maxAnnotationEnd = 0;
     if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
-      currentTutorial.annotations.forEach(ann => {
+      const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+      currentTutorial.annotations.forEach((ann, idx) => {
+        // Annotation timestamps are relative to tutorial start (not including the tutorialStartOffset)
+        // So we just use them directly
         const annEnd = (ann.timestamp + (ann.duration || 5000)) / 1000;
+        console.log(`  Annotation ${idx}: timestamp=${(ann.timestamp/1000).toFixed(2)}s, duration=${((ann.duration||5000)/1000).toFixed(2)}s, end=${annEnd.toFixed(2)}s`);
         maxAnnotationEnd = Math.max(maxAnnotationEnd, annEnd);
       });
     }
@@ -2865,7 +2870,8 @@
     
     console.log('📊 Timeline render: maxEventEnd:', maxEventEnd.toFixed(2) + 's,',
                 'maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's,',
-                '→ duration:', duration.toFixed(2) + 's');
+                '→ duration:', duration.toFixed(2) + 's',
+                '(', duration * 1000, 'ms )');
     
     // Auto-scale based on duration to fit nicely
     // Target: reasonable width but allow scrolling for very long tutorials
