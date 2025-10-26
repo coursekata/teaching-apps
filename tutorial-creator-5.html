@@ -1365,7 +1365,9 @@
     isPlaying = false;
     
     // Hide any visible annotations
-    annotationBox.classList.remove('visible');
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+    }
     currentAnnotationIndex = -1;
     
     // Preserve annotations if we have currentTutorial
@@ -1657,7 +1659,9 @@
     isPlaying = false;
     
     // Hide any visible annotations and reset annotation state
-    annotationBox.classList.remove('visible');
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+    }
     currentAnnotationIndex = -1;
     
     // Show preview controls
@@ -1720,6 +1724,9 @@
       
       playPausePreview.textContent = '▶ Resume Preview';
       
+      // ADDED: Remove playback-mode so iframe becomes interactive
+      appFrame.classList.remove('playback-mode');
+      
       // Stop any active drag animation
       if (activeDragAnimation) {
         activeDragAnimation = null;
@@ -1741,6 +1748,9 @@
       // Resume from the FROZEN pause time
       playbackStartTime = Date.now() - playbackPausedAt * 1000;
       playPausePreview.textContent = '⏸ Pause Preview';
+      
+      // ADDED: Re-add playback-mode to disable interaction
+      appFrame.classList.add('playback-mode');
       
       // Hide editing buttons
       addAnnotationAtPause.style.display = 'none';
