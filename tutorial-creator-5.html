@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.23</title>
+<title>Interactive Tutorial Creator - v10.25</title>
 <script>
   window.MathJax = {
     tex: {
@@ -662,7 +662,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.23</div>
+  <div class="version-number">v10.25</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2274,7 +2274,23 @@
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
     
-    // Calculate the actual end time considering annotations
+    // Calculate the actual end time considering both events and annotations
+    let maxEventEnd = 0;
+    if (currentTutorial.events && currentTutorial.events.length > 0) {
+      const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+      currentTutorial.events.forEach(event => {
+        if (event.timestamp >= tutorialStartOffset) {
+          const eventTime = (event.timestamp - tutorialStartOffset) / 1000;
+          if (event.type === 'drag' && event.detail?.duration) {
+            const eventEnd = eventTime + (event.detail.duration / 1000);
+            maxEventEnd = Math.max(maxEventEnd, eventEnd);
+          } else {
+            maxEventEnd = Math.max(maxEventEnd, eventTime);
+          }
+        }
+      });
+    }
+    
     let maxAnnotationEnd = 0;
     if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
       currentTutorial.annotations.forEach(ann => {
@@ -2285,15 +2301,25 @@
       });
     }
     
-    // Total duration is the MAX of tutorial duration and last annotation end
-    // This extends the timeline only if an annotation goes beyond the recording end
-    const totalDuration = Math.max(tutorialDurationSec, maxAnnotationEnd);
+    // Use the latest of: last event end or last annotation end
+    // This trims silent periods at the end while allowing annotations to extend beyond events
+    const totalDuration = Math.max(maxEventEnd, maxAnnotationEnd);
     const elapsed = realElapsed + tutorialStartSec;
+    
+    // Log once at start
+    if (realElapsed < 0.1) {
+      console.log('🎬 Playback starting:');
+      console.log('  tutorialDurationSec:', tutorialDurationSec.toFixed(2) + 's');
+      console.log('  maxEventEnd:', maxEventEnd.toFixed(2) + 's');
+      console.log('  maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's');
+      console.log('  → totalDuration:', totalDuration.toFixed(2) + 's');
+    }
     
     // Debug logging (only log occasionally to avoid spam)
     if (Math.floor(realElapsed * 10) % 10 === 0) {
       console.log('Playback:', realElapsed.toFixed(2) + 's /', totalDuration.toFixed(2) + 's', 
                   '(tutorialDuration:', tutorialDurationSec.toFixed(2) + 's,',
+                  'maxEventEnd:', maxEventEnd.toFixed(2) + 's,',
                   'maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's)');
     }
     
@@ -2385,24 +2411,17 @@
       
       isPlaying = false;
       
-      // Keep annotation visible if it was showing recently (within 0.5s of the end)
-      // This handles cases where annotation ends just before the recording duration
-      let shouldHideAnnotation = false;
+      // Keep annotation visible if it's the last content on the timeline
+      let shouldHideAnnotation = true;
       
       if (currentAnnotationIndex >= 0 && currentTutorial.annotations && currentTutorial.annotations[currentAnnotationIndex]) {
         const currentAnn = currentTutorial.annotations[currentAnnotationIndex];
         const annEnd = (currentAnn.timestamp + (currentAnn.duration || 5000)) / 1000;
         
-        // Keep visible if annotation ended within the last 0.5 seconds
-        if (totalDuration - annEnd < 0.5) {
-          shouldHideAnnotation = false;
-          console.log('📌 Keeping annotation visible - ended at', annEnd.toFixed(2) + 's, preview ended at', totalDuration.toFixed(2) + 's');
-        } else {
-          shouldHideAnnotation = true;
-        }
-      } else {
-        // No annotation was showing
-        shouldHideAnnotation = true;
+        // If annotation ends after all events, keep it visible
+        // (It's the last meaningful content)
+        shouldHideAnnotation = false;
+        console.log('📌 Keeping annotation visible - it\'s the last content (ends at', annEnd.toFixed(2) + 's)');
       }
       
       if (shouldHideAnnotation) {
