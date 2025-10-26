@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.4</title>
+<title>Interactive Tutorial Creator - v9.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -352,6 +352,7 @@
     width:auto;
     background:#8b5cf6;
     box-shadow:0 1px 3px rgba(139,92,246,0.3);
+    z-index:1;
   }
   
   .timeline-event:not(.drag-event):hover{
@@ -413,12 +414,12 @@
   
   .timeline-playhead{
     position:absolute;
-    top:20px;
+    top:32px;
     height:74px;
     width:3px;
     background:#ef4444;
     pointer-events:none;
-    z-index:1000;
+    z-index:9999;
     box-shadow:0 0 8px rgba(239,68,68,0.5);
   }
   
@@ -434,6 +435,7 @@
     border-radius:50%;
     border:2px solid #fff;
     box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    z-index:10000;
   }
   
   .modal-overlay{
@@ -655,7 +657,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v9.4</div>
+  <div class="version-number">v9.5</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
