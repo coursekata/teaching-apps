@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.27.2</title>
+<title>Interactive Tutorial Creator - v10.27.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -40,6 +40,15 @@
     padding:12px 20px;
     box-shadow:0 2px 4px rgba(0,0,0,0.05);
     z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .version-number{
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
   }
   
   .tutorial-controls{
@@ -690,6 +699,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
+    <div class="version-number">v10.27.3</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2883,6 +2893,10 @@
     
     // Use content duration instead of recording duration
     const duration = Math.max(maxEventEnd, maxAnnotationEnd);
+    
+    // Update tutorial duration to match actual content length
+    // This ensures playback stops at the right time
+    currentTutorial.duration = duration * 1000; // Convert back to milliseconds
     
     console.log('📊 Timeline render: maxEventEnd:', maxEventEnd.toFixed(2) + 's,',
                 'maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's,',
