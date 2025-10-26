@@ -688,7 +688,6 @@
         <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
         <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
         <button id="addAnnotationAtPause" class="primary" style="display:none;">➕ Add Annotation Here</button>
-        <button id="recordFromHere" class="warning" style="display:none;">⏺ Record From Here</button>
         <button id="recordAgain" class="record" style="display:none;">🔄 Record Again</button>
         <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
       </div>
@@ -968,7 +967,6 @@
   const annotationsTrack = document.getElementById('annotationsTrack');
   
   const addAnnotationAtPause = document.getElementById('addAnnotationAtPause');
-  const recordFromHere = document.getElementById('recordFromHere');
   
   const annotationEditModal = document.getElementById('annotationEditModal');
   const editAnnTitle = document.getElementById('editAnnTitle');
@@ -1251,101 +1249,6 @@
     console.log('  Annotations:', recordedAnnotations.length);
   });
   
-  recordFromHere.addEventListener('click', () => {
-    if (!currentTutorial) return;
-    
-    console.log('🎬 Record From Here clicked');
-    console.log('  Paused at:', playbackPausedAt, 'seconds');
-    console.log('  Tutorial start offset:', currentTutorial.tutorialStartOffset, 'ms');
-    
-    // Stop playback immediately
-    isPlaying = false;
-    isPaused = false; // Clear pause state
-    
-    // Preserve annotations
-    const savedAnnotations = currentTutorial.annotations || [];
-    
-    // Truncate events to pause point
-    const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
-    const cutoffTime = playbackPausedAt * 1000 + tutorialStartOffset;
-    const truncatedEvents = currentTutorial.events.filter(e => e.timestamp <= cutoffTime);
-    
-    console.log('⏺ Recording from pause point');
-    console.log('  Cutoff time:', cutoffTime, 'ms');
-    console.log('  Keeping', truncatedEvents.length, 'events out of', currentTutorial.events.length);
-    console.log('  Keeping', savedAnnotations.length, 'annotations');
-    
-    // Reload app
-    const url = appFrame.src;
-    appFrame.src = '';
-    
-    setTimeout(() => {
-      appFrame.src = url;
-      
-      appFrame.onload = () => {
-        // Replay events up to pause point
-        setTimeout(async () => {
-          setupEventListeners();
-          
-          const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-          const iframeWindow = appFrame.contentWindow;
-          
-          // Fast-forward through saved events
-          for (let event of truncatedEvents) {
-            if (event.type === 'drag') {
-              // For drags: skip animation but apply final position
-              const detail = event.detail || {};
-              const frames = detail.animationFrames || [];
-              
-              if (frames.length > 0 && iframeWindow.tutorialAPI) {
-                const lastFrame = frames[frames.length - 1];
-                if (lastFrame.tutorialState) {
-                  iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
-                }
-              }
-            } else {
-              // Replay other events normally
-              replayEvent(event);
-            }
-            await new Promise(r => setTimeout(r, 10)); // Small delay between events
-          }
-          
-          // Now start recording from here
-          appLoadTime = Date.now() - cutoffTime; // Adjust timeline
-          alwaysRecordedEvents = [...truncatedEvents]; // Copy the array
-          tutorialStartTime = Date.now() - playbackPausedAt * 1000;
-          totalPausedDuration = 0;
-          tutorialRecording = true; // Enable recording
-          recordedAnnotations = savedAnnotations;
-          
-          // Clear any leftover state
-          currentTutorial = null;
-          eventQueue = [];
-          
-          // Update UI
-          startRecording.style.display = 'none';
-          stopRecording.style.display = 'inline-block';
-          pauseRecording.style.display = 'inline-block';
-          addAnnotation.style.display = 'inline-block';
-          addAnnotation.disabled = false;
-          recordingIndicator.style.display = 'inline-block';
-          pausedIndicator.style.display = 'none';
-          previewRecording.style.display = 'none';
-          playPausePreview.style.display = 'none';
-          addAnnotationAtPause.style.display = 'none';
-          recordFromHere.style.display = 'none';
-          recordAgain.style.display = 'none';
-          exportRecording.style.display = 'none';
-          timelineContainer.classList.remove('visible');
-          appFrame.classList.remove('playback-mode');
-          
-          console.log('✓ Ready to record from', playbackPausedAt.toFixed(2) + 's');
-          console.log('  Base events:', alwaysRecordedEvents.length);
-        }, 500);
-      };
-    }, 100);
-  });
-  
   recordAgain.addEventListener('click', () => {
     // Stop any active playback
     isPlaying = false;
@@ -1401,7 +1304,6 @@
     previewRecording.style.display = 'none';
     playPausePreview.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
-    recordFromHere.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none';
     timelineContainer.classList.remove('visible');
@@ -1699,7 +1601,6 @@
       
       // Show editing buttons
       addAnnotationAtPause.style.display = 'inline-block';
-      recordFromHere.style.display = 'inline-block';
       
       console.log('⏸ Preview paused at', playbackPausedAt.toFixed(2) + 's (FROZEN)');
       console.log('  playbackStartTime:', playbackStartTime);
@@ -1715,7 +1616,6 @@
       
       // Hide editing buttons
       addAnnotationAtPause.style.display = 'none';
-      recordFromHere.style.display = 'none';
       
       // Rebuild event queue from pause point
       const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
@@ -2479,7 +2379,6 @@
         recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
         addAnnotationAtPause.style.display = 'none';
-        recordFromHere.style.display = 'none';
         tutorialRecording = false;
         appFrame.classList.remove('playback-mode');
         console.log('✓ Preview finished - final state visible');
