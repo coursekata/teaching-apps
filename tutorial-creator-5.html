@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.5</title>
+<title>Interactive Tutorial Creator - v10.0</title>
 <script>
   window.MathJax = {
     tex: {
@@ -436,6 +436,12 @@
     border:2px solid #fff;
     box-shadow:0 2px 6px rgba(0,0,0,0.3);
     z-index:10000;
+    cursor:grab;
+    pointer-events:auto;
+  }
+  
+  .timeline-playhead::before:active{
+    cursor:grabbing;
   }
   
   .modal-overlay{
@@ -657,7 +663,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v9.5</div>
+  <div class="version-number">v10.0</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2384,18 +2390,15 @@
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
       
-      // Hide timeline playhead
-      const playhead = document.getElementById('timelinePlayhead');
-      if (playhead) {
-        playhead.style.display = 'none';
-      }
+      // Keep timeline playhead visible at end position (don't hide it)
       
       if (playPausePreview.style.display !== 'none') {
-        playPausePreview.style.display = 'none';
-        playPausePreview.textContent = '⏸ Pause Preview';
+        playPausePreview.textContent = '▶ Resume Preview'; // Change to Resume
         previewRecording.style.display = 'inline-block';
         recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
+        addAnnotationAtPause.style.display = 'none';
+        recordFromHere.style.display = 'none';
         tutorialRecording = false;
         appFrame.classList.remove('playback-mode');
         console.log('✓ Preview finished - final state visible');
@@ -2644,11 +2647,15 @@
     if (duration > 600) tickInterval = 30;
     
     for (let i = 0; i <= Math.ceil(duration); i += tickInterval) {
-      const tick = document.createElement('div');
-      tick.className = 'timeline-tick';
-      tick.style.left = (i * timelineScale) + 'px';
-      tick.textContent = i + 's';
-      timelineRuler.appendChild(tick);
+      const tickPos = i * timelineScale;
+      // Only add tick if it fits within timeline (leave 30px padding for text)
+      if (tickPos <= width - 30) {
+        const tick = document.createElement('div');
+        tick.className = 'timeline-tick';
+        tick.style.left = tickPos + 'px';
+        tick.textContent = i + 's';
+        timelineRuler.appendChild(tick);
+      }
     }
     
     // Render events
@@ -2986,6 +2993,56 @@
     if (e.target === annotationEditModal) {
       annotationEditModal.classList.remove('visible');
       editingAnnotationIndex = -1;
+    }
+  });
+  
+  // Playhead dragging
+  let draggingPlayhead = false;
+  
+  document.addEventListener('mousedown', (e) => {
+    const playhead = document.getElementById('timelinePlayhead');
+    if (!playhead || !timelineVisible || !currentTutorial) return;
+    
+    // Check if clicking on playhead handle (the ::before pseudo-element)
+    const rect = playhead.getBoundingClientRect();
+    const handleX = rect.left;
+    const handleY = rect.top - 8;
+    const handleSize = 12;
+    
+    if (e.clientX >= handleX - handleSize/2 && 
+        e.clientX <= handleX + handleSize/2 &&
+        e.clientY >= handleY && 
+        e.clientY <= handleY + handleSize) {
+      draggingPlayhead = true;
+      
+      // Pause playback if playing
+      if (isPlaying) {
+        isPlaying = false;
+        playPausePreview.textContent = '▶ Resume Preview';
+      }
+      
+      e.preventDefault();
+    }
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!draggingPlayhead || !currentTutorial) return;
+    
+    const rulerRect = timelineRuler.getBoundingClientRect();
+    const x = e.clientX - rulerRect.left;
+    const seekTime = Math.max(0, Math.min(x / timelineScale, currentTutorial.duration / 1000));
+    
+    seekToTime(seekTime);
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (draggingPlayhead) {
+      draggingPlayhead = false;
+      
+      // Update button text to Resume
+      if (playPausePreview.style.display !== 'none') {
+        playPausePreview.textContent = '▶ Resume Preview';
+      }
     }
   });
   
