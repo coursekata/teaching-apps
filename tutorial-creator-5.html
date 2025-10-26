@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.1</title>
+<title>Interactive Tutorial Creator - v8.2</title>
 <script>
   window.MathJax = {
     tex: {
@@ -282,10 +282,8 @@
   .timeline-container{
     background:#fff;
     border-top:2px solid #ddd;
-    padding:12px 20px;
+    padding:8px 20px;
     display:none;
-    max-height:200px;
-    overflow-y:auto;
   }
   
   .timeline-container.visible{
@@ -296,56 +294,44 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    margin-bottom:8px;
+    margin-bottom:6px;
   }
   
   .timeline-header h3{
     margin:0;
-    font-size:14px;
+    font-size:12px;
     font-weight:600;
   }
   
-  .timeline-controls{
-    display:flex;
-    gap:8px;
-  }
-  
   .timeline-ruler{
-    height:20px;
-    background:#f9f9f9;
-    border:1px solid #ddd;
-    border-radius:4px;
+    height:12px;
     position:relative;
-    margin-bottom:4px;
+    margin-bottom:2px;
   }
   
   .timeline-tick{
     position:absolute;
     top:0;
-    bottom:0;
-    border-left:1px solid #ccc;
-    font-size:9px;
-    color:#666;
-    padding-left:3px;
-    padding-top:1px;
+    font-size:8px;
+    color:#999;
   }
   
   .timeline-track{
-    height:40px;
+    height:24px;
     background:#fafafa;
     border:1px solid #ddd;
-    border-radius:4px;
+    border-radius:3px;
     position:relative;
-    margin-bottom:4px;
+    margin-bottom:3px;
   }
   
   .timeline-track-label{
     position:absolute;
-    left:6px;
+    left:4px;
     top:2px;
-    font-size:10px;
+    font-size:9px;
     font-weight:600;
-    color:#666;
+    color:#999;
     pointer-events:none;
     z-index:0;
   }
@@ -353,8 +339,8 @@
   .timeline-event{
     position:absolute;
     top:50%;
-    width:8px;
-    height:8px;
+    width:6px;
+    height:6px;
     background:#2563eb;
     border-radius:50%;
     transform:translateY(-50%);
@@ -368,14 +354,14 @@
   
   .timeline-annotation{
     position:absolute;
-    top:20px;
-    height:18px;
+    top:12px;
+    height:11px;
     background:var(--accent);
-    border-radius:3px;
+    border-radius:2px;
     color:#fff;
-    font-size:10px;
-    padding:0 6px;
-    line-height:18px;
+    font-size:8px;
+    padding:0 4px;
+    line-height:11px;
     cursor:move;
     white-space:nowrap;
     overflow:hidden;
@@ -391,19 +377,19 @@
     position:absolute;
     top:0;
     bottom:0;
-    width:6px;
+    width:5px;
     cursor:ew-resize;
     background:rgba(255,255,255,0.3);
   }
   
   .timeline-annotation .resize-edge.left{
     left:0;
-    border-radius:3px 0 0 3px;
+    border-radius:2px 0 0 2px;
   }
   
   .timeline-annotation .resize-edge.right{
     right:0;
-    border-radius:0 3px 3px 0;
+    border-radius:0 2px 2px 0;
   }
   
   .timeline-playhead{
@@ -419,11 +405,11 @@
   .timeline-playhead::before{
     content:'▼';
     position:absolute;
-    top:-14px;
+    top:-10px;
     left:50%;
     transform:translateX(-50%);
     color:#ef4444;
-    font-size:10px;
+    font-size:8px;
   }
   
   .modal-overlay{
@@ -645,7 +631,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v8.1</div>
+  <div class="version-number">v8.2</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -677,10 +663,7 @@
   <!-- Timeline Editor -->
   <div id="timelineContainer" class="timeline-container">
     <div class="timeline-header">
-      <h3>Timeline Editor</h3>
-      <div class="timeline-controls">
-        <button id="toggleTimeline">Hide Timeline</button>
-      </div>
+      <h3>Timeline</h3>
     </div>
     
     <div id="timelineRuler" class="timeline-ruler">
@@ -903,7 +886,6 @@
   const loadJSON = document.getElementById('loadJSON');
   const jsonFileInput = document.getElementById('jsonFileInput');
   const timelineContainer = document.getElementById('timelineContainer');
-  const toggleTimeline = document.getElementById('toggleTimeline');
   const timelineRuler = document.getElementById('timelineRuler');
   const eventsTrack = document.getElementById('eventsTrack');
   const annotationsTrack = document.getElementById('annotationsTrack');
@@ -924,7 +906,7 @@
   
   // Timeline state
   let timelineVisible = false;
-  let timelineScale = 100; // pixels per second
+  let timelineScale = 100; // pixels per second - will auto-adjust
   let draggingTimelineItem = null;
   let resizingTimelineItem = null;
   
@@ -2465,29 +2447,38 @@
     e.target.value = '';
   });
   
-  toggleTimeline.addEventListener('click', () => {
-    if (timelineVisible) {
-      timelineContainer.classList.remove('visible');
-      toggleTimeline.textContent = 'Show Timeline';
-      timelineVisible = false;
-    } else {
-      timelineContainer.classList.add('visible');
-      toggleTimeline.textContent = 'Hide Timeline';
-      timelineVisible = true;
-    }
-  });
-  
   function renderTimeline() {
     if (!currentTutorial) return;
     
     const duration = currentTutorial.duration / 1000; // Convert to seconds
+    
+    // Auto-scale based on duration to fit nicely
+    // Target: reasonable width but allow scrolling for very long tutorials
+    const containerWidth = timelineContainer.offsetWidth || 1200;
+    const targetWidth = Math.max(containerWidth - 40, 800); // Min 800px
+    
+    // Calculate scale: aim for comfortable viewing
+    if (duration <= 30) {
+      timelineScale = 100; // 100px per second for short tutorials
+    } else if (duration <= 120) {
+      timelineScale = targetWidth / duration; // Scale to fit 2min tutorials
+    } else {
+      timelineScale = targetWidth / 120; // Cap at 2min worth, rest scrolls
+    }
+    
     const width = duration * timelineScale;
     
-    // Render ruler
+    // Render ruler (just time markers, no bar)
     timelineRuler.innerHTML = '';
     timelineRuler.style.width = width + 'px';
     
-    for (let i = 0; i <= Math.ceil(duration); i++) {
+    // Determine tick interval based on duration
+    let tickInterval = 1; // seconds
+    if (duration > 60) tickInterval = 5;
+    if (duration > 180) tickInterval = 10;
+    if (duration > 600) tickInterval = 30;
+    
+    for (let i = 0; i <= Math.ceil(duration); i += tickInterval) {
       const tick = document.createElement('div');
       tick.className = 'timeline-tick';
       tick.style.left = (i * timelineScale) + 'px';
