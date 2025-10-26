@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.0</title>
+<title>Interactive Tutorial Creator - v9.1</title>
 <script>
   window.MathJax = {
     tex: {
@@ -315,10 +315,10 @@
   }
   
   .timeline-track{
-    height:24px;
+    height:32px;
     background:#fafafa;
     border:1px solid #ddd;
-    border-radius:3px;
+    border-radius:4px;
     position:relative;
     margin-bottom:3px;
   }
@@ -336,45 +336,55 @@
   
   .timeline-event{
     position:absolute;
-    top:50%;
-    width:6px;
-    height:6px;
-    background:#2563eb;
-    border-radius:50%;
-    transform:translateY(-50%);
+    top:2px;
+    bottom:2px;
+    width:8px;
+    background:#6366f1;
+    border-radius:2px;
     cursor:pointer;
     z-index:1;
+    box-shadow:0 1px 3px rgba(99,102,241,0.3);
   }
   
   .timeline-event.drag-event{
     border-radius:3px;
-    height:4px;
-    width:auto; /* Will be set by JS */
+    width:auto;
+    background:#8b5cf6;
+    box-shadow:0 1px 3px rgba(139,92,246,0.3);
   }
   
   .timeline-event:not(.drag-event):hover{
-    transform:translateY(-50%) scale(1.5);
+    background:#4f46e5;
+    transform:scaleX(1.3);
+  }
+  
+  .timeline-event.drag-event:hover{
+    background:#7c3aed;
   }
   
   .timeline-annotation{
     position:absolute;
-    top:12px;
-    height:11px;
-    background:var(--accent);
-    border-radius:2px;
+    top:2px;
+    bottom:2px;
+    background:linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    border-radius:3px;
     color:#fff;
-    font-size:8px;
-    padding:0 4px;
-    line-height:11px;
+    font-size:9px;
+    padding:0 6px;
+    display:flex;
+    align-items:center;
     cursor:move;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
     z-index:2;
+    box-shadow:0 2px 4px rgba(6,182,212,0.3);
+    border:1px solid rgba(255,255,255,0.2);
   }
   
   .timeline-annotation:hover{
-    background:#1e40af;
+    background:linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    box-shadow:0 2px 6px rgba(6,182,212,0.4);
   }
   
   .timeline-annotation .resize-edge{
@@ -383,37 +393,46 @@
     bottom:0;
     width:5px;
     cursor:ew-resize;
-    background:rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.2);
   }
   
   .timeline-annotation .resize-edge.left{
     left:0;
-    border-radius:2px 0 0 2px;
+    border-radius:3px 0 0 3px;
   }
   
   .timeline-annotation .resize-edge.right{
     right:0;
-    border-radius:0 2px 2px 0;
+    border-radius:0 3px 3px 0;
+  }
+  
+  .timeline-annotation .resize-edge:hover{
+    background:rgba(255,255,255,0.4);
   }
   
   .timeline-playhead{
     position:absolute;
-    top:0;
-    bottom:0;
-    width:2px;
+    top:-14px;
+    bottom:-37px;
+    width:3px;
     background:#ef4444;
     pointer-events:none;
     z-index:10;
+    box-shadow:0 0 8px rgba(239,68,68,0.5);
   }
   
   .timeline-playhead::before{
-    content:'▼';
+    content:'';
     position:absolute;
-    top:-10px;
+    top:-4px;
     left:50%;
     transform:translateX(-50%);
-    color:#ef4444;
-    font-size:8px;
+    width:12px;
+    height:12px;
+    background:#ef4444;
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
   }
   
   .modal-overlay{
@@ -635,7 +654,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v9.0</div>
+  <div class="version-number">v9.1</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2829,7 +2848,10 @@
     const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
     const absoluteTime = seekTime * 1000 + tutorialStartOffset;
     
+    // Filter events that should play from this point forward
     eventQueue = currentTutorial.events.filter(e => e.timestamp >= absoluteTime);
+    
+    console.log('Event queue rebuilt:', eventQueue.length, 'events from', seekTime.toFixed(2) + 's');
     
     // Update playhead position
     const playhead = document.getElementById('timelinePlayhead');
@@ -2842,9 +2864,15 @@
     annotationBox.classList.remove('visible');
     currentAnnotationIndex = -1;
     
+    // Update button text
+    if (playPausePreview.style.display !== 'none') {
+      playPausePreview.textContent = '▶ Resume Preview';
+    }
+    
     // Resume if was playing
     if (wasPlaying) {
       isPlaying = true;
+      playPausePreview.textContent = '⏸ Pause Preview';
       requestAnimationFrame(playbackLoop);
     }
   }
