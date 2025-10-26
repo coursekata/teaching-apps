@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.2</title>
+<title>Interactive Tutorial Creator - v9.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -654,7 +654,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v9.2</div>
+  <div class="version-number">v9.3</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2354,11 +2354,17 @@
     
     // Update timeline playhead
     if (timelineVisible) {
-      const playhead = document.getElementById('timelinePlayhead');
-      if (playhead) {
-        playhead.style.display = 'block';
-        playhead.style.left = (realElapsed * timelineScale) + 'px';
-      }
+      const playheads = [
+        document.getElementById('timelinePlayhead'),
+        document.getElementById('eventsPlayhead'),
+        document.getElementById('annotationsPlayhead')
+      ];
+      playheads.forEach(playhead => {
+        if (playhead) {
+          playhead.style.display = 'block';
+          playhead.style.left = (realElapsed * timelineScale) + 'px';
+        }
+      });
     }
     
     // Check completion
@@ -2378,11 +2384,17 @@
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
       
-      // Hide timeline playhead
-      const playhead = document.getElementById('timelinePlayhead');
-      if (playhead) {
-        playhead.style.display = 'none';
-      }
+      // Hide timeline playheads
+      const playheads = [
+        document.getElementById('timelinePlayhead'),
+        document.getElementById('eventsPlayhead'),
+        document.getElementById('annotationsPlayhead')
+      ];
+      playheads.forEach(playhead => {
+        if (playhead) {
+          playhead.style.display = 'none';
+        }
+      });
       
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.style.display = 'none';
@@ -2645,7 +2657,7 @@
       timelineRuler.appendChild(tick);
     }
     
-    // Add playhead
+    // Add playhead to ruler
     const playhead = document.createElement('div');
     playhead.className = 'timeline-playhead';
     playhead.id = 'timelinePlayhead';
@@ -2655,6 +2667,7 @@
     // Render events
     eventsTrack.innerHTML = '';
     eventsTrack.style.width = width + 'px';
+    eventsTrack.style.position = 'relative'; // Ensure relative positioning
     
     const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
     
@@ -2681,6 +2694,13 @@
         }
       }
     });
+    
+    // Add playhead to events track (on top of events)
+    const eventsPlayhead = document.createElement('div');
+    eventsPlayhead.className = 'timeline-playhead';
+    eventsPlayhead.id = 'eventsPlayhead';
+    eventsPlayhead.style.display = 'none';
+    eventsTrack.appendChild(eventsPlayhead);
     
     console.log('Timeline rendered:', currentTutorial.events.length, 'events,', 
                 currentTutorial.annotations?.length || 0, 'annotations');
@@ -2741,6 +2761,13 @@
         annotationsTrack.appendChild(bar);
       });
     }
+    
+    // Add playhead to annotations track (on top of annotations)
+    const annotationsPlayhead = document.createElement('div');
+    annotationsPlayhead.className = 'timeline-playhead';
+    annotationsPlayhead.id = 'annotationsPlayhead';
+    annotationsPlayhead.style.display = 'none';
+    annotationsTrack.appendChild(annotationsPlayhead);
   }
   
   function startTimelineDrag(e) {
@@ -2854,11 +2881,17 @@
     console.log('Event queue rebuilt:', eventQueue.length, 'events from', seekTime.toFixed(2) + 's');
     
     // Update playhead position
-    const playhead = document.getElementById('timelinePlayhead');
-    if (playhead) {
-      playhead.style.display = 'block';
-      playhead.style.left = (seekTime * timelineScale) + 'px';
-    }
+    const playheads = [
+      document.getElementById('timelinePlayhead'),
+      document.getElementById('eventsPlayhead'),
+      document.getElementById('annotationsPlayhead')
+    ];
+    playheads.forEach(playhead => {
+      if (playhead) {
+        playhead.style.display = 'block';
+        playhead.style.left = (seekTime * timelineScale) + 'px';
+      }
+    });
     
     // Clear current annotation
     annotationBox.classList.remove('visible');
