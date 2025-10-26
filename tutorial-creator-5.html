@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.0</title>
+<title>Interactive Tutorial Creator - v8.1</title>
 <script>
   window.MathJax = {
     tex: {
@@ -282,9 +282,9 @@
   .timeline-container{
     background:#fff;
     border-top:2px solid #ddd;
-    padding:20px;
+    padding:12px 20px;
     display:none;
-    max-height:300px;
+    max-height:200px;
     overflow-y:auto;
   }
   
@@ -296,12 +296,13 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    margin-bottom:16px;
+    margin-bottom:8px;
   }
   
   .timeline-header h3{
     margin:0;
-    font-size:16px;
+    font-size:14px;
+    font-weight:600;
   }
   
   .timeline-controls{
@@ -310,12 +311,12 @@
   }
   
   .timeline-ruler{
-    height:30px;
+    height:20px;
     background:#f9f9f9;
     border:1px solid #ddd;
     border-radius:4px;
     position:relative;
-    margin-bottom:8px;
+    margin-bottom:4px;
   }
   
   .timeline-tick{
@@ -323,26 +324,26 @@
     top:0;
     bottom:0;
     border-left:1px solid #ccc;
-    font-size:10px;
+    font-size:9px;
     color:#666;
-    padding-left:4px;
-    padding-top:2px;
+    padding-left:3px;
+    padding-top:1px;
   }
   
   .timeline-track{
-    height:60px;
+    height:40px;
     background:#fafafa;
     border:1px solid #ddd;
     border-radius:4px;
     position:relative;
-    margin-bottom:8px;
+    margin-bottom:4px;
   }
   
   .timeline-track-label{
     position:absolute;
-    left:8px;
-    top:4px;
-    font-size:11px;
+    left:6px;
+    top:2px;
+    font-size:10px;
     font-weight:600;
     color:#666;
     pointer-events:none;
@@ -367,14 +368,14 @@
   
   .timeline-annotation{
     position:absolute;
-    top:30px;
-    height:24px;
+    top:20px;
+    height:18px;
     background:var(--accent);
-    border-radius:4px;
+    border-radius:3px;
     color:#fff;
-    font-size:11px;
-    padding:0 8px;
-    line-height:24px;
+    font-size:10px;
+    padding:0 6px;
+    line-height:18px;
     cursor:move;
     white-space:nowrap;
     overflow:hidden;
@@ -390,19 +391,19 @@
     position:absolute;
     top:0;
     bottom:0;
-    width:8px;
+    width:6px;
     cursor:ew-resize;
     background:rgba(255,255,255,0.3);
   }
   
   .timeline-annotation .resize-edge.left{
     left:0;
-    border-radius:4px 0 0 4px;
+    border-radius:3px 0 0 3px;
   }
   
   .timeline-annotation .resize-edge.right{
     right:0;
-    border-radius:0 4px 4px 0;
+    border-radius:0 3px 3px 0;
   }
   
   .timeline-playhead{
@@ -418,11 +419,11 @@
   .timeline-playhead::before{
     content:'▼';
     position:absolute;
-    top:-16px;
+    top:-14px;
     left:50%;
     transform:translateX(-50%);
     color:#ef4444;
-    font-size:12px;
+    font-size:10px;
   }
   
   .modal-overlay{
@@ -644,7 +645,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v8.0</div>
+  <div class="version-number">v8.1</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2210,6 +2211,15 @@
       });
     }
     
+    // Update timeline playhead
+    if (timelineVisible) {
+      const playhead = document.getElementById('timelinePlayhead');
+      if (playhead) {
+        playhead.style.display = 'block';
+        playhead.style.left = (realElapsed * timelineScale) + 'px';
+      }
+    }
+    
     // Check completion
     const allEventsComplete = eventQueue.length === 0;
     const lastAnnotation = currentTutorial.annotations?.[currentTutorial.annotations.length - 1];
@@ -2226,6 +2236,12 @@
       isPlaying = false;
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
+      
+      // Hide timeline playhead
+      const playhead = document.getElementById('timelinePlayhead');
+      if (playhead) {
+        playhead.style.display = 'none';
+      }
       
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.style.display = 'none';
@@ -2490,13 +2506,36 @@
     eventsTrack.innerHTML = '';
     eventsTrack.style.width = width + 'px';
     
+    const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+    
     currentTutorial.events.forEach((event, idx) => {
-      const dot = document.createElement('div');
-      dot.className = 'timeline-event';
-      dot.style.left = ((event.timestamp / 1000) * timelineScale) + 'px';
-      dot.title = event.type + ' at ' + (event.timestamp / 1000).toFixed(2) + 's';
-      eventsTrack.appendChild(dot);
+      // Only show events after tutorial start
+      if (event.timestamp >= tutorialStartOffset) {
+        const relativeTime = (event.timestamp - tutorialStartOffset) / 1000; // Relative to tutorial start
+        
+        if (event.type === 'drag') {
+          // Show drag as a bar
+          const bar = document.createElement('div');
+          bar.className = 'timeline-event';
+          bar.style.left = (relativeTime * timelineScale) + 'px';
+          bar.style.width = ((event.detail?.duration || 500) / 1000 * timelineScale) + 'px';
+          bar.style.borderRadius = '4px';
+          bar.style.height = '6px';
+          bar.title = 'drag at ' + relativeTime.toFixed(2) + 's';
+          eventsTrack.appendChild(bar);
+        } else {
+          // Show other events as dots
+          const dot = document.createElement('div');
+          dot.className = 'timeline-event';
+          dot.style.left = (relativeTime * timelineScale) + 'px';
+          dot.title = event.type + ' at ' + relativeTime.toFixed(2) + 's';
+          eventsTrack.appendChild(dot);
+        }
+      }
     });
+    
+    console.log('Timeline rendered:', currentTutorial.events.length, 'events,', 
+                currentTutorial.annotations?.length || 0, 'annotations');
     
     // Render annotations
     annotationsTrack.innerHTML = '';
