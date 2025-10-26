@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.2</title>
+<title>Interactive Tutorial Creator - v8.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -30,9 +30,6 @@
     font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     color:#111;
     background:#f5f5f5;
-    display:flex;
-    flex-direction:column;
-    height:100vh;
   }
   
   .tutorial-header{
@@ -172,8 +169,9 @@
   }
   
   .app-container{
-    flex:1;
     position:relative;
+    width:100%;
+    height:600px;
     overflow:hidden;
   }
   
@@ -348,7 +346,13 @@
     z-index:1;
   }
   
-  .timeline-event:hover{
+  .timeline-event.drag-event{
+    border-radius:3px;
+    height:4px;
+    width:auto; /* Will be set by JS */
+  }
+  
+  .timeline-event:not(.drag-event):hover{
     transform:translateY(-50%) scale(1.5);
   }
   
@@ -631,7 +635,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v8.2</div>
+  <div class="version-number">v8.3</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1279,30 +1283,6 @@
   let pendingAnnotation = null;
   
   // Preview functionality
-  
-  playPausePreview.addEventListener('click', () => {
-    if (!currentTutorial) return;
-    
-    if (!isPlaying) {
-      // Start/resume playback
-      isPlaying = true;
-      
-      if (playbackPausedAt > 0) {
-        playbackStartTime = Date.now() - playbackPausedAt * 1000;
-      } else {
-        playbackStartTime = Date.now();
-        eventQueue = [...currentTutorial.events];
-      }
-      
-      requestAnimationFrame(playbackLoop);
-      console.log('▶ Preview playing');
-    } else {
-      // Pause playback
-      isPlaying = false;
-      playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
-      console.log('⏸ Preview paused');
-    }
-  });
   
   addAnnotation.addEventListener('click', () => {
     // Reset form
@@ -2507,11 +2487,9 @@
         if (event.type === 'drag') {
           // Show drag as a bar
           const bar = document.createElement('div');
-          bar.className = 'timeline-event';
+          bar.className = 'timeline-event drag-event';
           bar.style.left = (relativeTime * timelineScale) + 'px';
           bar.style.width = ((event.detail?.duration || 500) / 1000 * timelineScale) + 'px';
-          bar.style.borderRadius = '4px';
-          bar.style.height = '6px';
           bar.title = 'drag at ' + relativeTime.toFixed(2) + 's';
           eventsTrack.appendChild(bar);
         } else {
@@ -2527,6 +2505,23 @@
     
     console.log('Timeline rendered:', currentTutorial.events.length, 'events,', 
                 currentTutorial.annotations?.length || 0, 'annotations');
+    
+    // Add click-to-seek on tracks
+    [eventsTrack, annotationsTrack, timelineRuler].forEach(track => {
+      track.addEventListener('click', (e) => {
+        if (e.target.classList.contains('timeline-annotation') || 
+            e.target.classList.contains('resize-edge')) {
+          return; // Don't seek if clicking on annotation or resize handle
+        }
+        
+        const rect = track.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const seekTime = x / timelineScale; // In seconds
+        
+        // Seek to this position
+        seekToTime(seekTime);
+      });
+    });
     
     // Render annotations
     annotationsTrack.innerHTML = '';
@@ -2654,6 +2649,43 @@
     resizingTimelineItem = null;
     document.removeEventListener('mousemove', doTimelineResize);
     document.removeEventListener('mouseup', stopTimelineResize);
+  }
+  
+  function seekToTime(seekTime) {
+    if (!currentTutorial) return;
+    
+    console.log('Seeking to:', seekTime.toFixed(2) + 's');
+    
+    // Pause if playing
+    const wasPlaying = isPlaying;
+    isPlaying = false;
+    
+    // Set playback position
+    playbackPausedAt = seekTime;
+    playbackStartTime = Date.now() - seekTime * 1000;
+    
+    // Rebuild event queue from this point
+    const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+    const absoluteTime = seekTime * 1000 + tutorialStartOffset;
+    
+    eventQueue = currentTutorial.events.filter(e => e.timestamp >= absoluteTime);
+    
+    // Update playhead position
+    const playhead = document.getElementById('timelinePlayhead');
+    if (playhead) {
+      playhead.style.display = 'block';
+      playhead.style.left = (seekTime * timelineScale) + 'px';
+    }
+    
+    // Clear current annotation
+    annotationBox.classList.remove('visible');
+    currentAnnotationIndex = -1;
+    
+    // Resume if was playing
+    if (wasPlaying) {
+      isPlaying = true;
+      requestAnimationFrame(playbackLoop);
+    }
   }
   
   // Update playhead during preview
