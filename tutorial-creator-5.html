@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.3</title>
+<title>Interactive Tutorial Creator - v9.0</title>
 <script>
   window.MathJax = {
     tex: {
@@ -635,7 +635,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v8.3</div>
+  <div class="version-number">v9.0</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -654,6 +654,8 @@
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
         <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
+        <button id="addAnnotationAtPause" class="primary" style="display:none;">➕ Add Annotation Here</button>
+        <button id="recordFromHere" class="warning" style="display:none;">⏺ Record From Here</button>
         <button id="recordAgain" class="record" style="display:none;">🔄 Record Again</button>
         <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
       </div>
@@ -736,6 +738,41 @@
       <div style="display:flex;gap:8px;">
         <button id="savePosition" class="success">💾 Save Position</button>
         <button id="cancelPosition">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Annotation Edit Modal -->
+  <div id="annotationEditModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Edit Annotation</h2>
+      
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="editAnnTitle" placeholder="Enter annotation title..."/>
+      </div>
+      
+      <div class="form-group">
+        <label>Text</label>
+        <textarea id="editAnnText" placeholder="Enter annotation description..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Duration (seconds)</label>
+        <input type="number" id="editAnnDuration" value="5" min="1" max="60" style="width:100px;"/>
+      </div>
+      
+      <div class="form-group">
+        <label>Start Time (seconds)</label>
+        <input type="number" id="editAnnTimestamp" value="0" min="0" step="0.1" style="width:100px;"/>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="repositionAnnotation" class="primary">📍 Reposition</button>
+        <button id="resizeAnnotation" class="primary">↔️ Resize</button>
+        <button id="deleteAnnotation" class="warning">🗑 Delete</button>
+        <button id="cancelEditAnnotation">Cancel</button>
+        <button id="saveEditAnnotation" class="success">💾 Save Changes</button>
       </div>
     </div>
   </div>
@@ -893,6 +930,22 @@
   const timelineRuler = document.getElementById('timelineRuler');
   const eventsTrack = document.getElementById('eventsTrack');
   const annotationsTrack = document.getElementById('annotationsTrack');
+  
+  const addAnnotationAtPause = document.getElementById('addAnnotationAtPause');
+  const recordFromHere = document.getElementById('recordFromHere');
+  
+  const annotationEditModal = document.getElementById('annotationEditModal');
+  const editAnnTitle = document.getElementById('editAnnTitle');
+  const editAnnText = document.getElementById('editAnnText');
+  const editAnnDuration = document.getElementById('editAnnDuration');
+  const editAnnTimestamp = document.getElementById('editAnnTimestamp');
+  const repositionAnnotation = document.getElementById('repositionAnnotation');
+  const resizeAnnotation = document.getElementById('resizeAnnotation');
+  const deleteAnnotation = document.getElementById('deleteAnnotation');
+  const saveEditAnnotation = document.getElementById('saveEditAnnotation');
+  const cancelEditAnnotation = document.getElementById('cancelEditAnnotation');
+  
+  let editingAnnotationIndex = -1;
   
   // State
   let isRecording = false;
@@ -1162,6 +1215,66 @@
     console.log('  Annotations:', recordedAnnotations.length);
   });
   
+  recordFromHere.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    // Preserve annotations
+    const savedAnnotations = currentTutorial.annotations || [];
+    
+    // Truncate events to pause point
+    const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+    const cutoffTime = playbackPausedAt * 1000 + tutorialStartOffset;
+    const truncatedEvents = currentTutorial.events.filter(e => e.timestamp <= cutoffTime);
+    
+    console.log('⏺ Recording from pause point - keeping', truncatedEvents.length, 'events and', savedAnnotations.length, 'annotations');
+    
+    // Reload app
+    const url = appFrame.src;
+    appFrame.src = '';
+    
+    setTimeout(() => {
+      appFrame.src = url;
+      
+      appFrame.onload = () => {
+        // Replay events up to pause point (silently)
+        setTimeout(async () => {
+          setupEventListeners();
+          
+          // Fast-forward through saved events
+          for (let event of truncatedEvents) {
+            replayEvent(event);
+            await new Promise(r => setTimeout(r, 10)); // Small delay between events
+          }
+          
+          // Now start recording from here
+          appLoadTime = Date.now() - cutoffTime; // Adjust timeline
+          alwaysRecordedEvents = truncatedEvents;
+          tutorialStartTime = Date.now() - playbackPausedAt * 1000;
+          totalPausedDuration = 0;
+          tutorialRecording = true;
+          recordedAnnotations = savedAnnotations;
+          
+          // Update UI
+          startRecording.style.display = 'none';
+          stopRecording.style.display = 'inline-block';
+          pauseRecording.style.display = 'inline-block';
+          addAnnotation.style.display = 'inline-block';
+          addAnnotation.disabled = false;
+          recordingIndicator.style.display = 'inline-block';
+          previewRecording.style.display = 'none';
+          playPausePreview.style.display = 'none';
+          addAnnotationAtPause.style.display = 'none';
+          recordFromHere.style.display = 'none';
+          recordAgain.style.display = 'none';
+          exportRecording.style.display = 'none';
+          appFrame.classList.remove('playback-mode');
+          
+          console.log('✓ Ready to record from', playbackPausedAt.toFixed(2) + 's');
+        }, 500);
+      };
+    }, 100);
+  });
+  
   recordAgain.addEventListener('click', () => {
     // Stop any active playback
     isPlaying = false;
@@ -1170,6 +1283,9 @@
     annotationBox.classList.remove('visible');
     currentAnnotationIndex = -1;
     
+    // Preserve annotations if we have currentTutorial
+    const savedAnnotations = currentTutorial?.annotations || [];
+    
     // Reload the app to go back to clean state
     const url = appFrame.src;
     if (!url || url === 'about:blank') {
@@ -1177,10 +1293,10 @@
       return;
     }
     
-    console.log('🔄 Record Again - reloading app to start fresh');
+    console.log('🔄 Record Again - preserving', savedAnnotations.length, 'annotations');
     
-    // Clear tutorial-specific data
-    recordedAnnotations = [];
+    // Clear tutorial-specific data but keep annotations
+    recordedAnnotations = savedAnnotations;
     currentTutorial = null;
     totalPausedDuration = 0;
     
@@ -1213,8 +1329,11 @@
     pausedIndicator.style.display = 'none';
     previewRecording.style.display = 'none';
     playPausePreview.style.display = 'none';
+    addAnnotationAtPause.style.display = 'none';
+    recordFromHere.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none';
+    timelineContainer.classList.remove('visible');
   });
   
   exportRecording.addEventListener('click', () => {
@@ -1293,6 +1412,24 @@
     annotationEditorModal.classList.add('visible');
   });
   
+  addAnnotationAtPause.addEventListener('click', () => {
+    // Add annotation at current pause point
+    annTitle.value = '';
+    annText.value = '';
+    annDuration.value = '5';
+    
+    // Override the timestamp to be at pause point
+    pendingAnnotation = {
+      timestamp: playbackPausedAt * 1000, // Use pause time
+      title: '',
+      text: '',
+      duration: 5000,
+      position: null
+    };
+    
+    annotationEditorModal.classList.add('visible');
+  });
+  
   createAnnotation.addEventListener('click', () => {
     const title = annTitle.value.trim();
     const text = annText.value.trim();
@@ -1303,9 +1440,15 @@
       return;
     }
     
-    // Calculate timestamp relative to tutorial start
-    // This is: pausedTime - tutorialStartTime - totalPausedDuration
-    const timestamp = pausedTime - tutorialStartTime - totalPausedDuration;
+    // Determine timestamp based on mode
+    let timestamp;
+    if (pendingAnnotation && pendingAnnotation.timestamp !== undefined) {
+      // Use pre-set timestamp (from addAnnotationAtPause)
+      timestamp = pendingAnnotation.timestamp;
+    } else {
+      // Calculate timestamp relative to tutorial start (recording mode)
+      timestamp = pausedTime - tutorialStartTime - totalPausedDuration;
+    }
     
     // Create pending annotation
     pendingAnnotation = {
@@ -1371,8 +1514,20 @@
       height: rect.height
     };
     
-    // Save to recordings
-    recordedAnnotations.push(pendingAnnotation);
+    // Save to appropriate location
+    if (tutorialRecording) {
+      // Recording mode - save to recordedAnnotations
+      recordedAnnotations.push(pendingAnnotation);
+      alert(`✓ Annotation "${pendingAnnotation.title}" saved! Click Resume to continue recording.`);
+    } else if (currentTutorial) {
+      // Preview/edit mode - save to currentTutorial
+      if (!currentTutorial.annotations) {
+        currentTutorial.annotations = [];
+      }
+      currentTutorial.annotations.push(pendingAnnotation);
+      renderTimeline(); // Update timeline
+      alert(`✓ Annotation "${pendingAnnotation.title}" added!`);
+    }
     
     console.log('✓ Annotation saved:', pendingAnnotation);
     
@@ -1385,11 +1540,6 @@
     handles.forEach(h => h.remove());
     
     pendingAnnotation = null;
-    
-    // Keep showing Resume button (don't auto-resume)
-    // User can click Resume when ready
-    
-    alert(`✓ Annotation "${recordedAnnotations[recordedAnnotations.length - 1].title}" saved! Click Resume to continue recording.`);
   });
   
   cancelPosition.addEventListener('click', () => {
@@ -1464,12 +1614,22 @@
       isPlaying = false;
       playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
       playPausePreview.textContent = '▶ Resume Preview';
+      
+      // Show editing buttons
+      addAnnotationAtPause.style.display = 'inline-block';
+      recordFromHere.style.display = 'inline-block';
+      
       console.log('⏸ Preview paused');
     } else {
       // Resume preview
       isPlaying = true;
       playbackStartTime = Date.now() - playbackPausedAt * 1000;
       playPausePreview.textContent = '⏸ Pause Preview';
+      
+      // Hide editing buttons
+      addAnnotationAtPause.style.display = 'none';
+      recordFromHere.style.display = 'none';
+      
       requestAnimationFrame(playbackLoop);
       console.log('▶ Preview resumed');
     }
@@ -2555,6 +2715,7 @@
         
         // Add drag handler
         bar.addEventListener('mousedown', startTimelineDrag);
+        bar.addEventListener('dblclick', () => openAnnotationEditor(idx));
         leftHandle.addEventListener('mousedown', startTimelineResize);
         rightHandle.addEventListener('mousedown', startTimelineResize);
         
@@ -2687,6 +2848,118 @@
       requestAnimationFrame(playbackLoop);
     }
   }
+  
+  // Annotation editing
+  function openAnnotationEditor(index) {
+    if (!currentTutorial || !currentTutorial.annotations[index]) return;
+    
+    editingAnnotationIndex = index;
+    const ann = currentTutorial.annotations[index];
+    
+    editAnnTitle.value = ann.title;
+    editAnnText.value = ann.text;
+    editAnnDuration.value = ann.duration / 1000;
+    editAnnTimestamp.value = (ann.timestamp / 1000).toFixed(1);
+    
+    annotationEditModal.classList.add('visible');
+  }
+  
+  saveEditAnnotation.addEventListener('click', () => {
+    if (editingAnnotationIndex < 0 || !currentTutorial) return;
+    
+    const ann = currentTutorial.annotations[editingAnnotationIndex];
+    ann.title = editAnnTitle.value.trim();
+    ann.text = editAnnText.value.trim();
+    ann.duration = parseFloat(editAnnDuration.value) * 1000;
+    ann.timestamp = parseFloat(editAnnTimestamp.value) * 1000;
+    
+    annotationEditModal.classList.remove('visible');
+    editingAnnotationIndex = -1;
+    renderTimeline();
+    
+    alert('✓ Annotation updated!');
+  });
+  
+  deleteAnnotation.addEventListener('click', () => {
+    if (editingAnnotationIndex < 0 || !currentTutorial) return;
+    
+    if (confirm('Delete this annotation?')) {
+      currentTutorial.annotations.splice(editingAnnotationIndex, 1);
+      annotationEditModal.classList.remove('visible');
+      editingAnnotationIndex = -1;
+      renderTimeline();
+      alert('✓ Annotation deleted!');
+    }
+  });
+  
+  repositionAnnotation.addEventListener('click', () => {
+    if (editingAnnotationIndex < 0 || !currentTutorial) return;
+    
+    const ann = currentTutorial.annotations[editingAnnotationIndex];
+    
+    // Close edit modal
+    annotationEditModal.classList.remove('visible');
+    
+    // Show annotation for repositioning
+    annotationBox.className = 'annotation-box visible draggable custom-position';
+    annotationBox.style.left = (ann.position?.left || window.innerWidth / 2) + 'px';
+    annotationBox.style.top = (ann.position?.top || 200) + 'px';
+    annotationBox.style.width = (ann.position?.width || 400) + 'px';
+    annotationBox.style.height = (ann.position?.height || 100) + 'px';
+    annotationBox.style.transform = 'none';
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    // Enable dragging
+    makeDraggable();
+    
+    // Show save button
+    positionEditorOverlay.style.display = 'block';
+    
+    // Override savePosition to update existing annotation
+    const originalSaveHandler = savePosition.onclick;
+    savePosition.onclick = () => {
+      const containerRect = appFrame.getBoundingClientRect();
+      const rect = annotationBox.getBoundingClientRect();
+      
+      ann.position = {
+        left: rect.left - containerRect.left,
+        top: rect.top - containerRect.top,
+        width: rect.width,
+        height: rect.height
+      };
+      
+      positionEditorOverlay.style.display = 'none';
+      annotationBox.classList.remove('visible', 'draggable');
+      
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+      
+      savePosition.onclick = originalSaveHandler;
+      editingAnnotationIndex = -1;
+      
+      alert('✓ Position updated!');
+    };
+  });
+  
+  resizeAnnotation.addEventListener('click', () => {
+    // Same as reposition but emphasize resize
+    repositionAnnotation.click();
+    alert('Drag the orange corner handle to resize, then Save Position');
+  });
+  
+  cancelEditAnnotation.addEventListener('click', () => {
+    annotationEditModal.classList.remove('visible');
+    editingAnnotationIndex = -1;
+  });
+  
+  // Close edit modal on outside click
+  annotationEditModal.addEventListener('click', (e) => {
+    if (e.target === annotationEditModal) {
+      annotationEditModal.classList.remove('visible');
+      editingAnnotationIndex = -1;
+    }
+  });
   
   // Update playhead during preview
   const originalPlaybackLoop = playbackLoop;
