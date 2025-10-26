@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.13</title>
+<title>Interactive Tutorial Creator - v10.14</title>
 <script>
   window.MathJax = {
     tex: {
@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.13</div>
+  <div class="version-number">v10.14</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2377,8 +2377,22 @@
       }
       
       isPlaying = false;
-      annotationBox.classList.remove('visible');
-      currentAnnotationIndex = -1;
+      
+      // Keep annotation visible if we stopped exactly at the end of an annotation
+      // Only hide if we're past all annotations
+      let shouldHideAnnotation = true;
+      if (currentTutorial.annotations && currentAnnotationIndex >= 0) {
+        const currentAnn = currentTutorial.annotations[currentAnnotationIndex];
+        const annEnd = (currentAnn.timestamp + (currentAnn.duration || 5000)) / 1000;
+        if (realElapsed <= annEnd) {
+          shouldHideAnnotation = false;
+        }
+      }
+      
+      if (shouldHideAnnotation) {
+        annotationBox.classList.remove('visible');
+        currentAnnotationIndex = -1;
+      }
       
       // Set playhead to exact end position
       if (timelineVisible) {
