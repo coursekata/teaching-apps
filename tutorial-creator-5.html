@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.17</title>
+<title>Interactive Tutorial Creator - v10.18</title>
 <script>
   window.MathJax = {
     tex: {
@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.17</div>
+  <div class="version-number">v10.18</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1476,8 +1476,9 @@
   savePosition.addEventListener('click', () => {
     if (!pendingAnnotation) return;
     
-    // Get current position and dimensions
-    const containerRect = appFrame.getBoundingClientRect();
+    // Get current position and dimensions relative to app-container (parent of both iframe and annotation box)
+    const container = document.querySelector('.app-container');
+    const containerRect = container.getBoundingClientRect();
     const rect = annotationBox.getBoundingClientRect();
     
     pendingAnnotation.position = {
@@ -1486,6 +1487,8 @@
       width: rect.width,
       height: rect.height
     };
+    
+    console.log('💾 Saving annotation position:', pendingAnnotation.position);
     
     // Save to appropriate location
     if (tutorialRecording) {
@@ -2386,20 +2389,34 @@
       
       isPlaying = false;
       
-      // Keep annotation visible if we stopped exactly at the end of an annotation
-      // Only hide if we're past all annotations
+      // Keep annotation visible if it's still showing at the end time
+      // Check if ANY annotation should be visible at the totalDuration time
       let shouldHideAnnotation = true;
-      if (currentTutorial.annotations && currentAnnotationIndex >= 0) {
-        const currentAnn = currentTutorial.annotations[currentAnnotationIndex];
-        const annEnd = (currentAnn.timestamp + (currentAnn.duration || 5000)) / 1000;
-        if (realElapsed <= annEnd) {
-          shouldHideAnnotation = false;
-        }
+      let visibleAnnotationIndex = -1;
+      
+      if (currentTutorial.annotations) {
+        currentTutorial.annotations.forEach((ann, idx) => {
+          const annStart = ann.timestamp / 1000;
+          const annEnd = annStart + (ann.duration || 5000) / 1000;
+          
+          // If this annotation should be visible at the end time
+          if (totalDuration >= annStart && totalDuration <= annEnd) {
+            shouldHideAnnotation = false;
+            visibleAnnotationIndex = idx;
+            console.log('📌 Keeping annotation visible at end:', ann.title, '(', annStart.toFixed(2), 's -', annEnd.toFixed(2), 's)');
+          }
+        });
       }
       
       if (shouldHideAnnotation) {
         annotationBox.classList.remove('visible');
         currentAnnotationIndex = -1;
+        console.log('👻 Hiding annotation at end');
+      } else if (visibleAnnotationIndex !== currentAnnotationIndex) {
+        // Show the annotation that should be visible
+        currentAnnotationIndex = visibleAnnotationIndex;
+        showAnnotation(currentTutorial.annotations[visibleAnnotationIndex]);
+        console.log('📌 Showing annotation at end:', currentTutorial.annotations[visibleAnnotationIndex].title);
       }
       
       // Set playhead to exact end position
@@ -2999,7 +3016,8 @@
     // Override savePosition to update existing annotation
     const originalSaveHandler = savePosition.onclick;
     savePosition.onclick = () => {
-      const containerRect = appFrame.getBoundingClientRect();
+      const container = document.querySelector('.app-container');
+      const containerRect = container.getBoundingClientRect();
       const rect = annotationBox.getBoundingClientRect();
       
       ann.position = {
@@ -3008,6 +3026,8 @@
         width: rect.width,
         height: rect.height
       };
+      
+      console.log('💾 Updating annotation position:', ann.position);
       
       positionEditorOverlay.style.display = 'none';
       annotationBox.classList.remove('visible', 'draggable');
