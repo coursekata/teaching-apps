@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v7.5</title>
+<title>Interactive Tutorial Creator - v8.0</title>
 <script>
   window.MathJax = {
     tex: {
@@ -278,6 +278,153 @@
     font-size:15px;
   }
   
+  /* Timeline Editor */
+  .timeline-container{
+    background:#fff;
+    border-top:2px solid #ddd;
+    padding:20px;
+    display:none;
+    max-height:300px;
+    overflow-y:auto;
+  }
+  
+  .timeline-container.visible{
+    display:block;
+  }
+  
+  .timeline-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  
+  .timeline-header h3{
+    margin:0;
+    font-size:16px;
+  }
+  
+  .timeline-controls{
+    display:flex;
+    gap:8px;
+  }
+  
+  .timeline-ruler{
+    height:30px;
+    background:#f9f9f9;
+    border:1px solid #ddd;
+    border-radius:4px;
+    position:relative;
+    margin-bottom:8px;
+  }
+  
+  .timeline-tick{
+    position:absolute;
+    top:0;
+    bottom:0;
+    border-left:1px solid #ccc;
+    font-size:10px;
+    color:#666;
+    padding-left:4px;
+    padding-top:2px;
+  }
+  
+  .timeline-track{
+    height:60px;
+    background:#fafafa;
+    border:1px solid #ddd;
+    border-radius:4px;
+    position:relative;
+    margin-bottom:8px;
+  }
+  
+  .timeline-track-label{
+    position:absolute;
+    left:8px;
+    top:4px;
+    font-size:11px;
+    font-weight:600;
+    color:#666;
+    pointer-events:none;
+    z-index:0;
+  }
+  
+  .timeline-event{
+    position:absolute;
+    top:50%;
+    width:8px;
+    height:8px;
+    background:#2563eb;
+    border-radius:50%;
+    transform:translateY(-50%);
+    cursor:pointer;
+    z-index:1;
+  }
+  
+  .timeline-event:hover{
+    transform:translateY(-50%) scale(1.5);
+  }
+  
+  .timeline-annotation{
+    position:absolute;
+    top:30px;
+    height:24px;
+    background:var(--accent);
+    border-radius:4px;
+    color:#fff;
+    font-size:11px;
+    padding:0 8px;
+    line-height:24px;
+    cursor:move;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    z-index:2;
+  }
+  
+  .timeline-annotation:hover{
+    background:#1e40af;
+  }
+  
+  .timeline-annotation .resize-edge{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:8px;
+    cursor:ew-resize;
+    background:rgba(255,255,255,0.3);
+  }
+  
+  .timeline-annotation .resize-edge.left{
+    left:0;
+    border-radius:4px 0 0 4px;
+  }
+  
+  .timeline-annotation .resize-edge.right{
+    right:0;
+    border-radius:0 4px 4px 0;
+  }
+  
+  .timeline-playhead{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:2px;
+    background:#ef4444;
+    pointer-events:none;
+    z-index:10;
+  }
+  
+  .timeline-playhead::before{
+    content:'▼';
+    position:absolute;
+    top:-16px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#ef4444;
+    font-size:12px;
+  }
+  
   .modal-overlay{
     position:fixed;
     top:0;
@@ -497,7 +644,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v7.5</div>
+  <div class="version-number">v8.0</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -521,6 +668,32 @@
       </div>
       
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
+      <button id="loadJSON" class="primary">📂 Load JSON</button>
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+    </div>
+  </div>
+  
+  <!-- Timeline Editor -->
+  <div id="timelineContainer" class="timeline-container">
+    <div class="timeline-header">
+      <h3>Timeline Editor</h3>
+      <div class="timeline-controls">
+        <button id="toggleTimeline">Hide Timeline</button>
+      </div>
+    </div>
+    
+    <div id="timelineRuler" class="timeline-ruler">
+      <!-- Time ticks will be generated here -->
+    </div>
+    
+    <div class="timeline-track">
+      <div class="timeline-track-label">Events</div>
+      <div id="eventsTrack" style="position:relative;height:100%;"></div>
+    </div>
+    
+    <div class="timeline-track">
+      <div class="timeline-track-label">Annotations</div>
+      <div id="annotationsTrack" style="position:relative;height:100%;"></div>
     </div>
   </div>
   
@@ -726,6 +899,14 @@
   const helpBtn = document.getElementById('helpBtn');
   const closeHelpModal = document.getElementById('closeHelpModal');
   
+  const loadJSON = document.getElementById('loadJSON');
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  const timelineContainer = document.getElementById('timelineContainer');
+  const toggleTimeline = document.getElementById('toggleTimeline');
+  const timelineRuler = document.getElementById('timelineRuler');
+  const eventsTrack = document.getElementById('eventsTrack');
+  const annotationsTrack = document.getElementById('annotationsTrack');
+  
   // State
   let isRecording = false;
   let isPaused = false;
@@ -739,6 +920,12 @@
   let dragOffsetX = 0;
   let dragOffsetY = 0;
   let initialInputValues = {}; // Capture input values at start of recording
+  
+  // Timeline state
+  let timelineVisible = false;
+  let timelineScale = 100; // pixels per second
+  let draggingTimelineItem = null;
+  let resizingTimelineItem = null;
   
   // Recording state
   let tutorialRecording = false; // True when intentionally recording tutorial actions
@@ -974,6 +1161,11 @@
     };
     
     currentTutorial = tutorial;
+    
+    // Show timeline
+    timelineContainer.classList.add('visible');
+    timelineVisible = true;
+    renderTimeline();
     
     console.log('✓ Recording stopped.');
     console.log('  Total events captured:', alwaysRecordedEvents.length);
@@ -2215,6 +2407,239 @@
       pendingAnnotation = null;
     }
   });
+  
+  // Timeline functions
+  loadJSON.addEventListener('click', () => {
+    jsonFileInput.click();
+  });
+  
+  jsonFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const tutorial = JSON.parse(event.target.result);
+        currentTutorial = tutorial;
+        
+        // Show success and load the app
+        alert(`✓ Tutorial loaded!\n\nApp: ${tutorial.appUrl}\nEvents: ${tutorial.events.length}\nAnnotations: ${tutorial.annotations?.length || 0}\n\nThe app will now load and you can edit in the timeline.`);
+        
+        // Load the app
+        appUrl.value = tutorial.appUrl;
+        appFrame.src = tutorial.appUrl;
+        
+        // Show timeline
+        timelineContainer.classList.add('visible');
+        timelineVisible = true;
+        renderTimeline();
+        
+        // Show preview/export buttons
+        previewRecording.style.display = 'inline-block';
+        exportRecording.style.display = 'inline-block';
+        
+      } catch (err) {
+        alert('Error loading JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset input so same file can be loaded again
+    e.target.value = '';
+  });
+  
+  toggleTimeline.addEventListener('click', () => {
+    if (timelineVisible) {
+      timelineContainer.classList.remove('visible');
+      toggleTimeline.textContent = 'Show Timeline';
+      timelineVisible = false;
+    } else {
+      timelineContainer.classList.add('visible');
+      toggleTimeline.textContent = 'Hide Timeline';
+      timelineVisible = true;
+    }
+  });
+  
+  function renderTimeline() {
+    if (!currentTutorial) return;
+    
+    const duration = currentTutorial.duration / 1000; // Convert to seconds
+    const width = duration * timelineScale;
+    
+    // Render ruler
+    timelineRuler.innerHTML = '';
+    timelineRuler.style.width = width + 'px';
+    
+    for (let i = 0; i <= Math.ceil(duration); i++) {
+      const tick = document.createElement('div');
+      tick.className = 'timeline-tick';
+      tick.style.left = (i * timelineScale) + 'px';
+      tick.textContent = i + 's';
+      timelineRuler.appendChild(tick);
+    }
+    
+    // Add playhead
+    const playhead = document.createElement('div');
+    playhead.className = 'timeline-playhead';
+    playhead.id = 'timelinePlayhead';
+    playhead.style.display = 'none';
+    timelineRuler.appendChild(playhead);
+    
+    // Render events
+    eventsTrack.innerHTML = '';
+    eventsTrack.style.width = width + 'px';
+    
+    currentTutorial.events.forEach((event, idx) => {
+      const dot = document.createElement('div');
+      dot.className = 'timeline-event';
+      dot.style.left = ((event.timestamp / 1000) * timelineScale) + 'px';
+      dot.title = event.type + ' at ' + (event.timestamp / 1000).toFixed(2) + 's';
+      eventsTrack.appendChild(dot);
+    });
+    
+    // Render annotations
+    annotationsTrack.innerHTML = '';
+    annotationsTrack.style.width = width + 'px';
+    
+    if (currentTutorial.annotations) {
+      currentTutorial.annotations.forEach((ann, idx) => {
+        const bar = document.createElement('div');
+        bar.className = 'timeline-annotation';
+        bar.textContent = ann.title;
+        bar.dataset.index = idx;
+        
+        const startTime = ann.timestamp / 1000;
+        const duration = (ann.duration || 5000) / 1000;
+        
+        bar.style.left = (startTime * timelineScale) + 'px';
+        bar.style.width = (duration * timelineScale) + 'px';
+        
+        // Add resize handles
+        const leftHandle = document.createElement('div');
+        leftHandle.className = 'resize-edge left';
+        leftHandle.dataset.index = idx;
+        leftHandle.dataset.edge = 'left';
+        bar.appendChild(leftHandle);
+        
+        const rightHandle = document.createElement('div');
+        rightHandle.className = 'resize-edge right';
+        rightHandle.dataset.index = idx;
+        rightHandle.dataset.edge = 'right';
+        bar.appendChild(rightHandle);
+        
+        // Add drag handler
+        bar.addEventListener('mousedown', startTimelineDrag);
+        leftHandle.addEventListener('mousedown', startTimelineResize);
+        rightHandle.addEventListener('mousedown', startTimelineResize);
+        
+        annotationsTrack.appendChild(bar);
+      });
+    }
+  }
+  
+  function startTimelineDrag(e) {
+    if (e.target.classList.contains('resize-edge')) return;
+    
+    draggingTimelineItem = {
+      index: parseInt(e.target.dataset.index),
+      startX: e.clientX,
+      startTime: currentTutorial.annotations[parseInt(e.target.dataset.index)].timestamp
+    };
+    
+    document.addEventListener('mousemove', doTimelineDrag);
+    document.addEventListener('mouseup', stopTimelineDrag);
+    e.preventDefault();
+  }
+  
+  function doTimelineDrag(e) {
+    if (!draggingTimelineItem) return;
+    
+    const dx = e.clientX - draggingTimelineItem.startX;
+    const dt = (dx / timelineScale) * 1000; // Convert to milliseconds
+    
+    let newTime = Math.max(0, draggingTimelineItem.startTime + dt);
+    newTime = Math.min(newTime, currentTutorial.duration);
+    
+    currentTutorial.annotations[draggingTimelineItem.index].timestamp = newTime;
+    renderTimeline();
+  }
+  
+  function stopTimelineDrag(e) {
+    draggingTimelineItem = null;
+    document.removeEventListener('mousemove', doTimelineDrag);
+    document.removeEventListener('mouseup', stopTimelineDrag);
+  }
+  
+  function startTimelineResize(e) {
+    e.stopPropagation();
+    
+    const index = parseInt(e.target.dataset.index);
+    const edge = e.target.dataset.edge;
+    
+    resizingTimelineItem = {
+      index: index,
+      edge: edge,
+      startX: e.clientX,
+      startTime: currentTutorial.annotations[index].timestamp,
+      startDuration: currentTutorial.annotations[index].duration
+    };
+    
+    document.addEventListener('mousemove', doTimelineResize);
+    document.addEventListener('mouseup', stopTimelineResize);
+    e.preventDefault();
+  }
+  
+  function doTimelineResize(e) {
+    if (!resizingTimelineItem) return;
+    
+    const dx = e.clientX - resizingTimelineItem.startX;
+    const dt = (dx / timelineScale) * 1000;
+    
+    const ann = currentTutorial.annotations[resizingTimelineItem.index];
+    
+    if (resizingTimelineItem.edge === 'left') {
+      // Adjust start time and duration
+      let newTime = Math.max(0, resizingTimelineItem.startTime + dt);
+      const diff = newTime - resizingTimelineItem.startTime;
+      let newDuration = resizingTimelineItem.startDuration - diff;
+      
+      if (newDuration < 1000) {
+        newDuration = 1000;
+        newTime = resizingTimelineItem.startTime + resizingTimelineItem.startDuration - 1000;
+      }
+      
+      ann.timestamp = newTime;
+      ann.duration = newDuration;
+    } else {
+      // Adjust duration only
+      let newDuration = Math.max(1000, resizingTimelineItem.startDuration + dt);
+      ann.duration = newDuration;
+    }
+    
+    renderTimeline();
+  }
+  
+  function stopTimelineResize(e) {
+    resizingTimelineItem = null;
+    document.removeEventListener('mousemove', doTimelineResize);
+    document.removeEventListener('mouseup', stopTimelineResize);
+  }
+  
+  // Update playhead during preview
+  const originalPlaybackLoop = playbackLoop;
+  function playbackLoopWithTimeline() {
+    originalPlaybackLoop();
+    
+    if (isPlaying && timelineVisible && currentTutorial) {
+      const playhead = document.getElementById('timelinePlayhead');
+      if (playhead) {
+        playhead.style.display = 'block';
+        let realElapsed = (Date.now() - playbackStartTime) / 1000;
+        playhead.style.left = (realElapsed * timelineScale) + 'px';
+      }
+    }
+  }
 })();
 </script>
 </body>
