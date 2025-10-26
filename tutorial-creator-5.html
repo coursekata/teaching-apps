@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.0</title>
+<title>Interactive Tutorial Creator - v10.28.1</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.0</div>
+    <div class="version-number">v10.28.1</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2898,7 +2898,8 @@
     
     // Use content duration instead of recording duration
     // Use whichever is longer: last event or last annotation
-    const duration = Math.max(maxEventEnd, maxAnnotationEnd);
+    // Add small buffer (0.1s) to ensure we don't cut off the last frame
+    const duration = Math.max(maxEventEnd, maxAnnotationEnd) + 0.1;
     
     console.log('📊 Calculated duration:', duration, 'seconds');
     console.log('📊 Before update - currentTutorial.duration:', currentTutorial.duration, 'ms');
