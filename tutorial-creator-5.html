@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.27.4</title>
+<title>Interactive Tutorial Creator - v10.27.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.27.4</div>
+    <div class="version-number">v10.27.5</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1562,9 +1562,15 @@
     annotationEditorModal.classList.remove('visible');
     
     // CHANGED: Initialize if needed and show in iframe
+    console.log('🔍 Checking annotation box initialization...');
+    console.log('  annotationBox:', annotationBox);
+    console.log('  appFrame:', appFrame);
+    
     if (!annotationBox) {
       console.log('⚠ Annotation box not initialized, initializing now...');
       const success = initializeAnnotationBox();
+      console.log('  Initialization result:', success);
+      console.log('  annotationBox after init:', annotationBox);
       if (!success) {
         alert('Failed to initialize annotation box. Please try again.');
         return;
@@ -1574,6 +1580,8 @@
     if (annotationBox) {
       console.log('✓ Annotation box ready, showing for positioning...');
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      console.log('  iframeDoc:', iframeDoc);
+      console.log('  annotationBox parent:', annotationBox.parentElement);
       
       // Show annotation in center for positioning
       annotationBox.className = 'annotation-box visible draggable custom-position';
@@ -1584,6 +1592,9 @@
       annotationBox.style.height = 'auto';
       annotationTitle.innerHTML = title;
       annotationText.innerHTML = text;
+      
+      console.log('  Applied styles - className:', annotationBox.className);
+      console.log('  Display style:', window.getComputedStyle(annotationBox).display);
       
       // Trigger MathJax in iframe if available
       const iframeWin = appFrame.contentWindow;
