@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.27.7</title>
+<title>Interactive Tutorial Creator - v10.28.0</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.27.7</div>
+    <div class="version-number">v10.28.0</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2858,14 +2858,29 @@
     let maxEventEnd = 0;
     if (currentTutorial.events && currentTutorial.events.length > 0) {
       const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+      
       currentTutorial.events.forEach(event => {
         if (event.timestamp >= tutorialStartOffset) {
-          const eventTime = (event.timestamp - tutorialStartOffset) / 1000;
-          if (event.type === 'drag' && event.detail?.duration) {
-            const eventEnd = eventTime + (event.detail.duration / 1000);
-            maxEventEnd = Math.max(maxEventEnd, eventEnd);
+          // Ignore events on tutorial creator UI elements
+          // Only count events that are actual tutorial content in the app iframe
+          const selector = event.target || event.detail?.selector || '';
+          const isTutorialUIEvent = 
+            selector.includes('tutorialAnnotation') || 
+            selector.includes('#annotation') ||
+            selector.includes('.annotation');
+          
+          if (!isTutorialUIEvent) {
+            const eventTime = (event.timestamp - tutorialStartOffset) / 1000;
+            if (event.type === 'drag' && event.detail?.duration) {
+              const eventEnd = eventTime + (event.detail.duration / 1000);
+              maxEventEnd = Math.max(maxEventEnd, eventEnd);
+              console.log(`  Event: drag ending at ${eventEnd.toFixed(2)}s`);
+            } else {
+              maxEventEnd = Math.max(maxEventEnd, eventTime);
+              console.log(`  Event: ${event.type} at ${eventTime.toFixed(2)}s (selector: ${selector})`);
+            }
           } else {
-            maxEventEnd = Math.max(maxEventEnd, eventTime);
+            console.log(`  Ignoring tutorial UI event: ${event.type} on ${selector}`);
           }
         }
       });
@@ -2884,6 +2899,7 @@
     }
     
     // Use content duration instead of recording duration
+    // Use whichever is longer: last event or last annotation
     const duration = Math.max(maxEventEnd, maxAnnotationEnd);
     
     console.log('📊 Calculated duration:', duration, 'seconds');
