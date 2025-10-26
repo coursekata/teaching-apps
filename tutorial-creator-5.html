@@ -1252,7 +1252,7 @@
     
     // If annotation is already visible (from save position), just keep it visible
     // Otherwise show the most recent annotation
-    if (recordedAnnotations.length > 0 && !annotationBox.classList.contains('visible')) {
+    if (annotationBox && recordedAnnotations.length > 0 && !annotationBox.classList.contains('visible')) {
       const mostRecentAnn = recordedAnnotations[recordedAnnotations.length - 1];
       
       // Display the annotation
@@ -1260,15 +1260,19 @@
       
       // Hide it after its duration
       setTimeout(() => {
-        annotationBox.classList.remove('visible');
+        if (annotationBox) {
+          annotationBox.classList.remove('visible');
+        }
       }, mostRecentAnn.duration);
       
       console.log('▶ Recording resumed - showing annotation for', mostRecentAnn.duration, 'ms');
-    } else if (annotationBox.classList.contains('visible')) {
+    } else if (annotationBox && annotationBox.classList.contains('visible')) {
       // Annotation already visible, set timer to hide it after duration
       const mostRecentAnn = recordedAnnotations[recordedAnnotations.length - 1];
       setTimeout(() => {
-        annotationBox.classList.remove('visible');
+        if (annotationBox) {
+          annotationBox.classList.remove('visible');
+        }
       }, mostRecentAnn.duration);
       
       console.log('▶ Recording resumed - annotation already visible, will hide after', mostRecentAnn.duration, 'ms');
@@ -1550,10 +1554,16 @@
     
     // CHANGED: Initialize if needed and show in iframe
     if (!annotationBox) {
-      initializeAnnotationBox();
+      console.log('⚠ Annotation box not initialized, initializing now...');
+      const success = initializeAnnotationBox();
+      if (!success) {
+        alert('Failed to initialize annotation box. Please try again.');
+        return;
+      }
     }
     
     if (annotationBox) {
+      console.log('✓ Annotation box ready, showing for positioning...');
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       
       // Show annotation in center for positioning
@@ -1578,8 +1588,10 @@
       
       // After a brief moment, capture the natural height
       setTimeout(() => {
-        const naturalHeight = annotationBox.offsetHeight;
-        annotationBox.style.height = naturalHeight + 'px';
+        if (annotationBox) {
+          const naturalHeight = annotationBox.offsetHeight;
+          annotationBox.style.height = naturalHeight + 'px';
+        }
       }, 50);
       
       // Show positioning overlay
@@ -1589,6 +1601,9 @@
       makeDraggable();
       
       console.log('✓ Annotation created at timestamp:', timestamp, 'ms - now position it...');
+    } else {
+      alert('Failed to show annotation box. Please check console for errors.');
+      console.error('❌ Annotation box is null after initialization attempt');
     }
   });
   
