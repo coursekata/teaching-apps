@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.3</title>
+<title>Interactive Tutorial Creator - v10.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -665,7 +665,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.3</div>
+  <div class="version-number">v10.4</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2326,13 +2326,14 @@
         const event = eventQueue[0];
         const eventTimeSec = event.timestamp / 1000;
         
+        // Skip events before tutorial start (don't replay setup)
         if (eventTimeSec < tutorialStartSec) {
           eventQueue.shift();
-          replayEvent(event);
+          // Don't replay - user already set up manually
           
           if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
             fastForwardComplete = true;
-            console.log('⏩ Fast-forward complete - pausing 100ms for app to settle...');
+            console.log('⏩ Pre-tutorial events skipped - starting playback...');
             setTimeout(() => {
               playbackStartTime = Date.now();
               requestAnimationFrame(playbackLoop);
@@ -2368,12 +2369,13 @@
       });
     }
     
-    // Update timeline playhead
+    // Update timeline playhead (cap at totalDuration)
     if (timelineVisible) {
       const playhead = document.getElementById('timelinePlayhead');
       if (playhead) {
         playhead.style.display = 'block';
-        playhead.style.left = (realElapsed * timelineScale) + 'px';
+        const cappedElapsed = Math.min(realElapsed, totalDuration);
+        playhead.style.left = (cappedElapsed * timelineScale) + 'px';
       }
     }
     
@@ -2403,6 +2405,11 @@
         console.log('✓ Preview finished - final state visible');
       }
       
+      return;
+    }
+    
+    // Don't continue playbackLoop if drag animation is active - it will restart when done
+    if (activeDragAnimation) {
       return;
     }
     
