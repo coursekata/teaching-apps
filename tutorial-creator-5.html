@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.14</title>
+<title>Interactive Tutorial Creator - v10.15</title>
 <script>
   window.MathJax = {
     tex: {
@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.14</div>
+  <div class="version-number">v10.15</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2289,6 +2289,13 @@
     // Total duration is the maximum of tutorial duration and last annotation end
     const totalDuration = Math.max(tutorialDurationSec, maxAnnotationEnd);
     const elapsed = realElapsed + tutorialStartSec;
+    
+    // Debug logging (only log occasionally to avoid spam)
+    if (Math.floor(realElapsed * 10) % 10 === 0) {
+      console.log('Playback:', realElapsed.toFixed(2) + 's /', totalDuration.toFixed(2) + 's', 
+                  '(tutorialDuration:', tutorialDurationSec.toFixed(2) + 's,',
+                  'maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's)');
+    }
     
     // Process events - but skip if drag animation is active
     if (!activeDragAnimation) {
