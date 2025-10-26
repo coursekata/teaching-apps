@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.11</div>
+  <div class="version-number">v10.12</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1601,6 +1601,7 @@
       
       // Show editing buttons
       addAnnotationAtPause.style.display = 'inline-block';
+      recordAgain.style.display = 'inline-block';
       
       console.log('⏸ Preview paused at', playbackPausedAt.toFixed(2) + 's (FROZEN)');
       console.log('  playbackStartTime:', playbackStartTime);
@@ -1616,6 +1617,7 @@
       
       // Hide editing buttons
       addAnnotationAtPause.style.display = 'none';
+      recordAgain.style.display = 'none';
       
       // Rebuild event queue from pause point
       const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
@@ -2374,8 +2376,8 @@
       }
       
       if (playPausePreview.style.display !== 'none') {
-        playPausePreview.textContent = '▶ Resume Preview'; // Change to Resume
-        previewRecording.style.display = 'inline-block';
+        playPausePreview.style.display = 'none'; // Hide Pause Preview button
+        previewRecording.style.display = 'inline-block'; // Show Preview button
         recordAgain.style.display = 'inline-block';
         exportRecording.style.display = 'inline-block';
         addAnnotationAtPause.style.display = 'none';
