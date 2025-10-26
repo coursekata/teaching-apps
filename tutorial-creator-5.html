@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v7.4</title>
+<title>Interactive Tutorial Creator - v7.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -189,6 +189,7 @@
   
   .annotation-box{
     position:absolute;
+    width:400px;
     max-width:500px;
     background:rgba(255,255,255,0.98);
     border:3px solid var(--accent);
@@ -197,11 +198,16 @@
     box-shadow:0 8px 24px rgba(0,0,0,0.15);
     z-index:100;
     display:none;
-    overflow:auto;
+    overflow-y:auto;
+    overflow-x:hidden;
   }
   
   .annotation-box.custom-position{
     max-width:none;
+  }
+  
+  .annotation-box.draggable{
+    overflow:hidden;
   }
   
   .annotation-box.visible{
@@ -491,7 +497,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v7.4</div>
+  <div class="version-number">v7.5</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1163,6 +1169,8 @@
     annotationBox.style.left = '50%';
     annotationBox.style.top = '50%';
     annotationBox.style.transform = 'translate(-50%, -50%)';
+    annotationBox.style.width = '400px';  // Set explicit initial width
+    annotationBox.style.height = 'auto';   // Let height adjust to content initially
     annotationTitle.innerHTML = title;
     annotationText.innerHTML = text;
     
@@ -1174,6 +1182,12 @@
         MathJax.typeset([annotationBox]);
       }
     }
+    
+    // After a brief moment, capture the natural height
+    setTimeout(() => {
+      const naturalHeight = annotationBox.offsetHeight;
+      annotationBox.style.height = naturalHeight + 'px';  // Lock in the height
+    }, 50);
     
     // Show positioning overlay
     positionEditorOverlay.style.display = 'block';
