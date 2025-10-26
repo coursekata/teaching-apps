@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.5</title>
+<title>Interactive Tutorial Creator - v10.6</title>
 <script>
   window.MathJax = {
     tex: {
@@ -665,7 +665,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.5</div>
+  <div class="version-number">v10.6</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2322,14 +2322,18 @@
         const event = eventQueue[0];
         const eventTimeSec = event.timestamp / 1000;
         
-        // Skip events before tutorial start (don't replay setup)
+        // Before tutorial start: skip drags but replay clicks (to set up app state)
         if (eventTimeSec < tutorialStartSec) {
           eventQueue.shift();
-          // Don't replay - user already set up manually
+          
+          // Replay clicks and other events to set up app, but skip drags (user positioned things manually)
+          if (event.type !== 'drag') {
+            replayEvent(event);
+          }
           
           if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
             fastForwardComplete = true;
-            console.log('⏩ Pre-tutorial events skipped - starting playback...');
+            console.log('⏩ Pre-tutorial setup complete - starting tutorial playback...');
             setTimeout(() => {
               playbackStartTime = Date.now();
               requestAnimationFrame(playbackLoop);
@@ -2442,6 +2446,8 @@
           const dragStartTime = Date.now();
           let currentFrameIndex = 0;
           
+          console.log('🎬 Starting drag animation with', sampledFrames.length, 'frames over', targetDuration, 'ms');
+          
           function animateDrag() {
             if (!activeDragAnimation) return;
             
@@ -2457,6 +2463,7 @@
               
               if (frame.tutorialState) {
                 iframeWindow.tutorialAPI.setShift(frame.tutorialState.shift);
+                console.log('  Frame', currentFrameIndex, '- shift:', frame.tutorialState.shift);
               }
               
               currentFrameIndex++;
@@ -2467,6 +2474,7 @@
               const lastFrame = sampledFrames[sampledFrames.length - 1];
               if (lastFrame.tutorialState) {
                 iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
+                console.log('  Final frame - shift:', lastFrame.tutorialState.shift);
               }
               activeDragAnimation = null;
               console.log('✓ Drag animation complete');
