@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.20</title>
+<title>Interactive Tutorial Creator - v10.22</title>
 <script>
   window.MathJax = {
     tex: {
@@ -662,7 +662,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.20</div>
+  <div class="version-number">v10.22</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1097,8 +1097,9 @@
     cursorPositions = [];
     recordingCursor = true;
     
-    console.log('✓ Tutorial start marked -', alwaysRecordedEvents.length, 'events already captured');
-    console.log('  Time since app load:', (tutorialStartTime - appLoadTime) / 1000, 'seconds');
+    console.log('🎬 START RECORDING clicked at', tutorialStartTime);
+    console.log('  ✓ Tutorial start marked -', alwaysRecordedEvents.length, 'events already captured');
+    console.log('  ✓ Time since app load:', (tutorialStartTime - appLoadTime) / 1000, 'seconds');
     
     // Update UI
     startRecording.style.display = 'none';
@@ -1201,6 +1202,11 @@
     
     // Calculate tutorial duration (from "Start Recording" to "Stop Recording")
     const tutorialDuration = Date.now() - tutorialStartTime - totalPausedDuration;
+    
+    console.log('🛑 STOP RECORDING clicked at', Date.now());
+    console.log('  tutorialStartTime:', tutorialStartTime);
+    console.log('  totalPausedDuration:', totalPausedDuration);
+    console.log('  Calculated duration:', tutorialDuration, 'ms (', (tutorialDuration/1000).toFixed(2), 'seconds )');
     
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'none';
@@ -2379,34 +2385,23 @@
       
       isPlaying = false;
       
-      // Keep annotation visible if it's still showing at the end time
-      // Check if ANY annotation should be visible at the totalDuration time
-      let shouldHideAnnotation = true;
-      let visibleAnnotationIndex = -1;
+      // Keep annotation visible if it was showing when we stopped
+      // This ensures annotations stay visible at the end of preview
+      let shouldHideAnnotation = false;
       
-      if (currentTutorial.annotations) {
-        currentTutorial.annotations.forEach((ann, idx) => {
-          const annStart = ann.timestamp / 1000;
-          const annEnd = annStart + (ann.duration || 5000) / 1000;
-          
-          // If this annotation should be visible at the end time
-          if (totalDuration >= annStart && totalDuration <= annEnd) {
-            shouldHideAnnotation = false;
-            visibleAnnotationIndex = idx;
-            console.log('📌 Keeping annotation visible at end:', ann.title, '(', annStart.toFixed(2), 's -', annEnd.toFixed(2), 's)');
-          }
-        });
+      // If an annotation was currently visible, keep it visible
+      if (currentAnnotationIndex >= 0 && currentTutorial.annotations && currentTutorial.annotations[currentAnnotationIndex]) {
+        shouldHideAnnotation = false;
+        console.log('📌 Keeping currently visible annotation at end:', currentTutorial.annotations[currentAnnotationIndex].title);
+      } else {
+        // No annotation was showing, so nothing to keep visible
+        shouldHideAnnotation = true;
       }
       
       if (shouldHideAnnotation) {
         annotationBox.classList.remove('visible');
         currentAnnotationIndex = -1;
-        console.log('👻 Hiding annotation at end');
-      } else if (visibleAnnotationIndex !== currentAnnotationIndex) {
-        // Show the annotation that should be visible
-        currentAnnotationIndex = visibleAnnotationIndex;
-        showAnnotation(currentTutorial.annotations[visibleAnnotationIndex]);
-        console.log('📌 Showing annotation at end:', currentTutorial.annotations[visibleAnnotationIndex].title);
+        console.log('👻 No annotation to keep visible at end');
       }
       
       // Set playhead to exact end position
