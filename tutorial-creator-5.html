@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.10</title>
+<title>Interactive Tutorial Creator - v10.11</title>
 <script>
   window.MathJax = {
     tex: {
@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.10</div>
+  <div class="version-number">v10.11</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1260,6 +1260,7 @@
     
     // Stop playback immediately
     isPlaying = false;
+    isPaused = false; // Clear pause state
     
     // Preserve annotations
     const savedAnnotations = currentTutorial.annotations || [];
@@ -1682,7 +1683,12 @@
     if (isPlaying) {
       // Pause preview
       isPlaying = false;
-      playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+      isPaused = true;
+      
+      // Calculate and FREEZE the pause time
+      const currentElapsed = (Date.now() - playbackStartTime) / 1000;
+      playbackPausedAt = currentElapsed;
+      
       playPausePreview.textContent = '▶ Resume Preview';
       
       // Stop any active drag animation
@@ -1695,10 +1701,15 @@
       addAnnotationAtPause.style.display = 'inline-block';
       recordFromHere.style.display = 'inline-block';
       
-      console.log('⏸ Preview paused at', playbackPausedAt.toFixed(2) + 's');
+      console.log('⏸ Preview paused at', playbackPausedAt.toFixed(2) + 's (FROZEN)');
+      console.log('  playbackStartTime:', playbackStartTime);
+      console.log('  Date.now():', Date.now());
     } else {
       // Resume preview
       isPlaying = true;
+      isPaused = false;
+      
+      // Resume from the FROZEN pause time
       playbackStartTime = Date.now() - playbackPausedAt * 1000;
       playPausePreview.textContent = '⏸ Pause Preview';
       
@@ -1711,8 +1722,9 @@
       const absoluteTime = playbackPausedAt * 1000 + tutorialStartOffset;
       eventQueue = currentTutorial.events.filter(e => e.timestamp >= absoluteTime);
       
-      requestAnimationFrame(playbackLoop);
       console.log('▶ Preview resumed from', playbackPausedAt.toFixed(2) + 's with', eventQueue.length, 'events remaining');
+      
+      requestAnimationFrame(playbackLoop);
     }
   });
   
