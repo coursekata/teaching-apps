@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.9.1</title>
+<title>Interactive Tutorial Creator - v10.10</title>
 <script>
   window.MathJax = {
     tex: {
@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.9.1</div>
+  <div class="version-number">v10.10</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1254,6 +1254,10 @@
   recordFromHere.addEventListener('click', () => {
     if (!currentTutorial) return;
     
+    console.log('🎬 Record From Here clicked');
+    console.log('  Paused at:', playbackPausedAt, 'seconds');
+    console.log('  Tutorial start offset:', currentTutorial.tutorialStartOffset, 'ms');
+    
     // Stop playback immediately
     isPlaying = false;
     
@@ -1265,7 +1269,10 @@
     const cutoffTime = playbackPausedAt * 1000 + tutorialStartOffset;
     const truncatedEvents = currentTutorial.events.filter(e => e.timestamp <= cutoffTime);
     
-    console.log('⏺ Recording from pause point - keeping', truncatedEvents.length, 'events and', savedAnnotations.length, 'annotations');
+    console.log('⏺ Recording from pause point');
+    console.log('  Cutoff time:', cutoffTime, 'ms');
+    console.log('  Keeping', truncatedEvents.length, 'events out of', currentTutorial.events.length);
+    console.log('  Keeping', savedAnnotations.length, 'annotations');
     
     // Reload app
     const url = appFrame.src;
@@ -1678,11 +1685,17 @@
       playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
       playPausePreview.textContent = '▶ Resume Preview';
       
+      // Stop any active drag animation
+      if (activeDragAnimation) {
+        activeDragAnimation = null;
+        console.log('⏹ Drag animation stopped');
+      }
+      
       // Show editing buttons
       addAnnotationAtPause.style.display = 'inline-block';
       recordFromHere.style.display = 'inline-block';
       
-      console.log('⏸ Preview paused');
+      console.log('⏸ Preview paused at', playbackPausedAt.toFixed(2) + 's');
     } else {
       // Resume preview
       isPlaying = true;
@@ -1693,8 +1706,13 @@
       addAnnotationAtPause.style.display = 'none';
       recordFromHere.style.display = 'none';
       
+      // Rebuild event queue from pause point
+      const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
+      const absoluteTime = playbackPausedAt * 1000 + tutorialStartOffset;
+      eventQueue = currentTutorial.events.filter(e => e.timestamp >= absoluteTime);
+      
       requestAnimationFrame(playbackLoop);
-      console.log('▶ Preview resumed');
+      console.log('▶ Preview resumed from', playbackPausedAt.toFixed(2) + 's with', eventQueue.length, 'events remaining');
     }
   });
   
