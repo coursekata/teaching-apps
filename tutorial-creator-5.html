@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.4</title>
+<title>Interactive Tutorial Creator - v10.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -665,7 +665,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.4</div>
+  <div class="version-number">v10.5</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2310,10 +2310,6 @@
     
     let realElapsed = (Date.now() - playbackStartTime) / 1000;
     
-    if (activeDragAnimation && dragAnimationPauseTime > 0) {
-      realElapsed = dragAnimationPauseTime;
-    }
-    
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
     const totalDuration = tutorialDurationSec;
@@ -2408,11 +2404,6 @@
       return;
     }
     
-    // Don't continue playbackLoop if drag animation is active - it will restart when done
-    if (activeDragAnimation) {
-      return;
-    }
-    
     requestAnimationFrame(playbackLoop);
   }
   
@@ -2448,27 +2439,43 @@
           // Mark that a drag animation is active
           activeDragAnimation = true;
           
-          dragAnimationPauseTime = (Date.now() - playbackStartTime) / 1000;
-          dragAnimationDuration = targetDuration / 1000;
+          const dragStartTime = Date.now();
+          let currentFrameIndex = 0;
           
-          sampledFrames.forEach((frame, index) => {
-            const progress = frame.time / originalDuration;
-            const delay = progress * targetDuration;
+          function animateDrag() {
+            if (!activeDragAnimation) return;
             
-            setTimeout(() => {
+            const dragElapsed = Date.now() - dragStartTime;
+            const progress = Math.min(dragElapsed / targetDuration, 1);
+            
+            // Find the frame to display based on progress
+            while (currentFrameIndex < sampledFrames.length - 1) {
+              const frame = sampledFrames[currentFrameIndex];
+              const frameProgress = frame.time / originalDuration;
+              
+              if (frameProgress > progress) break;
+              
               if (frame.tutorialState) {
                 iframeWindow.tutorialAPI.setShift(frame.tutorialState.shift);
               }
               
-              if (index === sampledFrames.length - 1) {
-                playbackStartTime = Date.now() - ((dragAnimationPauseTime + dragAnimationDuration) * 1000);
-                dragAnimationPauseTime = 0;
-                activeDragAnimation = null;
-                requestAnimationFrame(playbackLoop);
+              currentFrameIndex++;
+            }
+            
+            if (progress >= 1 || currentFrameIndex >= sampledFrames.length) {
+              // Animation complete - set final state
+              const lastFrame = sampledFrames[sampledFrames.length - 1];
+              if (lastFrame.tutorialState) {
+                iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
               }
-            }, delay);
-          });
+              activeDragAnimation = null;
+              console.log('✓ Drag animation complete');
+            } else {
+              requestAnimationFrame(animateDrag);
+            }
+          }
           
+          requestAnimationFrame(animateDrag);
           return;
         }
       }
