@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.18</title>
+<title>Interactive Tutorial Creator - v10.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -190,7 +190,7 @@
   
   .annotation-box{
     position:absolute;
-    width:400px;
+    width:250px;
     max-width:500px;
     background:rgba(255,255,255,0.98);
     border:3px solid var(--accent);
@@ -668,7 +668,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.18</div>
+  <div class="version-number">v10.19</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -1440,7 +1440,7 @@
     annotationBox.style.left = '50%';
     annotationBox.style.top = '50%';
     annotationBox.style.transform = 'translate(-50%, -50%)';
-    annotationBox.style.width = '400px';  // Set explicit initial width
+    annotationBox.style.width = '250px';  // Reduced from 400px to 250px
     annotationBox.style.height = 'auto';   // Let height adjust to content initially
     annotationTitle.innerHTML = title;
     annotationText.innerHTML = text;
@@ -1678,8 +1678,8 @@
     const dx = e.clientX - resizeStartX;
     const dy = e.clientY - resizeStartY;
     
-    const newWidth = Math.max(200, resizeStartWidth + dx);
-    const newHeight = Math.max(100, resizeStartHeight + dy);
+    const newWidth = Math.max(100, resizeStartWidth + dx);  // Reduced from 200 to 100
+    const newHeight = Math.max(50, resizeStartHeight + dy); // Reduced from 100 to 50
     
     annotationBox.style.width = newWidth + 'px';
     annotationBox.style.height = newHeight + 'px';
