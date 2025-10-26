@@ -671,7 +671,6 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.27.2</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2442,53 +2441,19 @@
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
     
-    // Calculate the actual end time considering both events and annotations
-    let maxEventEnd = 0;
-    if (currentTutorial.events && currentTutorial.events.length > 0) {
-      const tutorialStartOffset = currentTutorial.tutorialStartOffset || 0;
-      currentTutorial.events.forEach(event => {
-        if (event.timestamp >= tutorialStartOffset) {
-          const eventTime = (event.timestamp - tutorialStartOffset) / 1000;
-          if (event.type === 'drag' && event.detail?.duration) {
-            const eventEnd = eventTime + (event.detail.duration / 1000);
-            maxEventEnd = Math.max(maxEventEnd, eventEnd);
-          } else {
-            maxEventEnd = Math.max(maxEventEnd, eventTime);
-          }
-        }
-      });
-    }
-    
-    let maxAnnotationEnd = 0;
-    if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
-      currentTutorial.annotations.forEach(ann => {
-        const annEnd = (ann.timestamp + (ann.duration || 5000)) / 1000;
-        if (annEnd > maxAnnotationEnd) {
-          maxAnnotationEnd = annEnd;
-        }
-      });
-    }
-    
-    // Use the latest of: last event end or last annotation end
-    // This trims silent periods at the end while allowing annotations to extend beyond events
-    const totalDuration = Math.max(maxEventEnd, maxAnnotationEnd);
+    // Use the duration calculated by renderTimeline (which includes annotations)
+    const totalDuration = tutorialDurationSec;
     const elapsed = realElapsed + tutorialStartSec;
     
     // Log once at start
     if (realElapsed < 0.1) {
       console.log('🎬 Playback starting:');
-      console.log('  tutorialDurationSec:', tutorialDurationSec.toFixed(2) + 's');
-      console.log('  maxEventEnd:', maxEventEnd.toFixed(2) + 's');
-      console.log('  maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's');
-      console.log('  → totalDuration:', totalDuration.toFixed(2) + 's');
+      console.log('  totalDuration:', totalDuration.toFixed(2) + 's');
     }
     
     // Debug logging (only log occasionally to avoid spam)
     if (Math.floor(realElapsed * 10) % 10 === 0) {
-      console.log('Playback:', realElapsed.toFixed(2) + 's /', totalDuration.toFixed(2) + 's', 
-                  '(tutorialDuration:', tutorialDurationSec.toFixed(2) + 's,',
-                  'maxEventEnd:', maxEventEnd.toFixed(2) + 's,',
-                  'maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's)');
+      console.log('Playback:', realElapsed.toFixed(2) + 's /', totalDuration.toFixed(2) + 's');
     }
     
     // Process events - but skip if drag animation is active
