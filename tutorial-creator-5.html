@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.27.5</title>
+<title>Interactive Tutorial Creator - v10.27.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.27.5</div>
+    <div class="version-number">v10.27.7</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1739,6 +1739,17 @@
           playbackPausedAt = 0;
           playbackStartTime = Date.now();
           eventQueue = [...currentTutorial.events];
+          
+          console.log('🎬 About to start playback loop');
+          console.log('  currentTutorial.duration:', currentTutorial.duration, 'ms');
+          console.log('  That is:', (currentTutorial.duration / 1000).toFixed(2), 'seconds');
+          if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
+            currentTutorial.annotations.forEach((ann, idx) => {
+              const annEnd = (ann.timestamp + ann.duration) / 1000;
+              console.log(`  Annotation ${idx} ends at:`, annEnd.toFixed(2), 's');
+            });
+          }
+          
           requestAnimationFrame(playbackLoop);
           
           resolve();
@@ -2875,14 +2886,18 @@
     // Use content duration instead of recording duration
     const duration = Math.max(maxEventEnd, maxAnnotationEnd);
     
+    console.log('📊 Calculated duration:', duration, 'seconds');
+    console.log('📊 Before update - currentTutorial.duration:', currentTutorial.duration, 'ms');
+    
     // Update tutorial duration to match actual content length
     // This ensures playback stops at the right time
     currentTutorial.duration = duration * 1000; // Convert back to milliseconds
     
+    console.log('📊 After update - currentTutorial.duration:', currentTutorial.duration, 'ms');
     console.log('📊 Timeline render: maxEventEnd:', maxEventEnd.toFixed(2) + 's,',
                 'maxAnnotationEnd:', maxAnnotationEnd.toFixed(2) + 's,',
                 '→ duration:', duration.toFixed(2) + 's',
-                '(', duration * 1000, 'ms )');
+                '(', (duration * 1000).toFixed(0), 'ms )');
     
     // Auto-scale based on duration to fit nicely
     // Target: reasonable width but allow scrolling for very long tutorials
