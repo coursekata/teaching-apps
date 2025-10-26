@@ -765,9 +765,9 @@
   <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:99;pointer-events:none;">
     <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
       <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
-      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag the annotation box to where you want it, then click Save Position</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Adjust the size and position of the annotation, click Save when you are done.</div>
       <div style="display:flex;gap:8px;">
-        <button id="savePosition" class="success">💾 Save Position</button>
+        <button id="savePosition" class="success">Save</button>
         <button id="cancelPosition">Cancel</button>
       </div>
     </div>
@@ -1652,7 +1652,6 @@
     if (tutorialRecording) {
       // Recording mode - save to recordedAnnotations
       recordedAnnotations.push(pendingAnnotation);
-      alert(`✓ Annotation "${pendingAnnotation.title}" saved! Click Resume to continue recording.`);
     } else if (currentTutorial) {
       // Preview/edit mode - save to currentTutorial
       if (!currentTutorial.annotations) {
@@ -1660,7 +1659,6 @@
       }
       currentTutorial.annotations.push(pendingAnnotation);
       renderTimeline(); // Update timeline
-      alert(`✓ Annotation "${pendingAnnotation.title}" added!`);
     }
     
     console.log('✓ Annotation saved:', pendingAnnotation);
@@ -3275,8 +3273,6 @@
       
       savePosition.onclick = originalSaveHandler;
       editingAnnotationIndex = -1;
-      
-      alert('✓ Position updated!');
     };
   });
   
