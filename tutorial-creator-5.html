@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.2</title>
+<title>Interactive Tutorial Creator - v10.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -665,7 +665,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.2</div>
+  <div class="version-number">v10.3</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2319,34 +2319,36 @@
     const totalDuration = tutorialDurationSec;
     const elapsed = realElapsed + tutorialStartSec;
     
-    // Process events
-    let processedEventThisFrame = false;
-    while (eventQueue.length > 0) {
-      const event = eventQueue[0];
-      const eventTimeSec = event.timestamp / 1000;
-      
-      if (eventTimeSec < tutorialStartSec) {
-        eventQueue.shift();
-        replayEvent(event);
+    // Process events - but skip if drag animation is active
+    if (!activeDragAnimation) {
+      let processedEventThisFrame = false;
+      while (eventQueue.length > 0) {
+        const event = eventQueue[0];
+        const eventTimeSec = event.timestamp / 1000;
         
-        if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
-          fastForwardComplete = true;
-          console.log('⏩ Fast-forward complete - pausing 100ms for app to settle...');
-          setTimeout(() => {
-            playbackStartTime = Date.now();
-            requestAnimationFrame(playbackLoop);
-          }, 100);
-          return;
+        if (eventTimeSec < tutorialStartSec) {
+          eventQueue.shift();
+          replayEvent(event);
+          
+          if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
+            fastForwardComplete = true;
+            console.log('⏩ Fast-forward complete - pausing 100ms for app to settle...');
+            setTimeout(() => {
+              playbackStartTime = Date.now();
+              requestAnimationFrame(playbackLoop);
+            }, 100);
+            return;
+          }
+          continue;
         }
-        continue;
-      }
-      
-      if (eventTimeSec <= elapsed) {
-        eventQueue.shift();
-        processedEventThisFrame = true;
-        replayEvent(event);
-      } else {
-        break;
+        
+        if (eventTimeSec <= elapsed) {
+          eventQueue.shift();
+          processedEventThisFrame = true;
+          replayEvent(event);
+        } else {
+          break;
+        }
       }
     }
     
@@ -2435,6 +2437,9 @@
           const originalDuration = detail.duration || (lastFrame.time - firstFrame.time);
           const sampledFrames = frames.filter((f, i) => i % 3 === 0 || i === frames.length - 1);
           const targetDuration = originalDuration / playbackSpeed;
+          
+          // Mark that a drag animation is active
+          activeDragAnimation = true;
           
           dragAnimationPauseTime = (Date.now() - playbackStartTime) / 1000;
           dragAnimationDuration = targetDuration / 1000;
