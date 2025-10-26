@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.6</title>
+<title>Interactive Tutorial Creator - v10.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -665,7 +665,7 @@
 </style>
 </head>
 <body>
-  <div class="version-number">v10.6</div>
+  <div class="version-number">v10.7</div>
   <div class="tutorial-header">
     <div class="tutorial-controls">
       <div id="recordingControls" class="control-group">
@@ -2326,9 +2326,23 @@
         if (eventTimeSec < tutorialStartSec) {
           eventQueue.shift();
           
-          // Replay clicks and other events to set up app, but skip drags (user positioned things manually)
+          // Replay clicks and other events to set up app
           if (event.type !== 'drag') {
             replayEvent(event);
+          } else if (event.type === 'drag') {
+            // For drags: skip animation but apply final position
+            const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+            const iframeWindow = appFrame.contentWindow;
+            const detail = event.detail || {};
+            const frames = detail.animationFrames || [];
+            
+            if (frames.length > 0 && iframeWindow.tutorialAPI) {
+              const lastFrame = frames[frames.length - 1];
+              if (lastFrame.tutorialState) {
+                iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
+                console.log('  Applied final drag position: shift =', lastFrame.tutorialState.shift);
+              }
+            }
           }
           
           if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
@@ -2369,8 +2383,8 @@
       });
     }
     
-    // Update timeline playhead (cap at totalDuration)
-    if (timelineVisible) {
+    // Update timeline playhead (cap at totalDuration and don't update if completed)
+    if (timelineVisible && isPlaying) {
       const playhead = document.getElementById('timelinePlayhead');
       if (playhead) {
         playhead.style.display = 'block';
@@ -2391,7 +2405,13 @@
       annotationBox.classList.remove('visible');
       currentAnnotationIndex = -1;
       
-      // Keep timeline playhead visible at end position (don't hide it)
+      // Set playhead to exact end position
+      if (timelineVisible) {
+        const playhead = document.getElementById('timelinePlayhead');
+        if (playhead) {
+          playhead.style.left = (totalDuration * timelineScale) + 'px';
+        }
+      }
       
       if (playPausePreview.style.display !== 'none') {
         playPausePreview.textContent = '▶ Resume Preview'; // Change to Resume
