@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.5</title>
+<title>Interactive Tutorial Creator - v10.28.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -30,7 +30,6 @@
     font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     color:#111;
     background:#f5f5f5;
-    padding-top:70px; /* Space for fixed header */
   }
   
   .tutorial-header{
@@ -188,6 +187,7 @@
     width:100%;
     height:600px;
     overflow:hidden;
+    margin-top:70px; /* Space for fixed header */
   }
   
   iframe{
@@ -298,11 +298,14 @@
     padding:4px 20px 6px 20px;
     display:none;
     position:relative;
-    /* Timeline scrolls with the page content, not fixed to header */
+    /* Timeline appears between header and app-container */
+    /* When visible, it sits right below the fixed header */
   }
   
   .timeline-container.visible{
     display:block;
+    margin-top:70px; /* Space for fixed header */
+    margin-bottom:-70px; /* Cancel out app-container's margin */
   }
   
   .timeline-ruler{
@@ -702,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.5</div>
+    <div class="version-number">v10.28.7</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1589,19 +1592,41 @@
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       console.log('  iframeDoc:', iframeDoc);
       console.log('  annotationBox parent:', annotationBox.parentElement);
+      console.log('  annotationBox current display:', window.getComputedStyle ? 'N/A (parent window)' : 'N/A');
+      
+      // Check if annotation box is actually in the DOM
+      if (!annotationBox.parentElement) {
+        console.error('  ❌ Annotation box has no parent! Re-adding to iframe body...');
+        iframeDoc.body.appendChild(annotationBox);
+      }
       
       // Show annotation in center for positioning
       annotationBox.className = 'annotation-box visible draggable custom-position';
+      annotationBox.style.display = 'block'; // Force display
+      annotationBox.style.position = 'absolute'; // Ensure positioning
+      annotationBox.style.zIndex = '100000'; // Ensure it's on top
       annotationBox.style.left = '50px';
       annotationBox.style.top = '100px';
       annotationBox.style.transform = 'none';
       annotationBox.style.width = '250px';
       annotationBox.style.height = 'auto';
+      
+      console.log('  Setting innerHTML for title and text...');
       annotationTitle.innerHTML = title;
       annotationText.innerHTML = text;
       
       console.log('  Applied styles - className:', annotationBox.className);
-      console.log('  Display style:', window.getComputedStyle(annotationBox).display);
+      console.log('  Position:', annotationBox.style.left, annotationBox.style.top);
+      
+      // Check computed styles in iframe context
+      if (iframeDoc.defaultView) {
+        const computedDisplay = iframeDoc.defaultView.getComputedStyle(annotationBox).display;
+        console.log('  Computed display in iframe:', computedDisplay);
+        if (computedDisplay === 'none') {
+          console.error('  ❌ Display is "none"! Forcing to block...');
+          annotationBox.style.display = 'block';
+        }
+      }
       
       // Trigger MathJax in iframe if available
       const iframeWin = appFrame.contentWindow;
@@ -1659,12 +1684,15 @@
     if (tutorialRecording) {
       // Recording mode - save to recordedAnnotations
       recordedAnnotations.push(pendingAnnotation);
+      console.log('✓ Annotation added to recordedAnnotations. Total annotations:', recordedAnnotations.length);
+      console.log('  Current recordedAnnotations:', recordedAnnotations.map(a => ({title: a.title, timestamp: a.timestamp})));
     } else if (currentTutorial) {
       // Preview/edit mode - save to currentTutorial
       if (!currentTutorial.annotations) {
         currentTutorial.annotations = [];
       }
       currentTutorial.annotations.push(pendingAnnotation);
+      console.log('✓ Annotation added to currentTutorial.annotations. Total:', currentTutorial.annotations.length);
       renderTimeline(); // Update timeline
     }
     
