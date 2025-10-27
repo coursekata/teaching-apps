@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.1</title>
+<title>Interactive Tutorial Creator - v10.28.2</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.1</div>
+    <div class="version-number">v10.28.2</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1718,8 +1718,8 @@
           // ADDED: Initialize annotation box in iframe
           initializeAnnotationBox();
           
-          // Wait for app to initialize
-          await new Promise(r => setTimeout(r, 500));
+          // Wait for app to initialize (increased for complex D3 apps)
+          await new Promise(r => setTimeout(r, 1000));
           
           console.log('✓ Starting preview - will replay ALL', currentTutorial.events.length, 'events from app load');
           console.log('  Tutorial starts at:', currentTutorial.tutorialStartOffset, 'ms');
@@ -2491,6 +2491,16 @@
           // Replay clicks and other events to set up app
           if (event.type !== 'drag') {
             replayEvent(event);
+            
+            // Add a small delay after each pre-tutorial click to allow app to process
+            // This is especially important for apps with complex state like D3 visualizations
+            if (event.type === 'click') {
+              console.log('  Pre-tutorial click replayed, pausing briefly for app to process...');
+              setTimeout(() => {
+                requestAnimationFrame(playbackLoop);
+              }, 50); // 50ms delay between setup clicks
+              return;
+            }
           } else if (event.type === 'drag') {
             // For drags: skip animation but apply final position
             const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
@@ -2621,7 +2631,10 @@
       if (event.type === 'click') {
         const element = findElement(iframeDoc, event.target);
         if (element) {
+          console.log('  🖱️ Replaying click on:', event.target, '→', element.tagName, element.id || element.className);
           element.click();
+        } else {
+          console.warn('  ⚠️ Could not find element for click:', event.target);
         }
       } else if (event.type === 'drag') {
         const element = findElement(iframeDoc, event.target);
