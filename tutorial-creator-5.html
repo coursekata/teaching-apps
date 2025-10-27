@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.2</title>
+<title>Interactive Tutorial Creator - v10.28.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -698,7 +698,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.2</div>
+    <div class="version-number">v10.28.3</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2636,6 +2636,20 @@
         } else {
           console.warn('  ⚠️ Could not find element for click:', event.target);
         }
+      } else if (event.type === 'input' || event.type === 'change') {
+        const element = findElement(iframeDoc, event.target);
+        if (element && event.detail && event.detail.value !== undefined) {
+          console.log('  ⌨️ Replaying', event.type, 'on:', event.target, '→ value:', event.detail.value);
+          element.value = event.detail.value;
+          
+          // Dispatch both input and change events to trigger any listeners
+          const inputEvent = new Event('input', { bubbles: true });
+          const changeEvent = new Event('change', { bubbles: true });
+          element.dispatchEvent(inputEvent);
+          element.dispatchEvent(changeEvent);
+        } else if (!element) {
+          console.warn('  ⚠️ Could not find element for', event.type, ':', event.target);
+        }
       } else if (event.type === 'drag') {
         const element = findElement(iframeDoc, event.target);
         if (!element) return;
@@ -2708,36 +2722,55 @@
   }
   
   function findElement(doc, selector) {
-    if (!selector) return null;
+    if (!selector) {
+      console.warn('  ⚠️ findElement called with null/empty selector');
+      return null;
+    }
     
     if (typeof selector === 'object') {
       if (selector.type === 'button-text') {
         const buttons = doc.querySelectorAll(selector.tagName || 'button');
         for (let btn of buttons) {
           if (btn.textContent.trim() === selector.text) {
+            console.log('  ✓ Found button by text:', selector.text);
             return btn;
           }
         }
+        console.warn('  ⚠️ Could not find button with text:', selector.text);
       }
       return null;
     }
     
     if (selector.startsWith('#')) {
-      return doc.getElementById(selector.substring(1));
+      const element = doc.getElementById(selector.substring(1));
+      if (element) {
+        console.log('  ✓ Found element by ID:', selector);
+      } else {
+        console.warn('  ⚠️ Could not find element by ID:', selector);
+      }
+      return element;
     }
     
     try {
       const element = doc.querySelector(selector);
-      if (element) return element;
+      if (element) {
+        console.log('  ✓ Found element by selector:', selector);
+        return element;
+      }
       
       const svg = doc.querySelector('svg');
       if (svg) {
-        return svg.querySelector(selector);
+        const svgElement = svg.querySelector(selector);
+        if (svgElement) {
+          console.log('  ✓ Found element in SVG:', selector);
+          return svgElement;
+        }
       }
       
+      console.warn('  ⚠️ Could not find element:', selector);
       return null;
     } catch (e) {
-      console.warn('Invalid selector:', selector, e);
+      console.warn('  ⚠️ Invalid selector:', selector, e);
       return null;
     }
   }
