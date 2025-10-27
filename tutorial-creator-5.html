@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.4</title>
+<title>Interactive Tutorial Creator - v10.28.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -702,7 +702,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.4</div>
+    <div class="version-number">v10.28.5</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1381,6 +1381,9 @@
     // Stop any active playback
     isPlaying = false;
     
+    // Remove playback-mode to re-enable interaction with the app
+    appFrame.classList.remove('playback-mode');
+    
     // Hide any visible annotations
     if (annotationBox) {
       annotationBox.classList.remove('visible');
@@ -1772,8 +1775,8 @@
       
       playPausePreview.textContent = '▶ Resume Preview';
       
-      // ADDED: Remove playback-mode so iframe becomes interactive
-      appFrame.classList.remove('playback-mode');
+      // Keep playback-mode active during pause - no interaction allowed
+      // (User can still add annotations, but can't interact with the app)
       
       // Stop any active drag animation
       if (activeDragAnimation) {
@@ -1797,8 +1800,7 @@
       playbackStartTime = Date.now() - playbackPausedAt * 1000;
       playPausePreview.textContent = '⏸ Pause Preview';
       
-      // ADDED: Re-add playback-mode to disable interaction
-      appFrame.classList.add('playback-mode');
+      // playback-mode is still active from before pause, keeping iframe locked
       
       // Hide editing buttons
       addAnnotationAtPause.style.display = 'none';
@@ -2617,8 +2619,8 @@
         exportRecording.style.display = 'inline-block';
         addAnnotationAtPause.style.display = 'none';
         tutorialRecording = false;
-        appFrame.classList.remove('playback-mode');
-        console.log('✓ Preview finished - final state visible');
+        // Keep playback-mode active - iframe stays locked until Record Again is clicked
+        console.log('✓ Preview finished - final state visible (iframe locked)');
       }
       
       return;
