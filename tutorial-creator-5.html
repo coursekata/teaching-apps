@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.7</title>
+<title>Interactive Tutorial Creator - v10.28.8</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.7</div>
+    <div class="version-number">v10.28.8</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2511,7 +2511,7 @@
       console.log('Playback:', realElapsed.toFixed(2) + 's /', totalDuration.toFixed(2) + 's');
     }
     
-    // Process events - but skip if drag animation is active
+    // Process events - handle drags specially
     if (!activeDragAnimation) {
       let processedEventThisFrame = false;
       while (eventQueue.length > 0) {
@@ -2566,11 +2566,24 @@
         if (eventTimeSec <= elapsed) {
           eventQueue.shift();
           processedEventThisFrame = true;
+          
+          // If this is a drag event, replay it and DON'T continue the loop
+          // The drag animation will call requestAnimationFrame(playbackLoop) when done
+          if (event.type === 'drag') {
+            console.log('🎬 Starting drag event replay at', eventTimeSec.toFixed(2) + 's');
+            replayEvent(event);
+            // Return here - drag animation will continue playback when complete
+            return;
+          }
+          
           replayEvent(event);
         } else {
           break;
         }
       }
+    } else {
+      // Drag animation is in progress - just wait
+      console.log('  ⏸ Waiting for drag animation to complete...');
     }
     
     // Handle annotations
@@ -2740,7 +2753,10 @@
                 console.log('  Final frame - shift:', lastFrame.tutorialState.shift);
               }
               activeDragAnimation = null;
-              console.log('✓ Drag animation complete');
+              console.log('✓ Drag animation complete - resuming playback');
+              
+              // Resume playback loop
+              requestAnimationFrame(playbackLoop);
             } else {
               requestAnimationFrame(animateDrag);
             }
