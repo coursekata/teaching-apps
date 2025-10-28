@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.32</title>
+<title>Interactive Tutorial Creator - v10.28.33</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.32</div>
+    <div class="version-number">v10.28.33</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1409,6 +1409,18 @@
     
     currentTutorial = tutorial;
     
+    // Update UI
+    pauseRecording.style.display = 'none';
+    resumeRecording.style.display = 'none';
+    addAnnotation.style.display = 'none';
+    stopRecording.style.display = 'none';
+    startRecording.style.display = 'none';
+    previewRecording.style.display = 'inline-block';
+    recordAgain.style.display = 'inline-block';
+    exportRecording.style.display = 'inline-block';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    
     // Show timeline
     timelineContainer.classList.add('visible');
     timelineVisible = true;
@@ -1416,8 +1428,6 @@
     
     console.log('✓ Recording stopped.');
     console.log('  Total events captured:', alwaysRecordedEvents.length);
-    console.log('  Events before tutorial start:', alwaysRecordedEvents.filter(e => e.timestamp < tutorialStartOffset).length);
-    console.log('  Tutorial start offset:', tutorialStartOffset, 'ms');
     console.log('  Tutorial duration:', tutorialDuration, 'ms');
     console.log('  Annotations:', recordedAnnotations.length);
   });
