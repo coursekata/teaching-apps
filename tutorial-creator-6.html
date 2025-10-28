@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.11</title>
+<title>Interactive Tutorial Creator - v8.12</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.11</div>
+    <div class="version-number">v8.12</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -940,7 +940,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.11',
+      version: '8.12',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1169,12 +1169,19 @@
       }
     }
     
+    // Hide overlay and annotation box
     positionEditorOverlay.style.display = 'none';
     if (annotationBox) {
       annotationBox.classList.remove('visible', 'draggable');
+      annotationBox.style.display = 'none'; // Explicitly hide it
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
     }
+    
+    // Make sure the iframe is not in playback mode
+    appFrame.classList.remove('playback-mode');
+    
+    console.log('✓ Annotation positioning cancelled');
   });
   
   function makeDraggable() {
@@ -1519,12 +1526,22 @@
     // Clear current tutorial
     currentTutorial = null;
     
+    // Hide any positioning overlays
+    positionEditorOverlay.style.display = 'none';
+    if (annotationBox) {
+      annotationBox.classList.remove('visible', 'draggable');
+      annotationBox.style.display = 'none';
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+    }
+    
     // Reset UI
     previewRecording.style.display = 'none';
     exportRecording.style.display = 'none';
     recordAgain.style.display = 'none';
     playPausePreview.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
+    appFrame.classList.remove('playback-mode');
     
     // Clear timeline
     renderTimeline();
@@ -1951,7 +1968,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.11 initialized');
+  console.log('Tutorial Creator v8.12 initialized');
 })();
 </script>
 </body>
