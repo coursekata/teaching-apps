@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.33</title>
+<title>Interactive Tutorial Creator - v10.28.34</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.33</div>
+    <div class="version-number">v10.28.34</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2063,8 +2063,10 @@
   }
   
   function getTimestamp() {
-    // Return time since app load, excluding any paused durations
-    return Date.now() - appLoadTime - totalPausedDuration;
+    // Return time since "Start Recording" was clicked, excluding any paused durations
+    // If recording hasn't started yet, return 0
+    if (tutorialStartTime === 0) return 0;
+    return Date.now() - tutorialStartTime - totalPausedDuration;
   }
   
   function handleClick(e) {
