@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.21</title>
+<title>Interactive Tutorial Creator - v10.28.22</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.21</div>
+    <div class="version-number">v10.28.22</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1223,7 +1223,7 @@
     const initialState = {};
     console.log('  🔍 Attempting to capture app state...');
     console.log('  iframeWindow:', !!iframeWindow);
-    console.log('  tutorialAPI:', !!iframeWindow?.tutorialAPI);
+    console.log('  tutorialAPI:', !!(iframeWindow && iframeWindow.tutorialAPI));
     
     if (iframeWindow && iframeWindow.tutorialAPI) {
       if (iframeWindow.tutorialAPI.getShift) {
@@ -2634,7 +2634,7 @@
               console.log('  🔍 Attempting to restore initial state...');
               console.log('  currentTutorial.initialState:', currentTutorial.initialState);
               console.log('  iframeWindow:', !!iframeWindow);
-              console.log('  tutorialAPI:', !!iframeWindow?.tutorialAPI);
+              console.log('  tutorialAPI:', !!(iframeWindow && iframeWindow.tutorialAPI));
               
               if (currentTutorial.initialState && iframeWindow && iframeWindow.tutorialAPI) {
                 if (currentTutorial.initialState.shift !== undefined) {
@@ -2657,7 +2657,7 @@
                 console.warn('  ⚠️ Cannot restore state:', {
                   hasInitialState: !!currentTutorial.initialState,
                   hasIframeWindow: !!iframeWindow,
-                  hasTutorialAPI: !!iframeWindow?.tutorialAPI
+                  hasTutorialAPI: !!(iframeWindow && iframeWindow.tutorialAPI)
                 });
               }
               
