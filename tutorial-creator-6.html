@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.13</title>
+<title>Interactive Tutorial Creator - v8.14</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.13</div>
+    <div class="version-number">v8.14</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -940,7 +940,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.13',
+      version: '8.14',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -974,6 +974,14 @@
     };
     
     api.onAction(eventListener);
+    
+    // Capture initial snapshot immediately at time 0
+    currentTutorial.snapshots.push({
+      timestamp: 0,
+      state: api.getState(),
+      event: { action: 'recordingStart', params: {} }
+    });
+    console.log('📸 Initial snapshot captured at 0.00s');
     
     // Update UI
     startRecording.style.display = 'none';
@@ -1262,8 +1270,8 @@
       } else if (isResizing) {
         const newWidth = startWidth + (e.clientX - startX);
         const newHeight = startHeight + (e.clientY - startY);
-        annotationBox.style.width = Math.max(200, newWidth) + 'px';
-        annotationBox.style.height = Math.max(80, newHeight) + 'px';
+        annotationBox.style.width = Math.max(100, newWidth) + 'px'; // Reduced from 200
+        annotationBox.style.height = Math.max(50, newHeight) + 'px'; // Reduced from 80
       }
     };
     
@@ -1309,9 +1317,16 @@
     
     api.setState(currentTutorial.initialState);
     
+    // Hide annotation box at start of playback
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+      annotationBox.style.display = 'none';
+    }
+    
     isPlaying = true;
     playbackStartTime = Date.now();
     playbackPausedAt = 0;
+    currentAnnotationIndex = -1; // Reset annotation tracking
     
     playPausePreview.textContent = '⏸ Pause Preview';
     
@@ -1969,7 +1984,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.13 initialized');
+  console.log('Tutorial Creator v8.14 initialized');
 })();
 </script>
 </body>
