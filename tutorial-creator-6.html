@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Interactive Tutorial Creator - v8.0</title>
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$']],
+      displayMath: [['$$', '$$']]
+    },
+    startup: {
+      ready: () => {
+        MathJax.startup.defaultReady();
+      }
+    }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+  :root{
+    --accent:#2563eb;
+    --record:#ef4444;
+    --success:#10b981;
+    --warning:#f59e0b;
+  }
+  body{
+    margin:0;
+    font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:#111;
+    background:#f5f5f5;
+  }
+  
+  .tutorial-header{
+    position: sticky;
+    top: 0;
+    background:#fff;
+    border-bottom:2px solid #ddd;
+    padding:12px 20px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.05);
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .version-number{
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .tutorial-controls{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  
+  button{
+    padding:8px 14px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    background:#fff;
+    cursor:pointer;
+    font-size:13px;
+  }
+  
+  button:hover:not(:disabled):not(.primary):not(.record):not(.success):not(.warning){
+    background:#f9f9f9;
+  }
+  
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  
+  button.record{
+    background:var(--record);
+    color:#fff;
+    border-color:var(--record);
+  }
+  
+  button.success{
+    background:var(--success);
+    color:#fff;
+    border-color:var(--success);
+  }
+  
+  button.warning{
+    background:var(--warning);
+    color:#fff;
+    border-color:var(--warning);
+  }
+  
+  button.record.recording{
+    animation:pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse{
+    0%,100%{opacity:1}
+    50%{opacity:0.6}
+  }
+  
+  .recording-indicator{
+    background:var(--record);
+    color:#fff;
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+    font-size:13px;
+    animation:pulse 1.5s infinite;
+  }
+  
+  .paused-indicator{
+    background:var(--warning);
+    color:#fff;
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+    font-size:13px;
+  }
+  
+  .app-container{
+    position:relative;
+    width:100%;
+    height:600px;
+    overflow:hidden;
+  }
+  
+  iframe{
+    width:100%;
+    height:100%;
+    border:none;
+  }
+  
+  iframe.playback-mode{
+    pointer-events:none;
+  }
+  
+  .annotation-box{
+    position:absolute;
+    width:250px;
+    max-width:500px;
+    background:rgba(255,255,255,0.98);
+    border:3px solid var(--accent);
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.15);
+    z-index:100;
+    display:none;
+    overflow-y:auto;
+    overflow-x:hidden;
+  }
+  
+  .annotation-box.custom-position{
+    max-width:none;
+  }
+  
+  .annotation-box.draggable{
+    overflow:hidden;
+    cursor:move;
+    border-color:var(--warning);
+    border-style:dashed;
+  }
+  
+  .annotation-box.visible{
+    display:block;
+    animation:slideIn 0.3s ease-out;
+  }
+  
+  .annotation-box.draggable .resize-handle{
+    position:absolute;
+    bottom:0;
+    right:0;
+    width:20px;
+    height:20px;
+    background:var(--warning);
+    cursor:nwse-resize;
+    border-top-left-radius:4px;
+    border-bottom-right-radius:12px;
+  }
+  
+  .annotation-box.draggable .resize-handle::after{
+    content:'⋰';
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    color:#fff;
+    font-size:14px;
+    line-height:1;
+  }
+  
+  @keyframes slideIn{
+    from{opacity:0;}
+    to{opacity:1;}
+  }
+  
+  .annotation-box h3{
+    margin:0 0 12px;
+    color:var(--accent);
+    font-size:18px;
+  }
+  
+  .annotation-box p{
+    margin:0;
+    line-height:1.6;
+    font-size:15px;
+  }
+  
+  /* Timeline Editor */
+  .timeline-container{
+    background:#fff;
+    border-top:2px solid #ddd;
+    padding:4px 20px 6px 20px;
+    display:none;
+    position:relative;
+  }
+  
+  .timeline-container.visible{
+    display:block;
+  }
+  
+  .timeline-ruler{
+    height:14px;
+    position:relative;
+    margin-bottom:0px;
+    margin-left:60px;
+    overflow:hidden;
+  }
+  
+  .timeline-tick{
+    position:absolute;
+    top:0;
+    font-size:8px;
+    color:#999;
+  }
+  
+  .timeline-track{
+    height:26px;
+    background:#fafafa;
+    border:1px solid #ddd;
+    border-radius:4px;
+    position:relative;
+    margin-bottom:2px;
+    overflow:hidden;
+    padding-left:60px;
+  }
+  
+  .timeline-track-label{
+    position:absolute;
+    left:4px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:9px;
+    font-weight:600;
+    color:#666;
+    pointer-events:none;
+    z-index:0;
+    width:55px;
+    text-align:right;
+    padding-right:5px;
+  }
+  
+  .timeline-event{
+    position:absolute;
+    top:2px;
+    bottom:2px;
+    width:8px;
+    background:#6366f1;
+    border-radius:2px;
+    cursor:pointer;
+    z-index:1;
+    box-shadow:0 1px 3px rgba(99,102,241,0.3);
+  }
+  
+  .timeline-event:hover{
+    background:#4f46e5;
+    transform:scaleX(1.3);
+  }
+  
+  .timeline-annotation{
+    position:absolute;
+    top:2px;
+    bottom:2px;
+    background:linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    border-radius:3px;
+    color:#fff;
+    font-size:9px;
+    padding:0 6px;
+    display:flex;
+    align-items:center;
+    cursor:move;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    z-index:2;
+    box-shadow:0 2px 4px rgba(6,182,212,0.3);
+    border:1px solid rgba(255,255,255,0.2);
+  }
+  
+  .timeline-annotation:hover{
+    background:linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    box-shadow:0 2px 6px rgba(6,182,212,0.4);
+  }
+  
+  .timeline-annotation .resize-edge{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:5px;
+    cursor:ew-resize;
+    background:rgba(255,255,255,0.2);
+  }
+  
+  .timeline-annotation .resize-edge.left{
+    left:0;
+    border-radius:3px 0 0 3px;
+  }
+  
+  .timeline-annotation .resize-edge.right{
+    right:0;
+    border-radius:0 3px 3px 0;
+  }
+  
+  .timeline-annotation .resize-edge:hover{
+    background:rgba(255,255,255,0.4);
+  }
+  
+  .timeline-playhead{
+    position:absolute;
+    top:14px;
+    height:56px;
+    width:3px;
+    background:#ef4444;
+    pointer-events:none;
+    z-index:9999;
+    box-shadow:0 0 8px rgba(239,68,68,0.5);
+    margin-left:60px;
+  }
+  
+  .timeline-playhead::before{
+    content:'';
+    position:absolute;
+    top:-8px;
+    left:50%;
+    transform:translateX(-50%);
+    width:12px;
+    height:12px;
+    background:#ef4444;
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    z-index:10000;
+    cursor:grab;
+    pointer-events:auto;
+  }
+  
+  .timeline-playhead::before:active{
+    cursor:grabbing;
+  }
+  
+  .modal-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+  }
+  
+  .modal-overlay.visible{
+    display:flex;
+  }
+  
+  .modal{
+    background:#fff;
+    border-radius:12px;
+    padding:24px;
+    max-width:700px;
+    width:90%;
+    max-height:80vh;
+    overflow-y:auto;
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  }
+  
+  .modal h2{
+    margin:0 0 16px;
+    color:#111;
+  }
+  
+  .modal textarea{
+    width:100%;
+    min-height:300px;
+    max-height:400px;
+    font-family:monospace;
+    font-size:12px;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    resize:vertical;
+    overflow-y:auto;
+  }
+  
+  .modal input[type=text]{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    margin-bottom:12px;
+  }
+  
+  .modal-buttons{
+    display:flex;
+    gap:8px;
+    margin-top:16px;
+    justify-content:flex-end;
+  }
+  
+  .help-text{
+    font-size:13px;
+    color:#666;
+    margin:8px 0;
+    line-height:1.5;
+  }
+  
+  ol.help-text{
+    margin-left:20px;
+    padding-left:0;
+  }
+  
+  ol.help-text li{
+    margin:6px 0;
+  }
+  
+  .control-group{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  
+  label{
+    font-size:12px;
+    color:#666;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  
+  input[type=text]{
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid #ddd;
+    font-size:13px;
+    width:300px;
+  }
+  
+  .info-box{
+    background:#e0f2fe;
+    border:1px solid #0284c7;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+    font-size:13px;
+    color:#0c4a6e;
+  }
+  
+  .info-box strong{
+    color:#075985;
+  }
+  
+  .form-group{
+    margin-bottom:16px;
+  }
+  
+  .form-group label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:#374151;
+  }
+  
+  .form-group textarea{
+    width:100%;
+    min-height:100px;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    resize:vertical;
+  }
+  
+  .version-number{
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    font-size: 11px;
+    color: #999;
+    background: rgba(255,255,255,0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    z-index: 1000;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+  <div class="tutorial-header">
+    <div class="tutorial-controls">
+      <div id="recordingControls" class="control-group">
+        <label>
+          App URL:
+          <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
+        </label>
+        <button id="loadApp" class="primary">Load App</button>
+        <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
+        <button id="stopRecording" class="record" style="display:none;">⏹ Stop Recording</button>
+        <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
+        <button id="resumeRecording" class="success" style="display:none;">▶ Resume</button>
+        <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
+        <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
+        <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
+        <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
+        <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
+        <button id="recordAgain" class="record" style="display:none;">🔄 Record Again</button>
+        <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
+      </div>
+      
+      <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
+      <button id="loadJSON" class="primary">📂 Load JSON</button>
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+    </div>
+    <div class="version-number">v8.0</div>
+  </div>
+  
+  <!-- Timeline Editor -->
+  <div id="timelineContainer" class="timeline-container">
+    <div id="timelineRuler" class="timeline-ruler"></div>
+    
+    <div class="timeline-track">
+      <div class="timeline-track-label">Events</div>
+      <div id="eventsTrack" style="position:relative;height:100%;"></div>
+    </div>
+    
+    <div class="timeline-track">
+      <div class="timeline-track-label">Annotations</div>
+      <div id="annotationsTrack" style="position:relative;height:100%;"></div>
+    </div>
+    
+    <div id="timelinePlayhead" class="timeline-playhead" style="display:none;"></div>
+  </div>
+  
+  <div class="app-container">
+    <iframe id="appFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+  
+  <!-- Annotation Editor Modal -->
+  <div id="annotationEditorModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Add Annotation</h2>
+      
+      <div class="info-box">
+        <strong>📝 Instructions:</strong> Fill in the fields below and click "Create Annotation". The annotation will appear on screen where you can drag it to position it perfectly.
+      </div>
+      
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="annTitle" placeholder="Enter annotation title..."/>
+      </div>
+      
+      <div class="form-group">
+        <label>Text</label>
+        <textarea id="annText" placeholder="Enter annotation description..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Duration (seconds)</label>
+        <input type="number" id="annDuration" value="5" min="1" max="60" style="width:100px;"/>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="cancelAnnotation">Cancel</button>
+        <button id="createAnnotation" class="primary">✨ Create Annotation</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Position Editor Overlay -->
+  <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:99;pointer-events:none;">
+    <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
+      <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Adjust the size and position of the annotation, click Save when you are done.</div>
+      <div style="display:flex;gap:8px;">
+        <button id="savePosition" class="success">Save</button>
+        <button id="cancelPosition">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Annotation Edit Modal -->
+  <div id="annotationEditModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Edit Annotation</h2>
+      
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="editAnnTitle" placeholder="Enter annotation title..."/>
+      </div>
+      
+      <div class="form-group">
+        <label>Text</label>
+        <textarea id="editAnnText" placeholder="Enter annotation description..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Duration (seconds)</label>
+        <input type="number" id="editAnnDuration" value="5" min="1" max="60" style="width:100px;"/>
+      </div>
+      
+      <div class="form-group">
+        <label>Start Time (seconds)</label>
+        <input type="number" id="editAnnTimestamp" value="0" min="0" step="0.1" style="width:100px;"/>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="repositionAnnotation" class="primary">📍 Reposition</button>
+        <button id="resizeAnnotation" class="primary">↔️ Resize</button>
+        <button id="deleteAnnotation" class="warning">🗑 Delete</button>
+        <button id="cancelEditAnnotation">Cancel</button>
+        <button id="saveEditAnnotation" class="success">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Export Tutorial</h2>
+      
+      <div class="info-box">
+        <strong>✓ Recording Complete!</strong><br>
+        Your tutorial has been recorded with <strong id="snapshotCount">0</strong> snapshots and <strong id="annotationCount">0</strong> annotations.
+      </div>
+      
+      <p class="help-text">Copy the JSON below to save your tutorial. You can load it later using the "Load Tutorial" button.</p>
+      
+      <textarea id="exportTextarea" readonly></textarea>
+      
+      <div class="modal-buttons">
+        <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
+        <button id="closeExportModal">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal">
+      <h2>How to Use</h2>
+      
+      <h3>Recording Mode:</h3>
+      <ol class="help-text">
+        <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
+        <li><strong>Load App</strong> - Click "Load App" to load the app in the iframe</li>
+        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" when you're ready to begin the tutorial</li>
+        <li><strong>Interact Normally</strong> - Use your app normally. All interactions are being captured via the API!</li>
+        <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations</li>
+        <li><strong>Add Annotations</strong> - While paused:
+          <ul style="margin-left:20px;">
+            <li>Click "➕ Add Annotation"</li>
+            <li>Enter title, text, and duration</li>
+            <li>Click "✨ Create Annotation"</li>
+            <li>Drag the annotation box to position it exactly where you want</li>
+            <li>Click "Save" when ready</li>
+          </ul>
+        </li>
+        <li><strong>Resume Recording</strong> - Click "▶ Resume" to continue recording</li>
+        <li><strong>Stop Recording</strong> - Click "⏹ Stop Recording" when done</li>
+        <li><strong>Preview</strong> - Click "👁 Preview" to watch the replay with annotations</li>
+        <li><strong>Export</strong> - Click "💾 Export Tutorial" to get the JSON, then copy it to save</li>
+      </ol>
+      
+      <div class="modal-buttons">
+        <button id="closeHelpModal" class="primary">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+  
+  // DOM Elements
+  const appUrl = document.getElementById('appUrl');
+  const appFrame = document.getElementById('appFrame');
+  const loadApp = document.getElementById('loadApp');
+  const startRecording = document.getElementById('startRecording');
+  const pauseRecording = document.getElementById('pauseRecording');
+  const resumeRecording = document.getElementById('resumeRecording');
+  const addAnnotation = document.getElementById('addAnnotation');
+  const stopRecording = document.getElementById('stopRecording');
+  const previewRecording = document.getElementById('previewRecording');
+  const playPausePreview = document.getElementById('playPausePreview');
+  const recordAgain = document.getElementById('recordAgain');
+  const exportRecording = document.getElementById('exportRecording');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const pausedIndicator = document.getElementById('pausedIndicator');
+  
+  const annotationEditorModal = document.getElementById('annotationEditorModal');
+  const annTitle = document.getElementById('annTitle');
+  const annText = document.getElementById('annText');
+  const annDuration = document.getElementById('annDuration');
+  const createAnnotation = document.getElementById('createAnnotation');
+  const cancelAnnotation = document.getElementById('cancelAnnotation');
+  
+  const positionEditorOverlay = document.getElementById('positionEditorOverlay');
+  const savePosition = document.getElementById('savePosition');
+  const cancelPosition = document.getElementById('cancelPosition');
+  
+  const exportModal = document.getElementById('exportModal');
+  const exportTextarea = document.getElementById('exportTextarea');
+  const snapshotCount = document.getElementById('snapshotCount');
+  const annotationCount = document.getElementById('annotationCount');
+  const copyExport = document.getElementById('copyExport');
+  const closeExportModal = document.getElementById('closeExportModal');
+  
+  const helpModal = document.getElementById('helpModal');
+  const helpBtn = document.getElementById('helpBtn');
+  const closeHelpModal = document.getElementById('closeHelpModal');
+  
+  const loadJSON = document.getElementById('loadJSON');
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  
+  const timelineContainer = document.getElementById('timelineContainer');
+  const timelineRuler = document.getElementById('timelineRuler');
+  const eventsTrack = document.getElementById('eventsTrack');
+  const annotationsTrack = document.getElementById('annotationsTrack');
+  const timelinePlayhead = document.getElementById('timelinePlayhead');
+  
+  const annotationEditModal = document.getElementById('annotationEditModal');
+  const editAnnTitle = document.getElementById('editAnnTitle');
+  const editAnnText = document.getElementById('editAnnText');
+  const editAnnDuration = document.getElementById('editAnnDuration');
+  const editAnnTimestamp = document.getElementById('editAnnTimestamp');
+  const saveEditAnnotation = document.getElementById('saveEditAnnotation');
+  const deleteAnnotation = document.getElementById('deleteAnnotation');
+  const cancelEditAnnotation = document.getElementById('cancelEditAnnotation');
+  const repositionAnnotation = document.getElementById('repositionAnnotation');
+  const resizeAnnotation = document.getElementById('resizeAnnotation');
+  
+  // State
+  let isAppLoaded = false;
+  let apiReady = false;
+  let isRecording = false;
+  let isPaused = false;
+  let isPlaying = false;
+  let recordingStartTime = null;
+  let pauseStartTime = null;
+  let totalPausedTime = 0;
+  let currentTutorial = null;
+  let eventListener = null;
+  let playbackStartTime = null;
+  let playbackPausedAt = 0;
+  let currentAnnotationIndex = -1;
+  let annotationTimeout = null;
+  let editingAnnotationIndex = -1;
+  let timelineScale = 50; // pixels per second
+  let annotationBox = null; // Will be injected into iframe
+  let annotationTitle = null;
+  let annotationText = null;
+  
+  // Get tutorialAPI from iframe
+  function getAPI() {
+    if (!appFrame.contentWindow || !appFrame.contentWindow.tutorialAPI) {
+      return null;
+    }
+    return appFrame.contentWindow.tutorialAPI;
+  }
+  
+  // ========== APP LOADING ==========
+  
+  loadApp.addEventListener('click', () => {
+    const url = appUrl.value.trim();
+    if (!url) {
+      alert('Please enter an app URL');
+      return;
+    }
+    
+    appFrame.src = url;
+    loadApp.disabled = true;
+    loadApp.textContent = 'Loading...';
+  });
+  
+  appFrame.addEventListener('load', () => {
+    console.log('Iframe loaded, checking for API...');
+    
+    // Poll for API availability
+    const checkAPI = setInterval(() => {
+      const api = getAPI();
+      if (api) {
+        clearInterval(checkAPI);
+        apiReady = true;
+        isAppLoaded = true;
+        console.log('✓ tutorialAPI ready');
+        
+        loadApp.disabled = true;
+        loadApp.textContent = 'App Loaded ✓';
+        startRecording.style.display = 'inline-block';
+        
+        // Inject annotation box into iframe
+        injectAnnotationBox();
+        
+        // Show timeline
+        timelineContainer.classList.add('visible');
+      }
+    }, 100);
+    
+    setTimeout(() => {
+      if (!apiReady) {
+        clearInterval(checkAPI);
+        console.error('tutorialAPI not available after 5 seconds');
+        alert('Error: This app does not have the tutorialAPI. Make sure you are loading the correct confidence demo app.');
+        loadApp.disabled = false;
+        loadApp.textContent = 'Load App';
+      }
+    }, 5000);
+  });
+  
+  function injectAnnotationBox() {
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    annotationBox = iframeDoc.createElement('div');
+    annotationBox.className = 'annotation-box';
+    annotationBox.innerHTML = '<h3 id="annotationTitle"></h3><p id="annotationText"></p>';
+    
+    annotationTitle = annotationBox.querySelector('#annotationTitle');
+    annotationText = annotationBox.querySelector('#annotationText');
+    
+    // Inject the CSS styles for annotation box
+    const style = iframeDoc.createElement('style');
+    style.textContent = `
+      .annotation-box{
+        position:absolute;
+        width:250px;
+        max-width:500px;
+        background:rgba(255,255,255,0.98);
+        border:3px solid #2563eb;
+        border-radius:12px;
+        padding:20px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:100;
+        display:none;
+        overflow-y:auto;
+        overflow-x:hidden;
+      }
+      .annotation-box.custom-position{max-width:none;}
+      .annotation-box.draggable{
+        overflow:hidden;
+        cursor:move;
+        border-color:#f59e0b;
+        border-style:dashed;
+      }
+      .annotation-box.visible{display:block;animation:slideIn 0.3s ease-out;}
+      .annotation-box.draggable .resize-handle{
+        position:absolute;
+        bottom:0;
+        right:0;
+        width:20px;
+        height:20px;
+        background:#f59e0b;
+        cursor:nwse-resize;
+        border-top-left-radius:4px;
+        border-bottom-right-radius:12px;
+      }
+      .annotation-box.draggable .resize-handle::after{
+        content:'⋰';
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%, -50%);
+        color:#fff;
+        font-size:14px;
+        line-height:1;
+      }
+      @keyframes slideIn{from{opacity:0;}to{opacity:1;}}
+      .annotation-box h3{margin:0 0 12px;color:#2563eb;font-size:18px;}
+      .annotation-box p{margin:0;line-height:1.6;font-size:15px;}
+    `;
+    
+    iframeDoc.head.appendChild(style);
+    iframeDoc.body.appendChild(annotationBox);
+    
+    console.log('✓ Annotation box injected into iframe');
+  }
+  
+  // ========== RECORDING ==========
+  
+  startRecording.addEventListener('click', () => {
+    if (!apiReady) {
+      alert('App not ready');
+      return;
+    }
+    
+    const api = getAPI();
+    if (!api) {
+      alert('App not ready');
+      return;
+    }
+    
+    // Initialize tutorial
+    currentTutorial = {
+      version: '8.0',
+      initialState: api.getState(),
+      snapshots: [],
+      annotations: [],
+      duration: 0,
+      createdAt: new Date().toISOString()
+    };
+    
+    isRecording = true;
+    isPaused = false;
+    recordingStartTime = Date.now();
+    totalPausedTime = 0;
+    
+    // Start listening to events
+    eventListener = (event) => {
+      if (isPaused) return;
+      
+      const relativeTime = Date.now() - recordingStartTime - totalPausedTime;
+      
+      currentTutorial.snapshots.push({
+        timestamp: relativeTime,
+        state: api.getState(),
+        event: event
+      });
+    };
+    
+    api.onAction(eventListener);
+    
+    // Update UI
+    startRecording.style.display = 'none';
+    pauseRecording.style.display = 'inline-block';
+    stopRecording.style.display = 'inline-block';
+    addAnnotation.style.display = 'inline-block';
+    recordingIndicator.style.display = 'inline-block';
+    appUrl.disabled = true;
+    
+    console.log('🔴 Recording started');
+  });
+  
+  pauseRecording.addEventListener('click', () => {
+    if (!isRecording || isPaused) return;
+    
+    pauseStartTime = Date.now();
+    isPaused = true;
+    
+    pauseRecording.style.display = 'none';
+    resumeRecording.style.display = 'inline-block';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'inline-block';
+    addAnnotation.disabled = false;
+    
+    console.log('⏸ Recording paused');
+  });
+  
+  resumeRecording.addEventListener('click', () => {
+    if (!isRecording || !isPaused) return;
+    
+    const pauseDuration = Date.now() - pauseStartTime;
+    totalPausedTime += pauseDuration;
+    isPaused = false;
+    
+    resumeRecording.style.display = 'none';
+    pauseRecording.style.display = 'inline-block';
+    pausedIndicator.style.display = 'none';
+    recordingIndicator.style.display = 'inline-block';
+    addAnnotation.disabled = true;
+    
+    console.log('▶️ Recording resumed');
+  });
+  
+  stopRecording.addEventListener('click', () => {
+    if (!isRecording) return;
+    
+    const api = getAPI();
+    if (api && eventListener) {
+      api.offAction(eventListener);
+    }
+    
+    currentTutorial.duration = Date.now() - recordingStartTime - totalPausedTime;
+    
+    isRecording = false;
+    isPaused = false;
+    
+    // Update UI
+    pauseRecording.style.display = 'none';
+    resumeRecording.style.display = 'none';
+    stopRecording.style.display = 'none';
+    addAnnotation.style.display = 'none';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    previewRecording.style.display = 'inline-block';
+    exportRecording.style.display = 'inline-block';
+    recordAgain.style.display = 'inline-block';
+    
+    console.log('⏹ Recording stopped. Duration:', (currentTutorial.duration / 1000).toFixed(1) + 's');
+    console.log('Snapshots:', currentTutorial.snapshots.length);
+    console.log('Annotations:', currentTutorial.annotations.length);
+    
+    renderTimeline();
+  });
+  
+  // ========== ANNOTATIONS ==========
+  
+  addAnnotation.addEventListener('click', () => {
+    if (!isPaused) return;
+    
+    annTitle.value = '';
+    annText.value = '';
+    annDuration.value = 5;
+    annotationEditorModal.classList.add('visible');
+  });
+  
+  createAnnotation.addEventListener('click', () => {
+    const title = annTitle.value.trim();
+    const text = annText.value.trim();
+    const duration = parseFloat(annDuration.value) * 1000;
+    
+    if (!title || !text) {
+      alert('Please enter both title and text');
+      return;
+    }
+    
+    const timestamp = Date.now() - recordingStartTime - totalPausedTime;
+    
+    const annotation = {
+      timestamp: timestamp,
+      title: title,
+      text: text,
+      duration: duration,
+      position: null // Will be set after positioning
+    };
+    
+    currentTutorial.annotations.push(annotation);
+    
+    annotationEditorModal.classList.remove('visible');
+    
+    // Show annotation for positioning
+    showAnnotationForPositioning(annotation, currentTutorial.annotations.length - 1);
+  });
+  
+  cancelAnnotation.addEventListener('click', () => {
+    annotationEditorModal.classList.remove('visible');
+  });
+  
+  function showAnnotationForPositioning(ann, index) {
+    if (!annotationBox) return;
+    
+    annotationBox.className = 'annotation-box visible draggable custom-position';
+    annotationBox.style.left = '50%';
+    annotationBox.style.top = '200px';
+    annotationBox.style.width = '400px';
+    annotationBox.style.height = 'auto';
+    annotationBox.style.transform = 'translateX(-50%)';
+    
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    // Add resize handle
+    if (!annotationBox.querySelector('.resize-handle')) {
+      const handle = document.createElement('div');
+      handle.className = 'resize-handle';
+      annotationBox.appendChild(handle);
+    }
+    
+    makeDraggable();
+    positionEditorOverlay.style.display = 'block';
+    
+    // Override save handler
+    savePosition.onclick = () => {
+      const rect = annotationBox.getBoundingClientRect();
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeBody = iframeDoc.body.getBoundingClientRect();
+      
+      ann.position = {
+        left: rect.left - iframeBody.left,
+        top: rect.top - iframeBody.top,
+        width: rect.width,
+        height: rect.height
+      };
+      
+      positionEditorOverlay.style.display = 'none';
+      annotationBox.classList.remove('visible', 'draggable');
+      
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+      
+      console.log('✓ Annotation positioned:', ann.position);
+      renderTimeline();
+    };
+  }
+  
+  cancelPosition.addEventListener('click', () => {
+    // Remove the last annotation that wasn't positioned
+    if (currentTutorial && currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      if (!lastAnn.position) {
+        currentTutorial.annotations.pop();
+      }
+    }
+    
+    positionEditorOverlay.style.display = 'none';
+    if (annotationBox) {
+      annotationBox.classList.remove('visible', 'draggable');
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+    }
+  });
+  
+  function makeDraggable() {
+    if (!annotationBox) return;
+    
+    let isDragging = false;
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+    
+    const handle = annotationBox.querySelector('.resize-handle');
+    if (handle) {
+      handle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = annotationBox.offsetWidth;
+        startHeight = annotationBox.offsetHeight;
+        e.stopPropagation();
+        e.preventDefault();
+      });
+    }
+    
+    annotationBox.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('resize-handle')) return;
+      
+      isDragging = true;
+      startX = e.clientX - annotationBox.offsetLeft;
+      startY = e.clientY - annotationBox.offsetTop;
+    });
+    
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    
+    iframeDoc.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        annotationBox.style.transform = 'none';
+        annotationBox.style.left = (e.clientX - startX) + 'px';
+        annotationBox.style.top = (e.clientY - startY) + 'px';
+      } else if (isResizing) {
+        const newWidth = startWidth + (e.clientX - startX);
+        const newHeight = startHeight + (e.clientY - startY);
+        annotationBox.style.width = Math.max(200, newWidth) + 'px';
+        annotationBox.style.height = Math.max(80, newHeight) + 'px';
+      }
+    });
+    
+    iframeDoc.addEventListener('mouseup', () => {
+      isDragging = false;
+      isResizing = false;
+    });
+  }
+  
+  // ========== PREVIEW/PLAYBACK ==========
+  
+  previewRecording.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    previewRecording.style.display = 'none';
+    playPausePreview.style.display = 'inline-block';
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none';
+    appFrame.classList.add('playback-mode');
+    
+    startPlayback();
+  });
+  
+  playPausePreview.addEventListener('click', () => {
+    if (isPlaying) {
+      pausePlayback();
+    } else {
+      resumePlayback();
+    }
+  });
+  
+  function startPlayback() {
+    if (!currentTutorial) return;
+    
+    const api = getAPI();
+    if (!api) return;
+    
+    api.setState(currentTutorial.initialState);
+    
+    isPlaying = true;
+    playbackStartTime = Date.now();
+    playbackPausedAt = 0;
+    
+    playPausePreview.textContent = '⏸ Pause Preview';
+    
+    requestAnimationFrame(playbackLoop);
+    
+    console.log('▶️ Playback started');
+  }
+  
+  function pausePlayback() {
+    if (!isPlaying) return;
+    
+    isPlaying = false;
+    playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
+    
+    playPausePreview.textContent = '▶ Resume Preview';
+    
+    console.log('⏸ Playback paused at', playbackPausedAt.toFixed(1) + 's');
+  }
+  
+  function resumePlayback() {
+    if (isPlaying) return;
+    
+    isPlaying = true;
+    playbackStartTime = Date.now() - (playbackPausedAt * 1000);
+    
+    playPausePreview.textContent = '⏸ Pause Preview';
+    
+    requestAnimationFrame(playbackLoop);
+    
+    console.log('▶️ Playback resumed');
+  }
+  
+  function playbackLoop() {
+    if (!isPlaying || !currentTutorial) return;
+    
+    const api = getAPI();
+    if (!api) {
+      stopPlayback();
+      return;
+    }
+    
+    const elapsed = (Date.now() - playbackStartTime) / 1000;
+    const elapsedMs = elapsed * 1000;
+    
+    // Update timeline playhead
+    timelinePlayhead.style.display = 'block';
+    timelinePlayhead.style.left = (elapsed * timelineScale + 60) + 'px';
+    
+    // Apply snapshots
+    for (const snapshot of currentTutorial.snapshots) {
+      if (snapshot.timestamp <= elapsedMs && snapshot.timestamp > elapsedMs - 50) {
+        api.setState(snapshot.state);
+      }
+    }
+    
+    // Handle annotations
+    for (let i = 0; i < currentTutorial.annotations.length; i++) {
+      const ann = currentTutorial.annotations[i];
+      const annStart = ann.timestamp;
+      const annEnd = ann.timestamp + ann.duration;
+      
+      if (elapsedMs >= annStart && elapsedMs < annEnd) {
+        if (currentAnnotationIndex !== i) {
+          showAnnotation(ann);
+          currentAnnotationIndex = i;
+          
+          if (annotationTimeout) clearTimeout(annotationTimeout);
+          annotationTimeout = setTimeout(() => {
+            if (annotationBox) {
+              annotationBox.classList.remove('visible');
+            }
+            currentAnnotationIndex = -1;
+          }, ann.duration);
+        }
+        break;
+      }
+    }
+    
+    // Check if finished
+    if (elapsedMs >= currentTutorial.duration) {
+      stopPlayback();
+      return;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  }
+  
+  function showAnnotation(ann) {
+    if (!annotationBox) return;
+    
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    if (ann.position) {
+      annotationBox.className = 'annotation-box visible custom-position';
+      annotationBox.style.left = ann.position.left + 'px';
+      annotationBox.style.top = ann.position.top + 'px';
+      annotationBox.style.width = ann.position.width + 'px';
+      annotationBox.style.height = ann.position.height + 'px';
+      annotationBox.style.transform = 'none';
+    }
+    
+    // Render MathJax
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([annotationBox]).catch(err => console.error('MathJax error:', err));
+    }
+  }
+  
+  function stopPlayback() {
+    isPlaying = false;
+    playbackPausedAt = 0;
+    currentAnnotationIndex = -1;
+    
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+    }
+    
+    if (annotationTimeout) {
+      clearTimeout(annotationTimeout);
+      annotationTimeout = null;
+    }
+    
+    timelinePlayhead.style.display = 'none';
+    
+    previewRecording.style.display = 'inline-block';
+    playPausePreview.style.display = 'none';
+    recordAgain.style.display = 'inline-block';
+    exportRecording.style.display = 'inline-block';
+    appFrame.classList.remove('playback-mode');
+    
+    playPausePreview.textContent = '⏸ Pause Preview';
+    
+    // Reset to initial state
+    const api = getAPI();
+    if (api) {
+      api.setState(currentTutorial.initialState);
+    }
+    
+    console.log('⏹ Playback stopped');
+  }
+  
+  recordAgain.addEventListener('click', () => {
+    if (confirm('Start a new recording? This will discard the current tutorial.')) {
+      currentTutorial = null;
+      previewRecording.style.display = 'none';
+      exportRecording.style.display = 'none';
+      recordAgain.style.display = 'none';
+      startRecording.style.display = 'inline-block';
+      
+      const api = getAPI();
+      if (api) {
+        api.setState(currentTutorial ? currentTutorial.initialState : api.getState());
+      }
+      
+      renderTimeline();
+    }
+  });
+  
+  // ========== TIMELINE ==========
+  
+  function renderTimeline() {
+    if (!currentTutorial) {
+      timelineRuler.innerHTML = '';
+      eventsTrack.innerHTML = '';
+      annotationsTrack.innerHTML = '';
+      return;
+    }
+    
+    const duration = currentTutorial.duration / 1000;
+    
+    // Render time ticks
+    timelineRuler.innerHTML = '';
+    const tickInterval = 1; // Every second
+    
+    for (let t = 0; t <= duration; t += tickInterval) {
+      const tick = document.createElement('div');
+      tick.className = 'timeline-tick';
+      tick.style.left = (t * timelineScale) + 'px';
+      tick.textContent = t + 's';
+      timelineRuler.appendChild(tick);
+    }
+    
+    // Render event markers
+    eventsTrack.innerHTML = '';
+    currentTutorial.snapshots.forEach((snapshot, i) => {
+      const marker = document.createElement('div');
+      marker.className = 'timeline-event';
+      marker.style.left = ((snapshot.timestamp / 1000) * timelineScale) + 'px';
+      marker.title = 'Event at ' + (snapshot.timestamp / 1000).toFixed(2) + 's';
+      eventsTrack.appendChild(marker);
+    });
+    
+    // Render annotations
+    annotationsTrack.innerHTML = '';
+    currentTutorial.annotations.forEach((ann, i) => {
+      const annEl = document.createElement('div');
+      annEl.className = 'timeline-annotation';
+      annEl.style.left = ((ann.timestamp / 1000) * timelineScale) + 'px';
+      annEl.style.width = ((ann.duration / 1000) * timelineScale) + 'px';
+      annEl.textContent = ann.title;
+      annEl.title = ann.title;
+      
+      // Click to edit
+      annEl.addEventListener('click', () => openAnnotationEditor(i));
+      
+      // Drag to move
+      annEl.addEventListener('mousedown', (e) => startAnnotationDrag(e, i));
+      
+      // Resize edges
+      const leftEdge = document.createElement('div');
+      leftEdge.className = 'resize-edge left';
+      leftEdge.addEventListener('mousedown', (e) => startAnnotationResize(e, i, 'left'));
+      
+      const rightEdge = document.createElement('div');
+      rightEdge.className = 'resize-edge right';
+      rightEdge.addEventListener('mousedown', (e) => startAnnotationResize(e, i, 'right'));
+      
+      annEl.appendChild(leftEdge);
+      annEl.appendChild(rightEdge);
+      
+      annotationsTrack.appendChild(annEl);
+    });
+  }
+  
+  let draggingAnnotation = null;
+  
+  function startAnnotationDrag(e, index) {
+    if (e.target.classList.contains('resize-edge')) return;
+    
+    draggingAnnotation = {
+      index: index,
+      startX: e.clientX,
+      startTime: currentTutorial.annotations[index].timestamp
+    };
+    
+    document.addEventListener('mousemove', doAnnotationDrag);
+    document.addEventListener('mouseup', stopAnnotationDrag);
+    e.preventDefault();
+  }
+  
+  function doAnnotationDrag(e) {
+    if (!draggingAnnotation) return;
+    
+    const dx = e.clientX - draggingAnnotation.startX;
+    const dt = (dx / timelineScale) * 1000;
+    
+    let newTime = Math.max(0, draggingAnnotation.startTime + dt);
+    newTime = Math.min(newTime, currentTutorial.duration);
+    
+    currentTutorial.annotations[draggingAnnotation.index].timestamp = newTime;
+    renderTimeline();
+  }
+  
+  function stopAnnotationDrag() {
+    draggingAnnotation = null;
+    document.removeEventListener('mousemove', doAnnotationDrag);
+    document.removeEventListener('mouseup', stopAnnotationDrag);
+  }
+  
+  let resizingAnnotation = null;
+  
+  function startAnnotationResize(e, index, edge) {
+    e.stopPropagation();
+    
+    resizingAnnotation = {
+      index: index,
+      edge: edge,
+      startX: e.clientX,
+      startTime: currentTutorial.annotations[index].timestamp,
+      startDuration: currentTutorial.annotations[index].duration
+    };
+    
+    document.addEventListener('mousemove', doAnnotationResize);
+    document.addEventListener('mouseup', stopAnnotationResize);
+    e.preventDefault();
+  }
+  
+  function doAnnotationResize(e) {
+    if (!resizingAnnotation) return;
+    
+    const dx = e.clientX - resizingAnnotation.startX;
+    const dt = (dx / timelineScale) * 1000;
+    
+    const ann = currentTutorial.annotations[resizingAnnotation.index];
+    
+    if (resizingAnnotation.edge === 'left') {
+      let newTime = Math.max(0, resizingAnnotation.startTime + dt);
+      const diff = newTime - resizingAnnotation.startTime;
+      let newDuration = resizingAnnotation.startDuration - diff;
+      
+      if (newDuration < 1000) {
+        newDuration = 1000;
+        newTime = resizingAnnotation.startTime + resizingAnnotation.startDuration - 1000;
+      }
+      
+      ann.timestamp = newTime;
+      ann.duration = newDuration;
+    } else {
+      let newDuration = Math.max(1000, resizingAnnotation.startDuration + dt);
+      ann.duration = newDuration;
+    }
+    
+    renderTimeline();
+  }
+  
+  function stopAnnotationResize() {
+    resizingAnnotation = null;
+    document.removeEventListener('mousemove', doAnnotationResize);
+    document.removeEventListener('mouseup', stopAnnotationResize);
+  }
+  
+  // ========== ANNOTATION EDITING ==========
+  
+  function openAnnotationEditor(index) {
+    if (!currentTutorial || !currentTutorial.annotations[index]) return;
+    
+    editingAnnotationIndex = index;
+    const ann = currentTutorial.annotations[index];
+    
+    editAnnTitle.value = ann.title;
+    editAnnText.value = ann.text;
+    editAnnDuration.value = ann.duration / 1000;
+    editAnnTimestamp.value = (ann.timestamp / 1000).toFixed(1);
+    
+    annotationEditModal.classList.add('visible');
+  }
+  
+  saveEditAnnotation.addEventListener('click', () => {
+    if (editingAnnotationIndex < 0 || !currentTutorial) return;
+    
+    const ann = currentTutorial.annotations[editingAnnotationIndex];
+    ann.title = editAnnTitle.value.trim();
+    ann.text = editAnnText.value.trim();
+    ann.duration = parseFloat(editAnnDuration.value) * 1000;
+    
+    annotationEditModal.classList.remove('visible');
+    editingAnnotationIndex = -1;
+    renderTimeline();
+  });
+  
+  deleteAnnotation.addEventListener('click', () => {
+    if (editingAnnotationIndex < 0 || !currentTutorial) return;
+    
+    if (confirm('Delete this annotation?')) {
+      currentTutorial.annotations.splice(editingAnnotationIndex, 1);
+      annotationEditModal.classList.remove('visible');
+      editingAnnotationIndex = -1;
+      renderTimeline();
+    }
+  });
+  
+  cancelEditAnnotation.addEventListener('click', () => {
+    annotationEditModal.classList.remove('visible');
+    editingAnnotationIndex = -1;
+  });
+  
+  repositionAnnotation.addEventListener('click', () => {
+    if (editingAnnotationIndex < 0 || !currentTutorial) return;
+    
+    const ann = currentTutorial.annotations[editingAnnotationIndex];
+    
+    annotationEditModal.classList.remove('visible');
+    
+    showAnnotationForPositioning(ann, editingAnnotationIndex);
+    
+    savePosition.onclick = () => {
+      const rect = annotationBox.getBoundingClientRect();
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeBody = iframeDoc.body.getBoundingClientRect();
+      
+      ann.position = {
+        left: rect.left - iframeBody.left,
+        top: rect.top - iframeBody.top,
+        width: rect.width,
+        height: rect.height
+      };
+      
+      positionEditorOverlay.style.display = 'none';
+      annotationBox.classList.remove('visible', 'draggable');
+      
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+      
+      editingAnnotationIndex = -1;
+      renderTimeline();
+    };
+  });
+  
+  resizeAnnotation.addEventListener('click', () => {
+    repositionAnnotation.click();
+    setTimeout(() => {
+      alert('Drag the orange corner handle to resize, then Save');
+    }, 100);
+  });
+  
+  annotationEditModal.addEventListener('click', (e) => {
+    if (e.target === annotationEditModal) {
+      annotationEditModal.classList.remove('visible');
+      editingAnnotationIndex = -1;
+    }
+  });
+  
+  // ========== EXPORT/IMPORT ==========
+  
+  exportRecording.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    snapshotCount.textContent = currentTutorial.snapshots.length;
+    annotationCount.textContent = currentTutorial.annotations.length;
+    exportTextarea.value = JSON.stringify(currentTutorial, null, 2);
+    exportModal.classList.add('visible');
+  });
+  
+  copyExport.addEventListener('click', () => {
+    exportTextarea.select();
+    document.execCommand('copy');
+    copyExport.textContent = '✓ Copied!';
+    setTimeout(() => {
+      copyExport.textContent = '📋 Copy to Clipboard';
+    }, 2000);
+  });
+  
+  closeExportModal.addEventListener('click', () => {
+    exportModal.classList.remove('visible');
+  });
+  
+  loadJSON.addEventListener('click', () => {
+    jsonFileInput.click();
+  });
+  
+  jsonFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        
+        if (!imported.initialState || !imported.snapshots || !imported.annotations) {
+          throw new Error('Invalid tutorial format');
+        }
+        
+        currentTutorial = imported;
+        
+        // Load the app if not already loaded
+        if (!isAppLoaded && imported.initialState) {
+          // We can't auto-load without a URL, so just inform user
+          alert('Tutorial loaded! Please load the app first using "Load App", then click "Preview" to play the tutorial.');
+        } else if (isAppLoaded) {
+          const api = getAPI();
+          if (api) {
+            api.setState(currentTutorial.initialState);
+          }
+          
+          // Show preview controls
+          previewRecording.style.display = 'inline-block';
+          exportRecording.style.display = 'inline-block';
+          recordAgain.style.display = 'inline-block';
+          
+          renderTimeline();
+          
+          alert('✓ Tutorial loaded!\n\nClick "👁 Preview" to play it.');
+        }
+        
+        console.log('📤 Tutorial imported');
+      } catch (err) {
+        alert('Error importing tutorial: ' + err.message);
+        console.error('Import error:', err);
+      }
+    };
+    
+    reader.readAsText(file);
+    jsonFileInput.value = '';
+  });
+  
+  // ========== HELP ==========
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('visible');
+  });
+  
+  closeHelpModal.addEventListener('click', () => {
+    helpModal.classList.remove('visible');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('visible');
+    }
+  });
+  
+  exportModal.addEventListener('click', (e) => {
+    if (e.target === exportModal) {
+      exportModal.classList.remove('visible');
+    }
+  });
+  
+  annotationEditorModal.addEventListener('click', (e) => {
+    if (e.target === annotationEditorModal) {
+      annotationEditorModal.classList.remove('visible');
+    }
+  });
+  
+  console.log('Tutorial Creator v8.0 initialized');
+})();
+</script>
+</body>
+</html>
