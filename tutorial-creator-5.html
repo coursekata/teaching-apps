@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.22</title>
+<title>Interactive Tutorial Creator - v10.28.24</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.22</div>
+    <div class="version-number">v10.28.24</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1220,6 +1220,7 @@
     
     // Capture the current app state to restore during playback
     const iframeWindow = appFrame.contentWindow;
+    const iframeDoc = appFrame.contentDocument;
     const initialState = {};
     console.log('  🔍 Attempting to capture app state...');
     console.log('  iframeWindow:', !!iframeWindow);
@@ -1238,6 +1239,22 @@
       }
     } else {
       console.warn('  ⚠️ Cannot capture state - tutorialAPI not available');
+    }
+    
+    // Capture all input and select values
+    if (iframeDoc) {
+      initialState.inputs = {};
+      const inputs = iframeDoc.querySelectorAll('input, select');
+      inputs.forEach(input => {
+        if (input.id) {
+          if (input.type === 'checkbox' || input.type === 'radio') {
+            initialState.inputs[input.id] = { checked: input.checked };
+          } else {
+            initialState.inputs[input.id] = { value: input.value };
+          }
+          console.log('  📸 Captured input #' + input.id + ':', initialState.inputs[input.id]);
+        }
+      });
     }
     
     // Store initial state for later use
@@ -2552,15 +2569,12 @@
     // elapsed is the time relative to tutorial events (includes tutorial start offset)
     const elapsed = tutorialTime + tutorialStartSec;
     
-    // CRITICAL: Re-apply initial state for the first few frames to override any event resets
-    if (fastForwardComplete && initialStateRestorationFrames < 20) {
+    // Re-apply initial state for first few frames to ensure it sticks
+    if (fastForwardComplete && initialStateRestorationFrames < 10) {
       const iframeWindow = appFrame.contentWindow;
       if (currentTutorial.initialState && iframeWindow && iframeWindow.tutorialAPI) {
         if (currentTutorial.initialState.shift !== undefined) {
           iframeWindow.tutorialAPI.setShift(currentTutorial.initialState.shift);
-          if (initialStateRestorationFrames % 5 === 0) {
-            console.log('  🔁 Frame', initialStateRestorationFrames, '- re-applied shift:', currentTutorial.initialState.shift);
-          }
         }
         if (currentTutorial.initialState.shift2 !== undefined) {
           iframeWindow.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
@@ -2568,8 +2582,8 @@
       }
       initialStateRestorationFrames++;
       
-      if (initialStateRestorationFrames === 20) {
-        console.log('  ✓ Initial state restoration complete after 20 frames');
+      if (initialStateRestorationFrames === 10) {
+        console.log('  ✓ Initial state restoration complete');
       }
     }
     
@@ -2592,50 +2606,40 @@
         const event = eventQueue[0];
         const eventTimeSec = event.timestamp / 1000;
         
-        // Before tutorial start: skip drags but replay clicks (to set up app state)
+        // Before tutorial start: skip ALL events - we'll restore state from initialState instead
         if (eventTimeSec < tutorialStartSec) {
           eventQueue.shift();
-          
-          // Replay clicks and other events to set up app
-          if (event.type !== 'drag') {
-            replayEvent(event);
-            
-            // Add a small delay after each pre-tutorial click to allow app to process
-            // This is especially important for apps with complex state like D3 visualizations
-            if (event.type === 'click') {
-              console.log('  Pre-tutorial click replayed, pausing briefly for app to process...');
-              setTimeout(() => {
-                requestAnimationFrame(playbackLoop);
-              }, 50); // 50ms delay between setup clicks
-              return;
-            }
-          } else if (event.type === 'drag') {
-            // For drags: skip animation but apply final position
-            const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-            const iframeWindow = appFrame.contentWindow;
-            const detail = event.detail || {};
-            const frames = detail.animationFrames || [];
-            
-            if (frames.length > 0 && iframeWindow.tutorialAPI) {
-              const lastFrame = frames[frames.length - 1];
-              if (lastFrame.tutorialState) {
-                iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
-                console.log('  Applied final drag position: shift =', lastFrame.tutorialState.shift);
-              }
-            }
-          }
+          console.log('  ⏭️ Skipping pre-tutorial', event.type, 'event at', eventTimeSec.toFixed(2) + 's');
           
           if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
             fastForwardComplete = true;
-            console.log('⏩ Pre-tutorial setup complete - starting tutorial playback...');
+            console.log('⏩ Pre-tutorial events skipped - starting tutorial playback...');
             
             setTimeout(() => {
               // Restore the initial state captured when "Start Recording" was clicked
               console.log('  🔍 Attempting to restore initial state...');
               console.log('  currentTutorial.initialState:', currentTutorial.initialState);
-              console.log('  iframeWindow:', !!iframeWindow);
-              console.log('  tutorialAPI:', !!(iframeWindow && iframeWindow.tutorialAPI));
               
+              const iframeDoc = appFrame.contentDocument;
+              
+              // Restore input values FIRST
+              if (currentTutorial.initialState && currentTutorial.initialState.inputs && iframeDoc) {
+                console.log('  🔄 Restoring input values...');
+                for (const [inputId, inputState] of Object.entries(currentTutorial.initialState.inputs)) {
+                  const input = iframeDoc.getElementById(inputId);
+                  if (input) {
+                    if (inputState.checked !== undefined) {
+                      input.checked = inputState.checked;
+                      console.log('    ✓ Restored #' + inputId + ' checked:', inputState.checked);
+                    } else if (inputState.value !== undefined) {
+                      input.value = inputState.value;
+                      console.log('    ✓ Restored #' + inputId + ' value:', inputState.value);
+                    }
+                  }
+                }
+              }
+              
+              // Then restore shift values
               if (currentTutorial.initialState && iframeWindow && iframeWindow.tutorialAPI) {
                 if (currentTutorial.initialState.shift !== undefined) {
                   console.log('  🔄 Restoring initial shift:', currentTutorial.initialState.shift);
