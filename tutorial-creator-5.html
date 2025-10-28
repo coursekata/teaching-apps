@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.10</title>
+<title>Interactive Tutorial Creator - v10.28.11</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.10</div>
+    <div class="version-number">v10.28.11</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2592,8 +2592,9 @@
         }
       }
     } else {
-      // Drag animation is in progress - just wait
-      console.log('  ⏸ Waiting for drag animation to complete...');
+      // Drag animation is in progress - don't continue playback loop
+      // The drag animation will call requestAnimationFrame(playbackLoop) when done
+      return;
     }
     
     // Handle annotations
