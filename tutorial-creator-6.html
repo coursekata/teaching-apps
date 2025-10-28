@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.12</title>
+<title>Interactive Tutorial Creator - v8.13</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.12</div>
+    <div class="version-number">v8.13</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -940,7 +940,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.12',
+      version: '8.13',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1117,6 +1117,7 @@
     annotationBox.style.transform = 'none';
     annotationBox.style.zIndex = '10000';
     annotationBox.style.pointerEvents = 'auto';
+    annotationBox.style.display = 'block'; // CRITICAL: Override any previous display: none
     
     annotationTitle.innerHTML = ann.title;
     annotationText.innerHTML = ann.text;
@@ -1968,7 +1969,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.12 initialized');
+  console.log('Tutorial Creator v8.13 initialized');
 })();
 </script>
 </body>
