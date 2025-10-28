@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.0</title>
+<title>Interactive Tutorial Creator - v8.2</title>
 <script>
   window.MathJax = {
     tex: {
@@ -536,6 +536,7 @@
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
         <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
+        <button id="addAnnotationAtPause" class="primary" style="display:none;">➕ Add Annotation Here</button>
         <button id="recordAgain" class="record" style="display:none;">🔄 Record Again</button>
         <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
       </div>
@@ -544,7 +545,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.0</div>
+    <div class="version-number">v8.2</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -715,6 +716,7 @@
   const stopRecording = document.getElementById('stopRecording');
   const previewRecording = document.getElementById('previewRecording');
   const playPausePreview = document.getElementById('playPausePreview');
+  const addAnnotationAtPause = document.getElementById('addAnnotationAtPause');
   const recordAgain = document.getElementById('recordAgain');
   const exportRecording = document.getElementById('exportRecording');
   const recordingIndicator = document.getElementById('recordingIndicator');
@@ -924,7 +926,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.0',
+      version: '8.2',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1231,6 +1233,7 @@
     playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
     
     playPausePreview.textContent = '▶ Resume Preview';
+    addAnnotationAtPause.style.display = 'inline-block';
     
     console.log('⏸ Playback paused at', playbackPausedAt.toFixed(1) + 's');
   }
@@ -1242,11 +1245,55 @@
     playbackStartTime = Date.now() - (playbackPausedAt * 1000);
     
     playPausePreview.textContent = '⏸ Pause Preview';
+    addAnnotationAtPause.style.display = 'none';
     
     requestAnimationFrame(playbackLoop);
     
     console.log('▶️ Playback resumed');
   }
+  
+  addAnnotationAtPause.addEventListener('click', () => {
+    if (isPlaying) return; // Should only work when paused
+    
+    // Open annotation modal with timestamp set to current playback position
+    const currentTime = playbackPausedAt * 1000; // Convert to ms
+    
+    annTitle.value = '';
+    annText.value = '';
+    annDuration.value = 5;
+    annotationEditorModal.classList.add('visible');
+    
+    // Override the createAnnotation handler to use the paused time
+    const originalHandler = createAnnotation.onclick;
+    createAnnotation.onclick = () => {
+      const title = annTitle.value.trim();
+      const text = annText.value.trim();
+      const duration = parseFloat(annDuration.value) * 1000;
+      
+      if (!title || !text) {
+        alert('Please enter both title and text');
+        return;
+      }
+      
+      const annotation = {
+        timestamp: currentTime,
+        title: title,
+        text: text,
+        duration: duration,
+        position: null
+      };
+      
+      currentTutorial.annotations.push(annotation);
+      
+      annotationEditorModal.classList.remove('visible');
+      
+      // Show annotation for positioning
+      showAnnotationForPositioning(annotation, currentTutorial.annotations.length - 1);
+      
+      // Restore original handler
+      createAnnotation.onclick = originalHandler;
+    };
+  });
   
   function playbackLoop() {
     if (!isPlaying || !currentTutorial) return;
@@ -1355,6 +1402,7 @@
     
     previewRecording.style.display = 'inline-block';
     playPausePreview.style.display = 'none';
+    addAnnotationAtPause.style.display = 'none';
     recordAgain.style.display = 'inline-block';
     exportRecording.style.display = 'inline-block';
     appFrame.classList.remove('playback-mode');
@@ -1398,6 +1446,12 @@
     }
     
     const duration = currentTutorial.duration / 1000;
+    const timelineWidth = Math.max(duration * timelineScale, 800); // Minimum 800px
+    
+    // Set the width of timeline tracks
+    timelineRuler.style.minWidth = timelineWidth + 'px';
+    eventsTrack.parentElement.style.minWidth = timelineWidth + 'px';
+    annotationsTrack.parentElement.style.minWidth = timelineWidth + 'px';
     
     // Render time ticks
     timelineRuler.innerHTML = '';
@@ -1733,7 +1787,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.0 initialized');
+  console.log('Tutorial Creator v8.2 initialized');
 })();
 </script>
 </body>
