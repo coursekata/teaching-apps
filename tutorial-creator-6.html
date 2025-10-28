@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.10</title>
+<title>Interactive Tutorial Creator - v8.11</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.10</div>
+    <div class="version-number">v8.11</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -940,7 +940,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.10',
+      version: '8.11',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1116,11 +1116,14 @@
     annotationBox.style.height = 'auto';
     annotationBox.style.transform = 'none';
     annotationBox.style.zIndex = '10000';
+    annotationBox.style.pointerEvents = 'auto';
     
     annotationTitle.innerHTML = ann.title;
     annotationText.innerHTML = ann.text;
     
     console.log('Annotation box styles set, display:', window.getComputedStyle(annotationBox).display);
+    console.log('Annotation box in DOM:', annotationBox.parentElement !== null);
+    console.log('Annotation box getBoundingClientRect:', annotationBox.getBoundingClientRect());
     
     // Add resize handle
     if (!annotationBox.querySelector('.resize-handle')) {
@@ -1187,6 +1190,13 @@
     }
     
     console.log('makeDraggable: Setting up drag handlers');
+    console.log('annotationBox element:', annotationBox);
+    console.log('annotationBox tagName:', annotationBox.tagName);
+    
+    // Test if we can attach events at all
+    annotationBox.onclick = function(e) {
+      console.log('CLICK EVENT FIRED!', e);
+    };
     
     // State variables
     let isDragging = false;
@@ -1941,7 +1951,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.10 initialized');
+  console.log('Tutorial Creator v8.11 initialized');
 })();
 </script>
 </body>
