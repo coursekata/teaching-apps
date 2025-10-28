@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.26</title>
+<title>Interactive Tutorial Creator - v10.28.27</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.26</div>
+    <div class="version-number">v10.28.27</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2632,9 +2632,17 @@
                     if (inputState.checked !== undefined) {
                       input.checked = inputState.checked;
                       console.log('    ✓ Restored #' + inputId + ' checked:', inputState.checked);
+                      // Dispatch change event
+                      const changeEvent = new Event('change', { bubbles: true });
+                      input.dispatchEvent(changeEvent);
                     } else if (inputState.value !== undefined) {
                       input.value = inputState.value;
                       console.log('    ✓ Restored #' + inputId + ' value:', inputState.value);
+                      // Dispatch both input and change events
+                      const inputEvent = new Event('input', { bubbles: true });
+                      const changeEvent = new Event('change', { bubbles: true });
+                      input.dispatchEvent(inputEvent);
+                      input.dispatchEvent(changeEvent);
                     }
                   }
                 }
@@ -2647,7 +2655,7 @@
                   console.log('  🔄 Clicking simulate to generate initial data...');
                   regenBtn.click();
                   
-                  // Wait for simulate to finish
+                  // Wait for simulate to finish (needs time for data generation)
                   setTimeout(() => {
                     // NOW restore shift values AFTER simulation (re-get iframeWindow)
                     const iframeWin = appFrame.contentWindow;
@@ -2670,7 +2678,7 @@
                     
                     lastFrameTime = Date.now();  // Reset frame time for smooth playback start
                     requestAnimationFrame(playbackLoop);
-                  }, 100);
+                  }, 500);  // Wait 500ms for data generation
                 } else {
                   console.warn('  ⚠️ Could not find simulate button');
                   lastFrameTime = Date.now();
