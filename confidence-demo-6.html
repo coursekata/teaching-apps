@@ -1752,6 +1752,8 @@
       } else {
         dragTarget = 'main';
       }
+      
+      emitTutorialEvent('dragStart', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2});
     })
     .on('drag', function(event){
       if(!isSampleMeanLocked()) return;
@@ -1771,6 +1773,13 @@
         }
       }
       draw();
+      
+      emitTutorialEvent('drag', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2});
+    })
+    .on('end', function(event){
+      if(!isSampleMeanLocked()) return;
+      
+      emitTutorialEvent('dragEnd', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2});
     });
 
   const dragB = d3.drag()
@@ -1808,12 +1817,19 @@
           }
         }
       }
+      
+      emitTutorialEvent('dragBStart', {bValue: bValue});
     })
     .on('drag', function(event){
       if(bValue===null) bValue = 0;
       bValue += event.dx * dataUnitsPerPx();
       bInput.value = bValue.toFixed(2);
       draw();
+      
+      emitTutorialEvent('dragB', {bValue: bValue});
+    })
+    .on('end', function(){
+      emitTutorialEvent('dragBEnd', {bValue: bValue});
     });
   
   root.select('.draggable-veil').call(dragHist);
@@ -1832,6 +1848,8 @@
       blueMarkJustPlaced = false;
       dragTarget = 'main';
       betaMarkerG.style('cursor', 'grabbing');
+      
+      emitTutorialEvent('dragBetaStart', {shiftUnits: shiftUnits});
     })
     .on('drag', function(event){
       if(!isSampleMeanLocked()) return;
@@ -1847,9 +1865,13 @@
         linkedMarks.right = null;
       }
       draw();
+      
+      emitTutorialEvent('dragBeta', {shiftUnits: shiftUnits});
     })
     .on('end', function(){
       betaMarkerG.style('cursor', 'grab');
+      
+      emitTutorialEvent('dragBetaEnd', {shiftUnits: shiftUnits});
     });
   
   betaMarkerG.call(dragBeta);
@@ -1862,22 +1884,36 @@
       blueMarkJustPlaced = false;
       dragTarget = 'second';
       betaPrimeMarkerG.style('cursor', 'grabbing');
+      
+      emitTutorialEvent('dragBetaPrimeStart', {shiftUnits2: shiftUnits2});
     })
     .on('drag', function(event){
       shiftUnits2 += event.dx * dataUnitsPerPx();
       draw();
+      
+      emitTutorialEvent('dragBetaPrime', {shiftUnits2: shiftUnits2});
     })
     .on('end', function(){
       betaPrimeMarkerG.style('cursor', 'grab');
+      
+      emitTutorialEvent('dragBetaPrimeEnd', {shiftUnits2: shiftUnits2});
     });
   
   betaPrimeMarkerG.call(dragBetaPrime);
 
   // Drag behavior for axes to pan the view
   const dragAxis = d3.drag()
+    .on('start', function(){
+      emitTutorialEvent('dragAxisStart', {domainOffset: domainOffset});
+    })
     .on('drag', function(event){
       domainOffset += event.dx * dataUnitsPerPx();
       draw();
+      
+      emitTutorialEvent('dragAxis', {domainOffset: domainOffset});
+    })
+    .on('end', function(){
+      emitTutorialEvent('dragAxisEnd', {domainOffset: domainOffset});
     });
   
   xAxisG.call(dragAxis);
