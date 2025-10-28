@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.17</title>
+<title>Interactive Tutorial Creator - v10.28.18</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.17</div>
+    <div class="version-number">v10.28.18</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1024,8 +1024,6 @@
   let currentAnnotationIndex = -1;
   let fastForwardComplete = false;
   let activeDragAnimation = null;
-  let preTutorialShift = 0;  // Save the shift from pre-tutorial drags
-  let shiftReapplicationFrames = 0;  // Counter for re-applying shift during early playback
   
   // Simple time tracking: just track the current tutorial time
   let tutorialTime = 0;  // Current position in tutorial (in seconds)
@@ -1219,6 +1217,22 @@
     // Mark this as the tutorial start point
     tutorialStartTime = Date.now();
     
+    // Capture the current app state to restore during playback
+    const iframeWindow = appFrame.contentWindow;
+    const initialState = {};
+    if (iframeWindow && iframeWindow.tutorialAPI) {
+      if (iframeWindow.tutorialAPI.getShift) {
+        initialState.shift = iframeWindow.tutorialAPI.getShift();
+        console.log('  📸 Captured initial shift:', initialState.shift);
+      }
+      if (iframeWindow.tutorialAPI.getShift2) {
+        initialState.shift2 = iframeWindow.tutorialAPI.getShift2();
+      }
+    }
+    
+    // Store initial state for later use
+    window.capturedInitialState = initialState;
+    
     // Reset tutorial-specific state
     recordedAnnotations = [];
     totalPausedDuration = 0;
@@ -1366,8 +1380,11 @@
       duration: tutorialDuration,  // Duration from Start to Stop
       events: alwaysRecordedEvents,  // ALL events from app load
       annotations: recordedAnnotations,
-      cursorPositions: cursorPositions  // Cursor movement data
+      cursorPositions: cursorPositions,  // Cursor movement data
+      initialState: window.capturedInitialState || {}  // App state at recording start
     };
+    
+    console.log('  📦 Tutorial includes initial state:', tutorial.initialState);
     
     currentTutorial = tutorial;
     
@@ -1785,8 +1802,6 @@
           playbackPausedAt = 0;
           tutorialTime = 0;  // Reset tutorial time
           lastFrameTime = 0;  // Reset frame time tracking
-          preTutorialShift = 0;  // Reset pre-tutorial shift
-          shiftReapplicationFrames = 0;  // Reset reapplication counter
           eventQueue = [...currentTutorial.events];
           
           console.log('🎬 About to start playback loop');
@@ -2525,15 +2540,6 @@
     // elapsed is the time relative to tutorial events (includes tutorial start offset)
     const elapsed = tutorialTime + tutorialStartSec;
     
-    // Re-apply pre-tutorial shift for the first few frames to ensure it sticks
-    if (shiftReapplicationFrames < 10 && preTutorialShift !== 0 && fastForwardComplete) {
-      const iframeWindow = appFrame.contentWindow;
-      if (iframeWindow && iframeWindow.tutorialAPI) {
-        iframeWindow.tutorialAPI.setShift(preTutorialShift);
-      }
-      shiftReapplicationFrames++;
-    }
-    
     // Log once at start
     if (tutorialTime < 0.1) {
       console.log('🎬 Playback starting:');
@@ -2580,9 +2586,8 @@
             if (frames.length > 0 && iframeWindow.tutorialAPI) {
               const lastFrame = frames[frames.length - 1];
               if (lastFrame.tutorialState) {
-                preTutorialShift = lastFrame.tutorialState.shift;  // Save it
-                iframeWindow.tutorialAPI.setShift(preTutorialShift);
-                console.log('  Applied final drag position: shift =', preTutorialShift);
+                iframeWindow.tutorialAPI.setShift(lastFrame.tutorialState.shift);
+                console.log('  Applied final drag position: shift =', lastFrame.tutorialState.shift);
               }
             }
           }
@@ -2591,13 +2596,17 @@
             fastForwardComplete = true;
             console.log('⏩ Pre-tutorial setup complete - starting tutorial playback...');
             
-            const savedShift = preTutorialShift;  // Capture it now
-            
             setTimeout(() => {
-              // Re-apply pre-tutorial shift right before starting playback
-              if (savedShift !== 0 && iframeWindow.tutorialAPI) {
-                iframeWindow.tutorialAPI.setShift(savedShift);
-                console.log('  Re-applied pre-tutorial shift:', savedShift);
+              // Restore the initial state captured when "Start Recording" was clicked
+              if (currentTutorial.initialState && iframeWindow.tutorialAPI) {
+                if (currentTutorial.initialState.shift !== undefined) {
+                  iframeWindow.tutorialAPI.setShift(currentTutorial.initialState.shift);
+                  console.log('  🔄 Restored initial shift:', currentTutorial.initialState.shift);
+                }
+                if (currentTutorial.initialState.shift2 !== undefined) {
+                  iframeWindow.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+                  console.log('  🔄 Restored initial shift2:', currentTutorial.initialState.shift2);
+                }
               }
               
               lastFrameTime = Date.now();  // Reset frame time for smooth playback start
