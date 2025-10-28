@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.19</title>
+<title>Interactive Tutorial Creator - v10.28.21</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.19</div>
+    <div class="version-number">v10.28.21</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1024,6 +1024,7 @@
   let currentAnnotationIndex = -1;
   let fastForwardComplete = false;
   let activeDragAnimation = null;
+  let initialStateRestorationFrames = 0;  // Counter for re-applying initial state
   
   // Simple time tracking: just track the current tutorial time
   let tutorialTime = 0;  // Current position in tutorial (in seconds)
@@ -1812,6 +1813,7 @@
           playbackPausedAt = 0;
           tutorialTime = 0;  // Reset tutorial time
           lastFrameTime = 0;  // Reset frame time tracking
+          initialStateRestorationFrames = 0;  // Reset state restoration counter
           eventQueue = [...currentTutorial.events];
           
           console.log('🎬 About to start playback loop');
@@ -2549,6 +2551,27 @@
     
     // elapsed is the time relative to tutorial events (includes tutorial start offset)
     const elapsed = tutorialTime + tutorialStartSec;
+    
+    // CRITICAL: Re-apply initial state for the first few frames to override any event resets
+    if (fastForwardComplete && initialStateRestorationFrames < 20) {
+      const iframeWindow = appFrame.contentWindow;
+      if (currentTutorial.initialState && iframeWindow && iframeWindow.tutorialAPI) {
+        if (currentTutorial.initialState.shift !== undefined) {
+          iframeWindow.tutorialAPI.setShift(currentTutorial.initialState.shift);
+          if (initialStateRestorationFrames % 5 === 0) {
+            console.log('  🔁 Frame', initialStateRestorationFrames, '- re-applied shift:', currentTutorial.initialState.shift);
+          }
+        }
+        if (currentTutorial.initialState.shift2 !== undefined) {
+          iframeWindow.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+        }
+      }
+      initialStateRestorationFrames++;
+      
+      if (initialStateRestorationFrames === 20) {
+        console.log('  ✓ Initial state restoration complete after 20 frames');
+      }
+    }
     
     // Log once at start
     if (tutorialTime < 0.1) {
