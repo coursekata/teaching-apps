@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.18</title>
+<title>Interactive Tutorial Creator - v10.28.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.18</div>
+    <div class="version-number">v10.28.19</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1220,18 +1220,28 @@
     // Capture the current app state to restore during playback
     const iframeWindow = appFrame.contentWindow;
     const initialState = {};
+    console.log('  🔍 Attempting to capture app state...');
+    console.log('  iframeWindow:', !!iframeWindow);
+    console.log('  tutorialAPI:', !!iframeWindow?.tutorialAPI);
+    
     if (iframeWindow && iframeWindow.tutorialAPI) {
       if (iframeWindow.tutorialAPI.getShift) {
         initialState.shift = iframeWindow.tutorialAPI.getShift();
         console.log('  📸 Captured initial shift:', initialState.shift);
+      } else {
+        console.warn('  ⚠️ tutorialAPI.getShift() not available');
       }
       if (iframeWindow.tutorialAPI.getShift2) {
         initialState.shift2 = iframeWindow.tutorialAPI.getShift2();
+        console.log('  📸 Captured initial shift2:', initialState.shift2);
       }
+    } else {
+      console.warn('  ⚠️ Cannot capture state - tutorialAPI not available');
     }
     
     // Store initial state for later use
     window.capturedInitialState = initialState;
+    console.log('  📦 Full captured state:', initialState);
     
     // Reset tutorial-specific state
     recordedAnnotations = [];
@@ -2598,15 +2608,34 @@
             
             setTimeout(() => {
               // Restore the initial state captured when "Start Recording" was clicked
-              if (currentTutorial.initialState && iframeWindow.tutorialAPI) {
+              console.log('  🔍 Attempting to restore initial state...');
+              console.log('  currentTutorial.initialState:', currentTutorial.initialState);
+              console.log('  iframeWindow:', !!iframeWindow);
+              console.log('  tutorialAPI:', !!iframeWindow?.tutorialAPI);
+              
+              if (currentTutorial.initialState && iframeWindow && iframeWindow.tutorialAPI) {
                 if (currentTutorial.initialState.shift !== undefined) {
+                  console.log('  🔄 Restoring initial shift:', currentTutorial.initialState.shift);
                   iframeWindow.tutorialAPI.setShift(currentTutorial.initialState.shift);
-                  console.log('  🔄 Restored initial shift:', currentTutorial.initialState.shift);
+                  
+                  // Verify it was set
+                  if (iframeWindow.tutorialAPI.getShift) {
+                    const verifyShift = iframeWindow.tutorialAPI.getShift();
+                    console.log('  ✓ Verified shift after restoration:', verifyShift);
+                  }
+                } else {
+                  console.warn('  ⚠️ No shift value in initialState');
                 }
                 if (currentTutorial.initialState.shift2 !== undefined) {
                   iframeWindow.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
                   console.log('  🔄 Restored initial shift2:', currentTutorial.initialState.shift2);
                 }
+              } else {
+                console.warn('  ⚠️ Cannot restore state:', {
+                  hasInitialState: !!currentTutorial.initialState,
+                  hasIframeWindow: !!iframeWindow,
+                  hasTutorialAPI: !!iframeWindow?.tutorialAPI
+                });
               }
               
               lastFrameTime = Date.now();  // Reset frame time for smooth playback start
