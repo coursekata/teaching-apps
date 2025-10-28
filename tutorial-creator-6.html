@@ -1,9 +1,9 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.14</title>
+<title>Interactive Tutorial Creator - v8.15</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.14</div>
+    <div class="version-number">v8.15</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -940,7 +940,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.14',
+      version: '8.15',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1033,15 +1033,14 @@
       api.offAction(eventListener);
     }
     
-    currentTutorial.duration = Date.now() - recordingStartTime - totalPausedTime;
-    
-    // Also ensure duration matches the last snapshot timestamp
+    // Duration should be based on the last snapshot, not wall clock time
+    // This way pausing doesn't artificially inflate the duration
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
-      if (lastSnapshotTime > currentTutorial.duration) {
-        console.warn('Last snapshot time exceeds duration, adjusting:', lastSnapshotTime, 'vs', currentTutorial.duration);
-        currentTutorial.duration = lastSnapshotTime + 100; // Add small buffer
-      }
+      currentTutorial.duration = lastSnapshotTime + 100; // Add small buffer after last event
+      console.log('✓ Duration set to last snapshot time:', lastSnapshotTime + 'ms');
+    } else {
+      currentTutorial.duration = Date.now() - recordingStartTime - totalPausedTime;
     }
     
     isRecording = false;
@@ -1625,49 +1624,63 @@
       timelineRuler.appendChild(tick);
     }
     
-    // Render event markers - group consecutive drag events into spans
+    // Render event markers - group drag sequences into spans
     eventsTrack.innerHTML = '';
     
-    // Group events by type
+    // Group events by drag sequences
     let i = 0;
     while (i < currentTutorial.snapshots.length) {
       const snapshot = currentTutorial.snapshots[i];
       const action = snapshot.event.action;
       
-      // Check if this is a drag-type event
-      const isDragEvent = action === 'drag' || action === 'dragBeta' || action === 'dragBetaPrime' || 
-                         action === 'dragB' || action === 'dragAxis';
+      // Check if this is a drag start event
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || 
+                         action === 'dragBetaPrimeStart' || action === 'dragBStart' || 
+                         action === 'dragAxisStart';
       
-      if (isDragEvent) {
-        // Find the end of this drag sequence
+      if (isDragStart) {
+        // Determine the base action name
+        const baseAction = action.replace('Start', '');
+        const endAction = baseAction + 'End';
+        
+        // Find the corresponding end event
         let endIdx = i;
-        while (endIdx + 1 < currentTutorial.snapshots.length && 
-               currentTutorial.snapshots[endIdx + 1].event.action === action) {
-          endIdx++;
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (currentTutorial.snapshots[j].event.action === endAction) {
+            endIdx = j;
+            break;
+          }
         }
         
-        // Create a span for the drag
+        // Create a span for the entire drag sequence
         const startTime = snapshot.timestamp / 1000;
         const endTime = currentTutorial.snapshots[endIdx].timestamp / 1000;
         const duration = endTime - startTime;
         
-        if (duration > 0.05) { // Only show if drag lasted more than 50ms
-          const span = document.createElement('div');
-          span.className = 'timeline-event drag-event';
-          span.style.left = (startTime * timelineScale) + 'px';
-          span.style.width = (duration * timelineScale) + 'px';
-          span.title = `${action} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
-          eventsTrack.appendChild(span);
-        }
+        const span = document.createElement('div');
+        span.className = 'timeline-event drag-event';
+        span.style.left = (startTime * timelineScale) + 'px';
+        span.style.width = Math.max(duration * timelineScale, 2) + 'px'; // Minimum 2px width
+        span.title = `${baseAction} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
+        eventsTrack.appendChild(span);
         
         i = endIdx + 1;
       } else {
-        // Single event marker
-        const marker = document.createElement('div');
-        marker.className = 'timeline-event';
-        marker.style.left = ((snapshot.timestamp / 1000) * timelineScale) + 'px';
-        marker.title = action + ' at ' + (snapshot.timestamp / 1000).toFixed(2) + 's';
-        eventsTrack.appendChild(marker);
+        // Skip intermediate drag events (they're included in the span)
+        const isDragMiddle = action === 'drag' || action === 'dragBeta' || 
+                            action === 'dragBetaPrime' || action === 'dragB' || 
+                            action === 'dragAxis' || action === 'dragEnd' || 
+                            action === 'dragBetaEnd' || action === 'dragBetaPrimeEnd' || 
+                            action === 'dragBEnd' || action === 'dragAxisEnd';
+        
+        if (!isDragMiddle) {
+          // Single event marker for non-drag events
+          const marker = document.createElement('div');
+          marker.className = 'timeline-event';
+          marker.style.left = ((snapshot.timestamp / 1000) * timelineScale) + 'px';
+          marker.title = action + ' at ' + (snapshot.timestamp / 1000).toFixed(2) + 's';
+          eventsTrack.appendChild(marker);
+        }
         i++;
       }
     }
@@ -1984,7 +1997,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.14 initialized');
+  console.log('Tutorial Creator v8.15 initialized');
 })();
 </script>
 </body>
