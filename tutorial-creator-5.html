@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.24</title>
+<title>Interactive Tutorial Creator - v10.28.26</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.24</div>
+    <div class="version-number">v10.28.26</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2621,6 +2621,7 @@
               console.log('  currentTutorial.initialState:', currentTutorial.initialState);
               
               const iframeDoc = appFrame.contentDocument;
+              const iframeWindow = appFrame.contentWindow;
               
               // Restore input values FIRST
               if (currentTutorial.initialState && currentTutorial.initialState.inputs && iframeDoc) {
@@ -2639,34 +2640,46 @@
                 }
               }
               
-              // Then restore shift values
-              if (currentTutorial.initialState && iframeWindow && iframeWindow.tutorialAPI) {
-                if (currentTutorial.initialState.shift !== undefined) {
-                  console.log('  🔄 Restoring initial shift:', currentTutorial.initialState.shift);
-                  iframeWindow.tutorialAPI.setShift(currentTutorial.initialState.shift);
+              // Trigger a simulate to generate data with the restored inputs
+              if (iframeDoc) {
+                const regenBtn = iframeDoc.getElementById('regenBtn');
+                if (regenBtn) {
+                  console.log('  🔄 Clicking simulate to generate initial data...');
+                  regenBtn.click();
                   
-                  // Verify it was set
-                  if (iframeWindow.tutorialAPI.getShift) {
-                    const verifyShift = iframeWindow.tutorialAPI.getShift();
-                    console.log('  ✓ Verified shift after restoration:', verifyShift);
-                  }
+                  // Wait for simulate to finish
+                  setTimeout(() => {
+                    // NOW restore shift values AFTER simulation (re-get iframeWindow)
+                    const iframeWin = appFrame.contentWindow;
+                    if (currentTutorial.initialState && iframeWin && iframeWin.tutorialAPI) {
+                      if (currentTutorial.initialState.shift !== undefined) {
+                        console.log('  🔄 Restoring initial shift after simulation:', currentTutorial.initialState.shift);
+                        iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
+                        
+                        // Verify it was set
+                        if (iframeWin.tutorialAPI.getShift) {
+                          const verifyShift = iframeWin.tutorialAPI.getShift();
+                          console.log('  ✓ Verified shift after restoration:', verifyShift);
+                        }
+                      }
+                      if (currentTutorial.initialState.shift2 !== undefined) {
+                        iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+                        console.log('  🔄 Restored initial shift2:', currentTutorial.initialState.shift2);
+                      }
+                    }
+                    
+                    lastFrameTime = Date.now();  // Reset frame time for smooth playback start
+                    requestAnimationFrame(playbackLoop);
+                  }, 100);
                 } else {
-                  console.warn('  ⚠️ No shift value in initialState');
-                }
-                if (currentTutorial.initialState.shift2 !== undefined) {
-                  iframeWindow.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
-                  console.log('  🔄 Restored initial shift2:', currentTutorial.initialState.shift2);
+                  console.warn('  ⚠️ Could not find simulate button');
+                  lastFrameTime = Date.now();
+                  requestAnimationFrame(playbackLoop);
                 }
               } else {
-                console.warn('  ⚠️ Cannot restore state:', {
-                  hasInitialState: !!currentTutorial.initialState,
-                  hasIframeWindow: !!iframeWindow,
-                  hasTutorialAPI: !!(iframeWindow && iframeWindow.tutorialAPI)
-                });
+                lastFrameTime = Date.now();
+                requestAnimationFrame(playbackLoop);
               }
-              
-              lastFrameTime = Date.now();  // Reset frame time for smooth playback start
-              requestAnimationFrame(playbackLoop);
             }, 100);
             return;
           }
