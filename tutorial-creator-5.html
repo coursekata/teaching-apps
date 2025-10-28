@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.30</title>
+<title>Interactive Tutorial Creator - v10.28.32</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.30</div>
+    <div class="version-number">v10.28.32</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1212,7 +1212,9 @@
   
   
   startRecording.addEventListener('click', () => {
-    if (!appLoaded) {
+    // Check if app is loaded - either via appLoaded flag or by checking iframe
+    const hasIframeContent = appFrame.src && appFrame.src !== '' && appFrame.contentWindow;
+    if (!appLoaded && !hasIframeContent) {
       alert('Please load an app first!');
       return;
     }
@@ -1384,7 +1386,14 @@
       dragStartSnapshot = null;
     }
     
-    // Calculate tutorial start offset (time from app load to "Start Recording" click)
+    // Calculate tutorial duration (from "Start Recording" to "Stop Recording")
+    const tutorialDuration = Date.now() - tutorialStartTime - totalPausedDuration;
+    
+    console.log('🛑 STOP RECORDING clicked');
+    console.log('  tutorialStartTime:', tutorialStartTime);
+    console.log('  totalPausedDuration:', totalPausedDuration);
+    console.log('  Calculated duration:', tutorialDuration, 'ms (', (tutorialDuration/1000).toFixed(2), 'seconds )');
+    
     // Build tutorial JSON - events start from "Start Recording" click
     const tutorial = {
       appUrl: appUrl.value.trim(),
