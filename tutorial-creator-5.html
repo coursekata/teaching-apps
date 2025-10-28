@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.13</title>
+<title>Interactive Tutorial Creator - v10.28.14</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.13</div>
+    <div class="version-number">v10.28.14</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1024,9 +1024,11 @@
   let currentAnnotationIndex = -1;
   let fastForwardComplete = false;
   let activeDragAnimation = null;
-  let dragAnimationPauseTime = 0;
-  let dragAnimationDuration = 0;
   let preTutorialShift = 0;  // Save the shift from pre-tutorial drags
+  
+  // Simple time tracking: just track the current tutorial time
+  let tutorialTime = 0;  // Current position in tutorial (in seconds)
+  let lastFrameTime = 0;  // Last time we updated (for calculating deltas)
   
   // ADDED: Initialize annotation box in iframe
   function initializeAnnotationBox() {
@@ -1780,8 +1782,8 @@
           fastForwardComplete = false;
           isPlaying = true;
           playbackPausedAt = 0;
-          playbackStartTime = Date.now();
-          dragAnimationDuration = 0;  // Reset drag animation time tracking
+          tutorialTime = 0;  // Reset tutorial time
+          lastFrameTime = 0;  // Reset frame time tracking
           preTutorialShift = 0;  // Reset pre-tutorial shift
           eventQueue = [...currentTutorial.events];
           
@@ -2502,35 +2504,37 @@
   function playbackLoop() {
     if (!isPlaying) return;
     
-    // Calculate real elapsed time
-    // When drag animation is NOT active: use wall clock time
-    // When drag animation IS active: freeze at the pause point
-    let realElapsed;
-    if (activeDragAnimation) {
-      // Frozen at the moment drag animation started
-      realElapsed = (dragAnimationPauseTime - playbackStartTime - dragAnimationDuration) / 1000;
-    } else {
-      // Normal playback: current time minus start, minus accumulated drag animation time
-      realElapsed = (Date.now() - playbackStartTime - dragAnimationDuration) / 1000;
+    const now = Date.now();
+    
+    // Calculate time delta since last frame
+    if (lastFrameTime === 0) {
+      lastFrameTime = now;
+    }
+    const deltaMs = now - lastFrameTime;
+    lastFrameTime = now;
+    
+    // Only advance tutorial time if NOT in a drag animation
+    if (!activeDragAnimation) {
+      tutorialTime += (deltaMs / 1000) * playbackSpeed;
     }
     
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
-    
-    // Use the duration calculated by renderTimeline (which includes annotations)
     const totalDuration = tutorialDurationSec;
-    const elapsed = realElapsed + tutorialStartSec;
+    
+    // elapsed is the time relative to tutorial events (includes tutorial start offset)
+    const elapsed = tutorialTime + tutorialStartSec;
     
     // Log once at start
-    if (realElapsed < 0.1) {
+    if (tutorialTime < 0.1) {
       console.log('🎬 Playback starting:');
       console.log('  currentTutorial.duration:', currentTutorial.duration, 'ms (', tutorialDurationSec.toFixed(2), 's )');
       console.log('  totalDuration:', totalDuration.toFixed(2) + 's');
     }
     
     // Debug logging (only log occasionally to avoid spam)
-    if (Math.floor(realElapsed * 10) % 10 === 0) {
-      console.log('Playback:', realElapsed.toFixed(2) + 's /', totalDuration.toFixed(2) + 's');
+    if (Math.floor(tutorialTime * 10) % 10 === 0) {
+      console.log('Playback:', tutorialTime.toFixed(2) + 's /', totalDuration.toFixed(2) + 's');
     }
     
     // Process events - handle drags specially
@@ -2585,7 +2589,7 @@
             }
             
             setTimeout(() => {
-              playbackStartTime = Date.now();
+              lastFrameTime = Date.now();  // Reset frame time for smooth playback start
               requestAnimationFrame(playbackLoop);
             }, 100);
             return;
@@ -2618,15 +2622,15 @@
     }
     
     // Handle annotations
-    if (currentTutorial.annotations && realElapsed >= 0) {
+    if (currentTutorial.annotations && tutorialTime >= 0) {
       currentTutorial.annotations.forEach((ann, idx) => {
         const annStart = ann.timestamp / 1000;
         const annEnd = annStart + (ann.duration || 5000) / 1000;
         
-        if (realElapsed >= annStart && realElapsed < annEnd && currentAnnotationIndex !== idx) {
+        if (tutorialTime >= annStart && tutorialTime < annEnd && currentAnnotationIndex !== idx) {
           currentAnnotationIndex = idx;
           showAnnotation(ann);
-        } else if (realElapsed >= annEnd && currentAnnotationIndex === idx) {
+        } else if (tutorialTime >= annEnd && currentAnnotationIndex === idx) {
           // Only hide if this isn't the last content (keep it visible if it's the final thing)
           const isLastContent = annEnd >= totalDuration - 0.01; // Within 10ms of end
           if (!isLastContent) {
@@ -2642,13 +2646,13 @@
       const playhead = document.getElementById('timelinePlayhead');
       if (playhead) {
         playhead.style.display = 'block';
-        const cappedElapsed = Math.min(realElapsed, totalDuration);
-        playhead.style.left = (cappedElapsed * timelineScale) + 'px';
+        const cappedTime = Math.min(tutorialTime, totalDuration);
+        playhead.style.left = (cappedTime * timelineScale) + 'px';
       }
     }
     
     // Check completion - only stop when we've reached the actual tutorial duration
-    if (realElapsed >= totalDuration) {
+    if (tutorialTime >= totalDuration) {
       if (activeDragAnimation) {
         console.log('⏳ Waiting for drag animation to complete...');
         requestAnimationFrame(playbackLoop);
@@ -2747,9 +2751,8 @@
           const sampledFrames = frames.filter((f, i) => i % 3 === 0 || i === frames.length - 1);
           const targetDuration = originalDuration / playbackSpeed;
           
-          // Mark that a drag animation is active
+          // Mark that a drag animation is active (pauses tutorial time)
           activeDragAnimation = true;
-          dragAnimationPauseTime = Date.now();  // Track when drag animation starts
           
           const dragStartTime = Date.now();
           let currentFrameIndex = 0;
@@ -2785,15 +2788,10 @@
                 console.log('  Final frame - shift:', lastFrame.tutorialState.shift);
               }
               
-              // Track how long the drag animation took
-              const dragAnimationElapsed = Date.now() - dragAnimationPauseTime;
-              dragAnimationDuration += dragAnimationElapsed;
-              console.log('  Drag animation took:', dragAnimationElapsed, 'ms. Total drag time:', dragAnimationDuration, 'ms');
-              
               activeDragAnimation = null;
               console.log('✓ Drag animation complete - resuming playback');
               
-              // Resume playback loop
+              // Resume playback loop (tutorial time will start advancing again)
               requestAnimationFrame(playbackLoop);
             } else {
               requestAnimationFrame(animateDrag);
