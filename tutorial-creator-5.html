@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.29</title>
+<title>Interactive Tutorial Creator - v10.28.30</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.29</div>
+    <div class="version-number">v10.28.30</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1009,6 +1009,7 @@
   let tutorialRecording = false; // True when intentionally recording tutorial actions
   let alwaysRecordedEvents = [];
   let appLoadTime = 0;
+  let appLoaded = false;  // Track if app has been loaded
   let tutorialStartTime = 0; // When user clicks "Start Recording"
   
   // Cursor position tracking
@@ -1162,6 +1163,7 @@
       appLoadTime = Date.now();
       alwaysRecordedEvents = [];
       tutorialRecording = false; // DON'T record yet - wait for "Start Recording"
+      appLoaded = true;  // Mark app as loaded
       
       // ADDED: Initialize annotation box in iframe
       initializeAnnotationBox();
@@ -1210,7 +1212,7 @@
   
   
   startRecording.addEventListener('click', () => {
-    if (!tutorialRecording) {
+    if (!appLoaded) {
       alert('Please load an app first!');
       return;
     }
