@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.27</title>
+<title>Interactive Tutorial Creator - v10.28.28</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.27</div>
+    <div class="version-number">v10.28.28</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2606,88 +2606,75 @@
         const event = eventQueue[0];
         const eventTimeSec = event.timestamp / 1000;
         
-        // Before tutorial start: skip ALL events - we'll restore state from initialState instead
+        // Before tutorial start: replay clicks for setup, but skip input/change events
         if (eventTimeSec < tutorialStartSec) {
           eventQueue.shift();
-          console.log('  ⏭️ Skipping pre-tutorial', event.type, 'event at', eventTimeSec.toFixed(2) + 's');
           
+          // Skip input/change events - we'll restore values from captured state
+          if (event.type === 'input' || event.type === 'change') {
+            console.log('  ⏭️ Skipping pre-tutorial', event.type, 'event (will restore from captured state)');
+            continue;
+          }
+          
+          // Skip drag events - just track final position
+          if (event.type === 'drag') {
+            console.log('  ⏭️ Skipping pre-tutorial drag (will restore from captured state)');
+            continue;
+          }
+          
+          // Replay clicks to set up app state
+          if (event.type === 'click') {
+            replayEvent(event);
+            console.log('  ▶️ Replayed pre-tutorial click for setup');
+            
+            // Small delay after each click
+            setTimeout(() => {
+              requestAnimationFrame(playbackLoop);
+            }, 50);
+            return;
+          }
+          
+          // Check if we're done with pre-tutorial events
           if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
             fastForwardComplete = true;
-            console.log('⏩ Pre-tutorial events skipped - starting tutorial playback...');
+            console.log('⏩ Pre-tutorial setup complete - restoring captured state...');
             
             setTimeout(() => {
-              // Restore the initial state captured when "Start Recording" was clicked
-              console.log('  🔍 Attempting to restore initial state...');
-              console.log('  currentTutorial.initialState:', currentTutorial.initialState);
-              
               const iframeDoc = appFrame.contentDocument;
-              const iframeWindow = appFrame.contentWindow;
+              const iframeWin = appFrame.contentWindow;
               
-              // Restore input values FIRST
+              // Restore input values from captured state
               if (currentTutorial.initialState && currentTutorial.initialState.inputs && iframeDoc) {
-                console.log('  🔄 Restoring input values...');
+                console.log('  🔄 Restoring input values from captured state...');
                 for (const [inputId, inputState] of Object.entries(currentTutorial.initialState.inputs)) {
                   const input = iframeDoc.getElementById(inputId);
                   if (input) {
                     if (inputState.checked !== undefined) {
                       input.checked = inputState.checked;
                       console.log('    ✓ Restored #' + inputId + ' checked:', inputState.checked);
-                      // Dispatch change event
-                      const changeEvent = new Event('change', { bubbles: true });
-                      input.dispatchEvent(changeEvent);
                     } else if (inputState.value !== undefined) {
                       input.value = inputState.value;
                       console.log('    ✓ Restored #' + inputId + ' value:', inputState.value);
-                      // Dispatch both input and change events
-                      const inputEvent = new Event('input', { bubbles: true });
-                      const changeEvent = new Event('change', { bubbles: true });
-                      input.dispatchEvent(inputEvent);
-                      input.dispatchEvent(changeEvent);
                     }
                   }
                 }
               }
               
-              // Trigger a simulate to generate data with the restored inputs
-              if (iframeDoc) {
-                const regenBtn = iframeDoc.getElementById('regenBtn');
-                if (regenBtn) {
-                  console.log('  🔄 Clicking simulate to generate initial data...');
-                  regenBtn.click();
-                  
-                  // Wait for simulate to finish (needs time for data generation)
-                  setTimeout(() => {
-                    // NOW restore shift values AFTER simulation (re-get iframeWindow)
-                    const iframeWin = appFrame.contentWindow;
-                    if (currentTutorial.initialState && iframeWin && iframeWin.tutorialAPI) {
-                      if (currentTutorial.initialState.shift !== undefined) {
-                        console.log('  🔄 Restoring initial shift after simulation:', currentTutorial.initialState.shift);
-                        iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
-                        
-                        // Verify it was set
-                        if (iframeWin.tutorialAPI.getShift) {
-                          const verifyShift = iframeWin.tutorialAPI.getShift();
-                          console.log('  ✓ Verified shift after restoration:', verifyShift);
-                        }
-                      }
-                      if (currentTutorial.initialState.shift2 !== undefined) {
-                        iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
-                        console.log('  🔄 Restored initial shift2:', currentTutorial.initialState.shift2);
-                      }
-                    }
-                    
-                    lastFrameTime = Date.now();  // Reset frame time for smooth playback start
-                    requestAnimationFrame(playbackLoop);
-                  }, 500);  // Wait 500ms for data generation
-                } else {
-                  console.warn('  ⚠️ Could not find simulate button');
-                  lastFrameTime = Date.now();
-                  requestAnimationFrame(playbackLoop);
+              // Restore shift values
+              if (currentTutorial.initialState && iframeWin && iframeWin.tutorialAPI) {
+                if (currentTutorial.initialState.shift !== undefined) {
+                  iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
+                  console.log('  🔄 Restored shift:', currentTutorial.initialState.shift);
                 }
-              } else {
-                lastFrameTime = Date.now();
-                requestAnimationFrame(playbackLoop);
+                if (currentTutorial.initialState.shift2 !== undefined) {
+                  iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+                  console.log('  🔄 Restored shift2:', currentTutorial.initialState.shift2);
+                }
               }
+              
+              console.log('✓ State restoration complete - starting tutorial playback');
+              lastFrameTime = Date.now();
+              requestAnimationFrame(playbackLoop);
             }, 100);
             return;
           }
