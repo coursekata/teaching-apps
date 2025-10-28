@@ -948,6 +948,8 @@
         state: api.getState(),
         event: event
       });
+      
+      console.log('📸 Snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action);
     };
     
     api.onAction(eventListener);
@@ -1262,10 +1264,22 @@
     timelinePlayhead.style.display = 'block';
     timelinePlayhead.style.left = (elapsed * timelineScale + 60) + 'px';
     
-    // Apply snapshots
-    for (const snapshot of currentTutorial.snapshots) {
-      if (snapshot.timestamp <= elapsedMs && snapshot.timestamp > elapsedMs - 50) {
-        api.setState(snapshot.state);
+    // Find the most recent snapshot that should be active at this time
+    let targetSnapshot = null;
+    for (let i = currentTutorial.snapshots.length - 1; i >= 0; i--) {
+      if (currentTutorial.snapshots[i].timestamp <= elapsedMs) {
+        targetSnapshot = currentTutorial.snapshots[i];
+        break;
+      }
+    }
+    
+    // Apply the most recent applicable snapshot
+    if (targetSnapshot) {
+      // Use a simple flag to avoid re-applying the same snapshot
+      if (!playbackLoop.lastAppliedTimestamp || 
+          targetSnapshot.timestamp !== playbackLoop.lastAppliedTimestamp) {
+        api.setState(targetSnapshot.state);
+        playbackLoop.lastAppliedTimestamp = targetSnapshot.timestamp;
       }
     }
     
@@ -1326,6 +1340,7 @@
     isPlaying = false;
     playbackPausedAt = 0;
     currentAnnotationIndex = -1;
+    playbackLoop.lastAppliedTimestamp = null; // Reset the flag
     
     if (annotationBox) {
       annotationBox.classList.remove('visible');
