@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.28</title>
+<title>Interactive Tutorial Creator - v10.28.29</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.28</div>
+    <div class="version-number">v10.28.29</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1157,11 +1157,11 @@
     // Load the app
     appFrame.src = url;
     
-    // Wait for iframe to load, then start always-on recording
+    // Wait for iframe to load, but DON'T start recording yet
     appFrame.onload = () => {
       appLoadTime = Date.now();
       alwaysRecordedEvents = [];
-      tutorialRecording = true; // Enable recording from app load
+      tutorialRecording = false; // DON'T record yet - wait for "Start Recording"
       
       // ADDED: Initialize annotation box in iframe
       initializeAnnotationBox();
@@ -1217,6 +1217,10 @@
     
     // Mark this as the tutorial start point
     tutorialStartTime = Date.now();
+    
+    // START recording events from this point forward
+    tutorialRecording = true;
+    console.log('✓ Event recording enabled');
     
     // Capture the current app state to restore during playback
     const iframeWindow = appFrame.contentWindow;
@@ -1379,40 +1383,18 @@
     }
     
     // Calculate tutorial start offset (time from app load to "Start Recording" click)
-    const tutorialStartOffset = tutorialStartTime - appLoadTime;
-    
-    // Calculate tutorial duration (from "Start Recording" to "Stop Recording")
-    const tutorialDuration = Date.now() - tutorialStartTime - totalPausedDuration;
-    
-    console.log('🛑 STOP RECORDING clicked at', Date.now());
-    console.log('  tutorialStartTime:', tutorialStartTime);
-    console.log('  totalPausedDuration:', totalPausedDuration);
-    console.log('  Calculated duration:', tutorialDuration, 'ms (', (tutorialDuration/1000).toFixed(2), 'seconds )');
-    
-    pauseRecording.style.display = 'none';
-    resumeRecording.style.display = 'none';
-    addAnnotation.style.display = 'none';
-    stopRecording.style.display = 'none';
-    startRecording.style.display = 'none';
-    previewRecording.style.display = 'inline-block';
-    recordAgain.style.display = 'inline-block';
-    exportRecording.style.display = 'inline-block';
-    recordingIndicator.style.display = 'none';
-    pausedIndicator.style.display = 'none';
-    // reloadApp stays visible
-    
-    // Build tutorial JSON with ALL events (from app load) and tutorial start marker
+    // Build tutorial JSON - events start from "Start Recording" click
     const tutorial = {
       appUrl: appUrl.value.trim(),
-      tutorialStartOffset: tutorialStartOffset,  // When to start showing annotations
       duration: tutorialDuration,  // Duration from Start to Stop
-      events: alwaysRecordedEvents,  // ALL events from app load
+      events: alwaysRecordedEvents,  // Events from "Start Recording" forward
       annotations: recordedAnnotations,
       cursorPositions: cursorPositions,  // Cursor movement data
       initialState: window.capturedInitialState || {}  // App state at recording start
     };
     
     console.log('  📦 Tutorial includes initial state:', tutorial.initialState);
+    console.log('  📦 Tutorial has', tutorial.events.length, 'events starting from time 0');
     
     currentTutorial = tutorial;
     
@@ -1814,9 +1796,43 @@
           // Wait for app to initialize (increased for complex D3 apps)
           await new Promise(r => setTimeout(r, 1000));
           
-          console.log('✓ Starting preview - will replay ALL', currentTutorial.events.length, 'events from app load');
-          console.log('  Tutorial starts at:', currentTutorial.tutorialStartOffset, 'ms');
-          console.log('  Annotations will appear from that point forward');
+          console.log('✓ Starting preview');
+          console.log('  Will replay', currentTutorial.events.length, 'events');
+          console.log('  Duration:', (currentTutorial.duration / 1000).toFixed(2), 'seconds');
+          
+          // Restore initial state BEFORE starting playback
+          const iframeDoc = appFrame.contentDocument;
+          const iframeWin = appFrame.contentWindow;
+          
+          if (currentTutorial.initialState) {
+            console.log('  🔄 Restoring initial state...');
+            
+            // Restore input values
+            if (currentTutorial.initialState.inputs && iframeDoc) {
+              for (const [inputId, inputState] of Object.entries(currentTutorial.initialState.inputs)) {
+                const input = iframeDoc.getElementById(inputId);
+                if (input) {
+                  if (inputState.checked !== undefined) {
+                    input.checked = inputState.checked;
+                  } else if (inputState.value !== undefined) {
+                    input.value = inputState.value;
+                  }
+                }
+              }
+              console.log('    ✓ Restored', Object.keys(currentTutorial.initialState.inputs).length, 'input values');
+            }
+            
+            // Restore shift
+            if (iframeWin && iframeWin.tutorialAPI) {
+              if (currentTutorial.initialState.shift !== undefined) {
+                iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
+                console.log('    ✓ Restored shift:', currentTutorial.initialState.shift);
+              }
+              if (currentTutorial.initialState.shift2 !== undefined) {
+                iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+              }
+            }
+          }
           
           // CRITICAL: Disable recording during playback to prevent interference
           tutorialRecording = false;
@@ -1824,18 +1840,17 @@
           // Disable pointer events on iframe during playback
           appFrame.classList.add('playback-mode');
           
-          // Start playback of ALL events from beginning
-          fastForwardComplete = false;
+          // Start playback - all events start from time 0
+          fastForwardComplete = true;  // No pre-tutorial events to fast-forward through
           isPlaying = true;
           playbackPausedAt = 0;
-          tutorialTime = 0;  // Reset tutorial time
-          lastFrameTime = 0;  // Reset frame time tracking
-          initialStateRestorationFrames = 0;  // Reset state restoration counter
+          tutorialTime = 0;
+          lastFrameTime = 0;
+          initialStateRestorationFrames = 0;
           eventQueue = [...currentTutorial.events];
           
-          console.log('🎬 About to start playback loop');
-          console.log('  currentTutorial.duration:', currentTutorial.duration, 'ms');
-          console.log('  That is:', (currentTutorial.duration / 1000).toFixed(2), 'seconds');
+          console.log('🎬 Starting playback loop');
+          console.log('  Tutorial duration:', (currentTutorial.duration / 1000).toFixed(2), 'seconds');
           if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
             currentTutorial.annotations.forEach((ann, idx) => {
               const annEnd = (ann.timestamp + ann.duration) / 1000;
@@ -2562,12 +2577,11 @@
     tutorialTime += (deltaMs / 1000) * playbackSpeed;
     lastFrameTime = now;  // Always update lastFrameTime
     
-    const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
     const totalDuration = tutorialDurationSec;
     
-    // elapsed is the time relative to tutorial events (includes tutorial start offset)
-    const elapsed = tutorialTime + tutorialStartSec;
+    // elapsed is just tutorialTime (no offset needed)
+    const elapsed = tutorialTime;
     
     // Re-apply initial state for first few frames to ensure it sticks
     if (fastForwardComplete && initialStateRestorationFrames < 10) {
@@ -2606,81 +2620,7 @@
         const event = eventQueue[0];
         const eventTimeSec = event.timestamp / 1000;
         
-        // Before tutorial start: replay clicks for setup, but skip input/change events
-        if (eventTimeSec < tutorialStartSec) {
-          eventQueue.shift();
-          
-          // Skip input/change events - we'll restore values from captured state
-          if (event.type === 'input' || event.type === 'change') {
-            console.log('  ⏭️ Skipping pre-tutorial', event.type, 'event (will restore from captured state)');
-            continue;
-          }
-          
-          // Skip drag events - just track final position
-          if (event.type === 'drag') {
-            console.log('  ⏭️ Skipping pre-tutorial drag (will restore from captured state)');
-            continue;
-          }
-          
-          // Replay clicks to set up app state
-          if (event.type === 'click') {
-            replayEvent(event);
-            console.log('  ▶️ Replayed pre-tutorial click for setup');
-            
-            // Small delay after each click
-            setTimeout(() => {
-              requestAnimationFrame(playbackLoop);
-            }, 50);
-            return;
-          }
-          
-          // Check if we're done with pre-tutorial events
-          if (eventQueue.length > 0 && eventQueue[0].timestamp / 1000 >= tutorialStartSec) {
-            fastForwardComplete = true;
-            console.log('⏩ Pre-tutorial setup complete - restoring captured state...');
-            
-            setTimeout(() => {
-              const iframeDoc = appFrame.contentDocument;
-              const iframeWin = appFrame.contentWindow;
-              
-              // Restore input values from captured state
-              if (currentTutorial.initialState && currentTutorial.initialState.inputs && iframeDoc) {
-                console.log('  🔄 Restoring input values from captured state...');
-                for (const [inputId, inputState] of Object.entries(currentTutorial.initialState.inputs)) {
-                  const input = iframeDoc.getElementById(inputId);
-                  if (input) {
-                    if (inputState.checked !== undefined) {
-                      input.checked = inputState.checked;
-                      console.log('    ✓ Restored #' + inputId + ' checked:', inputState.checked);
-                    } else if (inputState.value !== undefined) {
-                      input.value = inputState.value;
-                      console.log('    ✓ Restored #' + inputId + ' value:', inputState.value);
-                    }
-                  }
-                }
-              }
-              
-              // Restore shift values
-              if (currentTutorial.initialState && iframeWin && iframeWin.tutorialAPI) {
-                if (currentTutorial.initialState.shift !== undefined) {
-                  iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
-                  console.log('  🔄 Restored shift:', currentTutorial.initialState.shift);
-                }
-                if (currentTutorial.initialState.shift2 !== undefined) {
-                  iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
-                  console.log('  🔄 Restored shift2:', currentTutorial.initialState.shift2);
-                }
-              }
-              
-              console.log('✓ State restoration complete - starting tutorial playback');
-              lastFrameTime = Date.now();
-              requestAnimationFrame(playbackLoop);
-            }, 100);
-            return;
-          }
-          continue;
-        }
-        
+        // Process events that are due
         if (eventTimeSec <= elapsed) {
           eventQueue.shift();
           processedEventThisFrame = true;
