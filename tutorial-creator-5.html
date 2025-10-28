@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.40</title>
+<title>Interactive Tutorial Creator - v10.28.41</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.40</div>
+    <div class="version-number">v10.28.41</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1222,74 +1222,46 @@
     // Mark this as the tutorial start point
     tutorialStartTime = Date.now();
     
-    // Capture the current app state to restore during playback
+    // Capture the current app state using tutorialAPI
     const iframeWindow = appFrame.contentWindow;
     const iframeDoc = appFrame.contentDocument;
-    const initialState = {};
+    let initialState = {};
     
     console.log('═══════════════════════════════════════');
     console.log('🔍 CAPTURING INITIAL STATE');
     console.log('═══════════════════════════════════════');
-    console.log('  iframeWindow exists:', !!iframeWindow);
-    console.log('  iframeDoc exists:', !!iframeDoc);
     
-    if (iframeWindow && iframeWindow.tutorialAPI) {
-      console.log('  ✓ tutorialAPI found');
-      if (iframeWindow.tutorialAPI.getShift) {
-        initialState.shift = iframeWindow.tutorialAPI.getShift();
-        console.log('  📸 Captured shift:', initialState.shift);
-      } else {
-        console.warn('  ⚠️ getShift() not available');
-      }
-      if (iframeWindow.tutorialAPI.getShift2) {
-        initialState.shift2 = iframeWindow.tutorialAPI.getShift2();
-        console.log('  📸 Captured shift2:', initialState.shift2);
-      }
+    if (iframeWindow && iframeWindow.tutorialAPI && iframeWindow.tutorialAPI.captureState) {
+      console.log('  ✓ Using tutorialAPI.captureState()');
+      initialState = iframeWindow.tutorialAPI.captureState();
+      console.log('  📸 Captured state:', initialState);
     } else {
-      console.warn('  ⚠️ tutorialAPI not available');
-    }
-    
-    // Capture all input and select values
-    if (iframeDoc) {
-      initialState.inputs = {};
-      const inputs = iframeDoc.querySelectorAll('input, select');
-      console.log('  Found', inputs.length, 'input/select elements');
+      console.warn('  ⚠️ tutorialAPI.captureState() not available - using fallback');
       
-      let capturedCount = 0;
-      inputs.forEach(input => {
-        if (input.id) {
-          if (input.type === 'checkbox' || input.type === 'radio') {
-            initialState.inputs[input.id] = { checked: input.checked };
-          } else {
-            initialState.inputs[input.id] = { value: input.value };
-          }
-          console.log('  📸 #' + input.id + ':', initialState.inputs[input.id]);
-          capturedCount++;
+      // Fallback: manual capture
+      if (iframeWindow && iframeWindow.tutorialAPI) {
+        if (iframeWindow.tutorialAPI.getShift) {
+          initialState.shift = iframeWindow.tutorialAPI.getShift();
         }
-      });
-      console.log('  Captured', capturedCount, 'inputs with IDs');
-      
-      // Capture active button states (like curve mode, histogram mode, etc.)
-      initialState.activeButtons = {};
-      const buttonGroups = iframeDoc.querySelectorAll('button[data-curve], button[data-histogram], button[data-ci], button[data-second]');
-      buttonGroups.forEach(btn => {
-        if (btn.classList.contains('active')) {
-          // Get the data attribute name (e.g., 'data-curve')
-          const dataAttr = Array.from(btn.attributes).find(attr => attr.name.startsWith('data-'));
-          if (dataAttr) {
-            const attrName = dataAttr.name;
-            const attrValue = btn.getAttribute(attrName);
-            initialState.activeButtons[attrName] = attrValue;
-            console.log('  📸 Active button', attrName + ':', attrValue);
-          }
+        if (iframeWindow.tutorialAPI.getShift2) {
+          initialState.shift2 = iframeWindow.tutorialAPI.getShift2();
         }
-      });
+      }
       
-      // Check if histogram/data is visible (indicates Simulate was clicked)
-      const histogramBars = iframeDoc.querySelectorAll('.bar, rect.bar');
-      const hasVisibleData = histogramBars.length > 0;
-      initialState.hasSimulatedData = hasVisibleData;
-      console.log('  📸 Has simulated data:', hasVisibleData);
+      // Capture inputs
+      if (iframeDoc) {
+        initialState.inputs = {};
+        const inputs = iframeDoc.querySelectorAll('input, select');
+        inputs.forEach(input => {
+          if (input.id) {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+              initialState.inputs[input.id] = { checked: input.checked };
+            } else {
+              initialState.inputs[input.id] = { value: input.value };
+            }
+          }
+        });
+      }
     }
     
     console.log('═══════════════════════════════════════');
@@ -2645,22 +2617,29 @@
             fastForwardComplete = true;
             console.log('⏩ Pre-tutorial fast-forward complete');
             
-            // CRITICAL FIX: Re-apply captured shift to override any resets from input events
+            // CRITICAL FIX: Use tutorialAPI.restoreState() to restore complete state
             setTimeout(() => {
               const iframeWin = appFrame.contentWindow;
               if (currentTutorial.initialState && iframeWin && iframeWin.tutorialAPI) {
-                if (currentTutorial.initialState.shift !== undefined) {
-                  iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
-                  console.log('  ✓ FINAL shift restoration after fast-forward:', currentTutorial.initialState.shift);
-                }
-                if (currentTutorial.initialState.shift2 !== undefined) {
-                  iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+                if (iframeWin.tutorialAPI.restoreState) {
+                  console.log('  🔄 Using tutorialAPI.restoreState()');
+                  iframeWin.tutorialAPI.restoreState(currentTutorial.initialState);
+                } else {
+                  // Fallback: manual restoration
+                  console.log('  ⚠️ tutorialAPI.restoreState() not available - using fallback');
+                  if (currentTutorial.initialState.shift !== undefined) {
+                    iframeWin.tutorialAPI.setShift(currentTutorial.initialState.shift);
+                    console.log('  ✓ Restored shift:', currentTutorial.initialState.shift);
+                  }
+                  if (currentTutorial.initialState.shift2 !== undefined) {
+                    iframeWin.tutorialAPI.setShift2(currentTutorial.initialState.shift2);
+                  }
                 }
               }
               
               lastFrameTime = Date.now();
               requestAnimationFrame(playbackLoop);
-            }, 100);
+            }, 200);
             return;
           }
           continue;
