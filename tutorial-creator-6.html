@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.7</title>
+<title>Interactive Tutorial Creator - v8.9</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.7</div>
+    <div class="version-number">v8.9</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -937,7 +937,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.7',
+      version: '8.9',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -956,13 +956,18 @@
       
       const relativeTime = Date.now() - recordingStartTime - totalPausedTime;
       
-      currentTutorial.snapshots.push({
+      const snapshot = {
         timestamp: relativeTime,
         state: api.getState(),
         event: event
-      });
+      };
       
-      console.log('📸 Snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action);
+      currentTutorial.snapshots.push(snapshot);
+      
+      // Log important events
+      if (event.action === 'simulate' || event.action === 'changeBeta' || event.action === 'changeN') {
+        console.log('📸 Key snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+      }
     };
     
     api.onAction(eventListener);
@@ -1018,6 +1023,15 @@
     }
     
     currentTutorial.duration = Date.now() - recordingStartTime - totalPausedTime;
+    
+    // Also ensure duration matches the last snapshot timestamp
+    if (currentTutorial.snapshots.length > 0) {
+      const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+      if (lastSnapshotTime > currentTutorial.duration) {
+        console.warn('Last snapshot time exceeds duration, adjusting:', lastSnapshotTime, 'vs', currentTutorial.duration);
+        currentTutorial.duration = lastSnapshotTime + 100; // Add small buffer
+      }
+    }
     
     isRecording = false;
     isPaused = false;
@@ -1390,6 +1404,11 @@
           targetSnapshot.timestamp !== playbackLoop.lastAppliedTimestamp) {
         api.setState(targetSnapshot.state);
         playbackLoop.lastAppliedTimestamp = targetSnapshot.timestamp;
+        
+        // Log important state changes
+        if (targetSnapshot.event.action === 'simulate') {
+          console.log('▶️ Applying simulate event - data length:', targetSnapshot.state.data.length, 'currentN:', targetSnapshot.state.currentN);
+        }
       }
     }
     
@@ -1472,10 +1491,12 @@
     
     playPausePreview.textContent = '⏸ Pause Preview';
     
-    // Reset to initial state
+    // Keep the final state - apply the last snapshot
     const api = getAPI();
-    if (api) {
-      api.setState(currentTutorial.initialState);
+    if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+      const finalSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+      api.setState(finalSnapshot.state);
+      console.log('✓ Applied final state from last snapshot');
     }
     
     console.log('⏹ Playback stopped');
@@ -1532,6 +1553,14 @@
     
     const duration = currentTutorial.duration / 1000;
     const timelineWidth = Math.max(duration * timelineScale, 800); // Minimum 800px
+    
+    console.log('📊 Timeline render - Duration:', duration.toFixed(2) + 's', 'Snapshots:', currentTutorial.snapshots.length);
+    
+    if (currentTutorial.snapshots.length > 0) {
+      const firstTime = (currentTutorial.snapshots[0].timestamp / 1000).toFixed(2);
+      const lastTime = (currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp / 1000).toFixed(2);
+      console.log('📊 First snapshot:', firstTime + 's', 'Last snapshot:', lastTime + 's');
+    }
     
     // Set the width of timeline tracks
     timelineRuler.style.minWidth = timelineWidth + 'px';
@@ -1909,7 +1938,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.7 initialized');
+  console.log('Tutorial Creator v8.9 initialized');
 })();
 </script>
 </body>
