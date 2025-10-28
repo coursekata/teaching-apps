@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.14</title>
+<title>Interactive Tutorial Creator - v10.28.15</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.14</div>
+    <div class="version-number">v10.28.15</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -2511,12 +2511,13 @@
       lastFrameTime = now;
     }
     const deltaMs = now - lastFrameTime;
-    lastFrameTime = now;
     
     // Only advance tutorial time if NOT in a drag animation
     if (!activeDragAnimation) {
       tutorialTime += (deltaMs / 1000) * playbackSpeed;
+      lastFrameTime = now;  // Only update lastFrameTime when time is advancing
     }
+    // If in drag animation: don't update lastFrameTime, so next frame gets full delta
     
     const tutorialStartSec = (currentTutorial.tutorialStartOffset || 0) / 1000;
     const tutorialDurationSec = currentTutorial.duration / 1000;
