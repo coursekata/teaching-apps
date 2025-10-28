@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.8</title>
+<title>Interactive Tutorial Creator - v10.28.9</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.8</div>
+    <div class="version-number">v10.28.9</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1626,6 +1626,15 @@
           console.error('  ❌ Display is "none"! Forcing to block...');
           annotationBox.style.display = 'block';
         }
+        
+        // Final check after forcing
+        setTimeout(() => {
+          const finalDisplay = iframeDoc.defaultView.getComputedStyle(annotationBox).display;
+          const finalVisibility = iframeDoc.defaultView.getComputedStyle(annotationBox).visibility;
+          console.log('  Final computed display:', finalDisplay);
+          console.log('  Final computed visibility:', finalVisibility);
+          console.log('  Final bounding rect:', annotationBox.getBoundingClientRect());
+        }, 100);
       }
       
       // Trigger MathJax in iframe if available
