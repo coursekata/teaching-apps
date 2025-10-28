@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.28.34</title>
+<title>Interactive Tutorial Creator - v10.28.35</title>
 <script>
   window.MathJax = {
     tex: {
@@ -705,7 +705,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.28.34</div>
+    <div class="version-number">v10.28.35</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -1230,29 +1230,36 @@
     const iframeWindow = appFrame.contentWindow;
     const iframeDoc = appFrame.contentDocument;
     const initialState = {};
-    console.log('  🔍 Attempting to capture app state...');
-    console.log('  iframeWindow:', !!iframeWindow);
-    console.log('  tutorialAPI:', !!(iframeWindow && iframeWindow.tutorialAPI));
+    
+    console.log('═══════════════════════════════════════');
+    console.log('🔍 CAPTURING INITIAL STATE');
+    console.log('═══════════════════════════════════════');
+    console.log('  iframeWindow exists:', !!iframeWindow);
+    console.log('  iframeDoc exists:', !!iframeDoc);
     
     if (iframeWindow && iframeWindow.tutorialAPI) {
+      console.log('  ✓ tutorialAPI found');
       if (iframeWindow.tutorialAPI.getShift) {
         initialState.shift = iframeWindow.tutorialAPI.getShift();
-        console.log('  📸 Captured initial shift:', initialState.shift);
+        console.log('  📸 Captured shift:', initialState.shift);
       } else {
-        console.warn('  ⚠️ tutorialAPI.getShift() not available');
+        console.warn('  ⚠️ getShift() not available');
       }
       if (iframeWindow.tutorialAPI.getShift2) {
         initialState.shift2 = iframeWindow.tutorialAPI.getShift2();
-        console.log('  📸 Captured initial shift2:', initialState.shift2);
+        console.log('  📸 Captured shift2:', initialState.shift2);
       }
     } else {
-      console.warn('  ⚠️ Cannot capture state - tutorialAPI not available');
+      console.warn('  ⚠️ tutorialAPI not available');
     }
     
     // Capture all input and select values
     if (iframeDoc) {
       initialState.inputs = {};
       const inputs = iframeDoc.querySelectorAll('input, select');
+      console.log('  Found', inputs.length, 'input/select elements');
+      
+      let capturedCount = 0;
       inputs.forEach(input => {
         if (input.id) {
           if (input.type === 'checkbox' || input.type === 'radio') {
@@ -1260,14 +1267,19 @@
           } else {
             initialState.inputs[input.id] = { value: input.value };
           }
-          console.log('  📸 Captured input #' + input.id + ':', initialState.inputs[input.id]);
+          console.log('  📸 #' + input.id + ':', initialState.inputs[input.id]);
+          capturedCount++;
         }
       });
+      console.log('  Captured', capturedCount, 'inputs with IDs');
     }
+    
+    console.log('═══════════════════════════════════════');
+    console.log('📦 FINAL CAPTURED STATE:', initialState);
+    console.log('═══════════════════════════════════════');
     
     // Store initial state for later use
     window.capturedInitialState = initialState;
-    console.log('  📦 Full captured state:', initialState);
     
     // Reset tutorial-specific state
     recordedAnnotations = [];
