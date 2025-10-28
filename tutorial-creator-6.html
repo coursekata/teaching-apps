@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v8.2</title>
+<title>Interactive Tutorial Creator - v8.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -545,7 +545,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v8.2</div>
+    <div class="version-number">v8.4</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -926,7 +926,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '8.2',
+      version: '8.4',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1114,6 +1114,17 @@
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
+      // Clean up drag state
+      if (annotationBox._dragState) {
+        const doc = appFrame.contentDocument || appFrame.contentWindow.document;
+        if (doc && annotationBox._dragState.mousedownHandler) {
+          annotationBox.removeEventListener('mousedown', annotationBox._dragState.mousedownHandler);
+          doc.removeEventListener('mousemove', annotationBox._dragState.mousemoveHandler);
+          doc.removeEventListener('mouseup', annotationBox._dragState.mouseupHandler);
+        }
+        delete annotationBox._dragState;
+      }
+      
       console.log('✓ Annotation positioned:', ann.position);
       renderTimeline();
     };
@@ -1133,56 +1144,107 @@
       annotationBox.classList.remove('visible', 'draggable');
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
+      
+      // Clean up drag state
+      if (annotationBox._dragState) {
+        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+        if (iframeDoc && annotationBox._dragState.mousedownHandler) {
+          annotationBox.removeEventListener('mousedown', annotationBox._dragState.mousedownHandler);
+          iframeDoc.removeEventListener('mousemove', annotationBox._dragState.mousemoveHandler);
+          iframeDoc.removeEventListener('mouseup', annotationBox._dragState.mouseupHandler);
+        }
+        delete annotationBox._dragState;
+      }
     }
   });
   
   function makeDraggable() {
     if (!annotationBox) return;
     
-    let isDragging = false;
-    let isResizing = false;
-    let startX, startY, startWidth, startHeight;
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
     
-    const handle = annotationBox.querySelector('.resize-handle');
-    if (handle) {
-      handle.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = annotationBox.offsetWidth;
-        startHeight = annotationBox.offsetHeight;
-        e.stopPropagation();
-        e.preventDefault();
-      });
+    // Remove any existing drag state
+    if (annotationBox._dragState) {
+      // Clean up old listeners
+      const oldState = annotationBox._dragState;
+      if (oldState.mousedownHandler) {
+        annotationBox.removeEventListener('mousedown', oldState.mousedownHandler);
+      }
+      if (oldState.mousemoveHandler) {
+        iframeDoc.removeEventListener('mousemove', oldState.mousemoveHandler);
+      }
+      if (oldState.mouseupHandler) {
+        iframeDoc.removeEventListener('mouseup', oldState.mouseupHandler);
+      }
     }
     
-    annotationBox.addEventListener('mousedown', (e) => {
+    // Create new drag state
+    const dragState = {
+      isDragging: false,
+      isResizing: false,
+      startX: 0,
+      startY: 0,
+      startWidth: 0,
+      startHeight: 0
+    };
+    
+    // Resize handle handler
+    const handle = annotationBox.querySelector('.resize-handle');
+    if (handle) {
+      handle.onmousedown = (e) => {
+        dragState.isResizing = true;
+        dragState.startX = e.clientX;
+        dragState.startY = e.clientY;
+        dragState.startWidth = annotationBox.offsetWidth;
+        dragState.startHeight = annotationBox.offsetHeight;
+        e.stopPropagation();
+        e.preventDefault();
+      };
+    }
+    
+    // Drag handler for annotation box
+    const mousedownHandler = (e) => {
       if (e.target.classList.contains('resize-handle')) return;
       
-      isDragging = true;
-      startX = e.clientX - annotationBox.offsetLeft;
-      startY = e.clientY - annotationBox.offsetTop;
-    });
+      dragState.isDragging = true;
+      dragState.startX = e.clientX - annotationBox.offsetLeft;
+      dragState.startY = e.clientY - annotationBox.offsetTop;
+      e.preventDefault();
+    };
     
-    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-    
-    iframeDoc.addEventListener('mousemove', (e) => {
-      if (isDragging) {
+    // Move handler
+    const mousemoveHandler = (e) => {
+      if (dragState.isDragging) {
         annotationBox.style.transform = 'none';
-        annotationBox.style.left = (e.clientX - startX) + 'px';
-        annotationBox.style.top = (e.clientY - startY) + 'px';
-      } else if (isResizing) {
-        const newWidth = startWidth + (e.clientX - startX);
-        const newHeight = startHeight + (e.clientY - startY);
+        annotationBox.style.left = (e.clientX - dragState.startX) + 'px';
+        annotationBox.style.top = (e.clientY - dragState.startY) + 'px';
+      } else if (dragState.isResizing) {
+        const newWidth = dragState.startWidth + (e.clientX - dragState.startX);
+        const newHeight = dragState.startHeight + (e.clientY - dragState.startY);
         annotationBox.style.width = Math.max(200, newWidth) + 'px';
         annotationBox.style.height = Math.max(80, newHeight) + 'px';
       }
-    });
+    };
     
-    iframeDoc.addEventListener('mouseup', () => {
-      isDragging = false;
-      isResizing = false;
-    });
+    // Release handler
+    const mouseupHandler = () => {
+      dragState.isDragging = false;
+      dragState.isResizing = false;
+    };
+    
+    // Attach event listeners
+    annotationBox.addEventListener('mousedown', mousedownHandler);
+    iframeDoc.addEventListener('mousemove', mousemoveHandler);
+    iframeDoc.addEventListener('mouseup', mouseupHandler);
+    
+    // Store state and handlers for cleanup
+    annotationBox._dragState = {
+      ...dragState,
+      mousedownHandler,
+      mousemoveHandler,
+      mouseupHandler
+    };
   }
   
   // ========== PREVIEW/PLAYBACK ==========
@@ -1192,8 +1254,8 @@
     
     previewRecording.style.display = 'none';
     playPausePreview.style.display = 'inline-block';
-    recordAgain.style.display = 'none';
-    exportRecording.style.display = 'none';
+    recordAgain.style.display = 'none'; // Hide initially, show when paused
+    exportRecording.style.display = 'none'; // Hide during preview
     appFrame.classList.add('playback-mode');
     
     startPlayback();
@@ -1234,6 +1296,8 @@
     
     playPausePreview.textContent = '▶ Resume Preview';
     addAnnotationAtPause.style.display = 'inline-block';
+    recordAgain.style.display = 'inline-block';
+    exportRecording.style.display = 'none'; // Hide export during preview pause
     
     console.log('⏸ Playback paused at', playbackPausedAt.toFixed(1) + 's');
   }
@@ -1246,6 +1310,8 @@
     
     playPausePreview.textContent = '⏸ Pause Preview';
     addAnnotationAtPause.style.display = 'none';
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none'; // Keep export hidden during playback
     
     requestAnimationFrame(playbackLoop);
     
@@ -1787,7 +1853,7 @@
     }
   });
   
-  console.log('Tutorial Creator v8.2 initialized');
+  console.log('Tutorial Creator v8.4 initialized');
 })();
 </script>
 </body>
