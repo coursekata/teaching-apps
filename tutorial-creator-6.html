@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.3</title>
+<title>Interactive Tutorial Creator - v9.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.3</div>
+    <div class="version-number">v9.5</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -704,6 +704,13 @@
         <li><strong>Preview</strong> - Click "👁 Preview" to watch the replay with annotations</li>
         <li><strong>Export</strong> - Click "💾 Export Tutorial" to get the JSON, then copy it to save</li>
       </ol>
+      
+      <h3>Timeline:</h3>
+      <ul class="help-text">
+        <li><strong style="color:#6366f1;">Blue markers</strong> - Single events (simulate, parameter changes, etc.)</li>
+        <li><strong style="color:#8b5cf6;">Purple bars</strong> - Drag operations (from mouse down to mouse up)</li>
+        <li><strong style="color:#06b6d4;">Cyan bars</strong> - Annotations (text overlays during playback)</li>
+      </ul>
       
       <div class="modal-buttons">
         <button id="closeHelpModal" class="primary">Got it!</button>
@@ -939,7 +946,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.3',
+      version: '9.5',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1054,12 +1061,14 @@
     
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
-      calculatedDuration = lastSnapshotTime + 100; // Add small buffer after last event
+      calculatedDuration = lastSnapshotTime;
+      console.log('  Last snapshot time:', (lastSnapshotTime / 1000).toFixed(2) + 's');
     }
     
     if (currentTutorial.annotations.length > 0) {
       const lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-      calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd + 100); // Add small buffer
+      console.log('  Last annotation ends at:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
+      calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
     }
     
     currentTutorial.duration = calculatedDuration;
@@ -1463,26 +1472,29 @@
     }
     
     // Handle annotations
+    let annotationShowing = false;
     for (let i = 0; i < currentTutorial.annotations.length; i++) {
       const ann = currentTutorial.annotations[i];
       const annStart = ann.timestamp;
       const annEnd = ann.timestamp + ann.duration;
       
-      if (elapsedMs >= annStart && elapsedMs < annEnd) {
+      // Check if annotation should be visible at current time
+      if (elapsedMs >= annStart && elapsedMs <= annEnd) {
+        annotationShowing = true;
         if (currentAnnotationIndex !== i) {
           showAnnotation(ann);
           currentAnnotationIndex = i;
-          
-          if (annotationTimeout) clearTimeout(annotationTimeout);
-          annotationTimeout = setTimeout(() => {
-            if (annotationBox) {
-              annotationBox.classList.remove('visible');
-            }
-            currentAnnotationIndex = -1;
-          }, ann.duration);
         }
         break;
       }
+    }
+    
+    // Hide annotation if no longer in range
+    if (!annotationShowing && currentAnnotationIndex >= 0) {
+      if (annotationBox) {
+        annotationBox.classList.remove('visible');
+      }
+      currentAnnotationIndex = -1;
     }
     
     // Check if finished
@@ -1646,44 +1658,57 @@
       timelineRuler.appendChild(tick);
     }
     
-    // Render event markers - group consecutive drag events into spans
+    // Render event markers - group drag sequences (dragStart -> drag... -> dragEnd) into spans
     eventsTrack.innerHTML = '';
     
-    // Group events by type
+    console.log('📊 Rendering', currentTutorial.snapshots.length, 'snapshots to timeline');
+    
+    // Group events by drag sequences
     let i = 0;
     while (i < currentTutorial.snapshots.length) {
       const snapshot = currentTutorial.snapshots[i];
       const action = snapshot.event.action;
       
-      // Check if this is a drag-type event
-      const isDragEvent = action === 'drag' || action === 'dragBeta' || action === 'dragBetaPrime' || 
-                         action === 'dragB' || action === 'dragAxis';
+      // Check if this is the start of a drag sequence
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+                         action === 'dragBStart' || action === 'dragAxisStart';
       
-      if (isDragEvent) {
-        // Find the end of this drag sequence
+      if (isDragStart) {
+        // Find the corresponding dragEnd
+        const dragType = action.replace('Start', ''); // e.g., 'drag', 'dragBeta', etc.
+        const dragEndAction = dragType + 'End';
+        
         let endIdx = i;
-        while (endIdx + 1 < currentTutorial.snapshots.length && 
-               currentTutorial.snapshots[endIdx + 1].event.action === action) {
-          endIdx++;
+        // Look for the dragEnd event
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
+            endIdx = j;
+            break;
+          }
         }
         
-        // Create a span for the drag
+        // Create a span from dragStart to dragEnd
         const startTime = snapshot.timestamp / 1000;
         const endTime = currentTutorial.snapshots[endIdx].timestamp / 1000;
         const duration = endTime - startTime;
         
-        if (duration > 0.05) { // Only show if drag lasted more than 50ms
-          const span = document.createElement('div');
-          span.className = 'timeline-event drag-event';
-          span.style.left = (startTime * timelineScale) + 'px';
-          span.style.width = (duration * timelineScale) + 'px';
-          span.title = `${action} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
-          eventsTrack.appendChild(span);
-        }
+        console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', endTime.toFixed(2) + 's', `(${endIdx - i + 1} events)`);
         
-        i = endIdx + 1;
+        const span = document.createElement('div');
+        span.className = 'timeline-event drag-event';
+        span.style.left = (startTime * timelineScale) + 'px';
+        span.style.width = Math.max(8, duration * timelineScale) + 'px'; // Minimum 8px width
+        span.title = `${dragType} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
+        eventsTrack.appendChild(span);
+        
+        i = endIdx + 1; // Skip to after dragEnd
+      } else if (action.includes('drag') || action.includes('Drag')) {
+        // Skip intermediate drag events that weren't part of a Start/End sequence
+        console.log('  ⚠️ Orphan drag event:', action, 'at', (snapshot.timestamp / 1000).toFixed(2) + 's');
+        i++;
       } else {
-        // Single event marker
+        // Single event marker (simulate, changeBeta, etc.)
+        console.log('  📍 Single event:', action, 'at', (snapshot.timestamp / 1000).toFixed(2) + 's');
         const marker = document.createElement('div');
         marker.className = 'timeline-event';
         marker.style.left = ((snapshot.timestamp / 1000) * timelineScale) + 'px';
@@ -2005,7 +2030,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.3 initialized');
+  console.log('Tutorial Creator v9.5 initialized');
 })();
 </script>
 </body>
