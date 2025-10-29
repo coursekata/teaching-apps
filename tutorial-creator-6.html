@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.33</title>
+<title>Interactive Tutorial Creator - v9.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -144,10 +144,6 @@
   
   iframe.playback-mode{
     pointer-events:none;
-  }
-  
-  iframe.playback-mode.positioning-annotation{
-    pointer-events:auto;
   }
   
   .annotation-box{
@@ -302,6 +298,36 @@
   
   .timeline-event.drag-event:hover{
     background:#7c3aed;
+  }
+  
+  .event-trim-handle{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:6px;
+    background:rgba(255,255,255,0.3);
+    cursor:ew-resize;
+    opacity:0;
+    transition:opacity 0.2s;
+    z-index:10;
+  }
+  
+  .timeline-event.drag-event:hover .event-trim-handle{
+    opacity:1;
+  }
+  
+  .event-trim-handle.left{
+    left:0;
+    border-right:2px solid rgba(255,255,255,0.6);
+  }
+  
+  .event-trim-handle.right{
+    right:0;
+    border-left:2px solid rgba(255,255,255,0.6);
+  }
+  
+  .event-trim-handle:hover{
+    background:rgba(255,255,255,0.5);
   }
   
   .timeline-annotation{
@@ -561,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.33</div>
+    <div class="version-number">v9.19</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -654,7 +680,8 @@
       </div>
       
       <div class="modal-buttons">
-        <button id="repositionAnnotation" class="primary">📍 Reposition/Resize</button>
+        <button id="repositionAnnotation" class="primary">📍 Reposition</button>
+        <button id="resizeAnnotation" class="primary">↔️ Resize</button>
         <button id="deleteAnnotation" class="warning">🗑 Delete</button>
         <button id="cancelEditAnnotation">Cancel</button>
         <button id="saveEditAnnotation" class="success">💾 Save Changes</button>
@@ -784,6 +811,7 @@
   const deleteAnnotation = document.getElementById('deleteAnnotation');
   const cancelEditAnnotation = document.getElementById('cancelEditAnnotation');
   const repositionAnnotation = document.getElementById('repositionAnnotation');
+  const resizeAnnotation = document.getElementById('resizeAnnotation');
   
   // State
   let isAppLoaded = false;
@@ -832,47 +860,14 @@
   appFrame.addEventListener('load', () => {
     console.log('Iframe loaded, checking for API...');
     
-    // Check for iframe errors
-    try {
-      const iframeWindow = appFrame.contentWindow;
-      if (iframeWindow) {
-        // Listen for errors in the iframe
-        iframeWindow.addEventListener('error', (e) => {
-          console.error('Error in iframe:', e.message);
-        });
-      }
-    } catch (err) {
-      console.error('Could not access iframe window:', err);
-    }
-    
     // Poll for API availability
-    let pollCount = 0;
     const checkAPI = setInterval(() => {
-      pollCount++;
       const api = getAPI();
-      
-      // Log every 10th poll to track progress
-      if (pollCount % 10 === 0) {
-        console.log(`Polling for tutorialAPI... attempt ${pollCount}`);
-        try {
-          const iframeWindow = appFrame.contentWindow;
-          if (iframeWindow) {
-            console.log('  Iframe window accessible:', !!iframeWindow);
-            console.log('  tutorialAPI exists:', !!iframeWindow.tutorialAPI);
-            if (iframeWindow.tutorialAPI) {
-              console.log('  tutorialAPI type:', typeof iframeWindow.tutorialAPI);
-            }
-          }
-        } catch (err) {
-          console.log('  Error accessing iframe:', err.message);
-        }
-      }
-      
       if (api) {
         clearInterval(checkAPI);
         apiReady = true;
         isAppLoaded = true;
-        console.log(`✓ tutorialAPI ready after ${pollCount} polls`);
+        console.log('✓ tutorialAPI ready');
         
         loadApp.style.display = 'none';
         loadApp.textContent = 'Load App'; // Reset text for next time
@@ -890,25 +885,12 @@
     setTimeout(() => {
       if (!apiReady) {
         clearInterval(checkAPI);
-        console.error(`tutorialAPI not available after 10 seconds (${pollCount} polls)`);
-        console.error('Current URL:', appFrame.src);
-        console.error('Check browser console for errors from the iframe');
-        
-        // Try to get error from iframe console if possible
-        try {
-          const iframeWindow = appFrame.contentWindow;
-          if (iframeWindow && iframeWindow.console && iframeWindow.console.error) {
-            console.error('Check the iframe console for initialization errors');
-          }
-        } catch (e) {
-          // Can't access iframe console due to CORS
-        }
-        
-        alert('Error: This app does not have the tutorialAPI ready.\n\nPossible causes:\n1. The app does not support tutorialAPI\n2. The URL parameters may have caused an error in the app\n   (Try using LaTeX notation like $\\beta_1$ instead of encoded characters)\n3. The app is taking too long to initialize\n\nCheck the browser console (F12) for more details.');
+        console.error('tutorialAPI not available after 5 seconds');
+        alert('Error: This app does not have the tutorialAPI. Make sure you are loading the correct confidence demo app.');
         loadApp.disabled = false;
         loadApp.textContent = 'Load App';
       }
-    }, 10000);
+    }, 5000);
   });
   
   function injectAnnotationBox() {
@@ -996,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.33',
+      version: '9.19',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1054,6 +1036,29 @@
     isPaused = true;
     
     const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+    
+    // If we're in the middle of recording a drag, finalize it now
+    if (isDragging && dragStartSnapshot !== null) {
+      console.log('🎯 Finalizing drag at pause');
+      console.log('  Drag started at snapshot:', dragStartSnapshot);
+      console.log('  Current snapshot count:', currentTutorial.snapshots.length);
+      console.log('  Pause time:', (pauseTimestamp / 1000).toFixed(2) + 's');
+      
+      // Mark the drag range in snapshots
+      const dragEndSnapshot = currentTutorial.snapshots.length - 1;
+      for (let i = dragStartSnapshot; i <= dragEndSnapshot; i++) {
+        currentTutorial.snapshots[i].isDrag = true;
+      }
+      
+      console.log(`  Marked snapshots ${dragStartSnapshot}-${dragEndSnapshot} as drag`);
+      
+      // Reset drag state
+      isDragging = false;
+      dragStartSnapshot = null;
+      
+      // Render timeline to show the drag event immediately
+      renderTimeline();
+    }
     
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'inline-block';
@@ -1136,9 +1141,6 @@
     isRecording = false;
     isPaused = false;
     
-    // Make iframe non-interactive after recording stops
-    appFrame.classList.add('playback-mode');
-    
     // Update UI
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'none';
@@ -1179,20 +1181,8 @@
       return;
     }
     
-    // Calculate the base timestamp from when pause started
-    let timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
-    
-    // Always check if we should place this annotation after existing ones
-    if (currentTutorial.annotations.length > 0) {
-      // Find the end time of the last annotation (chronologically)
-      const lastAnnotationEndTime = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-      
-      // If the last annotation ends after our current pause time, place the new one after it
-      if (lastAnnotationEndTime > timestamp) {
-        timestamp = lastAnnotationEndTime;
-        console.log('📝 Placing annotation after previous annotations at:', (timestamp / 1000).toFixed(2) + 's');
-      }
-    }
+    // Use the time when pause started, not current time
+    const timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
     
     console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
     
@@ -1223,9 +1213,6 @@
     }
     
     console.log('showAnnotationForPositioning called for:', ann.title);
-    
-    // Enable pointer events on iframe while positioning
-    appFrame.classList.add('positioning-annotation');
     
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
@@ -1268,9 +1255,6 @@
       positionEditorOverlay.style.display = 'none';
       annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
       
-      // Remove positioning class to disable pointer events again
-      appFrame.classList.remove('positioning-annotation');
-      
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
@@ -1294,10 +1278,6 @@
     }
     
     positionEditorOverlay.style.display = 'none';
-    
-    // Remove positioning class to disable pointer events again
-    appFrame.classList.remove('positioning-annotation');
-    
     if (annotationBox) {
       annotationBox.classList.remove('visible', 'draggable');
       const handles = annotationBox.querySelectorAll('.resize-handle');
@@ -1331,14 +1311,6 @@
     
     // Get the resize handle
     const handle = annotationBox.querySelector('.resize-handle');
-    
-    // Clear any existing handlers to avoid duplication
-    annotationBox.onmousedown = null;
-    iframeDoc.onmousemove = null;
-    iframeDoc.onmouseup = null;
-    if (handle) {
-      handle.onmousedown = null;
-    }
     
     // Handle resize
     if (handle) {
@@ -1656,7 +1628,7 @@
     addAnnotationAtPause.style.display = 'none';
     recordAgain.style.display = 'inline-block';
     exportRecording.style.display = 'inline-block';
-    // Don't remove playback-mode here - keep iframe non-interactive until "Record Again" is clicked
+    appFrame.classList.remove('playback-mode');
     
     playPausePreview.textContent = '⏸ Pause Preview';
     
@@ -1676,14 +1648,6 @@
   }
   
   recordAgain.addEventListener('click', () => {
-    // Stop playback if still in preview mode
-    if (isPlaying) {
-      isPlaying = false;
-    }
-    
-    // Remove playback mode to make iframe interactive again
-    appFrame.classList.remove('playback-mode');
-    
     // Clear current tutorial
     currentTutorial = null;
     
@@ -1807,6 +1771,17 @@
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
         
+        // Add trim handles for start/end
+        const leftTrim = document.createElement('div');
+        leftTrim.className = 'event-trim-handle left';
+        leftTrim.title = 'Trim from start';
+        span.appendChild(leftTrim);
+        
+        const rightTrim = document.createElement('div');
+        rightTrim.className = 'event-trim-handle right';
+        rightTrim.title = 'Trim from end';
+        span.appendChild(rightTrim);
+        
         eventsTrack.appendChild(span);
         
         i = endIdx + 1; // Skip to after dragEnd
@@ -1860,6 +1835,9 @@
       
       annotationsTrack.appendChild(annEl);
     });
+    
+    // Set up event trimming handlers
+    setupEventTrimming();
   }
   
   let draggingAnnotation = null;
@@ -1938,80 +1916,179 @@
   }
   
   function stopAnnotationResize() {
-    if (!resizingAnnotation) {
-      resizingAnnotation = null;
-      document.removeEventListener('mousemove', doAnnotationResize);
-      document.removeEventListener('mouseup', stopAnnotationResize);
-      return;
-    }
-    
-    const resizedAnnotation = currentTutorial.annotations[resizingAnnotation.index];
-    
-    // If we resized the left edge, check if it now overlaps with previous annotations
-    if (resizingAnnotation.edge === 'left') {
-      for (let i = 0; i < currentTutorial.annotations.length; i++) {
-        if (i === resizingAnnotation.index) continue;
-        
-        const otherAnn = currentTutorial.annotations[i];
-        const otherEnd = otherAnn.timestamp + otherAnn.duration;
-        
-        // Check if the resized annotation's new start is now within another annotation
-        if (resizedAnnotation.timestamp > otherAnn.timestamp && resizedAnnotation.timestamp < otherEnd) {
-          // Trim the other annotation to end where this one starts
-          const newDuration = resizedAnnotation.timestamp - otherAnn.timestamp;
-          if (newDuration >= 1000) { // Minimum 1 second
-            otherAnn.duration = newDuration;
-            console.log(`✂️ Auto-trimmed annotation "${otherAnn.title}" to end at ${(resizedAnnotation.timestamp / 1000).toFixed(2)}s`);
-          }
-        }
-      }
-    }
-    
     resizingAnnotation = null;
     document.removeEventListener('mousemove', doAnnotationResize);
     document.removeEventListener('mouseup', stopAnnotationResize);
     
     // Recalculate tutorial duration after resizing
     recalculateTutorialDuration();
+  }
+  
+  // ========== EVENT TRIMMING ==========
+  
+  let trimmingEvent = null;
+  
+  // Set up event trimming listeners (called after rendering events)
+  function setupEventTrimming() {
+    const trimHandles = document.querySelectorAll('.event-trim-handle');
+    trimHandles.forEach(handle => {
+      handle.addEventListener('mousedown', startEventTrim);
+    });
+  }
+  
+  function startEventTrim(e) {
+    e.stopPropagation();
+    
+    const handle = e.target;
+    const eventSpan = handle.parentElement;
+    const edge = handle.classList.contains('left') ? 'left' : 'right';
+    const startIdx = parseInt(eventSpan.dataset.startIdx);
+    const endIdx = parseInt(eventSpan.dataset.endIdx);
+    
+    trimmingEvent = {
+      startIdx: startIdx,
+      endIdx: endIdx,
+      edge: edge,
+      startX: e.clientX,
+      originalStartTime: currentTutorial.snapshots[startIdx].timestamp,
+      originalEndTime: currentTutorial.snapshots[endIdx].timestamp
+    };
+    
+    document.addEventListener('mousemove', doEventTrim);
+    document.addEventListener('mouseup', stopEventTrim);
+    e.preventDefault();
+  }
+  
+  function doEventTrim(e) {
+    if (!trimmingEvent) return;
+    
+    const dx = e.clientX - trimmingEvent.startX;
+    const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
+    
+    // Store current mouse position for stopEventTrim
+    trimmingEvent.currentX = e.clientX;
+    
+    if (trimmingEvent.edge === 'left') {
+      // Trim from start: move start time forward
+      const newStartTime = Math.max(
+        trimmingEvent.originalStartTime + dt,
+        trimmingEvent.originalStartTime // Can't go before original start
+      );
+      
+      // Ensure we don't go past the end (leave at least 100ms)
+      const maxStartTime = trimmingEvent.originalEndTime - 100;
+      const clampedStartTime = Math.min(newStartTime, maxStartTime);
+      
+      // Find which snapshot index corresponds to the new start time
+      let newStartIdx = trimmingEvent.startIdx;
+      for (let i = trimmingEvent.startIdx; i <= trimmingEvent.endIdx; i++) {
+        if (currentTutorial.snapshots[i].timestamp >= clampedStartTime) {
+          newStartIdx = i;
+          break;
+        }
+      }
+      
+      // Ensure at least 2 snapshots remain
+      if (newStartIdx >= trimmingEvent.endIdx - 1) {
+        newStartIdx = trimmingEvent.endIdx - 1;
+      }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newStartIdx = newStartIdx;
+      
+      // Visual feedback: update the event span
+      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
+      if (eventSpan) {
+        const newStartTimeSec = currentTutorial.snapshots[newStartIdx].timestamp / 1000;
+        const endTimeSec = trimmingEvent.originalEndTime / 1000;
+        const newWidth = Math.max(8, (endTimeSec - newStartTimeSec) * timelineScale - 18);
+        eventSpan.style.left = (newStartTimeSec * timelineScale) + 'px';
+        eventSpan.style.width = newWidth + 'px';
+      }
+    } else {
+      // Trim from end: move end time backward
+      const newEndTime = Math.min(
+        trimmingEvent.originalEndTime + dt,
+        trimmingEvent.originalEndTime // Can't go past original end
+      );
+      
+      // Ensure we don't go before the start (leave at least 100ms)
+      const minEndTime = trimmingEvent.originalStartTime + 100;
+      const clampedEndTime = Math.max(newEndTime, minEndTime);
+      
+      // Find which snapshot index corresponds to the new end time
+      let newEndIdx = trimmingEvent.endIdx;
+      for (let i = trimmingEvent.endIdx; i >= trimmingEvent.startIdx; i--) {
+        if (currentTutorial.snapshots[i].timestamp <= clampedEndTime) {
+          newEndIdx = i;
+          break;
+        }
+      }
+      
+      // Ensure at least 2 snapshots remain
+      if (newEndIdx <= trimmingEvent.startIdx + 1) {
+        newEndIdx = trimmingEvent.startIdx + 1;
+      }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newEndIdx = newEndIdx;
+      
+      // Visual feedback: update the event span
+      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
+      if (eventSpan) {
+        const startTimeSec = trimmingEvent.originalStartTime / 1000;
+        const newEndTimeSec = currentTutorial.snapshots[newEndIdx].timestamp / 1000;
+        const newWidth = Math.max(8, (newEndTimeSec - startTimeSec) * timelineScale - 18);
+        eventSpan.style.width = newWidth + 'px';
+      }
+    }
+  }
+  
+  function stopEventTrim() {
+    if (!trimmingEvent) return;
+    
+    console.log('🔪 stopEventTrim called:', trimmingEvent);
+    
+    if (trimmingEvent.edge === 'left') {
+      // Actually delete the trimmed snapshots from the start
+      const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
+      const deleteCount = newStartIdx - trimmingEvent.startIdx;
+      
+      console.log(`  Trimming from left: startIdx=${trimmingEvent.startIdx}, newStartIdx=${newStartIdx}, deleteCount=${deleteCount}`);
+      
+      if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
+        console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
+      }
+    } else {
+      // Actually delete the trimmed snapshots from the end
+      const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
+      const deleteCount = trimmingEvent.endIdx - newEndIdx;
+      
+      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}, deleteCount=${deleteCount}`);
+      
+      if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
+        console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
+      }
+    }
+    
+    trimmingEvent = null;
+    document.removeEventListener('mousemove', doEventTrim);
+    document.removeEventListener('mouseup', stopEventTrim);
+    
+    // Recalculate duration and re-render timeline
+    recalculateTutorialDuration();
     renderTimeline();
   }
   
   function stopAnnotationDrag() {
-    if (!draggingAnnotation) {
-      draggingAnnotation = null;
-      document.removeEventListener('mousemove', doAnnotationDrag);
-      document.removeEventListener('mouseup', stopAnnotationDrag);
-      return;
-    }
-    
-    const movedAnnotation = currentTutorial.annotations[draggingAnnotation.index];
-    
-    // Check if this annotation now overlaps with any previous annotations
-    // If so, trim the previous annotation to end where this one starts
-    for (let i = 0; i < currentTutorial.annotations.length; i++) {
-      if (i === draggingAnnotation.index) continue;
-      
-      const otherAnn = currentTutorial.annotations[i];
-      const otherEnd = otherAnn.timestamp + otherAnn.duration;
-      
-      // Check if the moved annotation's start is now within another annotation
-      if (movedAnnotation.timestamp > otherAnn.timestamp && movedAnnotation.timestamp < otherEnd) {
-        // Trim the other annotation to end where this one starts
-        const newDuration = movedAnnotation.timestamp - otherAnn.timestamp;
-        if (newDuration >= 1000) { // Minimum 1 second
-          otherAnn.duration = newDuration;
-          console.log(`✂️ Auto-trimmed annotation "${otherAnn.title}" to end at ${(movedAnnotation.timestamp / 1000).toFixed(2)}s`);
-        }
-      }
-    }
-    
     draggingAnnotation = null;
     document.removeEventListener('mousemove', doAnnotationDrag);
     document.removeEventListener('mouseup', stopAnnotationDrag);
     
     // Recalculate tutorial duration after moving
     recalculateTutorialDuration();
-    renderTimeline();
   }
   
   // Recalculate tutorial duration based on snapshots and annotations
@@ -2115,28 +2192,21 @@
       };
       
       positionEditorOverlay.style.display = 'none';
-      
-      // Only remove 'visible' class if we're not in the middle of showing this annotation
-      // If currentAnnotationIndex matches this annotation, keep it visible
-      if (currentAnnotationIndex !== editingAnnotationIndex) {
-        annotationBox.classList.remove('visible');
-      }
-      annotationBox.classList.remove('draggable');
-      
-      // Remove positioning class to disable pointer events again
-      appFrame.classList.remove('positioning-annotation');
+      annotationBox.classList.remove('visible', 'draggable');
       
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
-      // Re-show the annotation with updated position if it should be visible
-      if (currentAnnotationIndex === editingAnnotationIndex) {
-        showAnnotation(ann);
-      }
-      
       editingAnnotationIndex = -1;
       renderTimeline();
     };
+  });
+  
+  resizeAnnotation.addEventListener('click', () => {
+    repositionAnnotation.click();
+    setTimeout(() => {
+      alert('Drag the orange corner handle to resize, then Save');
+    }, 100);
   });
   
   annotationEditModal.addEventListener('click', (e) => {
@@ -2248,7 +2318,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.33 initialized');
+  console.log('Tutorial Creator v9.19 initialized');
 })();
 </script>
 </body>
