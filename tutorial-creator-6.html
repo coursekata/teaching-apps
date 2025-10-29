@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.1</title>
+<title>Interactive Tutorial Creator - v9.2</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.1</div>
+    <div class="version-number">v9.2</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -794,6 +794,7 @@
   let annotationBox = null; // Will be injected into iframe
   let annotationTitle = null;
   let annotationText = null;
+  let activeRecordingAnnotation = null; // Track annotation that should remain visible during recording
   
   // Get tutorialAPI from iframe
   function getAPI() {
@@ -938,7 +939,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.1',
+      version: '9.2',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1019,7 +1020,22 @@
     recordingIndicator.style.display = 'inline-block';
     addAnnotation.disabled = true;
     
-    console.log('▶️ Recording resumed');
+    // If there's an active annotation, schedule it to hide after its duration
+    if (activeRecordingAnnotation && annotationBox) {
+      const remainingDuration = activeRecordingAnnotation.duration;
+      console.log('▶️ Recording resumed - annotation will hide in', (remainingDuration / 1000).toFixed(1) + 's');
+      
+      if (annotationTimeout) clearTimeout(annotationTimeout);
+      annotationTimeout = setTimeout(() => {
+        if (annotationBox) {
+          annotationBox.classList.remove('visible');
+          console.log('✓ Annotation hidden after duration expired');
+        }
+        activeRecordingAnnotation = null;
+      }, remainingDuration);
+    } else {
+      console.log('▶️ Recording resumed');
+    }
   });
   
   stopRecording.addEventListener('click', () => {
@@ -1047,6 +1063,16 @@
     }
     
     currentTutorial.duration = calculatedDuration;
+    
+    // Clear any active annotation and timeout
+    if (annotationTimeout) {
+      clearTimeout(annotationTimeout);
+      annotationTimeout = null;
+    }
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+    }
+    activeRecordingAnnotation = null;
     
     isRecording = false;
     isPaused = false;
@@ -1163,12 +1189,17 @@
       };
       
       positionEditorOverlay.style.display = 'none';
-      annotationBox.classList.remove('visible', 'draggable');
+      annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
       
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
+      // Keep annotation visible during recording
+      // Store it so we can hide it when recording resumes and duration expires
+      activeRecordingAnnotation = ann;
+      
       console.log('✓ Annotation positioned:', ann.position);
+      console.log('  Annotation will remain visible until recording resumes and duration expires');
       renderTimeline();
     };
   }
@@ -1487,12 +1518,17 @@
   function stopPlayback() {
     isPlaying = false;
     playbackPausedAt = 0;
-    currentAnnotationIndex = -1;
+    // Don't reset currentAnnotationIndex - we need to know if an annotation was showing
     playbackLoop.lastAppliedTimestamp = null; // Reset the flag
     
-    if (annotationBox) {
+    // Keep annotation visible if the tutorial ended with one showing
+    // Only hide it if no annotation was active at the end
+    const lastAnnotationWasActive = currentAnnotationIndex >= 0;
+    
+    if (annotationBox && !lastAnnotationWasActive) {
       annotationBox.classList.remove('visible');
     }
+    // If annotation was active, leave it visible
     
     if (annotationTimeout) {
       clearTimeout(annotationTimeout);
@@ -1518,7 +1554,11 @@
       console.log('✓ Applied final state from last snapshot');
     }
     
-    console.log('⏹ Playback stopped');
+    if (lastAnnotationWasActive) {
+      console.log('⏹ Playback stopped - annotation remains visible');
+    } else {
+      console.log('⏹ Playback stopped');
+    }
   }
   
   recordAgain.addEventListener('click', () => {
@@ -1957,7 +1997,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.1 initialized');
+  console.log('Tutorial Creator v9.2 initialized');
 })();
 </script>
 </body>
