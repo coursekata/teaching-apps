@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.31</title>
+<title>Interactive Tutorial Creator - v9.32</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.31</div>
+    <div class="version-number">v9.32</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.31',
+      version: '9.32',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -2142,8 +2142,7 @@
     const draggedIndex = draggingAnnotation.index;
     const draggedAnn = currentTutorial.annotations[draggedIndex];
     
-    // Check for overlap with previous annotation
-    // If current annotation overlaps previous one, shorten the previous one
+    // Check for overlap with previous annotation (dragging right over left)
     if (draggedIndex > 0) {
       const prevAnn = currentTutorial.annotations[draggedIndex - 1];
       const prevEnd = prevAnn.timestamp + prevAnn.duration;
@@ -2160,6 +2159,19 @@
           draggedAnn.timestamp = prevAnn.timestamp + prevAnn.duration;
           console.log('⚠️ Moved annotation forward to avoid making previous one too short');
         }
+      }
+    }
+    
+    // Check for overlap with next annotation (dragging left over right)
+    if (draggedIndex < currentTutorial.annotations.length - 1) {
+      const nextAnn = currentTutorial.annotations[draggedIndex + 1];
+      const draggedEnd = draggedAnn.timestamp + draggedAnn.duration;
+      
+      if (draggedEnd > nextAnn.timestamp) {
+        // Dragged annotation overlaps next one
+        // Move the next annotation to start where dragged one ends
+        nextAnn.timestamp = draggedEnd;
+        console.log('⚠️ Moved next annotation forward to avoid overlap');
       }
     }
     
@@ -2400,7 +2412,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.31 initialized');
+  console.log('Tutorial Creator v9.32 initialized');
 })();
 </script>
 </body>
