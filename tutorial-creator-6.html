@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.11</title>
+<title>Interactive Tutorial Creator - v9.12</title>
 <script>
   window.MathJax = {
     tex: {
@@ -554,7 +554,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.11</div>
+    <div class="version-number">v9.12</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -945,7 +945,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.11',
+      version: '9.12',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1726,10 +1726,11 @@
       const annEl = document.createElement('div');
       annEl.className = 'timeline-annotation';
       const leftPos = ((ann.timestamp / 1000) * timelineScale);
-      const width = ((ann.duration / 1000) * timelineScale);
+      // Subtract padding (6px × 2) and border (1px × 2) from width so visual size matches duration
+      const width = ((ann.duration / 1000) * timelineScale) - 14;
       annEl.style.left = leftPos + 'px';
       annEl.style.width = width + 'px';
-      console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) end=${leftPos + width}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
+      console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) visual-end=${leftPos + width + 14}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
       annEl.textContent = ann.title;
       annEl.title = ann.title;
       
@@ -2075,7 +2076,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.11 initialized');
+  console.log('Tutorial Creator v9.12 initialized');
 })();
 </script>
 </body>
