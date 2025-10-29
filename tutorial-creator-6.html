@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.20</title>
+<title>Interactive Tutorial Creator - v9.21</title>
 <script>
   window.MathJax = {
     tex: {
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.20',
+      version: '9.21',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -2061,39 +2061,42 @@
     } else {
       // Trimming from the end
       const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
-      const deleteCount = trimmingEvent.endIdx - newEndIdx;
       
-      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}, deleteCount=${deleteCount}`);
+      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}`);
       
-      if (deleteCount > 0) {
-        // Find if there's a dragEnd event at the original endIdx that we need to preserve
-        const dragEndSnapshot = currentTutorial.snapshots[trimmingEvent.endIdx];
-        const isDragEnd = dragEndSnapshot && 
-          (dragEndSnapshot.event.action === 'dragEnd' || 
-           dragEndSnapshot.event.action === 'dragBetaEnd' || 
-           dragEndSnapshot.event.action === 'dragBetaPrimeEnd' || 
-           dragEndSnapshot.event.action === 'dragBEnd' || 
-           dragEndSnapshot.event.action === 'dragAxisEnd');
+      // Find if there's a dragEnd event at the original endIdx that we need to preserve
+      const dragEndSnapshot = currentTutorial.snapshots[trimmingEvent.endIdx];
+      const isDragEnd = dragEndSnapshot && 
+        (dragEndSnapshot.event.action === 'dragEnd' || 
+         dragEndSnapshot.event.action === 'dragBetaEnd' || 
+         dragEndSnapshot.event.action === 'dragBetaPrimeEnd' || 
+         dragEndSnapshot.event.action === 'dragBEnd' || 
+         dragEndSnapshot.event.action === 'dragAxisEnd');
+      
+      if (isDragEnd) {
+        // Preserve the dragEnd event by adjusting its timestamp to the new end
+        const newTimestamp = currentTutorial.snapshots[newEndIdx].timestamp;
+        console.log(`  🔒 Preserving ${dragEndSnapshot.event.action} at new time ${newTimestamp}ms`);
         
-        if (isDragEnd) {
-          // Preserve the dragEnd event by adjusting its timestamp to the new end
-          const newTimestamp = currentTutorial.snapshots[newEndIdx].timestamp;
-          dragEndSnapshot.timestamp = newTimestamp;
-          console.log(`  🔒 Preserved ${dragEndSnapshot.event.action} at new time ${newTimestamp}ms`);
-          
-          // Move the dragEnd to the new position
-          const dragEndSnapshotCopy = {...dragEndSnapshot};
-          currentTutorial.snapshots.splice(trimmingEvent.endIdx, 1); // Remove from old position
-          currentTutorial.snapshots.splice(newEndIdx, 0, dragEndSnapshotCopy); // Insert at new position
-          
-          // Now delete the trimmed snapshots (but we've already moved dragEnd, so it's safe)
-          currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
-          console.log(`🔪 Trimmed ${deleteCount} snapshots from end (preserved dragEnd)`);
-        } else {
-          // No dragEnd to preserve, delete normally
-          currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
-          console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
-        }
+        // Create a copy with the new timestamp
+        const dragEndSnapshotCopy = {
+          ...dragEndSnapshot,
+          timestamp: newTimestamp
+        };
+        
+        // Delete everything after newEndIdx (including the old dragEnd)
+        const totalToDelete = currentTutorial.snapshots.length - newEndIdx - 1;
+        currentTutorial.snapshots.splice(newEndIdx + 1, totalToDelete);
+        console.log(`🔪 Deleted ${totalToDelete} snapshots after newEndIdx=${newEndIdx}`);
+        
+        // Now replace the snapshot at newEndIdx with our adjusted dragEnd
+        currentTutorial.snapshots[newEndIdx] = dragEndSnapshotCopy;
+        console.log(`  🔒 Placed ${dragEndSnapshot.event.action} at index ${newEndIdx}`);
+      } else {
+        // No dragEnd to preserve, just delete everything after newEndIdx
+        const totalToDelete = currentTutorial.snapshots.length - newEndIdx - 1;
+        currentTutorial.snapshots.splice(newEndIdx + 1, totalToDelete);
+        console.log(`🔪 Trimmed ${totalToDelete} snapshots from end`);
       }
     }
     
@@ -2342,7 +2345,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.20 initialized');
+  console.log('Tutorial Creator v9.21 initialized');
 })();
 </script>
 </body>
