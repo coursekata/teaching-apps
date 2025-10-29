@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.21</title>
+<title>Interactive Tutorial Creator - v9.22</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.21</div>
+    <div class="version-number">v9.22</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.21',
+      version: '9.22',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1480,14 +1480,7 @@
     const elapsed = (Date.now() - playbackStartTime) / 1000;
     const elapsedMs = elapsed * 1000;
     
-    // Check if finished FIRST - before even updating playhead
-    if (elapsedMs >= currentTutorial.duration) {
-      console.log(`⏹ Stopping playback: elapsed=${(elapsedMs / 1000).toFixed(3)}s duration=${(currentTutorial.duration / 1000).toFixed(3)}s`);
-      stopPlayback();
-      return;
-    }
-    
-    // Update timeline playhead (only if playback continues)
+    // Update timeline playhead
     timelinePlayhead.style.display = 'block';
     timelinePlayhead.style.left = (elapsed * timelineScale + 60) + 'px';
     
@@ -1500,7 +1493,7 @@
       }
     }
     
-    // Apply the most recent applicable snapshot
+    // Apply the most recent applicable snapshot BEFORE checking if finished
     if (targetSnapshot) {
       // Use a simple flag to avoid re-applying the same snapshot
       if (!playbackLoop.lastAppliedTimestamp || 
@@ -1540,6 +1533,14 @@
         annotationBox.classList.remove('visible');
       }
       currentAnnotationIndex = -1;
+    }
+    
+    // Check if finished AFTER applying all state/annotations
+    // This ensures the last snapshot gets applied before stopping
+    if (elapsedMs >= currentTutorial.duration) {
+      console.log(`⏹ Stopping playback: elapsed=${(elapsedMs / 1000).toFixed(3)}s duration=${(currentTutorial.duration / 1000).toFixed(3)}s`);
+      stopPlayback();
+      return;
     }
     
     requestAnimationFrame(playbackLoop);
@@ -2301,7 +2302,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.21 initialized');
+  console.log('Tutorial Creator v9.22 initialized');
 })();
 </script>
 </body>
