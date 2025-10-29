@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.26</title>
+<title>Interactive Tutorial Creator - v9.27</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.26</div>
+    <div class="version-number">v9.27</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.26',
+      version: '9.27',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1004,13 +1004,13 @@
           if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
           
           const snapshot = {
-            timestamp: relativeTime,
+            timestamp: relativeTime + 50, // Add the delay to timestamp so marker and playback sync
             state: api.getState(),
             event: event
           };
           
           currentTutorial.snapshots.push(snapshot);
-          console.log('📸 Simulate snapshot captured (delayed) at', (relativeTime / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
+          console.log('📸 Simulate snapshot captured (delayed) at', ((relativeTime + 50) / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
         }, 50); // 50ms delay to allow simulation to complete
       } else {
         // For all other events, capture immediately
@@ -2349,7 +2349,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.26 initialized');
+  console.log('Tutorial Creator v9.27 initialized');
 })();
 </script>
 </body>
