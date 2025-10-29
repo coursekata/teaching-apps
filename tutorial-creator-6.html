@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.20</title>
+<title>Interactive Tutorial Creator - v9.21</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.20</div>
+    <div class="version-number">v9.21</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.20',
+      version: '9.21',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1106,7 +1106,9 @@
       calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
     }
     
-    currentTutorial.duration = calculatedDuration;
+    // Add a small buffer (100ms) to ensure the last snapshot gets applied during playback
+    // Without this, if an event happens at exactly the duration time, playback stops before applying it
+    currentTutorial.duration = calculatedDuration + 100;
     
     // Clear any active annotation and timeout
     if (annotationTimeout) {
@@ -2096,7 +2098,8 @@
       }
     }
     
-    currentTutorial.duration = calculatedDuration;
+    // Add a small buffer (100ms) to ensure the last snapshot gets applied during playback
+    currentTutorial.duration = calculatedDuration + 100;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
     console.log('  Last snapshot:', (lastSnapshotTime / 1000).toFixed(2) + 's');
     console.log('  Last annotation end:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
@@ -2298,7 +2301,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.20 initialized');
+  console.log('Tutorial Creator v9.21 initialized');
 })();
 </script>
 </body>
