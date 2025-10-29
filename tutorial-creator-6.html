@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.28</title>
+<title>Interactive Tutorial Creator - v9.29</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.28</div>
+    <div class="version-number">v9.29</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.28',
+      version: '9.29',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1433,7 +1433,15 @@
     api.setState(currentTutorial.initialState);
     
     isPlaying = true;
-    playbackStartTime = Date.now();
+    
+    // Start playback at the first event instead of at time 0
+    let startOffset = 0;
+    if (currentTutorial.snapshots.length > 0) {
+      startOffset = currentTutorial.snapshots[0].timestamp;
+      console.log('▶️ Starting playback at first event:', (startOffset / 1000).toFixed(2) + 's');
+    }
+    
+    playbackStartTime = Date.now() - startOffset;
     playbackPausedAt = 0;
     
     playPausePreview.textContent = '⏸ Pause Preview';
@@ -2352,7 +2360,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.28 initialized');
+  console.log('Tutorial Creator v9.29 initialized');
 })();
 </script>
 </body>
