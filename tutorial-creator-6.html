@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.17</title>
+<title>Interactive Tutorial Creator - v9.18</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.17</div>
+    <div class="version-number">v9.18</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.17',
+      version: '9.18',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1743,7 +1743,7 @@
         const span = document.createElement('div');
         span.className = 'timeline-event drag-event';
         span.style.left = (startTime * timelineScale) + 'px';
-        span.style.width = Math.max(8, duration * timelineScale) + 'px'; // Minimum 8px width
+        span.style.width = Math.max(8, duration * timelineScale - 10) + 'px'; // Subtract for border-radius + box-shadow
         span.title = `${dragType} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
@@ -1942,6 +1942,9 @@
     const dx = e.clientX - trimmingEvent.startX;
     const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
     
+    // Store current mouse position for stopEventTrim
+    trimmingEvent.currentX = e.clientX;
+    
     if (trimmingEvent.edge === 'left') {
       // Trim from start: delete snapshots from the beginning
       const newStartTime = trimmingEvent.originalStartTime + dt;
@@ -1959,6 +1962,9 @@
       if (newStartIdx >= trimmingEvent.endIdx) {
         newStartIdx = trimmingEvent.endIdx - 1;
       }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newStartIdx = newStartIdx;
       
       // Visual feedback: update the event span
       const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
@@ -1986,6 +1992,9 @@
         newEndIdx = trimmingEvent.startIdx + 1;
       }
       
+      // Store for stopEventTrim
+      trimmingEvent.newEndIdx = newEndIdx;
+      
       // Visual feedback: update the event span
       const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
       if (eventSpan) {
@@ -1999,40 +2008,22 @@
   function stopEventTrim() {
     if (!trimmingEvent) return;
     
-    const dx = trimmingEvent.startX - trimmingEvent.startX; // Will calculate from current position
-    
     if (trimmingEvent.edge === 'left') {
       // Actually delete the trimmed snapshots from the start
-      const newStartTime = trimmingEvent.originalStartTime + ((event.clientX || trimmingEvent.startX) - trimmingEvent.startX) / timelineScale * 1000;
+      const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
+      const deleteCount = newStartIdx - trimmingEvent.startIdx;
       
-      let deleteCount = 0;
-      for (let i = trimmingEvent.startIdx; i <= trimmingEvent.endIdx; i++) {
-        if (currentTutorial.snapshots[trimmingEvent.startIdx].timestamp < newStartTime && 
-            trimmingEvent.startIdx < trimmingEvent.endIdx - 1) {
-          currentTutorial.snapshots.splice(trimmingEvent.startIdx, 1);
-          deleteCount++;
-        } else {
-          break;
-        }
-      }
       if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
         console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
       }
     } else {
       // Actually delete the trimmed snapshots from the end
-      const newEndTime = trimmingEvent.originalEndTime + ((event.clientX || trimmingEvent.startX) - trimmingEvent.startX) / timelineScale * 1000;
+      const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
+      const deleteCount = trimmingEvent.endIdx - newEndIdx;
       
-      let deleteCount = 0;
-      for (let i = trimmingEvent.endIdx; i >= trimmingEvent.startIdx; i--) {
-        if (currentTutorial.snapshots[i].timestamp > newEndTime &&
-            i > trimmingEvent.startIdx) {
-          currentTutorial.snapshots.splice(i, 1);
-          deleteCount++;
-        } else {
-          break;
-        }
-      }
       if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
         console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
       }
     }
@@ -2282,7 +2273,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.17 initialized');
+  console.log('Tutorial Creator v9.18 initialized');
 })();
 </script>
 </body>
