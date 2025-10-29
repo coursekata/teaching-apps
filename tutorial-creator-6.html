@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.18</title>
+<title>Interactive Tutorial Creator - v9.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.18</div>
+    <div class="version-number">v9.19</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.18',
+      version: '9.19',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1743,7 +1743,7 @@
         const span = document.createElement('div');
         span.className = 'timeline-event drag-event';
         span.style.left = (startTime * timelineScale) + 'px';
-        span.style.width = Math.max(8, duration * timelineScale - 10) + 'px'; // Subtract for border-radius + box-shadow
+        span.style.width = Math.max(8, duration * timelineScale - 18) + 'px'; // Subtract for border-radius + box-shadow
         span.title = `${dragType} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
@@ -1946,20 +1946,27 @@
     trimmingEvent.currentX = e.clientX;
     
     if (trimmingEvent.edge === 'left') {
-      // Trim from start: delete snapshots from the beginning
-      const newStartTime = trimmingEvent.originalStartTime + dt;
+      // Trim from start: move start time forward
+      const newStartTime = Math.max(
+        trimmingEvent.originalStartTime + dt,
+        trimmingEvent.originalStartTime // Can't go before original start
+      );
+      
+      // Ensure we don't go past the end (leave at least 100ms)
+      const maxStartTime = trimmingEvent.originalEndTime - 100;
+      const clampedStartTime = Math.min(newStartTime, maxStartTime);
       
       // Find which snapshot index corresponds to the new start time
       let newStartIdx = trimmingEvent.startIdx;
       for (let i = trimmingEvent.startIdx; i <= trimmingEvent.endIdx; i++) {
-        if (currentTutorial.snapshots[i].timestamp >= newStartTime) {
+        if (currentTutorial.snapshots[i].timestamp >= clampedStartTime) {
           newStartIdx = i;
           break;
         }
       }
       
-      // Don't allow trimming past the end
-      if (newStartIdx >= trimmingEvent.endIdx) {
+      // Ensure at least 2 snapshots remain
+      if (newStartIdx >= trimmingEvent.endIdx - 1) {
         newStartIdx = trimmingEvent.endIdx - 1;
       }
       
@@ -1971,24 +1978,32 @@
       if (eventSpan) {
         const newStartTimeSec = currentTutorial.snapshots[newStartIdx].timestamp / 1000;
         const endTimeSec = trimmingEvent.originalEndTime / 1000;
+        const newWidth = Math.max(8, (endTimeSec - newStartTimeSec) * timelineScale - 18);
         eventSpan.style.left = (newStartTimeSec * timelineScale) + 'px';
-        eventSpan.style.width = Math.max(8, (endTimeSec - newStartTimeSec) * timelineScale) + 'px';
+        eventSpan.style.width = newWidth + 'px';
       }
     } else {
-      // Trim from end: delete snapshots from the end
-      const newEndTime = trimmingEvent.originalEndTime + dt;
+      // Trim from end: move end time backward
+      const newEndTime = Math.min(
+        trimmingEvent.originalEndTime + dt,
+        trimmingEvent.originalEndTime // Can't go past original end
+      );
+      
+      // Ensure we don't go before the start (leave at least 100ms)
+      const minEndTime = trimmingEvent.originalStartTime + 100;
+      const clampedEndTime = Math.max(newEndTime, minEndTime);
       
       // Find which snapshot index corresponds to the new end time
       let newEndIdx = trimmingEvent.endIdx;
       for (let i = trimmingEvent.endIdx; i >= trimmingEvent.startIdx; i--) {
-        if (currentTutorial.snapshots[i].timestamp <= newEndTime) {
+        if (currentTutorial.snapshots[i].timestamp <= clampedEndTime) {
           newEndIdx = i;
           break;
         }
       }
       
-      // Don't allow trimming before the start
-      if (newEndIdx <= trimmingEvent.startIdx) {
+      // Ensure at least 2 snapshots remain
+      if (newEndIdx <= trimmingEvent.startIdx + 1) {
         newEndIdx = trimmingEvent.startIdx + 1;
       }
       
@@ -2000,7 +2015,8 @@
       if (eventSpan) {
         const startTimeSec = trimmingEvent.originalStartTime / 1000;
         const newEndTimeSec = currentTutorial.snapshots[newEndIdx].timestamp / 1000;
-        eventSpan.style.width = Math.max(8, (newEndTimeSec - startTimeSec) * timelineScale) + 'px';
+        const newWidth = Math.max(8, (newEndTimeSec - startTimeSec) * timelineScale - 18);
+        eventSpan.style.width = newWidth + 'px';
       }
     }
   }
@@ -2008,10 +2024,14 @@
   function stopEventTrim() {
     if (!trimmingEvent) return;
     
+    console.log('🔪 stopEventTrim called:', trimmingEvent);
+    
     if (trimmingEvent.edge === 'left') {
       // Actually delete the trimmed snapshots from the start
       const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
       const deleteCount = newStartIdx - trimmingEvent.startIdx;
+      
+      console.log(`  Trimming from left: startIdx=${trimmingEvent.startIdx}, newStartIdx=${newStartIdx}, deleteCount=${deleteCount}`);
       
       if (deleteCount > 0) {
         currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
@@ -2021,6 +2041,8 @@
       // Actually delete the trimmed snapshots from the end
       const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
       const deleteCount = trimmingEvent.endIdx - newEndIdx;
+      
+      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}, deleteCount=${deleteCount}`);
       
       if (deleteCount > 0) {
         currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
@@ -2273,7 +2295,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.18 initialized');
+  console.log('Tutorial Creator v9.19 initialized');
 })();
 </script>
 </body>
