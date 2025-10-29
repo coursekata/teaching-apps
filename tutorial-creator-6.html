@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.26</title>
+<title>Interactive Tutorial Creator - v9.27</title>
 <script>
   window.MathJax = {
     tex: {
@@ -144,6 +144,10 @@
   
   iframe.playback-mode{
     pointer-events:none;
+  }
+  
+  iframe.playback-mode.positioning-annotation{
+    pointer-events:auto;
   }
   
   .annotation-box{
@@ -557,7 +561,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.26</div>
+    <div class="version-number">v9.27</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -946,7 +950,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.26',
+      version: '9.27',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1162,6 +1166,9 @@
     
     console.log('showAnnotationForPositioning called for:', ann.title);
     
+    // Enable pointer events on iframe while positioning
+    appFrame.classList.add('positioning-annotation');
+    
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
     annotationBox.style.left = '300px';
@@ -1203,6 +1210,9 @@
       positionEditorOverlay.style.display = 'none';
       annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
       
+      // Remove positioning class to disable pointer events again
+      appFrame.classList.remove('positioning-annotation');
+      
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
@@ -1226,6 +1236,10 @@
     }
     
     positionEditorOverlay.style.display = 'none';
+    
+    // Remove positioning class to disable pointer events again
+    appFrame.classList.remove('positioning-annotation');
+    
     if (annotationBox) {
       annotationBox.classList.remove('visible', 'draggable');
       const handles = annotationBox.querySelectorAll('.resize-handle');
@@ -1986,6 +2000,9 @@
       positionEditorOverlay.style.display = 'none';
       annotationBox.classList.remove('visible', 'draggable');
       
+      // Remove positioning class to disable pointer events again
+      appFrame.classList.remove('positioning-annotation');
+      
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
@@ -2103,7 +2120,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.26 initialized');
+  console.log('Tutorial Creator v9.27 initialized');
 })();
 </script>
 </body>
