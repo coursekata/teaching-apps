@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.25</title>
+<title>Interactive Tutorial Creator - v9.26</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.25</div>
+    <div class="version-number">v9.26</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.25',
+      version: '9.26',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1117,9 +1117,25 @@
     
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+      const lastAction = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].event.action;
+      
       calculatedDuration = lastSnapshotTime;
       console.log('  Last snapshot time:', (lastSnapshotTime / 1000).toFixed(3) + 's');
-      console.log('  Last snapshot action:', currentTutorial.snapshots[currentTutorial.snapshots.length - 1].event.action);
+      console.log('  Last snapshot action:', lastAction);
+      
+      // Check if last event is a single click event (not a drag)
+      const isDragEnd = lastAction === 'dragEnd' || lastAction === 'dragBetaEnd' || 
+                        lastAction === 'dragBetaPrimeEnd' || lastAction === 'dragBEnd' || 
+                        lastAction === 'dragAxisEnd';
+      
+      if (!isDragEnd) {
+        // For single events, add visual width so playhead stops at right edge of marker
+        // Single events have ~8px width + visual effects (border-radius, box-shadow) ≈ 30px total
+        const visualWidthMs = (30 / timelineScale) * 1000; // Convert 30px to milliseconds
+        calculatedDuration = lastSnapshotTime + visualWidthMs;
+        console.log('  Added visual width for single event:', visualWidthMs.toFixed(1) + 'ms');
+        console.log('  Adjusted duration:', (calculatedDuration / 1000).toFixed(3) + 's');
+      }
       
       // Log all snapshots for debugging
       currentTutorial.snapshots.forEach((snap, idx) => {
@@ -2333,7 +2349,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.25 initialized');
+  console.log('Tutorial Creator v9.26 initialized');
 })();
 </script>
 </body>
