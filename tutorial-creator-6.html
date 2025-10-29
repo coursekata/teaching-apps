@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.7</title>
+<title>Interactive Tutorial Creator - v9.8</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.7</div>
+    <div class="version-number">v9.8</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -946,7 +946,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.7',
+      version: '9.8',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1443,7 +1443,13 @@
     const elapsed = (Date.now() - playbackStartTime) / 1000;
     const elapsedMs = elapsed * 1000;
     
-    // Update timeline playhead
+    // Check if finished FIRST - before even updating playhead
+    if (elapsedMs >= currentTutorial.duration) {
+      stopPlayback();
+      return;
+    }
+    
+    // Update timeline playhead (only if playback continues)
     timelinePlayhead.style.display = 'block';
     timelinePlayhead.style.left = (elapsed * timelineScale + 60) + 'px';
     
@@ -1469,12 +1475,6 @@
           console.log('▶️ Applying simulate event - data length:', targetSnapshot.state.data.length, 'currentN:', targetSnapshot.state.currentN);
         }
       }
-    }
-    
-    // Check if finished FIRST - before hiding annotations
-    if (elapsedMs >= currentTutorial.duration) {
-      stopPlayback();
-      return;
     }
     
     // Handle annotations
@@ -1848,21 +1848,31 @@
     if (!currentTutorial) return;
     
     let calculatedDuration = 0;
+    let durationSource = 'none';
     
     // Get last snapshot time
+    let lastSnapshotTime = 0;
     if (currentTutorial.snapshots.length > 0) {
-      const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+      lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
       calculatedDuration = lastSnapshotTime;
+      durationSource = 'snapshot';
     }
     
     // Get last annotation end time
+    let lastAnnotationEnd = 0;
     if (currentTutorial.annotations.length > 0) {
-      const lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-      calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
+      lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+      if (lastAnnotationEnd > calculatedDuration) {
+        calculatedDuration = lastAnnotationEnd;
+        durationSource = 'annotation';
+      }
     }
     
     currentTutorial.duration = calculatedDuration;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
+    console.log('  Last snapshot:', (lastSnapshotTime / 1000).toFixed(2) + 's');
+    console.log('  Last annotation end:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
+    console.log('  Duration determined by:', durationSource);
   }
   
   // ========== ANNOTATION EDITING ==========
@@ -2060,7 +2070,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.7 initialized');
+  console.log('Tutorial Creator v9.8 initialized');
 })();
 </script>
 </body>
