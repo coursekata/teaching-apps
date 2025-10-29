@@ -1029,16 +1029,23 @@
       api.offAction(eventListener);
     }
     
-    currentTutorial.duration = Date.now() - recordingStartTime - totalPausedTime;
+    // Calculate the actual end time of the tutorial
+    // This should be the maximum of:
+    // 1. Last snapshot timestamp
+    // 2. Last annotation end time (timestamp + duration)
+    let calculatedDuration = 0;
     
-    // Also ensure duration matches the last snapshot timestamp
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
-      if (lastSnapshotTime > currentTutorial.duration) {
-        console.warn('Last snapshot time exceeds duration, adjusting:', lastSnapshotTime, 'vs', currentTutorial.duration);
-        currentTutorial.duration = lastSnapshotTime + 100; // Add small buffer
-      }
+      calculatedDuration = lastSnapshotTime + 100; // Add small buffer after last event
     }
+    
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+      calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd + 100); // Add small buffer
+    }
+    
+    currentTutorial.duration = calculatedDuration;
     
     isRecording = false;
     isPaused = false;
@@ -1054,9 +1061,10 @@
     exportRecording.style.display = 'inline-block';
     recordAgain.style.display = 'inline-block';
     
-    console.log('⏹ Recording stopped. Duration:', (currentTutorial.duration / 1000).toFixed(1) + 's');
-    console.log('Snapshots:', currentTutorial.snapshots.length);
-    console.log('Annotations:', currentTutorial.annotations.length);
+    console.log('⏹ Recording stopped');
+    console.log('  Duration:', (currentTutorial.duration / 1000).toFixed(2) + 's');
+    console.log('  Snapshots:', currentTutorial.snapshots.length);
+    console.log('  Annotations:', currentTutorial.annotations.length);
     
     renderTimeline();
   });
@@ -1251,8 +1259,8 @@
       } else if (isResizing) {
         const newWidth = startWidth + (e.clientX - startX);
         const newHeight = startHeight + (e.clientY - startY);
-        annotationBox.style.width = Math.max(200, newWidth) + 'px';
-        annotationBox.style.height = Math.max(80, newHeight) + 'px';
+        annotationBox.style.width = Math.max(80, newWidth) + 'px';
+        annotationBox.style.height = Math.max(40, newHeight) + 'px';
       }
     };
     
