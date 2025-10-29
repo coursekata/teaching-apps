@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.25</title>
+<title>Interactive Tutorial Creator - v9.26</title>
 <script>
   window.MathJax = {
     tex: {
@@ -557,7 +557,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.25</div>
+    <div class="version-number">v9.26</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -650,8 +650,7 @@
       </div>
       
       <div class="modal-buttons">
-        <button id="repositionAnnotation" class="primary">📍 Reposition</button>
-        <button id="resizeAnnotation" class="primary">↔️ Resize</button>
+        <button id="repositionAnnotation" class="primary">📍 Reposition/Resize</button>
         <button id="deleteAnnotation" class="warning">🗑 Delete</button>
         <button id="cancelEditAnnotation">Cancel</button>
         <button id="saveEditAnnotation" class="success">💾 Save Changes</button>
@@ -781,7 +780,6 @@
   const deleteAnnotation = document.getElementById('deleteAnnotation');
   const cancelEditAnnotation = document.getElementById('cancelEditAnnotation');
   const repositionAnnotation = document.getElementById('repositionAnnotation');
-  const resizeAnnotation = document.getElementById('resizeAnnotation');
   
   // State
   let isAppLoaded = false;
@@ -948,7 +946,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.25',
+      version: '9.26',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1261,6 +1259,14 @@
     
     // Get the resize handle
     const handle = annotationBox.querySelector('.resize-handle');
+    
+    // Clear any existing handlers to avoid duplication
+    annotationBox.onmousedown = null;
+    iframeDoc.onmousemove = null;
+    iframeDoc.onmouseup = null;
+    if (handle) {
+      handle.onmousedown = null;
+    }
     
     // Handle resize
     if (handle) {
@@ -1988,13 +1994,6 @@
     };
   });
   
-  resizeAnnotation.addEventListener('click', () => {
-    repositionAnnotation.click();
-    setTimeout(() => {
-      alert('Drag the orange corner handle to resize, then Save');
-    }, 100);
-  });
-  
   annotationEditModal.addEventListener('click', (e) => {
     if (e.target === annotationEditModal) {
       annotationEditModal.classList.remove('visible');
@@ -2104,7 +2103,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.25 initialized');
+  console.log('Tutorial Creator v9.26 initialized');
 })();
 </script>
 </body>
