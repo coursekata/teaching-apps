@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.27</title>
+<title>Interactive Tutorial Creator - v9.28</title>
 <script>
   window.MathJax = {
     tex: {
@@ -561,7 +561,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.27</div>
+    <div class="version-number">v9.28</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -950,7 +950,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.27',
+      version: '9.28',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1998,13 +1998,24 @@
       };
       
       positionEditorOverlay.style.display = 'none';
-      annotationBox.classList.remove('visible', 'draggable');
+      
+      // Only remove 'visible' class if we're not in the middle of showing this annotation
+      // If currentAnnotationIndex matches this annotation, keep it visible
+      if (currentAnnotationIndex !== editingAnnotationIndex) {
+        annotationBox.classList.remove('visible');
+      }
+      annotationBox.classList.remove('draggable');
       
       // Remove positioning class to disable pointer events again
       appFrame.classList.remove('positioning-annotation');
       
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
+      
+      // Re-show the annotation with updated position if it should be visible
+      if (currentAnnotationIndex === editingAnnotationIndex) {
+        showAnnotation(ann);
+      }
       
       editingAnnotationIndex = -1;
       renderTimeline();
@@ -2120,7 +2131,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.27 initialized');
+  console.log('Tutorial Creator v9.28 initialized');
 })();
 </script>
 </body>
