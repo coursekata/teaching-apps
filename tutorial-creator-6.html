@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.24</title>
+<title>Interactive Tutorial Creator - v9.25</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.24</div>
+    <div class="version-number">v9.25</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.24',
+      version: '9.25',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1133,11 +1133,10 @@
       calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
     }
     
-    // Add a small buffer (100ms) to ensure the last snapshot gets applied during playback
-    // Without this, if an event happens at exactly the duration time, playback stops before applying it
-    currentTutorial.duration = calculatedDuration + 100;
+    // No buffer needed anymore - the playback loop now applies snapshots before checking duration
+    currentTutorial.duration = calculatedDuration;
     
-    console.log('  Calculated duration (with buffer):', (currentTutorial.duration / 1000).toFixed(3) + 's');
+    console.log('  Calculated duration:', (currentTutorial.duration / 1000).toFixed(3) + 's');
     console.log('  Expected playhead position:', ((currentTutorial.duration / 1000) * timelineScale + 60).toFixed(1) + 'px');
     
     // Clear any active annotation and timeout
@@ -2131,8 +2130,8 @@
       }
     }
     
-    // Add a small buffer (100ms) to ensure the last snapshot gets applied during playback
-    currentTutorial.duration = calculatedDuration + 100;
+    // No buffer needed - playback loop applies snapshots before checking duration
+    currentTutorial.duration = calculatedDuration;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
     console.log('  Last snapshot:', (lastSnapshotTime / 1000).toFixed(2) + 's');
     console.log('  Last annotation end:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
@@ -2334,7 +2333,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.24 initialized');
+  console.log('Tutorial Creator v9.25 initialized');
 })();
 </script>
 </body>
