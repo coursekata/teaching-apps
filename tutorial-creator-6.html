@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.28</title>
+<title>Interactive Tutorial Creator - v9.30</title>
 <script>
   window.MathJax = {
     tex: {
@@ -561,7 +561,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.28</div>
+    <div class="version-number">v9.30</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -832,14 +832,47 @@
   appFrame.addEventListener('load', () => {
     console.log('Iframe loaded, checking for API...');
     
+    // Check for iframe errors
+    try {
+      const iframeWindow = appFrame.contentWindow;
+      if (iframeWindow) {
+        // Listen for errors in the iframe
+        iframeWindow.addEventListener('error', (e) => {
+          console.error('Error in iframe:', e.message);
+        });
+      }
+    } catch (err) {
+      console.error('Could not access iframe window:', err);
+    }
+    
     // Poll for API availability
+    let pollCount = 0;
     const checkAPI = setInterval(() => {
+      pollCount++;
       const api = getAPI();
+      
+      // Log every 10th poll to track progress
+      if (pollCount % 10 === 0) {
+        console.log(`Polling for tutorialAPI... attempt ${pollCount}`);
+        try {
+          const iframeWindow = appFrame.contentWindow;
+          if (iframeWindow) {
+            console.log('  Iframe window accessible:', !!iframeWindow);
+            console.log('  tutorialAPI exists:', !!iframeWindow.tutorialAPI);
+            if (iframeWindow.tutorialAPI) {
+              console.log('  tutorialAPI type:', typeof iframeWindow.tutorialAPI);
+            }
+          }
+        } catch (err) {
+          console.log('  Error accessing iframe:', err.message);
+        }
+      }
+      
       if (api) {
         clearInterval(checkAPI);
         apiReady = true;
         isAppLoaded = true;
-        console.log('✓ tutorialAPI ready');
+        console.log(`✓ tutorialAPI ready after ${pollCount} polls`);
         
         loadApp.style.display = 'none';
         loadApp.textContent = 'Load App'; // Reset text for next time
@@ -857,12 +890,25 @@
     setTimeout(() => {
       if (!apiReady) {
         clearInterval(checkAPI);
-        console.error('tutorialAPI not available after 5 seconds');
-        alert('Error: This app does not have the tutorialAPI. Make sure you are loading the correct confidence demo app.');
+        console.error(`tutorialAPI not available after 10 seconds (${pollCount} polls)`);
+        console.error('Current URL:', appFrame.src);
+        console.error('Check browser console for errors from the iframe');
+        
+        // Try to get error from iframe console if possible
+        try {
+          const iframeWindow = appFrame.contentWindow;
+          if (iframeWindow && iframeWindow.console && iframeWindow.console.error) {
+            console.error('Check the iframe console for initialization errors');
+          }
+        } catch (e) {
+          // Can't access iframe console due to CORS
+        }
+        
+        alert('Error: This app does not have the tutorialAPI ready.\n\nPossible causes:\n1. The app does not support tutorialAPI\n2. The URL parameters may have caused an error in the app\n   (Try using LaTeX notation like $\\beta_1$ instead of encoded characters)\n3. The app is taking too long to initialize\n\nCheck the browser console (F12) for more details.');
         loadApp.disabled = false;
         loadApp.textContent = 'Load App';
       }
-    }, 5000);
+    }, 10000);
   });
   
   function injectAnnotationBox() {
@@ -950,7 +996,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.28',
+      version: '9.30',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -2131,7 +2177,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.28 initialized');
+  console.log('Tutorial Creator v9.30 initialized');
 })();
 </script>
 </body>
