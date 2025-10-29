@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.21</title>
+<title>Interactive Tutorial Creator - v9.22</title>
 <script>
   window.MathJax = {
     tex: {
@@ -300,36 +300,6 @@
     background:#7c3aed;
   }
   
-  .event-trim-handle{
-    position:absolute;
-    top:0;
-    bottom:0;
-    width:6px;
-    background:rgba(255,255,255,0.3);
-    cursor:ew-resize;
-    opacity:0;
-    transition:opacity 0.2s;
-    z-index:10;
-  }
-  
-  .timeline-event.drag-event:hover .event-trim-handle{
-    opacity:1;
-  }
-  
-  .event-trim-handle.left{
-    left:0;
-    border-right:2px solid rgba(255,255,255,0.6);
-  }
-  
-  .event-trim-handle.right{
-    right:0;
-    border-left:2px solid rgba(255,255,255,0.6);
-  }
-  
-  .event-trim-handle:hover{
-    background:rgba(255,255,255,0.5);
-  }
-  
   .timeline-annotation{
     position:absolute;
     top:2px;
@@ -587,7 +557,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.21</div>
+    <div class="version-number">v9.22</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +948,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.21',
+      version: '9.22',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1748,17 +1718,6 @@
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
         
-        // Add trim handles for start/end
-        const leftTrim = document.createElement('div');
-        leftTrim.className = 'event-trim-handle left';
-        leftTrim.title = 'Trim from start';
-        span.appendChild(leftTrim);
-        
-        const rightTrim = document.createElement('div');
-        rightTrim.className = 'event-trim-handle right';
-        rightTrim.title = 'Trim from end';
-        span.appendChild(rightTrim);
-        
         eventsTrack.appendChild(span);
         
         i = endIdx + 1; // Skip to after dragEnd
@@ -1812,9 +1771,6 @@
       
       annotationsTrack.appendChild(annEl);
     });
-    
-    // Set up event trimming handlers
-    setupEventTrimming();
   }
   
   let draggingAnnotation = null;
@@ -1899,214 +1855,6 @@
     
     // Recalculate tutorial duration after resizing
     recalculateTutorialDuration();
-  }
-  
-  // ========== EVENT TRIMMING ==========
-  
-  let trimmingEvent = null;
-  
-  // Set up event trimming listeners (called after rendering events)
-  function setupEventTrimming() {
-    const trimHandles = document.querySelectorAll('.event-trim-handle');
-    trimHandles.forEach(handle => {
-      handle.addEventListener('mousedown', startEventTrim);
-    });
-  }
-  
-  function startEventTrim(e) {
-    e.stopPropagation();
-    
-    const handle = e.target;
-    const eventSpan = handle.parentElement;
-    const edge = handle.classList.contains('left') ? 'left' : 'right';
-    const startIdx = parseInt(eventSpan.dataset.startIdx);
-    const endIdx = parseInt(eventSpan.dataset.endIdx);
-    
-    trimmingEvent = {
-      startIdx: startIdx,
-      endIdx: endIdx,
-      edge: edge,
-      startX: e.clientX,
-      originalStartTime: currentTutorial.snapshots[startIdx].timestamp,
-      originalEndTime: currentTutorial.snapshots[endIdx].timestamp
-    };
-    
-    document.addEventListener('mousemove', doEventTrim);
-    document.addEventListener('mouseup', stopEventTrim);
-    e.preventDefault();
-  }
-  
-  function doEventTrim(e) {
-    if (!trimmingEvent) return;
-    
-    const dx = e.clientX - trimmingEvent.startX;
-    const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
-    
-    // Store current mouse position for stopEventTrim
-    trimmingEvent.currentX = e.clientX;
-    
-    if (trimmingEvent.edge === 'left') {
-      // Trim from start: move start time forward
-      const newStartTime = Math.max(
-        trimmingEvent.originalStartTime + dt,
-        trimmingEvent.originalStartTime // Can't go before original start
-      );
-      
-      // Ensure we don't go past the end (leave at least 100ms)
-      const maxStartTime = trimmingEvent.originalEndTime - 100;
-      const clampedStartTime = Math.min(newStartTime, maxStartTime);
-      
-      // Find which snapshot index corresponds to the new start time
-      let newStartIdx = trimmingEvent.startIdx;
-      for (let i = trimmingEvent.startIdx; i <= trimmingEvent.endIdx; i++) {
-        if (currentTutorial.snapshots[i].timestamp >= clampedStartTime) {
-          newStartIdx = i;
-          break;
-        }
-      }
-      
-      // Ensure at least 2 snapshots remain
-      if (newStartIdx >= trimmingEvent.endIdx - 1) {
-        newStartIdx = trimmingEvent.endIdx - 1;
-      }
-      
-      // Store for stopEventTrim
-      trimmingEvent.newStartIdx = newStartIdx;
-      
-      // Visual feedback: update the event span
-      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
-      if (eventSpan) {
-        const newStartTimeSec = currentTutorial.snapshots[newStartIdx].timestamp / 1000;
-        const endTimeSec = trimmingEvent.originalEndTime / 1000;
-        const newWidth = Math.max(8, (endTimeSec - newStartTimeSec) * timelineScale - 18);
-        eventSpan.style.left = (newStartTimeSec * timelineScale) + 'px';
-        eventSpan.style.width = newWidth + 'px';
-      }
-    } else {
-      // Trim from end: move end time backward
-      const newEndTime = Math.min(
-        trimmingEvent.originalEndTime + dt,
-        trimmingEvent.originalEndTime // Can't go past original end
-      );
-      
-      // Ensure we don't go before the start (leave at least 100ms)
-      const minEndTime = trimmingEvent.originalStartTime + 100;
-      const clampedEndTime = Math.max(newEndTime, minEndTime);
-      
-      // Find which snapshot index corresponds to the new end time
-      let newEndIdx = trimmingEvent.endIdx;
-      for (let i = trimmingEvent.endIdx; i >= trimmingEvent.startIdx; i--) {
-        if (currentTutorial.snapshots[i].timestamp <= clampedEndTime) {
-          newEndIdx = i;
-          break;
-        }
-      }
-      
-      // Ensure at least 2 snapshots remain
-      if (newEndIdx <= trimmingEvent.startIdx + 1) {
-        newEndIdx = trimmingEvent.startIdx + 1;
-      }
-      
-      // Store for stopEventTrim
-      trimmingEvent.newEndIdx = newEndIdx;
-      
-      // Visual feedback: update the event span
-      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
-      if (eventSpan) {
-        const startTimeSec = trimmingEvent.originalStartTime / 1000;
-        const newEndTimeSec = currentTutorial.snapshots[newEndIdx].timestamp / 1000;
-        const newWidth = Math.max(8, (newEndTimeSec - startTimeSec) * timelineScale - 18);
-        eventSpan.style.width = newWidth + 'px';
-      }
-    }
-  }
-  
-  function stopEventTrim() {
-    if (!trimmingEvent) return;
-    
-    console.log('🔪 stopEventTrim called:', trimmingEvent);
-    
-    if (trimmingEvent.edge === 'left') {
-      // Trimming from the start
-      const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
-      const deleteCount = newStartIdx - trimmingEvent.startIdx;
-      
-      console.log(`  Trimming from left: startIdx=${trimmingEvent.startIdx}, newStartIdx=${newStartIdx}, deleteCount=${deleteCount}`);
-      
-      if (deleteCount > 0) {
-        // Find if there's a dragStart event at the original startIdx that we need to preserve
-        const dragStartSnapshot = currentTutorial.snapshots[trimmingEvent.startIdx];
-        const isDragStart = dragStartSnapshot && 
-          (dragStartSnapshot.event.action === 'dragStart' || 
-           dragStartSnapshot.event.action === 'dragBetaStart' || 
-           dragStartSnapshot.event.action === 'dragBetaPrimeStart' || 
-           dragStartSnapshot.event.action === 'dragBStart' || 
-           dragStartSnapshot.event.action === 'dragAxisStart');
-        
-        if (isDragStart) {
-          // Preserve the dragStart event by adjusting its timestamp to the new start
-          const newTimestamp = currentTutorial.snapshots[newStartIdx].timestamp;
-          dragStartSnapshot.timestamp = newTimestamp;
-          console.log(`  🔒 Preserved ${dragStartSnapshot.event.action} at new time ${newTimestamp}ms`);
-          
-          // Delete snapshots after the dragStart event
-          currentTutorial.snapshots.splice(trimmingEvent.startIdx + 1, deleteCount);
-          console.log(`🔪 Trimmed ${deleteCount} snapshots from start (preserved dragStart)`);
-        } else {
-          // No dragStart to preserve, delete normally
-          currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
-          console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
-        }
-      }
-    } else {
-      // Trimming from the end
-      const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
-      
-      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}`);
-      
-      // Find if there's a dragEnd event at the original endIdx that we need to preserve
-      const dragEndSnapshot = currentTutorial.snapshots[trimmingEvent.endIdx];
-      const isDragEnd = dragEndSnapshot && 
-        (dragEndSnapshot.event.action === 'dragEnd' || 
-         dragEndSnapshot.event.action === 'dragBetaEnd' || 
-         dragEndSnapshot.event.action === 'dragBetaPrimeEnd' || 
-         dragEndSnapshot.event.action === 'dragBEnd' || 
-         dragEndSnapshot.event.action === 'dragAxisEnd');
-      
-      if (isDragEnd) {
-        // Preserve the dragEnd event by adjusting its timestamp to the new end
-        const newTimestamp = currentTutorial.snapshots[newEndIdx].timestamp;
-        console.log(`  🔒 Preserving ${dragEndSnapshot.event.action} at new time ${newTimestamp}ms`);
-        
-        // Create a copy with the new timestamp
-        const dragEndSnapshotCopy = {
-          ...dragEndSnapshot,
-          timestamp: newTimestamp
-        };
-        
-        // Delete everything after newEndIdx (including the old dragEnd)
-        const totalToDelete = currentTutorial.snapshots.length - newEndIdx - 1;
-        currentTutorial.snapshots.splice(newEndIdx + 1, totalToDelete);
-        console.log(`🔪 Deleted ${totalToDelete} snapshots after newEndIdx=${newEndIdx}`);
-        
-        // Now replace the snapshot at newEndIdx with our adjusted dragEnd
-        currentTutorial.snapshots[newEndIdx] = dragEndSnapshotCopy;
-        console.log(`  🔒 Placed ${dragEndSnapshot.event.action} at index ${newEndIdx}`);
-      } else {
-        // No dragEnd to preserve, just delete everything after newEndIdx
-        const totalToDelete = currentTutorial.snapshots.length - newEndIdx - 1;
-        currentTutorial.snapshots.splice(newEndIdx + 1, totalToDelete);
-        console.log(`🔪 Trimmed ${totalToDelete} snapshots from end`);
-      }
-    }
-    
-    trimmingEvent = null;
-    document.removeEventListener('mousemove', doEventTrim);
-    document.removeEventListener('mouseup', stopEventTrim);
-    
-    // Recalculate duration and re-render timeline
-    recalculateTutorialDuration();
-    renderTimeline();
   }
   
   function stopAnnotationDrag() {
@@ -2345,7 +2093,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.21 initialized');
+  console.log('Tutorial Creator v9.22 initialized');
 })();
 </script>
 </body>
