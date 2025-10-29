@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.19</title>
+<title>Interactive Tutorial Creator - v9.20</title>
 <script>
   window.MathJax = {
     tex: {
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.19',
+      version: '9.20',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -2027,26 +2027,73 @@
     console.log('🔪 stopEventTrim called:', trimmingEvent);
     
     if (trimmingEvent.edge === 'left') {
-      // Actually delete the trimmed snapshots from the start
+      // Trimming from the start
       const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
       const deleteCount = newStartIdx - trimmingEvent.startIdx;
       
       console.log(`  Trimming from left: startIdx=${trimmingEvent.startIdx}, newStartIdx=${newStartIdx}, deleteCount=${deleteCount}`);
       
       if (deleteCount > 0) {
-        currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
-        console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
+        // Find if there's a dragStart event at the original startIdx that we need to preserve
+        const dragStartSnapshot = currentTutorial.snapshots[trimmingEvent.startIdx];
+        const isDragStart = dragStartSnapshot && 
+          (dragStartSnapshot.event.action === 'dragStart' || 
+           dragStartSnapshot.event.action === 'dragBetaStart' || 
+           dragStartSnapshot.event.action === 'dragBetaPrimeStart' || 
+           dragStartSnapshot.event.action === 'dragBStart' || 
+           dragStartSnapshot.event.action === 'dragAxisStart');
+        
+        if (isDragStart) {
+          // Preserve the dragStart event by adjusting its timestamp to the new start
+          const newTimestamp = currentTutorial.snapshots[newStartIdx].timestamp;
+          dragStartSnapshot.timestamp = newTimestamp;
+          console.log(`  🔒 Preserved ${dragStartSnapshot.event.action} at new time ${newTimestamp}ms`);
+          
+          // Delete snapshots after the dragStart event
+          currentTutorial.snapshots.splice(trimmingEvent.startIdx + 1, deleteCount);
+          console.log(`🔪 Trimmed ${deleteCount} snapshots from start (preserved dragStart)`);
+        } else {
+          // No dragStart to preserve, delete normally
+          currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
+          console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
+        }
       }
     } else {
-      // Actually delete the trimmed snapshots from the end
+      // Trimming from the end
       const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
       const deleteCount = trimmingEvent.endIdx - newEndIdx;
       
       console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}, deleteCount=${deleteCount}`);
       
       if (deleteCount > 0) {
-        currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
-        console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
+        // Find if there's a dragEnd event at the original endIdx that we need to preserve
+        const dragEndSnapshot = currentTutorial.snapshots[trimmingEvent.endIdx];
+        const isDragEnd = dragEndSnapshot && 
+          (dragEndSnapshot.event.action === 'dragEnd' || 
+           dragEndSnapshot.event.action === 'dragBetaEnd' || 
+           dragEndSnapshot.event.action === 'dragBetaPrimeEnd' || 
+           dragEndSnapshot.event.action === 'dragBEnd' || 
+           dragEndSnapshot.event.action === 'dragAxisEnd');
+        
+        if (isDragEnd) {
+          // Preserve the dragEnd event by adjusting its timestamp to the new end
+          const newTimestamp = currentTutorial.snapshots[newEndIdx].timestamp;
+          dragEndSnapshot.timestamp = newTimestamp;
+          console.log(`  🔒 Preserved ${dragEndSnapshot.event.action} at new time ${newTimestamp}ms`);
+          
+          // Move the dragEnd to the new position
+          const dragEndSnapshotCopy = {...dragEndSnapshot};
+          currentTutorial.snapshots.splice(trimmingEvent.endIdx, 1); // Remove from old position
+          currentTutorial.snapshots.splice(newEndIdx, 0, dragEndSnapshotCopy); // Insert at new position
+          
+          // Now delete the trimmed snapshots (but we've already moved dragEnd, so it's safe)
+          currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
+          console.log(`🔪 Trimmed ${deleteCount} snapshots from end (preserved dragEnd)`);
+        } else {
+          // No dragEnd to preserve, delete normally
+          currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
+          console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
+        }
       }
     }
     
@@ -2295,7 +2342,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.19 initialized');
+  console.log('Tutorial Creator v9.20 initialized');
 })();
 </script>
 </body>
