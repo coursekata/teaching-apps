@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.22</title>
+<title>Interactive Tutorial Creator - v9.23</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.22</div>
+    <div class="version-number">v9.23</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.22',
+      version: '9.23',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1094,21 +1094,33 @@
     // 2. Last annotation end time (timestamp + duration)
     let calculatedDuration = 0;
     
+    console.log('⏹ STOP RECORDING - Duration Calculation:');
+    console.log('  Total snapshots:', currentTutorial.snapshots.length);
+    
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
       calculatedDuration = lastSnapshotTime;
-      console.log('  Last snapshot time:', (lastSnapshotTime / 1000).toFixed(2) + 's');
+      console.log('  Last snapshot time:', (lastSnapshotTime / 1000).toFixed(3) + 's');
+      console.log('  Last snapshot action:', currentTutorial.snapshots[currentTutorial.snapshots.length - 1].event.action);
+      
+      // Log all snapshots for debugging
+      currentTutorial.snapshots.forEach((snap, idx) => {
+        console.log(`    Snapshot[${idx}]: ${(snap.timestamp / 1000).toFixed(3)}s - ${snap.event.action}`);
+      });
     }
     
     if (currentTutorial.annotations.length > 0) {
       const lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-      console.log('  Last annotation ends at:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
+      console.log('  Last annotation ends at:', (lastAnnotationEnd / 1000).toFixed(3) + 's');
       calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
     }
     
     // Add a small buffer (100ms) to ensure the last snapshot gets applied during playback
     // Without this, if an event happens at exactly the duration time, playback stops before applying it
     currentTutorial.duration = calculatedDuration + 100;
+    
+    console.log('  Calculated duration (with buffer):', (currentTutorial.duration / 1000).toFixed(3) + 's');
+    console.log('  Expected playhead position:', ((currentTutorial.duration / 1000) * timelineScale + 60).toFixed(1) + 'px');
     
     // Clear any active annotation and timeout
     if (annotationTimeout) {
@@ -1774,11 +1786,13 @@
         i++;
       } else {
         // Single event marker (simulate, changeBeta, etc.)
-        console.log('  📍 Single event:', action, 'at', (snapshot.timestamp / 1000).toFixed(2) + 's');
+        const eventTime = snapshot.timestamp / 1000;
+        const eventLeft = eventTime * timelineScale;
+        console.log(`  📍 Single event: ${action} at ${eventTime.toFixed(3)}s, left=${eventLeft.toFixed(1)}px (within track, absolute would be ${(eventLeft + 60).toFixed(1)}px)`);
         const marker = document.createElement('div');
         marker.className = 'timeline-event';
-        marker.style.left = ((snapshot.timestamp / 1000) * timelineScale) + 'px';
-        marker.title = action + ' at ' + (snapshot.timestamp / 1000).toFixed(2) + 's';
+        marker.style.left = eventLeft + 'px';
+        marker.title = action + ' at ' + eventTime.toFixed(2) + 's';
         eventsTrack.appendChild(marker);
         i++;
       }
@@ -2302,7 +2316,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.22 initialized');
+  console.log('Tutorial Creator v9.23 initialized');
 })();
 </script>
 </body>
