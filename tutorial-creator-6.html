@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.5</title>
+<title>Interactive Tutorial Creator - v9.6</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.5</div>
+    <div class="version-number">v9.6</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -946,7 +946,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.5',
+      version: '9.6',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1471,6 +1471,12 @@
       }
     }
     
+    // Check if finished FIRST - before hiding annotations
+    if (elapsedMs >= currentTutorial.duration) {
+      stopPlayback();
+      return;
+    }
+    
     // Handle annotations
     let annotationShowing = false;
     for (let i = 0; i < currentTutorial.annotations.length; i++) {
@@ -1495,12 +1501,6 @@
         annotationBox.classList.remove('visible');
       }
       currentAnnotationIndex = -1;
-    }
-    
-    // Check if finished
-    if (elapsedMs >= currentTutorial.duration) {
-      stopPlayback();
-      return;
     }
     
     requestAnimationFrame(playbackLoop);
@@ -2030,7 +2030,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.5 initialized');
+  console.log('Tutorial Creator v9.6 initialized');
 })();
 </script>
 </body>
