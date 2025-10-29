@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.30</title>
+<title>Interactive Tutorial Creator - v9.31</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.30</div>
+    <div class="version-number">v9.31</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.30',
+      version: '9.31',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1919,26 +1919,7 @@
     let newTime = Math.max(0, draggingAnnotation.startTime + dt);
     newTime = Math.min(newTime, currentTutorial.duration);
     
-    const currentAnn = currentTutorial.annotations[draggingAnnotation.index];
-    currentAnn.timestamp = newTime;
-    
-    // Check for overlap with previous annotation
-    // If current annotation overlaps previous one, shorten the previous one
-    if (draggingAnnotation.index > 0) {
-      const prevAnn = currentTutorial.annotations[draggingAnnotation.index - 1];
-      const prevEnd = prevAnn.timestamp + prevAnn.duration;
-      
-      if (newTime < prevEnd) {
-        // Current annotation overlaps previous one
-        // Shorten the previous annotation so it ends where current one starts
-        const newPrevDuration = newTime - prevAnn.timestamp;
-        if (newPrevDuration >= 1000) { // Minimum 1 second
-          prevAnn.duration = newPrevDuration;
-          console.log('⚠️ Shortened previous annotation to avoid overlap');
-        }
-      }
-    }
-    
+    currentTutorial.annotations[draggingAnnotation.index].timestamp = newTime;
     renderTimeline();
   }
   
@@ -2156,12 +2137,39 @@
   }
   
   function stopAnnotationDrag() {
+    if (!draggingAnnotation) return;
+    
+    const draggedIndex = draggingAnnotation.index;
+    const draggedAnn = currentTutorial.annotations[draggedIndex];
+    
+    // Check for overlap with previous annotation
+    // If current annotation overlaps previous one, shorten the previous one
+    if (draggedIndex > 0) {
+      const prevAnn = currentTutorial.annotations[draggedIndex - 1];
+      const prevEnd = prevAnn.timestamp + prevAnn.duration;
+      
+      if (draggedAnn.timestamp < prevEnd) {
+        // Current annotation overlaps previous one
+        // Shorten the previous annotation so it ends where current one starts
+        const newPrevDuration = draggedAnn.timestamp - prevAnn.timestamp;
+        if (newPrevDuration >= 1000) { // Minimum 1 second
+          prevAnn.duration = newPrevDuration;
+          console.log('⚠️ Shortened previous annotation to avoid overlap');
+        } else {
+          // If shortening would make it too small, push the dragged annotation forward instead
+          draggedAnn.timestamp = prevAnn.timestamp + prevAnn.duration;
+          console.log('⚠️ Moved annotation forward to avoid making previous one too short');
+        }
+      }
+    }
+    
     draggingAnnotation = null;
     document.removeEventListener('mousemove', doAnnotationDrag);
     document.removeEventListener('mouseup', stopAnnotationDrag);
     
     // Recalculate tutorial duration after moving
     recalculateTutorialDuration();
+    renderTimeline();
   }
   
   // Recalculate tutorial duration based on snapshots and annotations
@@ -2392,7 +2400,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.30 initialized');
+  console.log('Tutorial Creator v9.31 initialized');
 })();
 </script>
 </body>
