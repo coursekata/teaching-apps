@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.22</title>
+<title>Interactive Tutorial Creator - v9.23</title>
 <script>
   window.MathJax = {
     tex: {
@@ -557,7 +557,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.22</div>
+    <div class="version-number">v9.23</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -948,7 +948,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.22',
+      version: '9.23',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1595,6 +1595,14 @@
   }
   
   recordAgain.addEventListener('click', () => {
+    // Stop playback if still in preview mode
+    if (isPlaying) {
+      isPlaying = false;
+    }
+    
+    // Remove playback mode to make iframe interactive again
+    appFrame.classList.remove('playback-mode');
+    
     // Clear current tutorial
     currentTutorial = null;
     
@@ -2093,7 +2101,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.22 initialized');
+  console.log('Tutorial Creator v9.23 initialized');
 })();
 </script>
 </body>
