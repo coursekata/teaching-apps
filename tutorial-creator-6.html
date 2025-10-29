@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.30</title>
+<title>Interactive Tutorial Creator - v9.32</title>
 <script>
   window.MathJax = {
     tex: {
@@ -561,7 +561,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.30</div>
+    <div class="version-number">v9.32</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -996,7 +996,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.30',
+      version: '9.32',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1179,8 +1179,20 @@
       return;
     }
     
-    // Use the time when pause started, not current time
-    const timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+    // Calculate the base timestamp from when pause started
+    let timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+    
+    // Always check if we should place this annotation after existing ones
+    if (currentTutorial.annotations.length > 0) {
+      // Find the end time of the last annotation (chronologically)
+      const lastAnnotationEndTime = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+      
+      // If the last annotation ends after our current pause time, place the new one after it
+      if (lastAnnotationEndTime > timestamp) {
+        timestamp = lastAnnotationEndTime;
+        console.log('📝 Placing annotation after previous annotations at:', (timestamp / 1000).toFixed(2) + 's');
+      }
+    }
     
     console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
     
@@ -2177,7 +2189,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.30 initialized');
+  console.log('Tutorial Creator v9.32 initialized');
 })();
 </script>
 </body>
