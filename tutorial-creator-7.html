@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.3</title>
+<title>Interactive Tutorial Creator - v10.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -588,7 +588,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.3</div>
+    <div class="version-number">v10.4</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1081,6 +1081,21 @@
   resumeRecording.addEventListener('click', () => {
     if (!isRecording || !isPaused) return;
     
+    // If preview is playing, stop it first
+    if (isPlaying) {
+      isPlaying = false;
+      isPreviewingFromPaused = false;
+      appFrame.classList.remove('playback-mode');
+      previewRecording.textContent = '👁 Preview';
+      
+      // Apply current state from last snapshot
+      const api = getAPI();
+      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+        const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+        api.setState(lastSnapshot.state);
+      }
+    }
+    
     const pauseDuration = Date.now() - pauseStartTime;
     totalPausedTime += pauseDuration;
     isPaused = false;
@@ -1112,6 +1127,14 @@
   
   stopRecording.addEventListener('click', () => {
     if (!isRecording) return;
+    
+    // If preview is playing, stop it first
+    if (isPlaying && isPreviewingFromPaused) {
+      isPlaying = false;
+      isPreviewingFromPaused = false;
+      appFrame.classList.remove('playback-mode');
+      previewRecording.textContent = '👁 Preview';
+    }
     
     const api = getAPI();
     if (api && eventListener) {
@@ -1429,23 +1452,32 @@
   previewRecording.addEventListener('click', () => {
     if (!currentTutorial) return;
     
+    // If already playing preview, stop it
+    if (isPlaying && isPreviewingFromPaused) {
+      isPlaying = false;
+      isPreviewingFromPaused = false;
+      appFrame.classList.remove('playback-mode');
+      previewRecording.textContent = '👁 Preview';
+      
+      // Apply current state from last snapshot
+      const api = getAPI();
+      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+        const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+        api.setState(lastSnapshot.state);
+      }
+      
+      console.log('⏹ Preview stopped manually');
+      return;
+    }
+    
     // Detect if we're previewing from paused recording state
     isPreviewingFromPaused = isRecording && isPaused;
     
-    previewRecording.style.display = 'none';
-    playPausePreview.style.display = 'inline-block';
-    recordAgain.style.display = 'none'; // Hide initially, show when paused
-    exportRecording.style.display = 'none'; // Hide during preview
-    
-    // Hide recording controls when previewing from paused
-    if (isPreviewingFromPaused) {
-      resumeRecording.style.display = 'none';
-      stopRecording.style.display = 'none';
-      pausedIndicator.style.display = 'none';
-      addAnnotation.style.display = 'none';
-    }
-    
+    // Don't hide recording controls - just add playback mode to iframe
     appFrame.classList.add('playback-mode');
+    
+    // Change Preview button to Stop Preview
+    previewRecording.textContent = '⏹ Stop Preview';
     
     startPlayback();
   });
@@ -1493,18 +1525,7 @@
     
     playPausePreview.textContent = '▶ Resume Preview';
     addAnnotationAtPause.style.display = 'inline-block';
-    
-    // Show appropriate button based on context
-    if (isPreviewingFromPaused) {
-      // Previewing from paused recording - show Resume Recording button
-      resumeFromPreview.style.display = 'inline-block';
-      recordAgain.style.display = 'none';
-    } else {
-      // Previewing from finished recording - show Start Over button
-      resumeFromPreview.style.display = 'none';
-      recordAgain.style.display = 'inline-block';
-    }
-    
+    recordAgain.style.display = 'inline-block';
     exportRecording.style.display = 'none'; // Hide export during preview pause
     
     console.log('⏸ Playback paused at', playbackPausedAt.toFixed(1) + 's');
@@ -1518,7 +1539,6 @@
     
     playPausePreview.textContent = '⏸ Pause Preview';
     addAnnotationAtPause.style.display = 'none';
-    resumeFromPreview.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none'; // Keep export hidden during playback
     
@@ -1675,76 +1695,60 @@
     
     // Save the preview context before resetting
     const wasPreviewingFromPaused = isPreviewingFromPaused;
-    isPreviewingFromPaused = false; // Reset the preview context flag
+    isPreviewingFromPaused = false;
     
     // Don't reset currentAnnotationIndex - we need to know if an annotation was showing
     playbackLoop.lastAppliedTimestamp = null; // Reset the flag
     
     // Keep annotation visible if the tutorial ended with one showing
-    // Only hide it if no annotation was active at the end
     const lastAnnotationWasActive = currentAnnotationIndex >= 0;
     
     if (annotationBox && !lastAnnotationWasActive) {
       annotationBox.classList.remove('visible');
     }
-    // If annotation was active, leave it visible
     
     if (annotationTimeout) {
       clearTimeout(annotationTimeout);
       annotationTimeout = null;
     }
     
-    // Keep playhead visible at the end position instead of hiding it
-    if (currentTutorial) {
-      const endPosition = (currentTutorial.duration / 1000) * timelineScale + 60;
-      timelinePlayhead.style.left = endPosition + 'px';
-      timelinePlayhead.style.display = 'block';
-      console.log(`📍 Playhead positioned at ${endPosition}px (duration=${(currentTutorial.duration / 1000).toFixed(3)}s, scale=${timelineScale})`);
-      console.log(`   Playhead has width=3px, so visual center is at ${endPosition + 1.5}px`);
-      
-      // Log where the last annotation actually ends
-      if (currentTutorial.annotations.length > 0) {
-        const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
-        const annLeftPx = (lastAnn.timestamp / 1000) * timelineScale;
-        const annWidthPx = (lastAnn.duration / 1000) * timelineScale - 30;
-        const annVisualEnd = annLeftPx + annWidthPx + 30 + 60;
-        console.log(`   Last annotation visual end: ${annVisualEnd}px (left=${annLeftPx + 60}px, width-set=${annWidthPx}px, visual-width=${annWidthPx + 30}px)`);
-        console.log(`   Difference: ${endPosition - annVisualEnd}px`);
-      }
-    }
-    
-    previewRecording.style.display = 'inline-block';
-    playPausePreview.style.display = 'none';
-    addAnnotationAtPause.style.display = 'none';
-    
-    // Show appropriate button based on context
-    if (wasPreviewingFromPaused) {
-      // Was previewing from paused recording - show Resume Recording button
-      resumeFromPreview.style.display = 'inline-block';
-      recordAgain.style.display = 'none';
-      exportRecording.style.display = 'none';
-    } else {
-      // Was previewing from finished recording - show Start Over and Export
-      resumeFromPreview.style.display = 'none';
-      recordAgain.style.display = 'inline-block';
-      exportRecording.style.display = 'inline-block';
-    }
-    
     appFrame.classList.remove('playback-mode');
     
-    playPausePreview.textContent = '⏸ Pause Preview';
-    
-    // Keep the final state - apply the last snapshot
-    const api = getAPI();
-    if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
-      const finalSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-      api.setState(finalSnapshot.state);
-      console.log('✓ Applied final state from last snapshot');
-    }
-    
-    if (lastAnnotationWasActive) {
-      console.log('⏹ Playback stopped - annotation remains visible');
+    // If we were previewing from paused, just restore the preview button
+    if (wasPreviewingFromPaused) {
+      previewRecording.textContent = '👁 Preview';
+      
+      // Apply current state from last snapshot
+      const api = getAPI();
+      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+        const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+        api.setState(lastSnapshot.state);
+      }
+      
+      console.log('⏹ Preview finished - returned to paused state');
     } else {
+      // Was previewing from finished recording - show final state with playhead
+      if (currentTutorial) {
+        const endPosition = (currentTutorial.duration / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = endPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+      }
+      
+      previewRecording.style.display = 'inline-block';
+      playPausePreview.style.display = 'none';
+      addAnnotationAtPause.style.display = 'none';
+      recordAgain.style.display = 'inline-block';
+      exportRecording.style.display = 'inline-block';
+      
+      playPausePreview.textContent = '⏸ Pause Preview';
+      
+      // Apply final state
+      const api = getAPI();
+      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+        const finalSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+        api.setState(finalSnapshot.state);
+      }
+      
       console.log('⏹ Playback stopped');
     }
   }
@@ -1791,37 +1795,6 @@
     }
   });
   
-  resumeFromPreview.addEventListener('click', () => {
-    // Stop playback
-    isPlaying = false;
-    isPreviewingFromPaused = false;
-    
-    // Hide preview controls
-    playPausePreview.style.display = 'none';
-    addAnnotationAtPause.style.display = 'none';
-    resumeFromPreview.style.display = 'none';
-    
-    // Remove playback mode
-    appFrame.classList.remove('playback-mode');
-    
-    // Return to paused recording state
-    previewRecording.style.display = 'inline-block';
-    resumeRecording.style.display = 'inline-block';
-    stopRecording.style.display = 'inline-block';
-    pausedIndicator.style.display = 'inline-block';
-    addAnnotation.style.display = 'inline-block';
-    addAnnotation.disabled = false;
-    
-    // Apply the current state from last snapshot
-    const api = getAPI();
-    if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
-      const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-      api.setState(lastSnapshot.state);
-      console.log('✓ Applied state from last snapshot');
-    }
-    
-    console.log('↩️ Returned to paused recording state');
-  });
   
   // ========== TIMELINE ==========
   
@@ -2494,7 +2467,7 @@
     }
   });
   
-  console.log('Tutorial Creator v10.3 initialized');
+  console.log('Tutorial Creator v10.4 initialized');
 })();
 </script>
 </body>
