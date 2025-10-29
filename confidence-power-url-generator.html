@@ -276,7 +276,7 @@
   <div class="section">
     <div class="section-title">Custom Labels (LaTeX)</div>
     <div class="info-box">
-      Use LaTeX notation (e.g., \mu, \bar{x}, \beta_1). Separate with commas. Leave blank to use defaults.
+      Use LaTeX notation (e.g., \mu, \bar{x}, \beta_1). $ delimiters will be added automatically. Separate with commas. Leave blank to use defaults.
     </div>
     <div class="control-group">
       <div class="control">
@@ -412,10 +412,11 @@ function generateURL() {
   const labelMean = document.getElementById('label_mean').value.trim();
   
   if(labelParam || labelStat || labelMean) {
+    // Wrap each label in $ delimiters for LaTeX notation
     const labels = [
-      labelParam || '\\beta', 
-      labelStat || 'b', 
-      labelMean || '\\bar{b}'
+      labelParam ? `$${labelParam}$` : '$\\beta$', 
+      labelStat ? `$${labelStat}$` : '$b$', 
+      labelMean ? `$${labelMean}$` : '$\\bar{b}$'
     ];
     params.append('labels', labels.join(','));
   }
