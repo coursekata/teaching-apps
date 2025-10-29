@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.32</title>
+<title>Interactive Tutorial Creator - v9.33</title>
 <script>
   window.MathJax = {
     tex: {
@@ -561,7 +561,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.32</div>
+    <div class="version-number">v9.33</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -996,7 +996,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.32',
+      version: '9.33',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1938,21 +1938,80 @@
   }
   
   function stopAnnotationResize() {
+    if (!resizingAnnotation) {
+      resizingAnnotation = null;
+      document.removeEventListener('mousemove', doAnnotationResize);
+      document.removeEventListener('mouseup', stopAnnotationResize);
+      return;
+    }
+    
+    const resizedAnnotation = currentTutorial.annotations[resizingAnnotation.index];
+    
+    // If we resized the left edge, check if it now overlaps with previous annotations
+    if (resizingAnnotation.edge === 'left') {
+      for (let i = 0; i < currentTutorial.annotations.length; i++) {
+        if (i === resizingAnnotation.index) continue;
+        
+        const otherAnn = currentTutorial.annotations[i];
+        const otherEnd = otherAnn.timestamp + otherAnn.duration;
+        
+        // Check if the resized annotation's new start is now within another annotation
+        if (resizedAnnotation.timestamp > otherAnn.timestamp && resizedAnnotation.timestamp < otherEnd) {
+          // Trim the other annotation to end where this one starts
+          const newDuration = resizedAnnotation.timestamp - otherAnn.timestamp;
+          if (newDuration >= 1000) { // Minimum 1 second
+            otherAnn.duration = newDuration;
+            console.log(`✂️ Auto-trimmed annotation "${otherAnn.title}" to end at ${(resizedAnnotation.timestamp / 1000).toFixed(2)}s`);
+          }
+        }
+      }
+    }
+    
     resizingAnnotation = null;
     document.removeEventListener('mousemove', doAnnotationResize);
     document.removeEventListener('mouseup', stopAnnotationResize);
     
     // Recalculate tutorial duration after resizing
     recalculateTutorialDuration();
+    renderTimeline();
   }
   
   function stopAnnotationDrag() {
+    if (!draggingAnnotation) {
+      draggingAnnotation = null;
+      document.removeEventListener('mousemove', doAnnotationDrag);
+      document.removeEventListener('mouseup', stopAnnotationDrag);
+      return;
+    }
+    
+    const movedAnnotation = currentTutorial.annotations[draggingAnnotation.index];
+    
+    // Check if this annotation now overlaps with any previous annotations
+    // If so, trim the previous annotation to end where this one starts
+    for (let i = 0; i < currentTutorial.annotations.length; i++) {
+      if (i === draggingAnnotation.index) continue;
+      
+      const otherAnn = currentTutorial.annotations[i];
+      const otherEnd = otherAnn.timestamp + otherAnn.duration;
+      
+      // Check if the moved annotation's start is now within another annotation
+      if (movedAnnotation.timestamp > otherAnn.timestamp && movedAnnotation.timestamp < otherEnd) {
+        // Trim the other annotation to end where this one starts
+        const newDuration = movedAnnotation.timestamp - otherAnn.timestamp;
+        if (newDuration >= 1000) { // Minimum 1 second
+          otherAnn.duration = newDuration;
+          console.log(`✂️ Auto-trimmed annotation "${otherAnn.title}" to end at ${(movedAnnotation.timestamp / 1000).toFixed(2)}s`);
+        }
+      }
+    }
+    
     draggingAnnotation = null;
     document.removeEventListener('mousemove', doAnnotationDrag);
     document.removeEventListener('mouseup', stopAnnotationDrag);
     
     // Recalculate tutorial duration after moving
     recalculateTutorialDuration();
+    renderTimeline();
   }
   
   // Recalculate tutorial duration based on snapshots and annotations
@@ -2189,7 +2248,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.32 initialized');
+  console.log('Tutorial Creator v9.33 initialized');
 })();
 </script>
 </body>
