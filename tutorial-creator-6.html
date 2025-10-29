@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.27</title>
+<title>Interactive Tutorial Creator - v9.28</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.27</div>
+    <div class="version-number">v9.28</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.27',
+      version: '9.28',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -995,25 +995,28 @@
     eventListener = (event) => {
       if (isPaused) return;
       
-      const relativeTime = Date.now() - recordingStartTime - totalPausedTime;
-      
       // For simulate actions, we need to delay capturing the state slightly
       // because the simulation is asynchronous and the state isn't updated yet
       if (event.action === 'simulate') {
         setTimeout(() => {
           if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
           
+          // Capture timestamp NOW, when state is actually ready
+          const captureTime = Date.now() - recordingStartTime - totalPausedTime;
+          
           const snapshot = {
-            timestamp: relativeTime + 50, // Add the delay to timestamp so marker and playback sync
+            timestamp: captureTime,
             state: api.getState(),
             event: event
           };
           
           currentTutorial.snapshots.push(snapshot);
-          console.log('📸 Simulate snapshot captured (delayed) at', ((relativeTime + 50) / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
+          console.log('📸 Simulate snapshot captured (delayed) at', (captureTime / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
         }, 50); // 50ms delay to allow simulation to complete
       } else {
         // For all other events, capture immediately
+        const relativeTime = Date.now() - recordingStartTime - totalPausedTime;
+        
         const snapshot = {
           timestamp: relativeTime,
           state: api.getState(),
@@ -2349,7 +2352,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.27 initialized');
+  console.log('Tutorial Creator v9.28 initialized');
 })();
 </script>
 </body>
