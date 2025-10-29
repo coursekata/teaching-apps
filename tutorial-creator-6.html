@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.6</title>
+<title>Interactive Tutorial Creator - v9.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.6</div>
+    <div class="version-number">v9.7</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -946,7 +946,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.6',
+      version: '9.7',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1779,12 +1779,6 @@
     renderTimeline();
   }
   
-  function stopAnnotationDrag() {
-    draggingAnnotation = null;
-    document.removeEventListener('mousemove', doAnnotationDrag);
-    document.removeEventListener('mouseup', stopAnnotationDrag);
-  }
-  
   let resizingAnnotation = null;
   
   function startAnnotationResize(e, index, edge) {
@@ -1835,6 +1829,40 @@
     resizingAnnotation = null;
     document.removeEventListener('mousemove', doAnnotationResize);
     document.removeEventListener('mouseup', stopAnnotationResize);
+    
+    // Recalculate tutorial duration after resizing
+    recalculateTutorialDuration();
+  }
+  
+  function stopAnnotationDrag() {
+    draggingAnnotation = null;
+    document.removeEventListener('mousemove', doAnnotationDrag);
+    document.removeEventListener('mouseup', stopAnnotationDrag);
+    
+    // Recalculate tutorial duration after moving
+    recalculateTutorialDuration();
+  }
+  
+  // Recalculate tutorial duration based on snapshots and annotations
+  function recalculateTutorialDuration() {
+    if (!currentTutorial) return;
+    
+    let calculatedDuration = 0;
+    
+    // Get last snapshot time
+    if (currentTutorial.snapshots.length > 0) {
+      const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+      calculatedDuration = lastSnapshotTime;
+    }
+    
+    // Get last annotation end time
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+      calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
+    }
+    
+    currentTutorial.duration = calculatedDuration;
+    console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
   }
   
   // ========== ANNOTATION EDITING ==========
@@ -1863,6 +1891,7 @@
     
     annotationEditModal.classList.remove('visible');
     editingAnnotationIndex = -1;
+    recalculateTutorialDuration();
     renderTimeline();
   });
   
@@ -1873,6 +1902,7 @@
       currentTutorial.annotations.splice(editingAnnotationIndex, 1);
       annotationEditModal.classList.remove('visible');
       editingAnnotationIndex = -1;
+      recalculateTutorialDuration();
       renderTimeline();
     }
   });
@@ -2030,7 +2060,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.6 initialized');
+  console.log('Tutorial Creator v9.7 initialized');
 })();
 </script>
 </body>
