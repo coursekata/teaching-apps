@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.23</title>
+<title>Interactive Tutorial Creator - v9.24</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.23</div>
+    <div class="version-number">v9.24</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.23',
+      version: '9.24',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -997,22 +997,40 @@
       
       const relativeTime = Date.now() - recordingStartTime - totalPausedTime;
       
-      const snapshot = {
-        timestamp: relativeTime,
-        state: api.getState(),
-        event: event
-      };
-      
-      currentTutorial.snapshots.push(snapshot);
-      
-      // Log all drag-related events for debugging
-      if (event.action.includes('drag') || event.action.includes('Drag')) {
-        console.log('📸 Drag event captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
-      }
-      
-      // Log other important events
-      if (event.action === 'simulate' || event.action === 'changeBeta' || event.action === 'changeN') {
-        console.log('📸 Key snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+      // For simulate actions, we need to delay capturing the state slightly
+      // because the simulation is asynchronous and the state isn't updated yet
+      if (event.action === 'simulate') {
+        setTimeout(() => {
+          if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
+          
+          const snapshot = {
+            timestamp: relativeTime,
+            state: api.getState(),
+            event: event
+          };
+          
+          currentTutorial.snapshots.push(snapshot);
+          console.log('📸 Simulate snapshot captured (delayed) at', (relativeTime / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
+        }, 50); // 50ms delay to allow simulation to complete
+      } else {
+        // For all other events, capture immediately
+        const snapshot = {
+          timestamp: relativeTime,
+          state: api.getState(),
+          event: event
+        };
+        
+        currentTutorial.snapshots.push(snapshot);
+        
+        // Log drag-related events for debugging
+        if (event.action.includes('drag') || event.action.includes('Drag')) {
+          console.log('📸 Drag event captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+        }
+        
+        // Log other important events
+        if (event.action === 'changeBeta' || event.action === 'changeN') {
+          console.log('📸 Key snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+        }
       }
     };
     
@@ -2316,7 +2334,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.23 initialized');
+  console.log('Tutorial Creator v9.24 initialized');
 })();
 </script>
 </body>
