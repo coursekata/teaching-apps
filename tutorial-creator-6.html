@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.29</title>
+<title>Interactive Tutorial Creator - v9.30</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.29</div>
+    <div class="version-number">v9.30</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.29',
+      version: '9.30',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1212,7 +1212,20 @@
     }
     
     // Use the time when pause started, not current time
-    const timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+    let timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+    
+    // Check if there are existing annotations
+    // If so, place this one after the last one to avoid overlap
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      const lastAnnEnd = lastAnn.timestamp + lastAnn.duration;
+      
+      // If the new annotation would overlap, place it after the last one
+      if (timestamp < lastAnnEnd) {
+        timestamp = lastAnnEnd;
+        console.log('📝 Adjusted annotation timestamp to avoid overlap:', (timestamp / 1000).toFixed(2) + 's');
+      }
+    }
     
     console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
     
@@ -1906,7 +1919,26 @@
     let newTime = Math.max(0, draggingAnnotation.startTime + dt);
     newTime = Math.min(newTime, currentTutorial.duration);
     
-    currentTutorial.annotations[draggingAnnotation.index].timestamp = newTime;
+    const currentAnn = currentTutorial.annotations[draggingAnnotation.index];
+    currentAnn.timestamp = newTime;
+    
+    // Check for overlap with previous annotation
+    // If current annotation overlaps previous one, shorten the previous one
+    if (draggingAnnotation.index > 0) {
+      const prevAnn = currentTutorial.annotations[draggingAnnotation.index - 1];
+      const prevEnd = prevAnn.timestamp + prevAnn.duration;
+      
+      if (newTime < prevEnd) {
+        // Current annotation overlaps previous one
+        // Shorten the previous annotation so it ends where current one starts
+        const newPrevDuration = newTime - prevAnn.timestamp;
+        if (newPrevDuration >= 1000) { // Minimum 1 second
+          prevAnn.duration = newPrevDuration;
+          console.log('⚠️ Shortened previous annotation to avoid overlap');
+        }
+      }
+    }
+    
     renderTimeline();
   }
   
@@ -2360,7 +2392,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.29 initialized');
+  console.log('Tutorial Creator v9.30 initialized');
 })();
 </script>
 </body>
