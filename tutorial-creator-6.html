@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.2</title>
+<title>Interactive Tutorial Creator - v9.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.2</div>
+    <div class="version-number">v9.3</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -939,7 +939,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.2',
+      version: '9.3',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1535,7 +1535,12 @@
       annotationTimeout = null;
     }
     
-    timelinePlayhead.style.display = 'none';
+    // Keep playhead visible at the end position instead of hiding it
+    if (currentTutorial) {
+      const endPosition = (currentTutorial.duration / 1000) * timelineScale + 60;
+      timelinePlayhead.style.left = endPosition + 'px';
+      timelinePlayhead.style.display = 'block';
+    }
     
     previewRecording.style.display = 'inline-block';
     playPausePreview.style.display = 'none';
@@ -1571,6 +1576,9 @@
     recordAgain.style.display = 'none';
     playPausePreview.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
+    
+    // Hide playhead
+    timelinePlayhead.style.display = 'none';
     
     // Clear timeline
     renderTimeline();
@@ -1997,7 +2005,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.2 initialized');
+  console.log('Tutorial Creator v9.3 initialized');
 })();
 </script>
 </body>
