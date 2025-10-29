@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10</title>
+<title>Interactive Tutorial Creator - v10.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -588,7 +588,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10</div>
+    <div class="version-number">v10.3</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1672,7 +1672,11 @@
   function stopPlayback() {
     isPlaying = false;
     playbackPausedAt = 0;
+    
+    // Save the preview context before resetting
+    const wasPreviewingFromPaused = isPreviewingFromPaused;
     isPreviewingFromPaused = false; // Reset the preview context flag
+    
     // Don't reset currentAnnotationIndex - we need to know if an annotation was showing
     playbackLoop.lastAppliedTimestamp = null; // Reset the flag
     
@@ -1712,9 +1716,20 @@
     previewRecording.style.display = 'inline-block';
     playPausePreview.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
-    resumeFromPreview.style.display = 'none';
-    recordAgain.style.display = 'inline-block';
-    exportRecording.style.display = 'inline-block';
+    
+    // Show appropriate button based on context
+    if (wasPreviewingFromPaused) {
+      // Was previewing from paused recording - show Resume Recording button
+      resumeFromPreview.style.display = 'inline-block';
+      recordAgain.style.display = 'none';
+      exportRecording.style.display = 'none';
+    } else {
+      // Was previewing from finished recording - show Start Over and Export
+      resumeFromPreview.style.display = 'none';
+      recordAgain.style.display = 'inline-block';
+      exportRecording.style.display = 'inline-block';
+    }
+    
     appFrame.classList.remove('playback-mode');
     
     playPausePreview.textContent = '⏸ Pause Preview';
@@ -2479,7 +2494,7 @@
     }
   });
   
-  console.log('Tutorial Creator v10 initialized');
+  console.log('Tutorial Creator v10.3 initialized');
 })();
 </script>
 </body>
