@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.12</title>
+<title>Interactive Tutorial Creator - v9.14</title>
 <script>
   window.MathJax = {
     tex: {
@@ -220,9 +220,11 @@
   .timeline-container{
     background:#fff;
     border-top:2px solid #ddd;
+    border-bottom:2px solid #ddd;
     padding:4px 20px 6px 20px;
     display:none;
     position:relative;
+    margin-bottom:8px;
   }
   
   .timeline-container.visible{
@@ -554,10 +556,10 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.12</div>
+    <div class="version-number">v9.14</div>
   </div>
   
-  <!-- Timeline Editor -->
+  <!-- Timeline Editor (moved outside header so it scrolls independently) -->
   <div id="timelineContainer" class="timeline-container">
     <div id="timelineRuler" class="timeline-ruler"></div>
     
@@ -945,7 +947,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.12',
+      version: '9.14',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1554,6 +1556,17 @@
       timelinePlayhead.style.left = endPosition + 'px';
       timelinePlayhead.style.display = 'block';
       console.log(`📍 Playhead positioned at ${endPosition}px (duration=${(currentTutorial.duration / 1000).toFixed(3)}s, scale=${timelineScale})`);
+      console.log(`   Playhead has width=3px, so visual center is at ${endPosition + 1.5}px`);
+      
+      // Log where the last annotation actually ends
+      if (currentTutorial.annotations.length > 0) {
+        const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+        const annLeftPx = (lastAnn.timestamp / 1000) * timelineScale;
+        const annWidthPx = (lastAnn.duration / 1000) * timelineScale - 13;
+        const annVisualEnd = annLeftPx + annWidthPx + 13 + 60; // left + width + (padding+border back) + container offset
+        console.log(`   Last annotation visual end: ${annVisualEnd}px (left=${annLeftPx + 60}px, width-set=${annWidthPx}px, visual-width=${annWidthPx + 13}px)`);
+        console.log(`   Difference: ${endPosition - annVisualEnd}px`);
+      }
     }
     
     previewRecording.style.display = 'inline-block';
@@ -1726,11 +1739,11 @@
       const annEl = document.createElement('div');
       annEl.className = 'timeline-annotation';
       const leftPos = ((ann.timestamp / 1000) * timelineScale);
-      // Subtract padding (6px × 2) and border (1px × 2) from width so visual size matches duration
-      const width = ((ann.duration / 1000) * timelineScale) - 14;
+      // Subtract padding (6px × 2) and border (1px × 2) = 14px, but add 1px for border-radius visual perception
+      const width = ((ann.duration / 1000) * timelineScale) - 13;
       annEl.style.left = leftPos + 'px';
       annEl.style.width = width + 'px';
-      console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) visual-end=${leftPos + width + 14}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
+      console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) visual-end=${leftPos + width + 13}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
       annEl.textContent = ann.title;
       annEl.title = ann.title;
       
@@ -2076,7 +2089,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.12 initialized');
+  console.log('Tutorial Creator v9.14 initialized');
 })();
 </script>
 </body>
