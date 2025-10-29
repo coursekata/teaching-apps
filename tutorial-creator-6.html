@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.9</title>
+<title>Interactive Tutorial Creator - v9.10</title>
 <script>
   window.MathJax = {
     tex: {
@@ -555,7 +555,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.9</div>
+    <div class="version-number">v9.10</div>
   </div>
   
   <!-- Timeline Editor -->
@@ -946,7 +946,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.9',
+      version: '9.10',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1445,6 +1445,7 @@
     
     // Check if finished FIRST - before even updating playhead
     if (elapsedMs >= currentTutorial.duration) {
+      console.log(`⏹ Stopping playback: elapsed=${(elapsedMs / 1000).toFixed(3)}s duration=${(currentTutorial.duration / 1000).toFixed(3)}s`);
       stopPlayback();
       return;
     }
@@ -1553,6 +1554,7 @@
       const endPosition = (currentTutorial.duration / 1000) * timelineScale + 60;
       timelinePlayhead.style.left = endPosition + 'px';
       timelinePlayhead.style.display = 'block';
+      console.log(`📍 Playhead positioned at ${endPosition}px (duration=${(currentTutorial.duration / 1000).toFixed(3)}s, scale=${timelineScale})`);
     }
     
     previewRecording.style.display = 'inline-block';
@@ -1724,8 +1726,11 @@
     currentTutorial.annotations.forEach((ann, i) => {
       const annEl = document.createElement('div');
       annEl.className = 'timeline-annotation';
-      annEl.style.left = ((ann.timestamp / 1000) * timelineScale) + 'px';
-      annEl.style.width = ((ann.duration / 1000) * timelineScale) + 'px';
+      const leftPos = ((ann.timestamp / 1000) * timelineScale);
+      const width = ((ann.duration / 1000) * timelineScale);
+      annEl.style.left = leftPos + 'px';
+      annEl.style.width = width + 'px';
+      console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) end=${leftPos + width}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
       annEl.textContent = ann.title;
       annEl.title = ann.title;
       
@@ -2071,7 +2076,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.9 initialized');
+  console.log('Tutorial Creator v9.10 initialized');
 })();
 </script>
 </body>
