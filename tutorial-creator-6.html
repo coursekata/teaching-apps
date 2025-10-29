@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v9.19</title>
+<title>Interactive Tutorial Creator - v9.20</title>
 <script>
   window.MathJax = {
     tex: {
@@ -587,7 +587,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v9.19</div>
+    <div class="version-number">v9.20</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -978,7 +978,7 @@
     
     // Initialize tutorial
     currentTutorial = {
-      version: '9.19',
+      version: '9.20',
       initialState: api.getState(),
       snapshots: [],
       annotations: [],
@@ -1037,34 +1037,14 @@
     
     const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
     
-    // If we're in the middle of recording a drag, finalize it now
-    if (isDragging && dragStartSnapshot !== null) {
-      console.log('🎯 Finalizing drag at pause');
-      console.log('  Drag started at snapshot:', dragStartSnapshot);
-      console.log('  Current snapshot count:', currentTutorial.snapshots.length);
-      console.log('  Pause time:', (pauseTimestamp / 1000).toFixed(2) + 's');
-      
-      // Mark the drag range in snapshots
-      const dragEndSnapshot = currentTutorial.snapshots.length - 1;
-      for (let i = dragStartSnapshot; i <= dragEndSnapshot; i++) {
-        currentTutorial.snapshots[i].isDrag = true;
-      }
-      
-      console.log(`  Marked snapshots ${dragStartSnapshot}-${dragEndSnapshot} as drag`);
-      
-      // Reset drag state
-      isDragging = false;
-      dragStartSnapshot = null;
-      
-      // Render timeline to show the drag event immediately
-      renderTimeline();
-    }
-    
     pauseRecording.style.display = 'none';
     resumeRecording.style.display = 'inline-block';
     recordingIndicator.style.display = 'none';
     pausedIndicator.style.display = 'inline-block';
     addAnnotation.disabled = false;
+    
+    // Render timeline to show any events captured so far (including drags in progress)
+    renderTimeline();
     
     console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
   });
@@ -2318,7 +2298,7 @@
     }
   });
   
-  console.log('Tutorial Creator v9.19 initialized');
+  console.log('Tutorial Creator v9.20 initialized');
 })();
 </script>
 </body>
