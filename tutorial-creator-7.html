@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.7</title>
+<title>Interactive Tutorial Creator - v11</title>
 <script>
   window.MathJax = {
     tex: {
@@ -569,17 +569,15 @@
           <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
         <button id="loadApp" class="primary">Load App</button>
-        <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
-        <button id="stopRecording" class="record" style="display:none;">⏹ Stop Recording</button>
-        <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
-        <button id="resumeRecording" class="success" style="display:none;">▶ Resume</button>
+        <button id="startRecording" class="record" style="display:none;">▶ Start Recording</button>
+        <button id="playPauseRecording" class="warning" style="display:none;">⏸ Pause</button>
+        <button id="stopRecording" class="record" style="display:none;">⏹ Stop</button>
         <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
         <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
         <button id="addAnnotationAtPause" class="primary" style="display:none;">➕ Add Annotation Here</button>
-        <button id="resumeFromPreview" class="success" style="display:none;">↩️ Resume Recording</button>
         <button id="recordAgain" class="record" style="display:none;">🔄 Start Over</button>
         <button id="exportRecording" class="success" style="display:none;">💾 Export Tutorial</button>
       </div>
@@ -588,7 +586,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.7</div>
+    <div class="version-number">v11</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -761,14 +759,12 @@
   const appFrame = document.getElementById('appFrame');
   const loadApp = document.getElementById('loadApp');
   const startRecording = document.getElementById('startRecording');
-  const pauseRecording = document.getElementById('pauseRecording');
-  const resumeRecording = document.getElementById('resumeRecording');
+  const playPauseRecording = document.getElementById('playPauseRecording');
   const addAnnotation = document.getElementById('addAnnotation');
   const stopRecording = document.getElementById('stopRecording');
   const previewRecording = document.getElementById('previewRecording');
   const playPausePreview = document.getElementById('playPausePreview');
   const addAnnotationAtPause = document.getElementById('addAnnotationAtPause');
-  const resumeFromPreview = document.getElementById('resumeFromPreview');
   const recordAgain = document.getElementById('recordAgain');
   const exportRecording = document.getElementById('exportRecording');
   const recordingIndicator = document.getElementById('recordingIndicator');
@@ -1045,7 +1041,10 @@
     
     // Update UI
     startRecording.style.display = 'none';
-    pauseRecording.style.display = 'inline-block';
+    loadJSON.style.display = 'none'; // Hide Load JSON during recording
+    playPauseRecording.style.display = 'inline-block';
+    playPauseRecording.textContent = '⏸ Pause';
+    playPauseRecording.className = 'warning'; // Yellow for pause
     stopRecording.style.display = 'inline-block';
     addAnnotation.style.display = 'inline-block';
     recordingIndicator.style.display = 'inline-block';
@@ -1054,75 +1053,75 @@
     console.log('🔴 Recording started');
   });
   
-  pauseRecording.addEventListener('click', () => {
-    if (!isRecording || isPaused) return;
+  playPauseRecording.addEventListener('click', () => {
+    if (!isRecording) return;
     
-    pauseStartTime = Date.now();
-    isPaused = true;
-    
-    const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
-    
-    pauseRecording.style.display = 'none';
-    resumeRecording.style.display = 'inline-block';
-    recordingIndicator.style.display = 'none';
-    pausedIndicator.style.display = 'inline-block';
-    addAnnotation.disabled = false;
-    previewRecording.style.display = 'inline-block';
-    previewRecording.textContent = '👁 Preview'; // Reset button text
-    
-    // Calculate duration so preview works
-    recalculateTutorialDuration();
-    
-    // Render timeline to show any events captured so far (including drags in progress)
-    renderTimeline();
-    
-    console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
-  });
-  
-  resumeRecording.addEventListener('click', () => {
-    if (!isRecording || !isPaused) return;
-    
-    // If preview is playing, stop it first
-    if (isPlaying) {
-      isPlaying = false;
-      isPreviewingFromPaused = false;
-      appFrame.classList.remove('playback-mode');
-      previewRecording.textContent = '👁 Preview';
+    if (isPaused) {
+      // Resume recording
+      const pauseDuration = Date.now() - pauseStartTime;
+      totalPausedTime += pauseDuration;
+      isPaused = false;
       
-      // Apply current state from last snapshot
-      const api = getAPI();
-      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
-        const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-        api.setState(lastSnapshot.state);
-      }
-    }
-    
-    const pauseDuration = Date.now() - pauseStartTime;
-    totalPausedTime += pauseDuration;
-    isPaused = false;
-    
-    resumeRecording.style.display = 'none';
-    pauseRecording.style.display = 'inline-block';
-    pausedIndicator.style.display = 'none';
-    recordingIndicator.style.display = 'inline-block';
-    addAnnotation.disabled = true;
-    previewRecording.style.display = 'none';
-    
-    // If there's an active annotation, schedule it to hide after its duration
-    if (activeRecordingAnnotation && annotationBox) {
-      const remainingDuration = activeRecordingAnnotation.duration;
-      console.log('▶️ Recording resumed - annotation will hide in', (remainingDuration / 1000).toFixed(1) + 's');
+      playPauseRecording.textContent = '⏸ Pause';
+      playPauseRecording.className = 'warning'; // Yellow for pause
+      pausedIndicator.style.display = 'none';
+      recordingIndicator.style.display = 'inline-block';
+      addAnnotation.disabled = true;
+      previewRecording.style.display = 'none';
       
-      if (annotationTimeout) clearTimeout(annotationTimeout);
-      annotationTimeout = setTimeout(() => {
-        if (annotationBox) {
-          annotationBox.classList.remove('visible');
-          console.log('✓ Annotation hidden after duration expired');
+      // If preview is playing, stop it first
+      if (isPlaying) {
+        isPlaying = false;
+        isPreviewingFromPaused = false;
+        appFrame.classList.remove('playback-mode');
+        previewRecording.textContent = '👁 Preview';
+        
+        // Apply current state from last snapshot
+        const api = getAPI();
+        if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
         }
-        activeRecordingAnnotation = null;
-      }, remainingDuration);
+      }
+      
+      // If there's an active annotation, schedule it to hide after its duration
+      if (activeRecordingAnnotation && annotationBox) {
+        const remainingDuration = activeRecordingAnnotation.duration;
+        console.log('▶️ Recording resumed - annotation will hide in', (remainingDuration / 1000).toFixed(1) + 's');
+        
+        if (annotationTimeout) clearTimeout(annotationTimeout);
+        annotationTimeout = setTimeout(() => {
+          if (annotationBox) {
+            annotationBox.classList.remove('visible');
+            console.log('✓ Annotation hidden after duration expired');
+          }
+          activeRecordingAnnotation = null;
+        }, remainingDuration);
+      } else {
+        console.log('▶️ Recording resumed');
+      }
     } else {
-      console.log('▶️ Recording resumed');
+      // Pause recording
+      pauseStartTime = Date.now();
+      isPaused = true;
+      
+      const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+      
+      playPauseRecording.textContent = '▶ Resume';
+      playPauseRecording.className = 'success'; // Green for resume
+      recordingIndicator.style.display = 'none';
+      pausedIndicator.style.display = 'inline-block';
+      addAnnotation.disabled = false;
+      previewRecording.style.display = 'inline-block';
+      previewRecording.textContent = '👁 Preview'; // Reset button text
+      
+      // Calculate duration so preview works
+      recalculateTutorialDuration();
+      
+      // Render timeline to show any events captured so far (including drags in progress)
+      renderTimeline();
+      
+      console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
     }
   });
   
@@ -1205,8 +1204,7 @@
     isPaused = false;
     
     // Update UI
-    pauseRecording.style.display = 'none';
-    resumeRecording.style.display = 'none';
+    playPauseRecording.style.display = 'none';
     stopRecording.style.display = 'none';
     addAnnotation.style.display = 'none';
     recordingIndicator.style.display = 'none';
@@ -1214,6 +1212,7 @@
     previewRecording.style.display = 'inline-block';
     exportRecording.style.display = 'inline-block';
     recordAgain.style.display = 'inline-block';
+    loadJSON.style.display = 'none'; // Keep hidden after recording
     
     console.log('⏹ Recording stopped');
     console.log('  Duration:', (currentTutorial.duration / 1000).toFixed(2) + 's');
@@ -1786,6 +1785,7 @@
     recordAgain.style.display = 'none';
     playPausePreview.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
+    loadJSON.style.display = 'inline-block'; // Show Load JSON again
     
     // Hide playhead
     timelinePlayhead.style.display = 'none';
@@ -2490,7 +2490,7 @@
     }
   });
   
-  console.log('Tutorial Creator v10.7 initialized');
+  console.log('Tutorial Creator v11 initialized');
 })();
 </script>
 </body>
