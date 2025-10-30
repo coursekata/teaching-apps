@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.6</title>
+<title>Interactive Tutorial Creator - v11.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.6</div>
+    <div class="version-number">v11.7</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1474,6 +1474,9 @@
       appFrame.classList.remove('playback-mode');
       previewRecording.textContent = '👁 Preview';
       
+      // Update pauseStartTime so preview time doesn't count as pause time
+      pauseStartTime = Date.now();
+      
       // Don't apply last snapshot - just leave the state where it is (paused in place)
       
       console.log('⏹ Preview stopped manually');
@@ -1760,6 +1763,9 @@
         const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
         api.setState(lastSnapshot.state);
       }
+      
+      // Update pauseStartTime so preview time doesn't count as pause time
+      pauseStartTime = Date.now();
       
       console.log('⏹ Preview finished - returned to paused state');
     } else {
@@ -2518,6 +2524,7 @@
           isRecording = true;
           isPaused = true;
           recordingStartTime = Date.now() - (currentTutorial.duration || 0);
+          pauseStartTime = Date.now(); // Set pause start time for correct resume calculation
           totalPausedTime = 0;
           
           // Set up event listener (so we can continue recording)
@@ -2591,7 +2598,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.6 initialized');
+  console.log('Tutorial Creator v11.7 initialized');
 })();
 </script>
 </body>
