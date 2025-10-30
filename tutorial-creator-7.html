@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.8</title>
+<title>Interactive Tutorial Creator - v11.9</title>
 <script>
   window.MathJax = {
     tex: {
@@ -569,7 +569,7 @@
           <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
         <button id="loadApp" class="primary">Load App</button>
-        <button id="loadJSON" class="primary" style="display:none;">📂 Load JSON</button>
+        <button id="loadJSON" class="primary" style="display:none;">📂 Import Tutorial</button>
         <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
         <button id="playPauseRecording" class="warning" style="display:none;">⏸ Pause</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.8</div>
+    <div class="version-number">v11.9</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -697,7 +697,7 @@
         Your tutorial has been recorded with <strong id="snapshotCount">0</strong> snapshots and <strong id="annotationCount">0</strong> annotations.
       </div>
       
-      <p class="help-text">Download the JSON file to save your tutorial. You can load it later using the "Load JSON" button.</p>
+      <p class="help-text">Download the JSON file to save your tutorial. You can load it later using the "Import Tutorial" button.</p>
       
       <textarea id="exportTextarea" readonly></textarea>
       
@@ -898,8 +898,6 @@
         appUrl.disabled = true;
         startRecording.style.display = 'inline-block';
         loadJSON.style.display = 'inline-block';
-        recordAgain.style.display = 'inline-block';
-        exportRecording.style.display = 'inline-block';
         
         // Inject annotation box into iframe
         injectAnnotationBox();
@@ -1069,7 +1067,7 @@
     
     // Update UI
     startRecording.style.display = 'none';
-    loadJSON.style.display = 'none'; // Hide Load JSON during recording
+    loadJSON.style.display = 'none'; // Hide Import Tutorial during recording
     playPauseRecording.style.display = 'inline-block';
     playPauseRecording.textContent = '⏸ Pause';
     playPauseRecording.className = 'warning'; // Yellow for pause
@@ -1077,6 +1075,10 @@
     previewRecording.style.display = 'inline-block';
     previewRecording.disabled = true; // Disabled until paused
     recordingIndicator.style.display = 'inline-block';
+    recordAgain.style.display = 'inline-block';
+    recordAgain.disabled = true; // Disabled while actively recording
+    exportRecording.style.display = 'inline-block';
+    exportRecording.disabled = true; // Disabled while actively recording
     appUrl.disabled = true;
     
     console.log('🔴 Recording started');
@@ -1258,7 +1260,7 @@
     }
     
     // Use the time when pause started, not current time
-    let timestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+    let timestamp = pauseStartTime - recordingStartTime - totalPausedTime + importedDurationOffset;
     
     // Check if there are existing annotations
     // If so, place this one after the last one to avoid overlap
@@ -2450,10 +2452,8 @@
   exportRecording.addEventListener('click', () => {
     if (!currentTutorial) return;
     
-    // Finalize recording if still in recording mode
-    if (isRecording || isPaused) {
-      finalizeRecording();
-    }
+    // Don't finalize - just export the current state
+    // User can continue recording after exporting
     
     snapshotCount.textContent = currentTutorial.snapshots.length;
     annotationCount.textContent = currentTutorial.annotations.length;
@@ -2555,7 +2555,9 @@
           addAnnotation.disabled = false;
           previewRecording.style.display = 'inline-block';
           previewRecording.disabled = false;
+          recordAgain.style.display = 'inline-block';
           recordAgain.disabled = false;
+          exportRecording.style.display = 'inline-block';
           exportRecording.disabled = false;
           
           renderTimeline();
@@ -2602,7 +2604,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.8 initialized');
+  console.log('Tutorial Creator v11.9 initialized');
 })();
 </script>
 </body>
