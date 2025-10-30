@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.1</title>
+<title>Interactive Tutorial Creator - v11.2</title>
 <script>
   window.MathJax = {
     tex: {
@@ -586,7 +586,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.1</div>
+    <div class="version-number">v11.2</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1832,9 +1832,25 @@
     }
     
     const duration = currentTutorial.duration / 1000;
-    const timelineWidth = Math.max(duration * timelineScale, 800); // Minimum 800px
     
-    console.log('📊 Timeline render - Duration:', duration.toFixed(2) + 's', 'Snapshots:', currentTutorial.snapshots.length);
+    // Calculate dynamic scale to fit timeline in available width
+    // Account for the 60px label offset
+    const containerWidth = timelineContainer.offsetWidth || 1200; // Fallback to 1200px
+    const availableWidth = containerWidth - 80; // Leave some padding
+    const minScale = 20; // Minimum pixels per second (very zoomed out)
+    const maxScale = 100; // Maximum pixels per second (very zoomed in)
+    
+    // Calculate scale to fit duration in available width
+    if (duration > 0) {
+      const calculatedScale = availableWidth / duration;
+      timelineScale = Math.max(minScale, Math.min(maxScale, calculatedScale));
+    } else {
+      timelineScale = 50; // Default for empty timeline
+    }
+    
+    const timelineWidth = Math.max(duration * timelineScale, 200); // Minimum 200px
+    
+    console.log('📊 Timeline render - Duration:', duration.toFixed(2) + 's', 'Scale:', timelineScale.toFixed(1) + 'px/s', 'Snapshots:', currentTutorial.snapshots.length);
     
     if (currentTutorial.snapshots.length > 0) {
       const firstTime = (currentTutorial.snapshots[0].timestamp / 1000).toFixed(2);
@@ -1847,9 +1863,15 @@
     eventsTrack.parentElement.style.minWidth = timelineWidth + 'px';
     annotationsTrack.parentElement.style.minWidth = timelineWidth + 'px';
     
-    // Render time ticks
+    // Render time ticks with adaptive interval
     timelineRuler.innerHTML = '';
-    const tickInterval = 1; // Every second
+    
+    // Choose tick interval based on duration to avoid crowding
+    let tickInterval = 1; // Default: every second
+    if (duration > 60) tickInterval = 5;      // Over 1 min: every 5 seconds
+    if (duration > 180) tickInterval = 10;    // Over 3 min: every 10 seconds
+    if (duration > 600) tickInterval = 30;    // Over 10 min: every 30 seconds
+    if (duration > 1800) tickInterval = 60;   // Over 30 min: every minute
     
     for (let t = 0; t <= duration; t += tickInterval) {
       const tick = document.createElement('div');
@@ -2481,7 +2503,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.1 initialized');
+  console.log('Tutorial Creator v11.2 initialized');
 })();
 </script>
 </body>
