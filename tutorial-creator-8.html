@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.22</title>
+<title>Interactive Tutorial Creator - v11.23</title>
 <script>
   window.MathJax = {
     tex: {
@@ -170,6 +170,10 @@
     cursor:move;
     border-color:var(--warning);
     border-style:dashed;
+    border-width:4px;
+    background:#fff;
+    box-shadow:0 12px 32px rgba(0,0,0,0.3);
+    z-index:10001;
   }
   
   .annotation-box.visible{
@@ -585,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.22</div>
+    <div class="version-number">v11.23</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1668,12 +1672,27 @@
     
     isPlaying = true;
     
-    // Start playback at the first event instead of at time 0
+    // Start playback at the earliest timestamp (0, first annotation, or first snapshot)
     let startOffset = 0;
-    if (currentTutorial.snapshots.length > 0) {
+    
+    // Check if there are annotations before the first snapshot
+    if (currentTutorial.annotations.length > 0) {
+      const firstAnnTimestamp = Math.min(...currentTutorial.annotations.map(ann => ann.timestamp));
+      if (currentTutorial.snapshots.length > 0) {
+        const firstSnapshotTimestamp = currentTutorial.snapshots[0].timestamp;
+        // Start at whichever comes first: annotation or snapshot
+        startOffset = Math.min(firstAnnTimestamp, firstSnapshotTimestamp);
+      } else {
+        // No snapshots, just annotations
+        startOffset = firstAnnTimestamp;
+      }
+      console.log('▶️ Starting playback at first event:', (startOffset / 1000).toFixed(2) + 's');
+    } else if (currentTutorial.snapshots.length > 0) {
+      // No annotations, start at first snapshot
       startOffset = currentTutorial.snapshots[0].timestamp;
       console.log('▶️ Starting playback at first event:', (startOffset / 1000).toFixed(2) + 's');
     }
+    // If neither snapshots nor annotations exist, startOffset stays 0
     
     playbackStartTime = Date.now() - startOffset;
     playbackPausedAt = 0;
@@ -2930,7 +2949,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.22 initialized');
+  console.log('Tutorial Creator v11.23 initialized');
 })();
 </script>
 </body>
