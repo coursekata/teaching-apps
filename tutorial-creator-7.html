@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.9</title>
+<title>Interactive Tutorial Creator - v11.12</title>
 <script>
   window.MathJax = {
     tex: {
@@ -569,8 +569,8 @@
           <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
         <button id="loadApp" class="primary">Load App</button>
-        <button id="loadJSON" class="primary" style="display:none;">📂 Import Tutorial</button>
         <button id="startRecording" class="record" style="display:none;">⏺ Start Recording</button>
+        <button id="loadJSON" class="primary" style="display:none;">📂 Import Tutorial</button>
         <button id="playPauseRecording" class="warning" style="display:none;">⏸ Pause</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.9</div>
+    <div class="version-number">v11.12</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1089,6 +1089,14 @@
     
     if (isPaused) {
       // Resume recording
+      // Move playhead to end of tutorial before resuming
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+      }
+      
       const pauseDuration = Date.now() - pauseStartTime;
       totalPausedTime += pauseDuration;
       isPaused = false;
@@ -1821,9 +1829,9 @@
     recordingIndicator.style.display = 'none';
     pausedIndicator.style.display = 'none';
     
-    // Keep these visible but disabled
-    recordAgain.disabled = true;
-    exportRecording.disabled = true;
+    // Hide these buttons - they should not appear
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none';
     loadJSON.style.display = 'inline-block';
     
     // Hide playhead
@@ -2562,6 +2570,12 @@
           
           renderTimeline();
           
+          // Position playhead at the end of the imported tutorial
+          const timelineStartOffset = getTimelineStartOffset();
+          const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+          timelinePlayhead.style.left = timelineEndPosition + 'px';
+          timelinePlayhead.style.display = 'block';
+          
           alert('✓ Tutorial loaded!\n\nYou can now:\n• Preview it\n• Resume recording to add more\n• Add/edit annotations\n• Export when done');
         }
         
@@ -2604,7 +2618,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.9 initialized');
+  console.log('Tutorial Creator v11.12 initialized');
 })();
 </script>
 </body>
