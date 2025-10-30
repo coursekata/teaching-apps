@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.17</title>
+<title>Interactive Tutorial Creator - v11.18</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.17</div>
+    <div class="version-number">v11.18</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1974,7 +1974,12 @@
         span.dataset.endIdx = endIdx;
         
         // Make drag event draggable (will move start and end together)
-        span.addEventListener('mousedown', (e) => startEventDrag(e, i, endIdx));
+        // Use dataset values to avoid closure issues with loop variable
+        span.addEventListener('mousedown', (e) => {
+          const startIdx = parseInt(span.dataset.startIdx);
+          const endIdx = parseInt(span.dataset.endIdx);
+          startEventDrag(e, startIdx, endIdx);
+        });
         
         eventsTrack.appendChild(span);
         
@@ -1994,8 +1999,11 @@
         marker.title = action + ' at ' + eventTime.toFixed(2) + 's';
         marker.dataset.snapshotIdx = i;
         
-        // Make event draggable
-        marker.addEventListener('mousedown', (e) => startEventDrag(e, i, null));
+        // Make event draggable - use dataset value to avoid closure issues
+        marker.addEventListener('mousedown', (e) => {
+          const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+          startEventDrag(e, snapshotIdx, null);
+        });
         
         eventsTrack.appendChild(marker);
         i++;
@@ -2050,6 +2058,16 @@
     const isDragEvent = endIdx !== null;
     
     console.log('🖱️ startEventDrag called:', { startIdx, endIdx, isDragEvent });
+    
+    // Bounds check
+    if (!currentTutorial || !currentTutorial.snapshots[startIdx]) {
+      console.error('❌ Invalid startIdx:', startIdx);
+      return;
+    }
+    if (isDragEvent && !currentTutorial.snapshots[endIdx]) {
+      console.error('❌ Invalid endIdx:', endIdx);
+      return;
+    }
     
     draggingEvent = {
       startIdx: startIdx,
@@ -2720,7 +2738,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.17 initialized');
+  console.log('Tutorial Creator v11.18 initialized');
 })();
 </script>
 </body>
