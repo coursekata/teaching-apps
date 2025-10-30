@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.5</title>
+<title>Interactive Tutorial Creator - v10.6</title>
 <script>
   window.MathJax = {
     tex: {
@@ -588,7 +588,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.5</div>
+    <div class="version-number">v10.6</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1068,6 +1068,7 @@
     pausedIndicator.style.display = 'inline-block';
     addAnnotation.disabled = false;
     previewRecording.style.display = 'inline-block';
+    previewRecording.textContent = '👁 Preview'; // Reset button text
     
     // Calculate duration so preview works
     recalculateTutorialDuration();
@@ -1339,6 +1340,9 @@
       
       console.log('✓ Annotation positioned:', ann.position);
       console.log('  Annotation will remain visible until recording resumes and duration expires');
+      
+      // Recalculate duration in case annotation extends beyond current duration
+      recalculateTutorialDuration();
       renderTimeline();
     };
   }
@@ -2462,7 +2466,7 @@
     }
   });
   
-  console.log('Tutorial Creator v10.5 initialized');
+  console.log('Tutorial Creator v10.6 initialized');
 })();
 </script>
 </body>
