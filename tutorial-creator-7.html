@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.14</title>
+<title>Interactive Tutorial Creator - v11.15</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.14</div>
+    <div class="version-number">v11.15</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1095,6 +1095,13 @@
         const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
+        
+        // Apply the last snapshot's state so visual state matches the end
+        const api = getAPI();
+        if (api && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
+        }
         
         // Reset time calculations so new events start at current duration
         // This prevents gaps from preview time being added to timestamps
@@ -2629,7 +2636,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.14 initialized');
+  console.log('Tutorial Creator v11.15 initialized');
 })();
 </script>
 </body>
