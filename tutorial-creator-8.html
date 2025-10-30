@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.20</title>
+<title>Interactive Tutorial Creator - v11.22</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.20</div>
+    <div class="version-number">v11.22</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -644,9 +644,10 @@
   <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:99;pointer-events:none;">
     <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
       <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
-      <div style="font-size:13px;color:#666;margin-bottom:12px;">Adjust the size and position of the annotation, click Save when you are done.</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag to move, resize from corner. Double-click title or text to edit.</div>
       <div style="display:flex;gap:8px;">
         <button id="savePosition" class="success">Save</button>
+        <button id="deleteAnnotationFromOverlay" class="record">Delete</button>
         <button id="cancelPosition">Cancel</button>
       </div>
     </div>
@@ -779,6 +780,7 @@
   
   const positionEditorOverlay = document.getElementById('positionEditorOverlay');
   const savePosition = document.getElementById('savePosition');
+  const deleteAnnotationFromOverlay = document.getElementById('deleteAnnotationFromOverlay');
   const cancelPosition = document.getElementById('cancelPosition');
   
   const exportModal = document.getElementById('exportModal');
@@ -1262,10 +1264,40 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused) return;
     
-    annTitle.value = '';
-    annText.value = '';
-    annDuration.value = 5;
-    annotationEditorModal.classList.add('visible');
+    // Use current tutorial duration as the timestamp (end of existing content)
+    let timestamp = currentTutorial.duration || 0;
+    
+    // Check if there are existing annotations
+    // If so, place this one after the last one to avoid overlap
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      const lastAnnEnd = lastAnn.timestamp + lastAnn.duration;
+      
+      // If the new annotation would overlap, place it after the last one
+      if (timestamp < lastAnnEnd) {
+        timestamp = lastAnnEnd;
+        console.log('📝 Adjusted annotation timestamp to avoid overlap:', (timestamp / 1000).toFixed(2) + 's');
+      }
+    }
+    
+    console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
+    
+    // Create annotation with default text
+    const annotation = {
+      timestamp: timestamp,
+      title: 'New Annotation',
+      text: 'Double-click to edit this text',
+      duration: 5000, // 5 seconds default
+      position: null // Will be set after positioning
+    };
+    
+    currentTutorial.annotations.push(annotation);
+    
+    // Store index for save handler
+    editingAnnotationIndex = currentTutorial.annotations.length - 1;
+    
+    // Directly show annotation for positioning/editing
+    showAnnotationForPositioning(annotation, editingAnnotationIndex);
   });
   
   createAnnotation.addEventListener('click', () => {
@@ -1338,6 +1370,72 @@
     
     console.log('Annotation box styles set, display:', window.getComputedStyle(annotationBox).display);
     
+    // Make title and text editable on double-click
+    annotationTitle.ondblclick = (e) => {
+      e.stopPropagation();
+      const currentText = annotationTitle.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentText;
+      input.style.width = '100%';
+      input.style.fontSize = '18px';
+      input.style.fontWeight = 'bold';
+      input.style.border = '2px solid var(--accent)';
+      input.style.padding = '4px';
+      input.style.borderRadius = '4px';
+      
+      annotationTitle.innerHTML = '';
+      annotationTitle.appendChild(input);
+      input.focus();
+      input.select();
+      
+      const saveEdit = () => {
+        ann.title = input.value.trim() || currentText;
+        annotationTitle.innerHTML = ann.title;
+      };
+      
+      input.onblur = saveEdit;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          saveEdit();
+        } else if (e.key === 'Escape') {
+          annotationTitle.innerHTML = currentText;
+        }
+      };
+    };
+    
+    annotationText.ondblclick = (e) => {
+      e.stopPropagation();
+      const currentText = annotationText.textContent;
+      const textarea = document.createElement('textarea');
+      textarea.value = currentText;
+      textarea.style.width = '100%';
+      textarea.style.minHeight = '60px';
+      textarea.style.fontSize = '15px';
+      textarea.style.border = '2px solid var(--accent)';
+      textarea.style.padding = '4px';
+      textarea.style.borderRadius = '4px';
+      textarea.style.fontFamily = 'inherit';
+      
+      annotationText.innerHTML = '';
+      annotationText.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      
+      const saveEdit = () => {
+        ann.text = textarea.value.trim() || currentText;
+        annotationText.innerHTML = ann.text;
+      };
+      
+      textarea.onblur = saveEdit;
+      textarea.onkeydown = (e) => {
+        if (e.key === 'Escape') {
+          annotationText.innerHTML = currentText;
+        }
+        // Allow Enter for new lines, don't close on Enter
+      };
+    };
+    
     // Add resize handle
     if (!annotationBox.querySelector('.resize-handle')) {
       const handle = document.createElement('div');
@@ -1368,6 +1466,9 @@
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
+      // Clear editing index
+      editingAnnotationIndex = -1;
+      
       // Keep annotation visible during recording
       // Store it so we can hide it when recording resumes and duration expires
       activeRecordingAnnotation = ann;
@@ -1390,11 +1491,32 @@
       }
     }
     
+    editingAnnotationIndex = -1;
+    
     positionEditorOverlay.style.display = 'none';
     if (annotationBox) {
       annotationBox.classList.remove('visible', 'draggable');
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
+    }
+  });
+  
+  deleteAnnotationFromOverlay.addEventListener('click', () => {
+    if (editingAnnotationIndex >= 0 && currentTutorial && currentTutorial.annotations[editingAnnotationIndex]) {
+      if (confirm('Delete this annotation?')) {
+        currentTutorial.annotations.splice(editingAnnotationIndex, 1);
+        editingAnnotationIndex = -1;
+        
+        positionEditorOverlay.style.display = 'none';
+        if (annotationBox) {
+          annotationBox.classList.remove('visible', 'draggable');
+          const handles = annotationBox.querySelectorAll('.resize-handle');
+          handles.forEach(h => h.remove());
+        }
+        
+        recalculateTutorialDuration();
+        renderTimeline();
+      }
     }
   });
   
@@ -2024,8 +2146,38 @@
       annEl.textContent = ann.title;
       annEl.title = ann.title + ' (double-click to edit)';
       
-      // Double-click to edit
-      annEl.addEventListener('dblclick', () => openAnnotationEditor(i));
+      // Double-click to edit - directly show moveable/resizable box
+      annEl.addEventListener('dblclick', () => {
+        // Fast-forward to the annotation's timestamp so user can see context
+        const api = getAPI();
+        if (api && currentTutorial.snapshots.length > 0) {
+          // Find the most recent snapshot at or before the annotation timestamp
+          let targetSnapshot = null;
+          for (let j = currentTutorial.snapshots.length - 1; j >= 0; j--) {
+            if (currentTutorial.snapshots[j].timestamp <= ann.timestamp) {
+              targetSnapshot = currentTutorial.snapshots[j];
+              break;
+            }
+          }
+          
+          if (targetSnapshot) {
+            api.setState(targetSnapshot.state);
+            console.log('⏭️ Fast-forwarded to annotation at', (ann.timestamp / 1000).toFixed(2) + 's');
+          }
+          
+          // Move playhead to annotation timestamp
+          const timelineStartOffset = getTimelineStartOffset();
+          const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+          timelinePlayhead.style.left = timelinePosition + 'px';
+          timelinePlayhead.style.display = 'block';
+        }
+        
+        // Store the editing index for the save handler
+        editingAnnotationIndex = i;
+        
+        // Show the moveable/resizable box directly
+        showAnnotationForPositioning(ann, i);
+      });
       
       // Drag to move
       annEl.addEventListener('mousedown', (e) => startAnnotationDrag(e, i));
@@ -2778,7 +2930,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.20 initialized');
+  console.log('Tutorial Creator v11.22 initialized');
 })();
 </script>
 </body>
