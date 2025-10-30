@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.18</title>
+<title>Interactive Tutorial Creator - v11.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.18</div>
+    <div class="version-number">v11.19</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2069,6 +2069,14 @@
       return;
     }
     
+    // Store original timestamps for all snapshots in the drag sequence
+    const originalTimestamps = {};
+    if (isDragEvent) {
+      for (let i = startIdx; i <= endIdx; i++) {
+        originalTimestamps[i] = currentTutorial.snapshots[i].timestamp;
+      }
+    }
+    
     draggingEvent = {
       startIdx: startIdx,
       endIdx: endIdx,
@@ -2076,6 +2084,7 @@
       startX: e.clientX,
       originalTimestamp: currentTutorial.snapshots[startIdx].timestamp,
       originalEndTimestamp: isDragEvent ? currentTutorial.snapshots[endIdx].timestamp : null,
+      originalTimestamps: originalTimestamps, // Store all original timestamps
       hasMoved: false
     };
     
@@ -2097,13 +2106,20 @@
     
     console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
-    // Update the snapshot timestamp(s)
-    currentTutorial.snapshots[draggingEvent.startIdx].timestamp = newTimestamp;
-    
     if (draggingEvent.isDragEvent) {
-      // For drag events, move both start and end together to preserve duration
-      const dragDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
-      currentTutorial.snapshots[draggingEvent.endIdx].timestamp = newTimestamp + dragDuration;
+      // For drag events, update ALL snapshots between start and end proportionally
+      const originalDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
+      
+      for (let i = draggingEvent.startIdx; i <= draggingEvent.endIdx; i++) {
+        // Use stored original timestamp, not current value
+        const originalTimestamp = draggingEvent.originalTimestamps[i];
+        const relativePosition = (originalTimestamp - draggingEvent.originalTimestamp) / originalDuration;
+        // Apply the same relative position at the new time
+        currentTutorial.snapshots[i].timestamp = newTimestamp + (relativePosition * originalDuration);
+      }
+    } else {
+      // For single events, just update the one snapshot
+      currentTutorial.snapshots[draggingEvent.startIdx].timestamp = newTimestamp;
     }
     
     // Re-render to show the updated position
@@ -2738,7 +2754,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.18 initialized');
+  console.log('Tutorial Creator v11.19 initialized');
 })();
 </script>
 </body>
