@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.19</title>
+<title>Interactive Tutorial Creator - v11.20</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.19</div>
+    <div class="version-number">v11.20</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2504,6 +2504,30 @@
     editAnnDuration.value = ann.duration / 1000;
     editAnnTimestamp.value = (ann.timestamp / 1000).toFixed(1);
     
+    // Fast-forward to the annotation's timestamp so user can see context
+    const api = getAPI();
+    if (api && currentTutorial.snapshots.length > 0) {
+      // Find the most recent snapshot at or before the annotation timestamp
+      let targetSnapshot = null;
+      for (let i = currentTutorial.snapshots.length - 1; i >= 0; i--) {
+        if (currentTutorial.snapshots[i].timestamp <= ann.timestamp) {
+          targetSnapshot = currentTutorial.snapshots[i];
+          break;
+        }
+      }
+      
+      if (targetSnapshot) {
+        api.setState(targetSnapshot.state);
+        console.log('⏭️ Fast-forwarded to annotation at', (ann.timestamp / 1000).toFixed(2) + 's');
+      }
+      
+      // Move playhead to annotation timestamp
+      const timelineStartOffset = getTimelineStartOffset();
+      const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+      timelinePlayhead.style.left = timelinePosition + 'px';
+      timelinePlayhead.style.display = 'block';
+    }
+    
     annotationEditModal.classList.add('visible');
   }
   
@@ -2754,7 +2778,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.19 initialized');
+  console.log('Tutorial Creator v11.20 initialized');
 })();
 </script>
 </body>
