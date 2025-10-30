@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.23</title>
+<title>Interactive Tutorial Creator - v11.24</title>
 <script>
   window.MathJax = {
     tex: {
@@ -589,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.23</div>
+    <div class="version-number">v11.24</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2009,6 +2009,28 @@
   
   // ========== TIMELINE ==========
   
+  function replayToTimestamp(timestamp) {
+    // Replay all events from the beginning up to the given timestamp
+    // This ensures proper context when editing annotations
+    const api = getAPI();
+    if (!api || !currentTutorial) return;
+    
+    // Start with initial state
+    api.setState(currentTutorial.initialState);
+    
+    // Apply all snapshots up to the target timestamp in sequence
+    for (let i = 0; i < currentTutorial.snapshots.length; i++) {
+      const snapshot = currentTutorial.snapshots[i];
+      if (snapshot.timestamp <= timestamp) {
+        api.setState(snapshot.state);
+      } else {
+        break; // Past our target time, stop
+      }
+    }
+    
+    console.log('⏭️ Replayed events up to', (timestamp / 1000).toFixed(2) + 's');
+  }
+  
   function renderTimeline() {
     if (!currentTutorial) {
       timelineRuler.innerHTML = '';
@@ -2167,29 +2189,14 @@
       
       // Double-click to edit - directly show moveable/resizable box
       annEl.addEventListener('dblclick', () => {
-        // Fast-forward to the annotation's timestamp so user can see context
-        const api = getAPI();
-        if (api && currentTutorial.snapshots.length > 0) {
-          // Find the most recent snapshot at or before the annotation timestamp
-          let targetSnapshot = null;
-          for (let j = currentTutorial.snapshots.length - 1; j >= 0; j--) {
-            if (currentTutorial.snapshots[j].timestamp <= ann.timestamp) {
-              targetSnapshot = currentTutorial.snapshots[j];
-              break;
-            }
-          }
-          
-          if (targetSnapshot) {
-            api.setState(targetSnapshot.state);
-            console.log('⏭️ Fast-forwarded to annotation at', (ann.timestamp / 1000).toFixed(2) + 's');
-          }
-          
-          // Move playhead to annotation timestamp
-          const timelineStartOffset = getTimelineStartOffset();
-          const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
-          timelinePlayhead.style.left = timelinePosition + 'px';
-          timelinePlayhead.style.display = 'block';
-        }
+        // Replay all events up to the annotation's timestamp so user can see context
+        replayToTimestamp(ann.timestamp);
+        
+        // Move playhead to annotation timestamp
+        const timelineStartOffset = getTimelineStartOffset();
+        const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = timelinePosition + 'px';
+        timelinePlayhead.style.display = 'block';
         
         // Store the editing index for the save handler
         editingAnnotationIndex = i;
@@ -2949,7 +2956,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.23 initialized');
+  console.log('Tutorial Creator v11.24 initialized');
 })();
 </script>
 </body>
