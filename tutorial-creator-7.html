@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.4</title>
+<title>Interactive Tutorial Creator - v10.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -588,7 +588,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.4</div>
+    <div class="version-number">v10.5</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1452,19 +1452,14 @@
   previewRecording.addEventListener('click', () => {
     if (!currentTutorial) return;
     
-    // If already playing preview, stop it
+    // If already playing preview, stop it (pause in place)
     if (isPlaying && isPreviewingFromPaused) {
       isPlaying = false;
       isPreviewingFromPaused = false;
       appFrame.classList.remove('playback-mode');
       previewRecording.textContent = '👁 Preview';
       
-      // Apply current state from last snapshot
-      const api = getAPI();
-      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
-        const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-        api.setState(lastSnapshot.state);
-      }
+      // Don't apply last snapshot - just leave the state where it is (paused in place)
       
       console.log('⏹ Preview stopped manually');
       return;
@@ -2467,7 +2462,7 @@
     }
   });
   
-  console.log('Tutorial Creator v10.4 initialized');
+  console.log('Tutorial Creator v10.5 initialized');
 })();
 </script>
 </body>
