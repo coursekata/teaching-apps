@@ -586,7 +586,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.2</div>
+    <div class="version-number">v11.3</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1993,18 +1993,27 @@
     draggingAnnotation = {
       index: index,
       startX: e.clientX,
-      startTime: currentTutorial.annotations[index].timestamp
+      startTime: currentTutorial.annotations[index].timestamp,
+      hasMoved: false  // Track if user actually dragged
     };
     
     document.addEventListener('mousemove', doAnnotationDrag);
     document.addEventListener('mouseup', stopAnnotationDrag);
-    e.preventDefault();
+    // Don't preventDefault here - let double-click work
   }
   
   function doAnnotationDrag(e) {
     if (!draggingAnnotation) return;
     
     const dx = e.clientX - draggingAnnotation.startX;
+    
+    // Only start dragging if moved more than 3 pixels
+    if (!draggingAnnotation.hasMoved && Math.abs(dx) < 3) {
+      return;
+    }
+    
+    draggingAnnotation.hasMoved = true;
+    
     const dt = (dx / timelineScale) * 1000;
     
     let newTime = Math.max(0, draggingAnnotation.startTime + dt);
