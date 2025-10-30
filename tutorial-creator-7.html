@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.2</title>
+<title>Interactive Tutorial Creator - v11.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -1958,10 +1958,10 @@
       annEl.style.width = width + 'px';
       console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) visual-end=${leftPos + width + 30}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
       annEl.textContent = ann.title;
-      annEl.title = ann.title;
+      annEl.title = ann.title + ' (double-click to edit)';
       
-      // Click to edit
-      annEl.addEventListener('click', () => openAnnotationEditor(i));
+      // Double-click to edit
+      annEl.addEventListener('dblclick', () => openAnnotationEditor(i));
       
       // Drag to move
       annEl.addEventListener('mousedown', (e) => startAnnotationDrag(e, i));
@@ -2503,7 +2503,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.2 initialized');
+  console.log('Tutorial Creator v11.3 initialized');
 })();
 </script>
 </body>
