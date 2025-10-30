@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11</title>
+<title>Interactive Tutorial Creator - v11.1</title>
 <script>
   window.MathJax = {
     tex: {
@@ -572,10 +572,10 @@
         <button id="startRecording" class="record" style="display:none;">▶ Start Recording</button>
         <button id="playPauseRecording" class="warning" style="display:none;">⏸ Pause</button>
         <button id="stopRecording" class="record" style="display:none;">⏹ Stop</button>
-        <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
-        <button id="previewRecording" class="primary" style="display:none;">👁 Preview</button>
+        <button id="addAnnotation" class="primary" style="display:none;" disabled>➕ Add Annotation</button>
+        <button id="previewRecording" class="primary" style="display:none;" disabled>👁 Preview</button>
         <button id="playPausePreview" class="primary" style="display:none;">⏸ Pause Preview</button>
         <button id="addAnnotationAtPause" class="primary" style="display:none;">➕ Add Annotation Here</button>
         <button id="recordAgain" class="record" style="display:none;">🔄 Start Over</button>
@@ -586,7 +586,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11</div>
+    <div class="version-number">v11.1</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1047,6 +1047,8 @@
     playPauseRecording.className = 'warning'; // Yellow for pause
     stopRecording.style.display = 'inline-block';
     addAnnotation.style.display = 'inline-block';
+    previewRecording.style.display = 'inline-block';
+    previewRecording.disabled = true; // Disabled until paused
     recordingIndicator.style.display = 'inline-block';
     appUrl.disabled = true;
     
@@ -1067,7 +1069,7 @@
       pausedIndicator.style.display = 'none';
       recordingIndicator.style.display = 'inline-block';
       addAnnotation.disabled = true;
-      previewRecording.style.display = 'none';
+      previewRecording.disabled = true; // Disable when resuming
       
       // If preview is playing, stop it first
       if (isPlaying) {
@@ -1112,7 +1114,7 @@
       recordingIndicator.style.display = 'none';
       pausedIndicator.style.display = 'inline-block';
       addAnnotation.disabled = false;
-      previewRecording.style.display = 'inline-block';
+      previewRecording.disabled = false; // Enable when paused
       previewRecording.textContent = '👁 Preview'; // Reset button text
       
       // Calculate duration so preview works
@@ -1901,17 +1903,6 @@
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
         
-        // Add trim handles for start/end
-        const leftTrim = document.createElement('div');
-        leftTrim.className = 'event-trim-handle left';
-        leftTrim.title = 'Trim from start';
-        span.appendChild(leftTrim);
-        
-        const rightTrim = document.createElement('div');
-        rightTrim.className = 'event-trim-handle right';
-        rightTrim.title = 'Trim from end';
-        span.appendChild(rightTrim);
-        
         eventsTrack.appendChild(span);
         
         i = endIdx + 1; // Skip to after dragEnd
@@ -2490,7 +2481,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11 initialized');
+  console.log('Tutorial Creator v11.1 initialized');
 })();
 </script>
 </body>
