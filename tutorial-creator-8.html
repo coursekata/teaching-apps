@@ -2049,6 +2049,8 @@
     // endIdx is null for single events, or the end snapshot index for drag events
     const isDragEvent = endIdx !== null;
     
+    console.log('🖱️ startEventDrag called:', { startIdx, endIdx, isDragEvent });
+    
     draggingEvent = {
       startIdx: startIdx,
       endIdx: endIdx,
@@ -2074,6 +2076,8 @@
     const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
     
     const newTimestamp = Math.max(0, draggingEvent.originalTimestamp + dt);
+    
+    console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
     // Update the snapshot timestamp(s)
     currentTutorial.snapshots[draggingEvent.startIdx].timestamp = newTimestamp;
