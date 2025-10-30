@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v10.6</title>
+<title>Interactive Tutorial Creator - v10.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -588,7 +588,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v10.6</div>
+    <div class="version-number">v10.7</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1497,6 +1497,16 @@
     
     api.setState(currentTutorial.initialState);
     
+    // Hide any visible annotation before starting
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+    }
+    if (annotationTimeout) {
+      clearTimeout(annotationTimeout);
+      annotationTimeout = null;
+    }
+    currentAnnotationIndex = -1;
+    
     isPlaying = true;
     
     // Start playback at the first event instead of at time 0
@@ -1696,14 +1706,28 @@
     const wasPreviewingFromPaused = isPreviewingFromPaused;
     isPreviewingFromPaused = false;
     
-    // Don't reset currentAnnotationIndex - we need to know if an annotation was showing
     playbackLoop.lastAppliedTimestamp = null; // Reset the flag
     
-    // Keep annotation visible if the tutorial ended with one showing
-    const lastAnnotationWasActive = currentAnnotationIndex >= 0;
+    // Check if tutorial ends with an annotation (within 100ms tolerance)
+    let tutorialEndsWithAnnotation = false;
+    if (currentTutorial && currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      const annEnd = lastAnn.timestamp + lastAnn.duration;
+      const tolerance = 100; // 100ms tolerance
+      
+      if (Math.abs(annEnd - currentTutorial.duration) < tolerance) {
+        tutorialEndsWithAnnotation = true;
+        // Show the last annotation
+        showAnnotation(lastAnn);
+        currentAnnotationIndex = currentTutorial.annotations.length - 1;
+        console.log('✓ Tutorial ends with annotation - keeping it visible');
+      }
+    }
     
-    if (annotationBox && !lastAnnotationWasActive) {
+    // Hide annotation only if tutorial doesn't end with one
+    if (annotationBox && !tutorialEndsWithAnnotation) {
       annotationBox.classList.remove('visible');
+      currentAnnotationIndex = -1;
     }
     
     if (annotationTimeout) {
@@ -2466,7 +2490,7 @@
     }
   });
   
-  console.log('Tutorial Creator v10.6 initialized');
+  console.log('Tutorial Creator v10.7 initialized');
 })();
 </script>
 </body>
