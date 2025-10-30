@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.5</title>
+<title>Interactive Tutorial Creator - v11.6</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.5</div>
+    <div class="version-number">v11.6</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -697,11 +697,12 @@
         Your tutorial has been recorded with <strong id="snapshotCount">0</strong> snapshots and <strong id="annotationCount">0</strong> annotations.
       </div>
       
-      <p class="help-text">Copy the JSON below to save your tutorial. You can load it later using the "Load Tutorial" button.</p>
+      <p class="help-text">Download the JSON file to save your tutorial. You can load it later using the "Load JSON" button.</p>
       
       <textarea id="exportTextarea" readonly></textarea>
       
       <div class="modal-buttons">
+        <button id="downloadExport" class="success">💾 Download JSON</button>
         <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
         <button id="closeExportModal">Close</button>
       </div>
@@ -784,6 +785,7 @@
   const exportTextarea = document.getElementById('exportTextarea');
   const snapshotCount = document.getElementById('snapshotCount');
   const annotationCount = document.getElementById('annotationCount');
+  const downloadExport = document.getElementById('downloadExport');
   const copyExport = document.getElementById('copyExport');
   const closeExportModal = document.getElementById('closeExportModal');
   
@@ -833,6 +835,28 @@
   let annotationTitle = null;
   let annotationText = null;
   let activeRecordingAnnotation = null; // Track annotation that should remain visible during recording
+  
+  // Calculate timeline start offset to remove blank space at beginning
+  function getTimelineStartOffset() {
+    if (!currentTutorial) return 0;
+    
+    if (currentTutorial.snapshots.length === 0 && currentTutorial.annotations.length === 0) {
+      return 0;
+    }
+    
+    let firstEventTime = Infinity;
+    
+    if (currentTutorial.snapshots.length > 0) {
+      firstEventTime = Math.min(firstEventTime, currentTutorial.snapshots[0].timestamp);
+    }
+    
+    if (currentTutorial.annotations.length > 0) {
+      const firstAnnotationTime = Math.min(...currentTutorial.annotations.map(ann => ann.timestamp));
+      firstEventTime = Math.min(firstEventTime, firstAnnotationTime);
+    }
+    
+    return (firstEventTime !== Infinity && firstEventTime > 0) ? firstEventTime : 0;
+  }
   
   // Get tutorialAPI from iframe
   function getAPI() {
@@ -1598,9 +1622,11 @@
     const elapsed = (Date.now() - playbackStartTime) / 1000;
     const elapsedMs = elapsed * 1000;
     
-    // Update timeline playhead
+    // Update timeline playhead (adjusted for timeline start offset)
+    const timelineStartOffset = getTimelineStartOffset();
+    const timelineElapsed = (elapsedMs - timelineStartOffset) / 1000;
     timelinePlayhead.style.display = 'block';
-    timelinePlayhead.style.left = (elapsed * timelineScale + 60) + 'px';
+    timelinePlayhead.style.left = (timelineElapsed * timelineScale + 60) + 'px';
     
     // Find the most recent snapshot that should be active at this time
     let targetSnapshot = null;
@@ -1739,8 +1765,9 @@
     } else {
       // Was previewing from finished recording - show final state with playhead
       if (currentTutorial) {
-        const endPosition = (currentTutorial.duration / 1000) * timelineScale + 60;
-        timelinePlayhead.style.left = endPosition + 'px';
+        const timelineStartOffset = getTimelineStartOffset();
+        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
       }
       
@@ -1819,7 +1846,10 @@
       return;
     }
     
-    const duration = currentTutorial.duration / 1000;
+    // Calculate timeline start offset (first event or annotation)
+    const timelineStartOffset = getTimelineStartOffset();
+    
+    const duration = (currentTutorial.duration - timelineStartOffset) / 1000;
     
     // Calculate dynamic scale to fit timeline in available width
     // Account for the 60px label offset
@@ -1899,8 +1929,8 @@
         }
         
         // Create a span from dragStart to dragEnd
-        const startTime = snapshot.timestamp / 1000;
-        const endTime = currentTutorial.snapshots[endIdx].timestamp / 1000;
+        const startTime = (snapshot.timestamp - timelineStartOffset) / 1000;
+        const endTime = (currentTutorial.snapshots[endIdx].timestamp - timelineStartOffset) / 1000;
         const duration = endTime - startTime;
         
         console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', endTime.toFixed(2) + 's', `(${endIdx - i + 1} events)`);
@@ -1922,7 +1952,7 @@
         i++;
       } else {
         // Single event marker (simulate, changeBeta, etc.)
-        const eventTime = snapshot.timestamp / 1000;
+        const eventTime = (snapshot.timestamp - timelineStartOffset) / 1000;
         const eventLeft = eventTime * timelineScale;
         console.log(`  📍 Single event: ${action} at ${eventTime.toFixed(3)}s, left=${eventLeft.toFixed(1)}px (within track, absolute would be ${(eventLeft + 60).toFixed(1)}px)`);
         const marker = document.createElement('div');
@@ -1939,7 +1969,7 @@
     currentTutorial.annotations.forEach((ann, i) => {
       const annEl = document.createElement('div');
       annEl.className = 'timeline-annotation';
-      const leftPos = ((ann.timestamp / 1000) * timelineScale);
+      const leftPos = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale;
       // Subtract padding + border + box-shadow + border-radius visual effects = 30px total
       const width = ((ann.duration / 1000) * timelineScale) - 30;
       annEl.style.left = leftPos + 'px';
@@ -2422,6 +2452,26 @@
     exportModal.classList.add('visible');
   });
   
+  downloadExport.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    const jsonStr = JSON.stringify(currentTutorial, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tutorial-' + Date.now() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    downloadExport.textContent = '✓ Downloaded!';
+    setTimeout(() => {
+      downloadExport.textContent = '💾 Download JSON';
+    }, 2000);
+  });
+  
   copyExport.addEventListener('click', () => {
     exportTextarea.select();
     document.execCommand('copy');
@@ -2457,21 +2507,49 @@
         // Load the app if not already loaded
         if (!isAppLoaded && imported.initialState) {
           // We can't auto-load without a URL, so just inform user
-          alert('Tutorial loaded! Please load the app first using "Load App", then click "Preview" to play the tutorial.');
+          alert('Tutorial loaded! Please load the app first using "Load App", then the tutorial will be ready to edit.');
         } else if (isAppLoaded) {
           const api = getAPI();
           if (api) {
             api.setState(currentTutorial.initialState);
           }
           
-          // Show preview controls
+          // Set up recording state as if we just paused
+          isRecording = true;
+          isPaused = true;
+          recordingStartTime = Date.now() - (currentTutorial.duration || 0);
+          totalPausedTime = 0;
+          
+          // Set up event listener (so we can continue recording)
+          eventListener = (event) => {
+            const timestamp = Date.now() - recordingStartTime - totalPausedTime;
+            const snapshot = {
+              timestamp: timestamp,
+              event: event,
+              state: api.getState()
+            };
+            currentTutorial.snapshots.push(snapshot);
+            renderTimeline();
+          };
+          api.onAction(eventListener);
+          
+          // Show paused recording UI
+          startRecording.style.display = 'none';
+          loadJSON.style.display = 'none';
+          playPauseRecording.style.display = 'inline-block';
+          playPauseRecording.textContent = '⏺ Resume';
+          playPauseRecording.className = 'success';
+          pausedIndicator.style.display = 'inline-block';
+          addAnnotation.style.display = 'inline-block';
+          addAnnotation.disabled = false;
           previewRecording.style.display = 'inline-block';
-          exportRecording.style.display = 'inline-block';
-          recordAgain.style.display = 'inline-block';
+          previewRecording.disabled = false;
+          recordAgain.disabled = false;
+          exportRecording.disabled = false;
           
           renderTimeline();
           
-          alert('✓ Tutorial loaded!\n\nClick "👁 Preview" to play it.');
+          alert('✓ Tutorial loaded!\n\nYou can now:\n• Preview it\n• Resume recording to add more\n• Add/edit annotations\n• Export when done');
         }
         
         console.log('📤 Tutorial imported');
@@ -2513,7 +2591,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.5 initialized');
+  console.log('Tutorial Creator v11.6 initialized');
 })();
 </script>
 </body>
