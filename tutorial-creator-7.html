@@ -1259,8 +1259,8 @@
       return;
     }
     
-    // Use the time when pause started, not current time
-    let timestamp = pauseStartTime - recordingStartTime - totalPausedTime + importedDurationOffset;
+    // Use current tutorial duration as the timestamp (end of existing content)
+    let timestamp = currentTutorial.duration || 0;
     
     // Check if there are existing annotations
     // If so, place this one after the last one to avoid overlap
