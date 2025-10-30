@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.3</title>
+<title>Interactive Tutorial Creator - v11.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -586,7 +586,7 @@
       <button id="loadJSON" class="primary">📂 Load JSON</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.3</div>
+    <div class="version-number">v11.4</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2239,6 +2239,14 @@
   function stopAnnotationDrag() {
     if (!draggingAnnotation) return;
     
+    // Only do overlap checking and re-rendering if user actually dragged
+    if (!draggingAnnotation.hasMoved) {
+      draggingAnnotation = null;
+      document.removeEventListener('mousemove', doAnnotationDrag);
+      document.removeEventListener('mouseup', stopAnnotationDrag);
+      return;
+    }
+    
     const draggedIndex = draggingAnnotation.index;
     const draggedAnn = currentTutorial.annotations[draggedIndex];
     
@@ -2512,7 +2520,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.3 initialized');
+  console.log('Tutorial Creator v11.4 initialized');
 })();
 </script>
 </body>
