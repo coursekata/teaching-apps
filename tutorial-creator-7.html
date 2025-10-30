@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.7</title>
+<title>Interactive Tutorial Creator - v11.8</title>
 <script>
   window.MathJax = {
     tex: {
@@ -585,7 +585,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.7</div>
+    <div class="version-number">v11.8</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -835,6 +835,7 @@
   let annotationTitle = null;
   let annotationText = null;
   let activeRecordingAnnotation = null; // Track annotation that should remain visible during recording
+  let importedDurationOffset = 0; // Offset to add to timestamps for imported tutorials
   
   // Calculate timeline start offset to remove blank space at beginning
   function getTimelineStartOffset() {
@@ -1016,6 +1017,7 @@
     isPaused = false;
     recordingStartTime = Date.now();
     totalPausedTime = 0;
+    importedDurationOffset = 0; // Reset offset for new recording
     
     // Start listening to events
     eventListener = (event) => {
@@ -1028,7 +1030,7 @@
           if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
           
           // Capture timestamp NOW, when state is actually ready
-          const captureTime = Date.now() - recordingStartTime - totalPausedTime;
+          const captureTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
           
           const snapshot = {
             timestamp: captureTime,
@@ -1041,7 +1043,7 @@
         }, 50); // 50ms delay to allow simulation to complete
       } else {
         // For all other events, capture immediately
-        const relativeTime = Date.now() - recordingStartTime - totalPausedTime;
+        const relativeTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
         
         const snapshot = {
           timestamp: relativeTime,
@@ -1804,6 +1806,7 @@
     
     // Clear current tutorial
     currentTutorial = null;
+    importedDurationOffset = 0; // Reset offset
     
     // Reset UI
     startRecording.style.display = 'inline-block';
@@ -2523,13 +2526,14 @@
           // Set up recording state as if we just paused
           isRecording = true;
           isPaused = true;
-          recordingStartTime = Date.now() - (currentTutorial.duration || 0);
+          recordingStartTime = Date.now(); // Start recording from NOW
           pauseStartTime = Date.now(); // Set pause start time for correct resume calculation
           totalPausedTime = 0;
+          importedDurationOffset = currentTutorial.duration || 0; // Offset new events by imported duration
           
           // Set up event listener (so we can continue recording)
           eventListener = (event) => {
-            const timestamp = Date.now() - recordingStartTime - totalPausedTime;
+            const timestamp = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
             const snapshot = {
               timestamp: timestamp,
               event: event,
@@ -2598,7 +2602,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.7 initialized');
+  console.log('Tutorial Creator v11.8 initialized');
 })();
 </script>
 </body>
