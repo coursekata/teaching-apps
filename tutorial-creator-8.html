@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.29</title>
+<title>Interactive Tutorial Creator - v11.30</title>
 <script>
   window.MathJax = {
     tex: {
@@ -589,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.29</div>
+    <div class="version-number">v11.30</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1453,20 +1453,15 @@
       annotationTitle.appendChild(input);
       input.focus();
       
-      // Don't select all - let user click to position cursor
-      // Add handler to detect when all text is selected and clear it on click
-      let isFirstClick = true;
+      // CRITICAL: Stop propagation to prevent annotation box drag handler from interfering
       input.addEventListener('mousedown', function(e) {
-        console.log('  Title input mousedown - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd, 'isFirstClick:', isFirstClick);
-        if (isFirstClick && this.selectionStart === 0 && this.selectionEnd === this.value.length) {
-          console.log('  Clearing auto-selection');
-          this.setSelectionRange(0, 0);
-          isFirstClick = false;
-        }
+        console.log('  Title input mousedown - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
       });
       
       input.addEventListener('click', function(e) {
         console.log('  Title input click - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
       });
       
       const saveEdit = () => {
@@ -1503,20 +1498,15 @@
       annotationText.appendChild(textarea);
       textarea.focus();
       
-      // Don't select all - let user click to position cursor
-      // Add handler to detect when all text is selected and clear it on click
-      let isFirstClick = true;
+      // CRITICAL: Stop propagation to prevent annotation box drag handler from interfering
       textarea.addEventListener('mousedown', function(e) {
-        console.log('  Text textarea mousedown - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd, 'isFirstClick:', isFirstClick);
-        if (isFirstClick && this.selectionStart === 0 && this.selectionEnd === this.value.length) {
-          console.log('  Clearing auto-selection');
-          this.setSelectionRange(0, 0);
-          isFirstClick = false;
-        }
+        console.log('  Text textarea mousedown - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
       });
       
       textarea.addEventListener('click', function(e) {
         console.log('  Text textarea click - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
       });
       
       const saveEdit = () => {
@@ -3072,7 +3062,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.29 initialized');
+  console.log('Tutorial Creator v11.30 initialized');
 })();
 </script>
 </body>
