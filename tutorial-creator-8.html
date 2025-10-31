@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.26</title>
+<title>Interactive Tutorial Creator - v11.27</title>
 <script>
   window.MathJax = {
     tex: {
@@ -589,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.26</div>
+    <div class="version-number">v11.27</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -782,31 +782,15 @@
   const createAnnotation = document.getElementById('createAnnotation');
   const cancelAnnotation = document.getElementById('cancelAnnotation');
   
-  // Prevent automatic text selection on focus to allow natural cursor positioning
-  // Track first click to handle it specially
+  // Fix cursor positioning in annotation fields
+  // When modal opens, fields auto-select all text. We need to allow normal cursor placement.
   [annTitle, annText, annDuration].forEach(field => {
-    let isFirstClick = true;
-    
     field.addEventListener('mousedown', function(e) {
-      // On first mousedown after field is populated, prevent default select-all
-      if (isFirstClick && this.value) {
-        setTimeout(() => {
-          // Don't select all - place cursor where clicked
-          const clickPos = this.selectionStart;
-          this.setSelectionRange(clickPos, clickPos);
-        }, 0);
-        isFirstClick = false;
+      // If the entire field is selected when user clicks, clear selection first
+      // so the click can position the cursor naturally
+      if (this.selectionStart === 0 && this.selectionEnd === this.value.length) {
+        this.setSelectionRange(0, 0);
       }
-    });
-    
-    // Reset flag when modal opens
-    field.addEventListener('focus', function() {
-      isFirstClick = true;
-    });
-    
-    // Reset when field loses focus
-    field.addEventListener('blur', function() {
-      isFirstClick = true;
     });
   });
   
@@ -847,31 +831,15 @@
   const repositionAnnotation = document.getElementById('repositionAnnotation');
   const resizeAnnotation = document.getElementById('resizeAnnotation');
   
-  // Prevent automatic text selection on focus to allow natural cursor positioning
-  // Track first click to handle it specially
+  // Fix cursor positioning in annotation edit fields
+  // When modal opens, fields auto-select all text. We need to allow normal cursor placement.
   [editAnnTitle, editAnnText, editAnnDuration, editAnnTimestamp].forEach(field => {
-    let isFirstClick = true;
-    
     field.addEventListener('mousedown', function(e) {
-      // On first mousedown after field is populated, prevent default select-all
-      if (isFirstClick && this.value) {
-        setTimeout(() => {
-          // Don't select all - place cursor where clicked
-          const clickPos = this.selectionStart;
-          this.setSelectionRange(clickPos, clickPos);
-        }, 0);
-        isFirstClick = false;
+      // If the entire field is selected when user clicks, clear selection first
+      // so the click can position the cursor naturally
+      if (this.selectionStart === 0 && this.selectionEnd === this.value.length) {
+        this.setSelectionRange(0, 0);
       }
-    });
-    
-    // Reset flag when modal opens
-    field.addEventListener('focus', function() {
-      isFirstClick = true;
-    });
-    
-    // Reset when field loses focus
-    field.addEventListener('blur', function() {
-      isFirstClick = true;
     });
   });
   
@@ -3018,7 +2986,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.26 initialized');
+  console.log('Tutorial Creator v11.27 initialized');
 })();
 </script>
 </body>
