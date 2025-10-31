@@ -2247,22 +2247,10 @@
       annEl.textContent = ann.title;
       annEl.title = ann.title + ' (double-click to edit)';
       
-      // Double-click to edit - directly show moveable/resizable box
+      // Double-click to edit - open the edit modal
       annEl.addEventListener('dblclick', () => {
-        // Replay all events up to the annotation's timestamp so user can see context
-        replayToTimestamp(ann.timestamp);
-        
-        // Move playhead to annotation timestamp
-        const timelineStartOffset = getTimelineStartOffset();
-        const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
-        timelinePlayhead.style.left = timelinePosition + 'px';
-        timelinePlayhead.style.display = 'block';
-        
-        // Store the editing index for the save handler
-        editingAnnotationIndex = i;
-        
-        // Show the moveable/resizable box directly
-        showAnnotationForPositioning(ann, i);
+        console.log('🖱️ Double-clicked annotation in timeline, opening editor for index:', i);
+        openAnnotationEditor(i);
       });
       
       // Drag to move
