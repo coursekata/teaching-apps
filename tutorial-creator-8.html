@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.30</title>
+<title>Interactive Tutorial Creator - v11.31</title>
 <script>
   window.MathJax = {
     tex: {
@@ -589,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.30</div>
+    <div class="version-number">v11.31</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -657,37 +657,14 @@
     </div>
   </div>
   
-  <!-- Annotation Edit Modal -->
-  <div id="annotationEditModal" class="modal-overlay">
-    <div class="modal">
-      <h2>Edit Annotation</h2>
-      
-      <div class="form-group">
-        <label>Title</label>
-        <input type="text" id="editAnnTitle" placeholder="Enter annotation title..."/>
-      </div>
-      
-      <div class="form-group">
-        <label>Text</label>
-        <textarea id="editAnnText" placeholder="Enter annotation description..."></textarea>
-      </div>
-      
-      <div class="form-group">
-        <label>Duration (seconds)</label>
-        <input type="number" id="editAnnDuration" value="5" min="1" max="60" style="width:100px;"/>
-      </div>
-      
-      <div class="form-group">
-        <label>Start Time (seconds)</label>
-        <input type="number" id="editAnnTimestamp" value="0" min="0" step="0.1" style="width:100px;"/>
-      </div>
-      
+  <!-- Event Deletion Modal -->
+  <div id="eventDeletionModal" class="modal-overlay">
+    <div class="modal" style="max-width:400px;">
+      <h2>Delete Event?</h2>
+      <p id="eventDeletionText" style="margin:16px 0;color:#666;">Are you sure you want to delete this event?</p>
       <div class="modal-buttons">
-        <button id="repositionAnnotation" class="primary">📍 Reposition</button>
-        <button id="resizeAnnotation" class="primary">↔️ Resize</button>
-        <button id="deleteAnnotation" class="warning">🗑 Delete</button>
-        <button id="cancelEditAnnotation">Cancel</button>
-        <button id="saveEditAnnotation" class="success">💾 Save Changes</button>
+        <button id="cancelEventDeletion">Cancel</button>
+        <button id="confirmEventDeletion" class="warning">🗑 Delete</button>
       </div>
     </div>
   </div>
@@ -817,6 +794,15 @@
   const deleteAnnotationFromOverlay = document.getElementById('deleteAnnotationFromOverlay');
   const cancelPosition = document.getElementById('cancelPosition');
   
+  const eventDeletionModal = document.getElementById('eventDeletionModal');
+  const eventDeletionText = document.getElementById('eventDeletionText');
+  const confirmEventDeletion = document.getElementById('confirmEventDeletion');
+  const cancelEventDeletion = document.getElementById('cancelEventDeletion');
+  
+  // Event deletion state
+  let eventToDelete = null; // Will store {startIdx, endIdx} or {startIdx} for single events
+  
+  
   const exportModal = document.getElementById('exportModal');
   const exportTextarea = document.getElementById('exportTextarea');
   const snapshotCount = document.getElementById('snapshotCount');
@@ -837,47 +823,6 @@
   const eventsTrack = document.getElementById('eventsTrack');
   const annotationsTrack = document.getElementById('annotationsTrack');
   const timelinePlayhead = document.getElementById('timelinePlayhead');
-  
-  const annotationEditModal = document.getElementById('annotationEditModal');
-  const editAnnTitle = document.getElementById('editAnnTitle');
-  const editAnnText = document.getElementById('editAnnText');
-  const editAnnDuration = document.getElementById('editAnnDuration');
-  const editAnnTimestamp = document.getElementById('editAnnTimestamp');
-  const saveEditAnnotation = document.getElementById('saveEditAnnotation');
-  const deleteAnnotation = document.getElementById('deleteAnnotation');
-  const cancelEditAnnotation = document.getElementById('cancelEditAnnotation');
-  const repositionAnnotation = document.getElementById('repositionAnnotation');
-  const resizeAnnotation = document.getElementById('resizeAnnotation');
-  
-  // Fix cursor positioning in annotation edit fields with detailed logging
-  [editAnnTitle, editAnnText, editAnnDuration, editAnnTimestamp].forEach(field => {
-    const fieldName = field.id;
-    
-    field.addEventListener('focus', function(e) {
-      console.log(`[${fieldName}] FOCUS - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
-    });
-    
-    field.addEventListener('mousedown', function(e) {
-      console.log(`[${fieldName}] MOUSEDOWN - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
-      // If the entire field is selected when user clicks, clear selection first
-      if (this.selectionStart === 0 && this.selectionEnd === this.value.length) {
-        console.log(`[${fieldName}] - All text selected, clearing selection`);
-        this.setSelectionRange(0, 0);
-      }
-    });
-    
-    field.addEventListener('mouseup', function(e) {
-      console.log(`[${fieldName}] MOUSEUP - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
-    });
-    
-    field.addEventListener('click', function(e) {
-      console.log(`[${fieldName}] CLICK - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
-    });
-    
-    field.addEventListener('select', function(e) {
-      console.log(`[${fieldName}] SELECT event - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
-    });
-  });
   
   // State
   let isAppLoaded = false;
@@ -1608,6 +1553,44 @@
     }
   });
   
+  // Event deletion modal handlers
+  confirmEventDeletion.addEventListener('click', () => {
+    if (!eventToDelete || !currentTutorial) return;
+    
+    console.log('🗑️ Deleting event:', eventToDelete);
+    
+    if (eventToDelete.endIdx !== null) {
+      // Delete drag event (start and end)
+      // Remove in reverse order to maintain indices
+      const indices = [eventToDelete.startIdx, eventToDelete.endIdx].sort((a, b) => b - a);
+      indices.forEach(idx => {
+        currentTutorial.snapshots.splice(idx, 1);
+      });
+      console.log(`  Deleted drag event pair at indices ${eventToDelete.startIdx} and ${eventToDelete.endIdx}`);
+    } else {
+      // Delete single event
+      currentTutorial.snapshots.splice(eventToDelete.startIdx, 1);
+      console.log(`  Deleted single event at index ${eventToDelete.startIdx}`);
+    }
+    
+    eventDeletionModal.classList.remove('visible');
+    eventToDelete = null;
+    recalculateTutorialDuration();
+    renderTimeline();
+  });
+  
+  cancelEventDeletion.addEventListener('click', () => {
+    eventDeletionModal.classList.remove('visible');
+    eventToDelete = null;
+  });
+  
+  eventDeletionModal.addEventListener('click', (e) => {
+    if (e.target === eventDeletionModal) {
+      eventDeletionModal.classList.remove('visible');
+      eventToDelete = null;
+    }
+  });
+  
   function makeDraggable() {
     if (!annotationBox) {
       console.error('makeDraggable: annotationBox is null');
@@ -2216,9 +2199,21 @@
         span.className = 'timeline-event drag-event';
         span.style.left = (startTime * timelineScale) + 'px';
         span.style.width = Math.max(8, duration * timelineScale - 18) + 'px'; // Subtract for border-radius + box-shadow
-        span.title = `${dragType} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`;
+        span.title = `${dragType} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s) - Double-click to delete`;
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
+        
+        // Double-click to delete
+        span.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const startIdx = parseInt(span.dataset.startIdx);
+          const endIdx = parseInt(span.dataset.endIdx);
+          console.log('🖱️ Double-clicked drag event for deletion:', { startIdx, endIdx, dragType });
+          
+          eventToDelete = { startIdx, endIdx };
+          eventDeletionText.textContent = `Delete "${dragType}" drag event (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)?`;
+          eventDeletionModal.classList.add('visible');
+        });
         
         // Make drag event draggable (will move start and end together)
         // Use dataset values to avoid closure issues with loop variable
@@ -2243,8 +2238,19 @@
         const marker = document.createElement('div');
         marker.className = 'timeline-event';
         marker.style.left = eventLeft + 'px';
-        marker.title = action + ' at ' + eventTime.toFixed(2) + 's';
+        marker.title = action + ' at ' + eventTime.toFixed(2) + 's - Double-click to delete';
         marker.dataset.snapshotIdx = i;
+        
+        // Double-click to delete
+        marker.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+          console.log('🖱️ Double-clicked single event for deletion:', { snapshotIdx, action });
+          
+          eventToDelete = { startIdx: snapshotIdx, endIdx: null };
+          eventDeletionText.textContent = `Delete "${action}" event at ${eventTime.toFixed(2)}s?`;
+          eventDeletionModal.classList.add('visible');
+        });
         
         // Make event draggable - use dataset value to avoid closure issues
         marker.addEventListener('mousedown', (e) => {
@@ -2757,141 +2763,6 @@
   
   // ========== ANNOTATION EDITING ==========
   
-  function openAnnotationEditor(index) {
-    if (!currentTutorial || !currentTutorial.annotations[index]) return;
-    
-    editingAnnotationIndex = index;
-    const ann = currentTutorial.annotations[index];
-    
-    console.log('🔧 Opening annotation editor for index:', index);
-    console.log('  Annotation title:', ann.title);
-    console.log('  Annotation text:', ann.text);
-    
-    editAnnTitle.value = ann.title;
-    editAnnText.value = ann.text;
-    editAnnDuration.value = ann.duration / 1000;
-    editAnnTimestamp.value = (ann.timestamp / 1000).toFixed(1);
-    
-    console.log('  After setting values:');
-    console.log('    editAnnTitle selection:', editAnnTitle.selectionStart, '-', editAnnTitle.selectionEnd);
-    console.log('    editAnnText selection:', editAnnText.selectionStart, '-', editAnnText.selectionEnd);
-    
-    // Fast-forward to the annotation's timestamp so user can see context
-    const api = getAPI();
-    if (api && currentTutorial.snapshots.length > 0) {
-      // Find the most recent snapshot at or before the annotation timestamp
-      let targetSnapshot = null;
-      for (let i = currentTutorial.snapshots.length - 1; i >= 0; i--) {
-        if (currentTutorial.snapshots[i].timestamp <= ann.timestamp) {
-          targetSnapshot = currentTutorial.snapshots[i];
-          break;
-        }
-      }
-      
-      if (targetSnapshot) {
-        api.setState(targetSnapshot.state);
-        console.log('⏭️ Fast-forwarded to annotation at', (ann.timestamp / 1000).toFixed(2) + 's');
-      }
-      
-      // Move playhead to annotation timestamp
-      const timelineStartOffset = getTimelineStartOffset();
-      const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
-      timelinePlayhead.style.left = timelinePosition + 'px';
-      timelinePlayhead.style.display = 'block';
-    }
-    
-    // Remove any focus from fields to ensure clean state
-    editAnnTitle.blur();
-    editAnnText.blur();
-    editAnnDuration.blur();
-    editAnnTimestamp.blur();
-    
-    console.log('  After blur:');
-    console.log('    editAnnTitle selection:', editAnnTitle.selectionStart, '-', editAnnTitle.selectionEnd);
-    console.log('    editAnnText selection:', editAnnText.selectionStart, '-', editAnnText.selectionEnd);
-    
-    annotationEditModal.classList.add('visible');
-    
-    console.log('  Modal now visible');
-  }
-  
-  saveEditAnnotation.addEventListener('click', () => {
-    if (editingAnnotationIndex < 0 || !currentTutorial) return;
-    
-    const ann = currentTutorial.annotations[editingAnnotationIndex];
-    ann.title = editAnnTitle.value.trim();
-    ann.text = editAnnText.value.trim();
-    ann.duration = parseFloat(editAnnDuration.value) * 1000;
-    
-    annotationEditModal.classList.remove('visible');
-    editingAnnotationIndex = -1;
-    recalculateTutorialDuration();
-    renderTimeline();
-  });
-  
-  deleteAnnotation.addEventListener('click', () => {
-    if (editingAnnotationIndex < 0 || !currentTutorial) return;
-    
-    if (confirm('Delete this annotation?')) {
-      currentTutorial.annotations.splice(editingAnnotationIndex, 1);
-      annotationEditModal.classList.remove('visible');
-      editingAnnotationIndex = -1;
-      recalculateTutorialDuration();
-      renderTimeline();
-    }
-  });
-  
-  cancelEditAnnotation.addEventListener('click', () => {
-    annotationEditModal.classList.remove('visible');
-    editingAnnotationIndex = -1;
-  });
-  
-  repositionAnnotation.addEventListener('click', () => {
-    if (editingAnnotationIndex < 0 || !currentTutorial) return;
-    
-    const ann = currentTutorial.annotations[editingAnnotationIndex];
-    
-    annotationEditModal.classList.remove('visible');
-    
-    showAnnotationForPositioning(ann, editingAnnotationIndex);
-    
-    savePosition.onclick = () => {
-      const rect = annotationBox.getBoundingClientRect();
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      const iframeBody = iframeDoc.body.getBoundingClientRect();
-      
-      ann.position = {
-        left: rect.left - iframeBody.left,
-        top: rect.top - iframeBody.top,
-        width: rect.width,
-        height: rect.height
-      };
-      
-      positionEditorOverlay.style.display = 'none';
-      annotationBox.classList.remove('visible', 'draggable');
-      
-      const handles = annotationBox.querySelectorAll('.resize-handle');
-      handles.forEach(h => h.remove());
-      
-      editingAnnotationIndex = -1;
-      renderTimeline();
-    };
-  });
-  
-  resizeAnnotation.addEventListener('click', () => {
-    repositionAnnotation.click();
-    setTimeout(() => {
-      alert('Drag the orange corner handle to resize, then Save');
-    }, 100);
-  });
-  
-  annotationEditModal.addEventListener('click', (e) => {
-    if (e.target === annotationEditModal) {
-      annotationEditModal.classList.remove('visible');
-      editingAnnotationIndex = -1;
-    }
-  });
-  
   // ========== EXPORT/IMPORT ==========
   
   exportRecording.addEventListener('click', () => {
@@ -3062,7 +2933,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.30 initialized');
+  console.log('Tutorial Creator v11.31 initialized');
 })();
 </script>
 </body>
