@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.25</title>
+<title>Interactive Tutorial Creator - v11.26</title>
 <script>
   window.MathJax = {
     tex: {
@@ -589,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.25</div>
+    <div class="version-number">v11.26</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -783,24 +783,30 @@
   const cancelAnnotation = document.getElementById('cancelAnnotation');
   
   // Prevent automatic text selection on focus to allow natural cursor positioning
+  // Track first click to handle it specially
   [annTitle, annText, annDuration].forEach(field => {
-    field.addEventListener('mouseup', function(e) {
-      // Prevent the default behavior that selects all text
-      e.preventDefault();
-      // Set cursor position where user clicked
-      const pos = this.selectionStart;
-      this.setSelectionRange(pos, pos);
+    let isFirstClick = true;
+    
+    field.addEventListener('mousedown', function(e) {
+      // On first mousedown after field is populated, prevent default select-all
+      if (isFirstClick && this.value) {
+        setTimeout(() => {
+          // Don't select all - place cursor where clicked
+          const clickPos = this.selectionStart;
+          this.setSelectionRange(clickPos, clickPos);
+        }, 0);
+        isFirstClick = false;
+      }
     });
     
-    field.addEventListener('focus', function(e) {
-      // Allow normal cursor positioning on focus
-      const target = e.target;
-      setTimeout(() => {
-        // Don't select all - let user click to position cursor
-        if (target.selectionStart === 0 && target.selectionEnd === target.value.length) {
-          target.setSelectionRange(target.value.length, target.value.length);
-        }
-      }, 0);
+    // Reset flag when modal opens
+    field.addEventListener('focus', function() {
+      isFirstClick = true;
+    });
+    
+    // Reset when field loses focus
+    field.addEventListener('blur', function() {
+      isFirstClick = true;
     });
   });
   
@@ -842,24 +848,30 @@
   const resizeAnnotation = document.getElementById('resizeAnnotation');
   
   // Prevent automatic text selection on focus to allow natural cursor positioning
+  // Track first click to handle it specially
   [editAnnTitle, editAnnText, editAnnDuration, editAnnTimestamp].forEach(field => {
-    field.addEventListener('mouseup', function(e) {
-      // Prevent the default behavior that selects all text
-      e.preventDefault();
-      // Set cursor position where user clicked
-      const pos = this.selectionStart;
-      this.setSelectionRange(pos, pos);
+    let isFirstClick = true;
+    
+    field.addEventListener('mousedown', function(e) {
+      // On first mousedown after field is populated, prevent default select-all
+      if (isFirstClick && this.value) {
+        setTimeout(() => {
+          // Don't select all - place cursor where clicked
+          const clickPos = this.selectionStart;
+          this.setSelectionRange(clickPos, clickPos);
+        }, 0);
+        isFirstClick = false;
+      }
     });
     
-    field.addEventListener('focus', function(e) {
-      // Allow normal cursor positioning on focus
-      const target = e.target;
-      setTimeout(() => {
-        // Don't select all - let user click to position cursor
-        if (target.selectionStart === 0 && target.selectionEnd === target.value.length) {
-          target.setSelectionRange(target.value.length, target.value.length);
-        }
-      }, 0);
+    // Reset flag when modal opens
+    field.addEventListener('focus', function() {
+      isFirstClick = true;
+    });
+    
+    // Reset when field loses focus
+    field.addEventListener('blur', function() {
+      isFirstClick = true;
     });
   });
   
@@ -3006,7 +3018,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.25 initialized');
+  console.log('Tutorial Creator v11.26 initialized');
 })();
 </script>
 </body>
