@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.27</title>
+<title>Interactive Tutorial Creator - v11.28</title>
 <script>
   window.MathJax = {
     tex: {
@@ -589,7 +589,7 @@
       <button id="helpBtn" style="margin-left:auto;">❓ Help</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.27</div>
+    <div class="version-number">v11.28</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -782,15 +782,33 @@
   const createAnnotation = document.getElementById('createAnnotation');
   const cancelAnnotation = document.getElementById('cancelAnnotation');
   
-  // Fix cursor positioning in annotation fields
-  // When modal opens, fields auto-select all text. We need to allow normal cursor placement.
+  // Fix cursor positioning in annotation fields with detailed logging
   [annTitle, annText, annDuration].forEach(field => {
+    const fieldName = field.id;
+    
+    field.addEventListener('focus', function(e) {
+      console.log(`[${fieldName}] FOCUS - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
+    });
+    
     field.addEventListener('mousedown', function(e) {
+      console.log(`[${fieldName}] MOUSEDOWN - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
       // If the entire field is selected when user clicks, clear selection first
-      // so the click can position the cursor naturally
       if (this.selectionStart === 0 && this.selectionEnd === this.value.length) {
+        console.log(`[${fieldName}] - All text selected, clearing selection`);
         this.setSelectionRange(0, 0);
       }
+    });
+    
+    field.addEventListener('mouseup', function(e) {
+      console.log(`[${fieldName}] MOUSEUP - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+    
+    field.addEventListener('click', function(e) {
+      console.log(`[${fieldName}] CLICK - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+    
+    field.addEventListener('select', function(e) {
+      console.log(`[${fieldName}] SELECT event - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
     });
   });
   
@@ -831,15 +849,33 @@
   const repositionAnnotation = document.getElementById('repositionAnnotation');
   const resizeAnnotation = document.getElementById('resizeAnnotation');
   
-  // Fix cursor positioning in annotation edit fields
-  // When modal opens, fields auto-select all text. We need to allow normal cursor placement.
+  // Fix cursor positioning in annotation edit fields with detailed logging
   [editAnnTitle, editAnnText, editAnnDuration, editAnnTimestamp].forEach(field => {
+    const fieldName = field.id;
+    
+    field.addEventListener('focus', function(e) {
+      console.log(`[${fieldName}] FOCUS - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
+    });
+    
     field.addEventListener('mousedown', function(e) {
+      console.log(`[${fieldName}] MOUSEDOWN - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
       // If the entire field is selected when user clicks, clear selection first
-      // so the click can position the cursor naturally
       if (this.selectionStart === 0 && this.selectionEnd === this.value.length) {
+        console.log(`[${fieldName}] - All text selected, clearing selection`);
         this.setSelectionRange(0, 0);
       }
+    });
+    
+    field.addEventListener('mouseup', function(e) {
+      console.log(`[${fieldName}] MOUSEUP - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+    
+    field.addEventListener('click', function(e) {
+      console.log(`[${fieldName}] CLICK - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+    
+    field.addEventListener('select', function(e) {
+      console.log(`[${fieldName}] SELECT event - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
     });
   });
   
@@ -2701,10 +2737,18 @@
     editingAnnotationIndex = index;
     const ann = currentTutorial.annotations[index];
     
+    console.log('🔧 Opening annotation editor for index:', index);
+    console.log('  Annotation title:', ann.title);
+    console.log('  Annotation text:', ann.text);
+    
     editAnnTitle.value = ann.title;
     editAnnText.value = ann.text;
     editAnnDuration.value = ann.duration / 1000;
     editAnnTimestamp.value = (ann.timestamp / 1000).toFixed(1);
+    
+    console.log('  After setting values:');
+    console.log('    editAnnTitle selection:', editAnnTitle.selectionStart, '-', editAnnTitle.selectionEnd);
+    console.log('    editAnnText selection:', editAnnText.selectionStart, '-', editAnnText.selectionEnd);
     
     // Fast-forward to the annotation's timestamp so user can see context
     const api = getAPI();
@@ -2736,7 +2780,13 @@
     editAnnDuration.blur();
     editAnnTimestamp.blur();
     
+    console.log('  After blur:');
+    console.log('    editAnnTitle selection:', editAnnTitle.selectionStart, '-', editAnnTitle.selectionEnd);
+    console.log('    editAnnText selection:', editAnnText.selectionStart, '-', editAnnText.selectionEnd);
+    
     annotationEditModal.classList.add('visible');
+    
+    console.log('  Modal now visible');
   }
   
   saveEditAnnotation.addEventListener('click', () => {
@@ -2986,7 +3036,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.27 initialized');
+  console.log('Tutorial Creator v11.28 initialized');
 })();
 </script>
 </body>
