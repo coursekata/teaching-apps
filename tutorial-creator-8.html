@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.32</title>
+<title>Interactive Tutorial Creator - v11.33</title>
 <script>
   window.MathJax = {
     tex: {
@@ -609,7 +609,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.32</div>
+    <div class="version-number">v11.33</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1965,7 +1965,23 @@
       currentAnnotationIndex = -1;
     }
     
-    // Check if finished AFTER applying all state/annotations
+    // Check for pauses
+    if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+      for (let i = 0; i < currentTutorial.pauses.length; i++) {
+        const pause = currentTutorial.pauses[i];
+        // Check if we just passed this pause (within 100ms)
+        if (elapsedMs >= pause.timestamp && elapsedMs < pause.timestamp + 100) {
+          console.log('⏸ Pause reached at', (pause.timestamp / 1000).toFixed(2) + 's - pausing playback');
+          // Pause playback (this preserves playbackPausedAt)
+          pausePlayback();
+          // Update button text to show "Continue"
+          playPausePreview.textContent = '▶ Continue';
+          return;
+        }
+      }
+    }
+    
+    // Check if finished AFTER applying all state/annotations/pauses
     // This ensures the last snapshot gets applied before stopping
     if (elapsedMs >= currentTutorial.duration) {
       console.log(`⏹ Stopping playback: elapsed=${(elapsedMs / 1000).toFixed(3)}s duration=${(currentTutorial.duration / 1000).toFixed(3)}s`);
@@ -3072,7 +3088,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.32 initialized');
+  console.log('Tutorial Creator v11.33 initialized');
 })();
 </script>
 </body>
