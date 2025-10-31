@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v11.34</title>
+<title>Interactive Tutorial Creator - v11.35</title>
 <script>
   window.MathJax = {
     tex: {
@@ -563,7 +563,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v11.34</div>
+    <div class="version-number">v11.35</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1858,6 +1858,12 @@
         }
       });
       
+      // Mousedown to drag event
+      eventEl.addEventListener('mousedown', (e) => {
+        if (e.shiftKey) return; // Don't start drag if shift is held
+        startEventDrag(e, group.startIdx, group.endIdx);
+      });
+      
       eventsTrack.appendChild(eventEl);
     });
     
@@ -2040,8 +2046,107 @@
   
   // ========== DRAGGING ==========
   
+  let draggingEvent = null;
   let draggingAnnotation = null;
   let draggingPause = null;
+  
+  function startEventDrag(e, startIdx, endIdx) {
+    // endIdx is null for single events, or the end snapshot index for drag events
+    const isDragEvent = endIdx !== null;
+    
+    console.log('🖱️ startEventDrag called:', { startIdx, endIdx, isDragEvent });
+    
+    // Bounds check
+    if (!currentTutorial || !currentTutorial.snapshots[startIdx]) {
+      console.error('❌ Invalid startIdx:', startIdx);
+      return;
+    }
+    if (isDragEvent && !currentTutorial.snapshots[endIdx]) {
+      console.error('❌ Invalid endIdx:', endIdx);
+      return;
+    }
+    
+    // Store original timestamps for all snapshots in the drag sequence
+    const originalTimestamps = {};
+    if (isDragEvent) {
+      for (let i = startIdx; i <= endIdx; i++) {
+        originalTimestamps[i] = currentTutorial.snapshots[i].timestamp;
+      }
+    }
+    
+    draggingEvent = {
+      startIdx: startIdx,
+      endIdx: endIdx,
+      isDragEvent: isDragEvent,
+      startX: e.clientX,
+      originalTimestamp: currentTutorial.snapshots[startIdx].timestamp,
+      originalEndTimestamp: isDragEvent ? currentTutorial.snapshots[endIdx].timestamp : null,
+      originalTimestamps: originalTimestamps, // Store all original timestamps
+      hasMoved: false
+    };
+    
+    document.addEventListener('mousemove', doEventDrag);
+    document.addEventListener('mouseup', stopEventDrag);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  function doEventDrag(e) {
+    if (!draggingEvent) return;
+    
+    draggingEvent.hasMoved = true;
+    
+    const dx = e.clientX - draggingEvent.startX;
+    const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
+    
+    const newTimestamp = Math.max(0, draggingEvent.originalTimestamp + dt);
+    
+    console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
+    
+    if (draggingEvent.isDragEvent) {
+      // For drag events, update ALL snapshots between start and end proportionally
+      const originalDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
+      
+      for (let i = draggingEvent.startIdx; i <= draggingEvent.endIdx; i++) {
+        // Use stored original timestamp, not current value
+        const originalTimestamp = draggingEvent.originalTimestamps[i];
+        const relativePosition = (originalTimestamp - draggingEvent.originalTimestamp) / originalDuration;
+        // Apply the same relative position at the new time
+        currentTutorial.snapshots[i].timestamp = newTimestamp + (relativePosition * originalDuration);
+      }
+    } else {
+      // For single events, just update the one snapshot
+      currentTutorial.snapshots[draggingEvent.startIdx].timestamp = newTimestamp;
+    }
+    
+    // Re-render to show the updated position
+    renderTimeline();
+  }
+  
+  function stopEventDrag() {
+    if (!draggingEvent) return;
+    
+    // Only do sorting and cleanup if user actually dragged
+    if (!draggingEvent.hasMoved) {
+      draggingEvent = null;
+      document.removeEventListener('mousemove', doEventDrag);
+      document.removeEventListener('mouseup', stopEventDrag);
+      return;
+    }
+    
+    // Sort snapshots by timestamp to maintain proper order
+    currentTutorial.snapshots.sort((a, b) => a.timestamp - b.timestamp);
+    
+    draggingEvent = null;
+    document.removeEventListener('mousemove', doEventDrag);
+    document.removeEventListener('mouseup', stopEventDrag);
+    
+    // Recalculate tutorial duration after moving
+    recalculateTutorialDuration();
+    renderTimeline();
+    
+    console.log('✓ Event moved and snapshots re-sorted');
+  }
   
   function doAnnotationDrag(e) {
     if (!draggingAnnotation) return;
@@ -2489,7 +2594,7 @@
     }
   });
   
-  console.log('Tutorial Creator v11.34 initialized');
+  console.log('Tutorial Creator v11.35 initialized');
 })();
 </script>
 </body>
