@@ -1113,7 +1113,10 @@
     playPauseRecording.textContent = '⏸ Pause';
     playPauseRecording.className = 'warning'; // Yellow for pause
     addAnnotation.style.display = 'inline-block';
+    addAnnotation.disabled = true; // Disabled during active recording
+    addAnnotationAtPause.style.display = 'none';
     addPause.style.display = 'inline-block';
+    addPause.disabled = true; // Disabled during active recording
     previewRecording.style.display = 'inline-block';
     previewRecording.disabled = true; // Disabled until paused
     recordingIndicator.style.display = 'inline-block';
@@ -1159,6 +1162,7 @@
       pausedIndicator.style.display = 'none';
       recordingIndicator.style.display = 'inline-block';
       addAnnotation.disabled = true;
+      addAnnotationAtPause.style.display = 'none';
       addPause.disabled = true;
       previewRecording.disabled = true; // Disable when resuming
       recordAgain.disabled = true; // Disable Start Over when actively recording
@@ -1787,6 +1791,8 @@
     previewRecording.textContent = '⏸';
     previewRecording.title = 'Pause';
     replayPreview.style.display = 'inline-block';
+    addAnnotation.style.display = 'none';
+    addPause.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none';
@@ -1846,6 +1852,10 @@
     previewRecording.textContent = '▶';
     previewRecording.title = 'Play';
     playPausePreview.textContent = '▶ Resume Preview';
+    addAnnotation.style.display = 'inline-block';
+    addAnnotation.disabled = false;
+    addPause.style.display = 'inline-block';
+    addPause.disabled = false;
     addAnnotationAtPause.style.display = 'inline-block';
     recordAgain.style.display = 'inline-block';
     exportRecording.style.display = 'none'; // Hide export during preview pause
@@ -1862,6 +1872,8 @@
     previewRecording.textContent = '⏸';
     previewRecording.title = 'Pause';
     playPausePreview.textContent = '⏸ Pause Preview';
+    addAnnotation.style.display = 'none';
+    addPause.style.display = 'none';
     addAnnotationAtPause.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none'; // Keep export hidden during playback
@@ -2088,6 +2100,15 @@
         const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
         api.setState(lastSnapshot.state);
       }
+      
+      // Restore paused recording button states
+      addAnnotation.style.display = 'inline-block';
+      addAnnotation.disabled = false;
+      addPause.style.display = 'inline-block';
+      addPause.disabled = false;
+      addAnnotationAtPause.style.display = 'none';
+      exportRecording.style.display = 'inline-block';
+      recordAgain.style.display = 'inline-block';
       
       // Update pauseStartTime so preview time doesn't count as pause time
       pauseStartTime = Date.now();
@@ -3059,6 +3080,7 @@
           pausedIndicator.style.display = 'inline-block';
           addAnnotation.style.display = 'inline-block';
           addAnnotation.disabled = false;
+          addAnnotationAtPause.style.display = 'none';
           addPause.style.display = 'inline-block';
           addPause.disabled = false;
           previewRecording.style.display = 'inline-block';
