@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.8</title>
+<title>Interactive Tutorial Creator - v12.9</title>
 <script>
   window.MathJax = {
     tex: {
@@ -616,14 +616,14 @@
         <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
         <button id="previewRecording" class="primary" style="display:none;" disabled title="Play tutorial">▶ Play</button>
         <button id="playPausePreview" style="display:none;"></button><!-- Hidden, kept for compatibility -->
-        <button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">🔄</button>
-        <button id="exportRecording" class="success" style="display:none;" disabled title="Export tutorial JSON">💾</button>
+        <button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">New Tutorial</button>
+        <button id="exportRecording" class="success" style="display:none;" disabled title="Export tutorial JSON">Export</button>
       </div>
       
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.8</div>
+    <div class="version-number">v12.9</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3313,7 +3313,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.8 initialized');
+  console.log('Tutorial Creator v12.9 initialized');
 })();
 </script>
 </body>
