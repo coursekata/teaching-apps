@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.13</title>
+<title>Interactive Tutorial Creator - v12.14</title>
 <script>
   window.MathJax = {
     tex: {
@@ -608,7 +608,7 @@
         </label>
         <button id="loadApp" class="primary">Load App</button>
         <button id="startRecording" class="record" style="display:none;" title="Start recording interactions">⏺ Record</button>
-        <button id="loadJSON" class="primary" style="display:none;" title="Import existing tutorial JSON">📂</button>
+        <button id="loadJSON" class="success" style="display:none;" title="Import existing tutorial JSON">Import</button>
         <button id="playPauseRecording" class="warning" style="display:none;" title="Pause recording">⏸</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.13</div>
+    <div class="version-number">v12.14</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1144,7 +1144,7 @@
       // Update UI - button now shows Pause and blinks
       startRecording.textContent = '⏸ Pause';
       startRecording.classList.add('recording-active');
-      startRecording.className = 'warning recording-active'; // Yellow for pause
+      startRecording.className = 'record recording-active'; // Keep red, add animation
       loadJSON.style.display = 'none'; // Hide Import Tutorial during recording
       playPauseRecording.style.display = 'none'; // Not used anymore
       addAnnotation.style.display = 'inline-block';
@@ -1218,7 +1218,7 @@
       
       startRecording.textContent = '⏸ Pause';
       startRecording.classList.add('recording-active');
-      startRecording.className = 'warning recording-active'; // Yellow for pause
+      startRecording.className = 'record recording-active'; // Keep red, add animation
       addAnnotation.disabled = true;
       addAnnotationAtPause.style.display = 'none';
       addPause.disabled = true;
@@ -1255,7 +1255,7 @@
       
       startRecording.textContent = '⏺ Record';
       startRecording.classList.remove('recording-active');
-      startRecording.className = 'success'; // Green for resume
+      startRecording.className = 'record'; // Keep red
       addAnnotation.disabled = false;
       addPause.disabled = false;
       previewRecording.disabled = false; // Enable when paused
@@ -3327,7 +3327,7 @@
           startRecording.style.display = 'inline-block';
           startRecording.textContent = '⏺ Record';
           startRecording.classList.remove('recording-active');
-          startRecording.className = 'success';
+          startRecording.className = 'record';
           loadJSON.style.display = 'none';
           playPauseRecording.style.display = 'none';
           recordingIndicator.style.display = 'none';
@@ -3394,7 +3394,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.13 initialized');
+  console.log('Tutorial Creator v12.14 initialized');
 })();
 </script>
 </body>
