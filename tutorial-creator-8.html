@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.4</title>
+<title>Interactive Tutorial Creator - v12.5</title>
 <script>
   window.MathJax = {
     tex: {
@@ -24,6 +24,7 @@
     --record:#ef4444;
     --success:#10b981;
     --warning:#f59e0b;
+    --teal:#06b6d4;
   }
   body{
     margin:0;
@@ -98,6 +99,12 @@
     background:var(--warning);
     color:#fff;
     border-color:var(--warning);
+  }
+  
+  button.teal{
+    background:var(--teal);
+    color:#fff;
+    border-color:var(--teal);
   }
   
   button.record.recording{
@@ -601,8 +608,8 @@
         <button id="playPauseRecording" class="warning" style="display:none;" title="Pause recording">⏸</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
-        <button id="addAnnotation" class="primary" style="display:none;" disabled title="Add text annotation">📝</button>
-        <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">⏸⏱</button>
+        <button id="addAnnotation" class="teal" style="display:none;" disabled title="Add text annotation">+Text</button>
+        <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
         <button id="previewRecording" class="primary" style="display:none;" disabled title="Play/pause tutorial">▶</button>
         <button id="replayPreview" class="primary" style="display:none;" title="Replay from beginning">🔄</button>
         <button id="playPausePreview" style="display:none;"></button><!-- Hidden, kept for compatibility -->
@@ -614,7 +621,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.4</div>
+    <div class="version-number">v12.5</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3278,7 +3285,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.4 initialized');
+  console.log('Tutorial Creator v12.5 initialized');
 })();
 </script>
 </body>
