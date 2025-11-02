@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.21</title>
+<title>Interactive Tutorial Creator - v12.22</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.21</div>
+    <div class="version-number">v12.22</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2934,106 +2934,108 @@
           // Calculate how much we're trying to push into the previous event
           const overlap = getEffectiveTime(prevEvent, false) + MIN_SEPARATION - newTimestamp;
           
-          // Check if pushing the previous event would cause it to go below MIN_SEPARATION
-          const prevEventEffectiveStart = getEffectiveTime(prevEvent, true);
-          const maxAllowedPush = prevEventEffectiveStart - MIN_SEPARATION;
+          // Build the complete chain of events that need to be pushed
+          const pushChain = [];
           
-          if (overlap > maxAllowedPush && maxAllowedPush >= 0) {
-            // Can't push the full amount - would go negative
-            // Limit the push to what's possible
-            const limitedOverlap = maxAllowedPush;
+          // Helper function to build push chain recursively
+          const buildPushChain = (pushedEvent, requiredPushAmount) => {
+            pushChain.push({ event: pushedEvent, requestedPush: requiredPushAmount });
             
-            // Constrain our position based on the limited push
-            finalTimestamp = prevEventEffectiveStart - limitedOverlap + MIN_SEPARATION;
+            const pushedEventNewStart = pushedEvent.startTime - requiredPushAmount;
             
-            if (limitedOverlap > 0) {
-              // Push the previous event by the limited amount only
-              eventsPushed.push({
-                event: prevEvent,
-                pushAmount: -limitedOverlap
-              });
-              accumulatedPushes.set(prevEvent.startIdx, -limitedOverlap);
+            // Find the preceding event
+            const precedingEvents = otherEvents.filter(evt => 
+              evt.startIdx !== pushedEvent.startIdx && 
+              evt.endTime < pushedEvent.startTime
+            );
+            precedingEvents.sort((a, b) => b.endTime - a.endTime);
+            
+            if (precedingEvents.length > 0) {
+              const precedingEvent = precedingEvents[0];
+              
+              // Check if pushed event would collide with preceding event
+              if (pushedEventNewStart < precedingEvent.endTime + MIN_SEPARATION) {
+                const cascadeOverlap = precedingEvent.endTime + MIN_SEPARATION - pushedEventNewStart;
+                buildPushChain(precedingEvent, cascadeOverlap);
+              }
+            }
+          };
+          
+          // Build the chain starting from prevEvent
+          buildPushChain(prevEvent, overlap);
+          
+          // Check if any event in the chain would go below MIN_SEPARATION
+          let hitWall = false;
+          let wallPosition = MIN_SEPARATION;
+          
+          for (const item of pushChain) {
+            const evt = item.event;
+            const newStartTime = evt.startTime - item.requestedPush;
+            
+            if (newStartTime < MIN_SEPARATION) {
+              hitWall = true;
+              // The wall is at this event's current start position
+              wallPosition = evt.startTime;
+              console.log('🧱 Hit wall at event idx', evt.startIdx, 'at position', wallPosition.toFixed(2), 'ms');
+              break;
+            }
+          }
+          
+          if (hitWall) {
+            // We hit a wall - recalculate positions working forward from the wall
+            // Each event must maintain MIN_SEPARATION from the previous
+            console.log('🔄 Recalculating push chain to maintain spacing from wall at', wallPosition.toFixed(2), 'ms');
+            
+            // Clear the accumulated pushes and eventsPushed
+            eventsPushed.length = 0;
+            accumulatedPushes.clear();
+            
+            // Work forward through the chain, placing each event with proper spacing
+            let currentPosition = wallPosition;
+            
+            // Reverse the chain to process from wall forward
+            const reversedChain = [...pushChain].reverse();
+            
+            for (let i = 0; i < reversedChain.length; i++) {
+              const item = reversedChain[i];
+              const evt = item.event;
+              
+              // This event needs to be at currentPosition
+              const pushAmount = currentPosition - evt.startTime;
+              
+              if (Math.abs(pushAmount) > 0.001) { // Only add if there's actual movement
+                eventsPushed.push({
+                  event: evt,
+                  pushAmount: pushAmount
+                });
+                accumulatedPushes.set(evt.startIdx, pushAmount);
+              }
+              
+              // Next event must start after this one ends, plus MIN_SEPARATION
+              const eventDuration = evt.endTime - evt.startTime;
+              currentPosition = currentPosition + eventDuration + MIN_SEPARATION;
             }
             
-            console.log('⏪ Collision detected, but limited push to', -limitedOverlap, 'ms to avoid negative time');
+            // The dragged event must be positioned after the last pushed event
+            finalTimestamp = currentPosition;
+            
+            console.log('✓ Repositioned', reversedChain.length, 'events with proper spacing');
+            console.log('  Dragged event will be at', finalTimestamp.toFixed(2), 'ms');
           } else {
-            // Normal case - can push the full overlap amount
-            // Constrain our position to maintain MIN_SEPARATION from previous event
+            // Normal case - no wall hit, can push everything as planned
             finalTimestamp = getEffectiveTime(prevEvent, false) + MIN_SEPARATION;
             
-            // Push the previous event backward
-            eventsPushed.push({
-              event: prevEvent,
-              pushAmount: -overlap
-            });
-            accumulatedPushes.set(prevEvent.startIdx, -overlap);
+            // Apply all pushes from the chain
+            for (const item of pushChain.reverse()) {
+              const evt = item.event;
+              eventsPushed.push({
+                event: evt,
+                pushAmount: -item.requestedPush
+              });
+              accumulatedPushes.set(evt.startIdx, -item.requestedPush);
+            }
             
-            // Check for cascading collisions - if pushing prevEvent would cause it to hit another event
-            const cascadeCheck = (pushedEvent, pushAmt) => {
-              const pushedEventNewStart = getEffectiveTime(pushedEvent, true);
-              
-              // Check if this push would cause the event to go below MIN_SEPARATION
-              // If so, stop the cascade here
-              if (pushedEventNewStart < MIN_SEPARATION) {
-                console.log('⏪ Cascade stopped: would push event below MIN_SEPARATION');
-                return;
-              }
-              
-              // Find the previous event before the one being pushed
-              const precedingEvents = otherEvents.filter(evt => 
-                evt.startIdx !== pushedEvent.startIdx && // Not the same event
-                evt.endTime < pushedEvent.startTime // Before the pushed event (in original position)
-              );
-              precedingEvents.sort((a, b) => b.endTime - a.endTime);
-              
-              if (precedingEvents.length > 0) {
-                const precedingEvent = precedingEvents[0];
-                
-                // Check if the pushed event would now collide with the preceding event (using effective positions)
-                if (pushedEventNewStart < getEffectiveTime(precedingEvent, false) + MIN_SEPARATION) {
-                  const cascadeOverlap = getEffectiveTime(precedingEvent, false) + MIN_SEPARATION - pushedEventNewStart;
-                  
-                  // Check if pushing the preceding event would cause it to go below MIN_SEPARATION
-                  const precedingEventEffectiveStart = getEffectiveTime(precedingEvent, true);
-                  const maxAllowedCascadePush = precedingEventEffectiveStart - MIN_SEPARATION;
-                  
-                  if (cascadeOverlap > maxAllowedCascadePush && maxAllowedCascadePush >= 0) {
-                    // Can't push the full cascade amount
-                    const limitedCascadeOverlap = maxAllowedCascadePush;
-                    
-                    if (limitedCascadeOverlap > 0) {
-                      eventsPushed.push({
-                        event: precedingEvent,
-                        pushAmount: -limitedCascadeOverlap
-                      });
-                      const currentPush = accumulatedPushes.get(precedingEvent.startIdx) || 0;
-                      accumulatedPushes.set(precedingEvent.startIdx, currentPush - limitedCascadeOverlap);
-                      
-                      console.log('⏪⏪ Limited cascade push: event at idx', precedingEvent.startIdx, 'by', -limitedCascadeOverlap, 'ms to avoid negative time');
-                    }
-                    // Stop cascading here
-                    return;
-                  }
-                  
-                  // Add this event to the push list and track accumulated push
-                  eventsPushed.push({
-                    event: precedingEvent,
-                    pushAmount: -cascadeOverlap
-                  });
-                  const currentPush = accumulatedPushes.get(precedingEvent.startIdx) || 0;
-                  accumulatedPushes.set(precedingEvent.startIdx, currentPush - cascadeOverlap);
-                  
-                  console.log('⏪⏪ Cascade push: event at idx', precedingEvent.startIdx, 'needs push by', -cascadeOverlap, 'ms (total:', (currentPush - cascadeOverlap), 'ms)');
-                  
-                  // Recursively check if this causes another collision
-                  cascadeCheck(precedingEvent, -cascadeOverlap);
-                }
-              }
-            };
-            
-            cascadeCheck(prevEvent, -overlap);
-            
-            console.log('⏪ Collision detected, pushing previous event by', -overlap, 'ms');
+            console.log('⏪ Collision detected, pushing', pushChain.length, 'event(s)');
           }
         }
       }
@@ -3685,7 +3687,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.21 initialized');
+  console.log('Tutorial Creator v12.22 initialized');
 })();
 </script>
 </body>
