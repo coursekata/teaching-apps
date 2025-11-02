@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.27</title>
+<title>Interactive Tutorial Creator - v12.28</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.27</div>
+    <div class="version-number">v12.28</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2529,16 +2529,27 @@
         const dragEndAction = dragType + 'End';
         
         let endIdx = i;
-        // Look for the dragEnd event
+        // Look for the dragEnd event - only count drag-related snapshots
+        let dragSnapshotCount = 1; // Count the dragStart
         for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
-          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
+          const jAction = currentTutorial.snapshots[j].event.action;
+          
+          // Check if this snapshot is part of the drag sequence (drag-related action)
+          const isDragRelated = jAction.includes('drag') || jAction.includes('Drag');
+          
+          if (jAction === dragEndAction) {
             endIdx = j;
+            dragSnapshotCount++;
             break;
+          } else if (isDragRelated) {
+            dragSnapshotCount++;
           }
+          // If it's not drag-related, we DON'T increment dragSnapshotCount
+          // This means non-drag events inserted between dragStart and dragEnd won't be grouped
         }
         
         // Create a span from dragStart to dragEnd
-        const startTime = (snapshot.timestamp - timelineStartOffset) / 1000;
+        const startTime = (currentTutorial.snapshots[i].timestamp - timelineStartOffset) / 1000;
         const trueEndTime = (currentTutorial.snapshots[endIdx].timestamp - timelineStartOffset) / 1000;
         const trueDuration = trueEndTime - startTime;
         
@@ -2547,7 +2558,7 @@
         const visualEndTime = trueEndTime - visualEndAdjustment;
         const visualDuration = visualEndTime - startTime;
         
-        console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', visualEndTime.toFixed(2) + 's (visual)', `(${endIdx - i + 1} events)`);
+        console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', visualEndTime.toFixed(2) + 's (visual)', `(${dragSnapshotCount} drag events)`);
         
         const span = document.createElement('div');
         span.className = 'timeline-event drag-event';
@@ -2578,6 +2589,47 @@
         });
         
         eventsTrack.appendChild(span);
+        
+        // Check for any non-drag events that fell between dragStart and dragEnd
+        // These need to be rendered as separate single events
+        for (let j = i + 1; j < endIdx; j++) {
+          const jSnapshot = currentTutorial.snapshots[j];
+          const jAction = jSnapshot.event.action;
+          const isDragRelated = jAction.includes('drag') || jAction.includes('Drag');
+          
+          if (!isDragRelated) {
+            // This is a non-drag event that fell within the drag's timestamp range
+            // Render it as a single event marker
+            const eventTime = (jSnapshot.timestamp - timelineStartOffset) / 1000;
+            const eventLeft = eventTime * timelineScale;
+            console.log(`  📍 Single event (within drag range): ${jAction} at ${eventTime.toFixed(3)}s, left=${eventLeft.toFixed(1)}px`);
+            
+            const marker = document.createElement('div');
+            marker.className = 'timeline-event';
+            marker.style.left = eventLeft + 'px';
+            marker.title = jAction + ' at ' + eventTime.toFixed(2) + 's - Double-click to delete';
+            marker.dataset.snapshotIdx = j;
+            
+            // Double-click to delete
+            marker.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+              console.log('🖱️ Double-clicked single event for deletion:', { snapshotIdx, action: jAction });
+              
+              eventToDelete = { startIdx: snapshotIdx, endIdx: null };
+              eventDeletionText.textContent = `Delete "${jAction}" event at ${eventTime.toFixed(2)}s?`;
+              eventDeletionModal.classList.add('visible');
+            });
+            
+            // Make event draggable - use dataset value to avoid closure issues
+            marker.addEventListener('mousedown', (e) => {
+              const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+              startEventDrag(e, snapshotIdx, null);
+            });
+            
+            eventsTrack.appendChild(marker);
+          }
+        }
         
         i = endIdx + 1; // Skip to after dragEnd
       } else if (action.includes('drag') || action.includes('Drag')) {
@@ -3743,7 +3795,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.27 initialized');
+  console.log('Tutorial Creator v12.28 initialized');
 })();
 </script>
 </body>
