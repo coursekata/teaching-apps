@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.22</title>
+<title>Interactive Tutorial Creator - v12.24</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.22</div>
+    <div class="version-number">v12.24</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2965,45 +2965,50 @@
           buildPushChain(prevEvent, overlap);
           
           // Check if any event in the chain would go below MIN_SEPARATION
+          // Find the leftmost event that would hit the wall
           let hitWall = false;
-          let wallPosition = MIN_SEPARATION;
+          let wallEvent = null;
           
-          for (const item of pushChain) {
+          for (let i = pushChain.length - 1; i >= 0; i--) {
+            const item = pushChain[i];
             const evt = item.event;
             const newStartTime = evt.startTime - item.requestedPush;
             
             if (newStartTime < MIN_SEPARATION) {
               hitWall = true;
-              // The wall is at this event's current start position
-              wallPosition = evt.startTime;
-              console.log('🧱 Hit wall at event idx', evt.startIdx, 'at position', wallPosition.toFixed(2), 'ms');
+              wallEvent = evt;
+              console.log('🧱 Hit wall at event idx', evt.startIdx, 'which cannot be pushed below', MIN_SEPARATION, 'ms');
               break;
             }
           }
           
           if (hitWall) {
-            // We hit a wall - recalculate positions working forward from the wall
-            // Each event must maintain MIN_SEPARATION from the previous
-            console.log('🔄 Recalculating push chain to maintain spacing from wall at', wallPosition.toFixed(2), 'ms');
+            // We hit a wall - need to recalculate positions
+            // The wall event stays at its current position
+            // All other events must be positioned to the right of it with proper spacing
+            console.log('🔄 Recalculating push chain from immovable wall event');
             
             // Clear the accumulated pushes and eventsPushed
             eventsPushed.length = 0;
             accumulatedPushes.clear();
             
-            // Work forward through the chain, placing each event with proper spacing
-            let currentPosition = wallPosition;
+            // Start positioning from the wall event (which doesn't move)
+            // Wall event stays at its current position
+            // Next event must start after the wall's TRUE end (not visual end)
+            let currentPosition = wallEvent.startTime + wallEvent.duration + MIN_SEPARATION;
             
-            // Reverse the chain to process from wall forward
-            const reversedChain = [...pushChain].reverse();
+            // Find wall event in the chain and process events after it (toward the right)
+            const wallIndex = pushChain.findIndex(item => item.event.startIdx === wallEvent.startIdx);
             
-            for (let i = 0; i < reversedChain.length; i++) {
-              const item = reversedChain[i];
+            // Process events from wall toward the dragged event
+            for (let i = wallIndex - 1; i >= 0; i--) {
+              const item = pushChain[i];
               const evt = item.event;
               
-              // This event needs to be at currentPosition
+              // This event should start at currentPosition
               const pushAmount = currentPosition - evt.startTime;
               
-              if (Math.abs(pushAmount) > 0.001) { // Only add if there's actual movement
+              if (Math.abs(pushAmount) > 0.001) {
                 eventsPushed.push({
                   event: evt,
                   pushAmount: pushAmount
@@ -3011,15 +3016,16 @@
                 accumulatedPushes.set(evt.startIdx, pushAmount);
               }
               
-              // Next event must start after this one ends, plus MIN_SEPARATION
-              const eventDuration = evt.endTime - evt.startTime;
-              currentPosition = currentPosition + eventDuration + MIN_SEPARATION;
+              // Next event (to the right) must start after this one ends
+              // Use the stored duration, not endTime - startTime (endTime has visual adjustments)
+              currentPosition = currentPosition + evt.duration + MIN_SEPARATION;
             }
             
-            // The dragged event must be positioned after the last pushed event
+            // The dragged event must be positioned after the last event
             finalTimestamp = currentPosition;
             
-            console.log('✓ Repositioned', reversedChain.length, 'events with proper spacing');
+            console.log('✓ Repositioned', (wallIndex), 'events from wall');
+            console.log('  Wall event at idx', wallEvent.startIdx, 'stays at', wallEvent.startTime.toFixed(2), 'ms');
             console.log('  Dragged event will be at', finalTimestamp.toFixed(2), 'ms');
           } else {
             // Normal case - no wall hit, can push everything as planned
@@ -3687,7 +3693,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.22 initialized');
+  console.log('Tutorial Creator v12.24 initialized');
 })();
 </script>
 </body>
