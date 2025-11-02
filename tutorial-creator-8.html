@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.12</title>
+<title>Interactive Tutorial Creator - v12.13</title>
 <script>
   window.MathJax = {
     tex: {
@@ -68,7 +68,7 @@
     font-size:13px;
   }
   
-  button:hover:not(:disabled):not(.primary):not(.record):not(.success):not(.warning){
+  button:hover:not(:disabled):not(.primary):not(.record):not(.success):not(.warning):not(.teal){
     background:#f9f9f9;
   }
   
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.12</div>
+    <div class="version-number">v12.13</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1231,7 +1231,7 @@
         isPlaying = false;
         isPreviewingFromPaused = false;
         appFrame.classList.remove('playback-mode');
-        previewRecording.textContent = '▶';
+        previewRecording.textContent = '▶ Play';
         previewRecording.title = 'Play';
         
         // Apply current state from last snapshot
@@ -1259,7 +1259,7 @@
       addAnnotation.disabled = false;
       addPause.disabled = false;
       previewRecording.disabled = false; // Enable when paused
-      previewRecording.textContent = '▶';
+      previewRecording.textContent = '▶ Play';
       previewRecording.title = 'Play';
       recordAgain.disabled = false; // Enable Start Over when paused
       exportRecording.disabled = false; // Enable Export when paused
@@ -1346,7 +1346,7 @@
         isPlaying = false;
         isPreviewingFromPaused = false;
         appFrame.classList.remove('playback-mode');
-        previewRecording.textContent = '👁 Preview';
+        previewRecording.textContent = '▶ Play';
         
         // Apply current state from last snapshot
         const api = getAPI();
@@ -1386,7 +1386,7 @@
       addAnnotation.disabled = false;
       addPause.disabled = false;
       previewRecording.disabled = false; // Enable when paused
-      previewRecording.textContent = '👁 Preview'; // Reset button text
+      previewRecording.textContent = '▶ Play'; // Reset button text
       recordAgain.disabled = false; // Enable Start Over when paused
       exportRecording.disabled = false; // Enable Export when paused
       
@@ -1409,7 +1409,7 @@
       isPlaying = false;
       isPreviewingFromPaused = false;
       appFrame.classList.remove('playback-mode');
-      previewRecording.textContent = '👁 Preview';
+      previewRecording.textContent = '▶ Play';
     }
     
     const api = getAPI();
@@ -3394,7 +3394,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.12 initialized');
+  console.log('Tutorial Creator v12.13 initialized');
 })();
 </script>
 </body>
