@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.5</title>
+<title>Interactive Tutorial Creator - v12.6</title>
 <script>
   window.MathJax = {
     tex: {
@@ -621,7 +621,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.5</div>
+    <div class="version-number">v12.6</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1163,6 +1163,10 @@
       console.log('🔴 Recording started');
     } else if (isPaused) {
       // Resume recording
+      
+      // Ensure iframe is interactive (remove playback mode if it was left on)
+      appFrame.classList.remove('playback-mode');
+      
       // Move playhead to end of tutorial before resuming
       if (currentTutorial) {
         const timelineStartOffset = getTimelineStartOffset();
@@ -1249,6 +1253,10 @@
     
     if (isPaused) {
       // Resume recording
+      
+      // Ensure iframe is interactive (remove playback mode if it was left on)
+      appFrame.classList.remove('playback-mode');
+      
       // Move playhead to end of tutorial before resuming
       if (currentTutorial) {
         const timelineStartOffset = getTimelineStartOffset();
@@ -3285,7 +3293,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.5 initialized');
+  console.log('Tutorial Creator v12.6 initialized');
 })();
 </script>
 </body>
