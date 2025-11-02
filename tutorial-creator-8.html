@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.3</title>
+<title>Interactive Tutorial Creator - v12.4</title>
 <script>
   window.MathJax = {
     tex: {
@@ -107,6 +107,10 @@
   @keyframes pulse{
     0%,100%{opacity:1}
     50%{opacity:0.6}
+  }
+  
+  .recording-active{
+    animation:pulse 1.5s infinite;
   }
   
   .recording-indicator{
@@ -592,7 +596,7 @@
           <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
         </label>
         <button id="loadApp" class="primary">Load App</button>
-        <button id="startRecording" class="record" style="display:none;" title="Start recording interactions">⏺ Start</button>
+        <button id="startRecording" class="record" style="display:none;" title="Start recording interactions">⏺ Record</button>
         <button id="loadJSON" class="primary" style="display:none;" title="Import existing tutorial JSON">📂</button>
         <button id="playPauseRecording" class="warning" style="display:none;" title="Pause recording">⏸</button>
         <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
@@ -610,7 +614,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.3</div>
+    <div class="version-number">v12.4</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1050,103 +1054,187 @@
   // ========== RECORDING ==========
   
   startRecording.addEventListener('click', () => {
-    if (!apiReady) {
-      alert('App not ready');
-      return;
-    }
-    
-    const api = getAPI();
-    if (!api) {
-      alert('App not ready');
-      return;
-    }
-    
-    // Initialize tutorial
-    currentTutorial = {
-      version: '9.32',
-      initialState: api.getState(),
-      snapshots: [],
-      annotations: [],
-      pauses: [],
-      duration: 0,
-      createdAt: new Date().toISOString()
-    };
-    
-    isRecording = true;
-    isPaused = false;
-    recordingStartTime = Date.now();
-    totalPausedTime = 0;
-    importedDurationOffset = 0; // Reset offset for new recording
-    
-    // Start listening to events
-    eventListener = (event) => {
-      if (isPaused) return;
+    if (!isRecording) {
+      // Start recording
+      if (!apiReady) {
+        alert('App not ready');
+        return;
+      }
       
-      // For simulate actions, we need to delay capturing the state slightly
-      // because the simulation is asynchronous and the state isn't updated yet
-      if (event.action === 'simulate') {
-        setTimeout(() => {
-          if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
-          
-          // Capture timestamp NOW, when state is actually ready
-          const captureTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+      const api = getAPI();
+      if (!api) {
+        alert('App not ready');
+        return;
+      }
+      
+      // Initialize tutorial
+      currentTutorial = {
+        version: '9.32',
+        initialState: api.getState(),
+        snapshots: [],
+        annotations: [],
+        pauses: [],
+        duration: 0,
+        createdAt: new Date().toISOString()
+      };
+      
+      isRecording = true;
+      isPaused = false;
+      recordingStartTime = Date.now();
+      totalPausedTime = 0;
+      importedDurationOffset = 0; // Reset offset for new recording
+      
+      // Start listening to events
+      eventListener = (event) => {
+        if (isPaused) return;
+        
+        // For simulate actions, we need to delay capturing the state slightly
+        // because the simulation is asynchronous and the state isn't updated yet
+        if (event.action === 'simulate') {
+          setTimeout(() => {
+            if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
+            
+            // Capture timestamp NOW, when state is actually ready
+            const captureTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+            
+            const snapshot = {
+              timestamp: captureTime,
+              state: api.getState(),
+              event: event
+            };
+            
+            currentTutorial.snapshots.push(snapshot);
+            console.log('📸 Simulate snapshot captured (delayed) at', (captureTime / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
+          }, 50); // 50ms delay to allow simulation to complete
+        } else {
+          // For all other events, capture immediately
+          const relativeTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
           
           const snapshot = {
-            timestamp: captureTime,
+            timestamp: relativeTime,
             state: api.getState(),
             event: event
           };
           
           currentTutorial.snapshots.push(snapshot);
-          console.log('📸 Simulate snapshot captured (delayed) at', (captureTime / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
-        }, 50); // 50ms delay to allow simulation to complete
-      } else {
-        // For all other events, capture immediately
-        const relativeTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+          
+          // Log drag-related events for debugging
+          if (event.action.includes('drag') || event.action.includes('Drag')) {
+            console.log('📸 Drag event captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+          }
+          
+          // Log other important events
+          if (event.action === 'changeBeta' || event.action === 'changeN') {
+            console.log('📸 Key snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+          }
+        }
+      };
+      
+      api.onAction(eventListener);
+      
+      // Update UI - button now shows Pause and blinks
+      startRecording.textContent = '⏸ Pause';
+      startRecording.classList.add('recording-active');
+      startRecording.className = 'warning recording-active'; // Yellow for pause
+      loadJSON.style.display = 'none'; // Hide Import Tutorial during recording
+      playPauseRecording.style.display = 'none'; // Not used anymore
+      addAnnotation.style.display = 'inline-block';
+      addAnnotation.disabled = true; // Disabled during active recording
+      addAnnotationAtPause.style.display = 'none';
+      addPause.style.display = 'inline-block';
+      addPause.disabled = true; // Disabled during active recording
+      previewRecording.style.display = 'inline-block';
+      previewRecording.disabled = true; // Disabled until paused
+      recordingIndicator.style.display = 'none'; // Indicator not shown - button blinks instead
+      pausedIndicator.style.display = 'none'; // Indicator not shown
+      recordAgain.style.display = 'inline-block';
+      recordAgain.disabled = true; // Disabled while actively recording
+      exportRecording.style.display = 'inline-block';
+      exportRecording.disabled = true; // Disabled while actively recording
+      appUrl.disabled = true;
+      
+      console.log('🔴 Recording started');
+    } else if (isPaused) {
+      // Resume recording
+      // Move playhead to end of tutorial before resuming
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
         
-        const snapshot = {
-          timestamp: relativeTime,
-          state: api.getState(),
-          event: event
-        };
-        
-        currentTutorial.snapshots.push(snapshot);
-        
-        // Log drag-related events for debugging
-        if (event.action.includes('drag') || event.action.includes('Drag')) {
-          console.log('📸 Drag event captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+        // Apply the last snapshot's state so visual state matches the end
+        const api = getAPI();
+        if (api && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
         }
         
-        // Log other important events
-        if (event.action === 'changeBeta' || event.action === 'changeN') {
-          console.log('📸 Key snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+        // Reset time calculations so new events start at current duration
+        // This prevents gaps from preview time being added to timestamps
+        recordingStartTime = Date.now();
+        totalPausedTime = 0;
+        importedDurationOffset = currentTutorial.duration;
+      }
+      
+      isPaused = false;
+      
+      startRecording.textContent = '⏸ Pause';
+      startRecording.classList.add('recording-active');
+      startRecording.className = 'warning recording-active'; // Yellow for pause
+      addAnnotation.disabled = true;
+      addAnnotationAtPause.style.display = 'none';
+      addPause.disabled = true;
+      previewRecording.disabled = true; // Disable when resuming
+      recordAgain.disabled = true; // Disable Start Over when actively recording
+      exportRecording.disabled = true; // Disable Export when actively recording
+      
+      // If preview is playing, stop it first
+      if (isPlaying) {
+        isPlaying = false;
+        isPreviewingFromPaused = false;
+        appFrame.classList.remove('playback-mode');
+        previewRecording.textContent = '▶';
+        previewRecording.title = 'Play';
+        
+        // Apply current state from last snapshot
+        const api = getAPI();
+        if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
         }
       }
-    };
-    
-    api.onAction(eventListener);
-    
-    // Update UI
-    startRecording.style.display = 'none';
-    loadJSON.style.display = 'none'; // Hide Import Tutorial during recording
-    playPauseRecording.style.display = 'inline-block';
-    playPauseRecording.textContent = '⏸ Pause';
-    playPauseRecording.className = 'warning'; // Yellow for pause
-    addAnnotation.style.display = 'inline-block';
-    addAnnotation.disabled = true; // Disabled during active recording
-    addAnnotationAtPause.style.display = 'none';
-    addPause.style.display = 'inline-block';
-    addPause.disabled = true; // Disabled during active recording
-    previewRecording.style.display = 'inline-block';
-    previewRecording.disabled = true; // Disabled until paused
-    recordingIndicator.style.display = 'inline-block';
-    recordAgain.style.display = 'inline-block';
-    recordAgain.disabled = true; // Disabled while actively recording
-    exportRecording.style.display = 'inline-block';
-    exportRecording.disabled = true; // Disabled while actively recording
-    appUrl.disabled = true;
-    
-    console.log('🔴 Recording started');
+      
+      // Hide timeline playhead when resuming
+      timelinePlayhead.style.display = 'none';
+      
+      console.log('▶️ Recording resumed');
+    } else {
+      // Pause recording
+      pauseStartTime = Date.now();
+      isPaused = true;
+      
+      const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+      
+      startRecording.textContent = '⏺ Record';
+      startRecording.classList.remove('recording-active');
+      startRecording.className = 'success'; // Green for resume
+      addAnnotation.disabled = false;
+      addPause.disabled = false;
+      previewRecording.disabled = false; // Enable when paused
+      previewRecording.textContent = '▶';
+      previewRecording.title = 'Play';
+      recordAgain.disabled = false; // Enable Start Over when paused
+      exportRecording.disabled = false; // Enable Export when paused
+      
+      // Calculate duration so preview works
+      recalculateTutorialDuration();
+      
+      // Render timeline to show any events captured so far (including drags in progress)
+      renderTimeline();
+      
+      console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
+    }
   });
   
   playPauseRecording.addEventListener('click', () => {
@@ -2204,6 +2292,9 @@
     
     // Reset UI
     startRecording.style.display = 'inline-block';
+    startRecording.textContent = '⏺ Record';
+    startRecording.classList.remove('recording-active');
+    startRecording.className = 'record';
     playPauseRecording.style.display = 'none';
     addAnnotation.style.display = 'none';
     addPause.style.display = 'none';
@@ -3117,12 +3208,14 @@
           api.onAction(eventListener);
           
           // Show paused recording UI
-          startRecording.style.display = 'none';
+          startRecording.style.display = 'inline-block';
+          startRecording.textContent = '⏺ Record';
+          startRecording.classList.remove('recording-active');
+          startRecording.className = 'success';
           loadJSON.style.display = 'none';
-          playPauseRecording.style.display = 'inline-block';
-          playPauseRecording.textContent = '⏺ Resume';
-          playPauseRecording.className = 'success';
-          pausedIndicator.style.display = 'inline-block';
+          playPauseRecording.style.display = 'none';
+          recordingIndicator.style.display = 'none';
+          pausedIndicator.style.display = 'none';
           addAnnotation.style.display = 'inline-block';
           addAnnotation.disabled = false;
           addAnnotationAtPause.style.display = 'none';
@@ -3185,7 +3278,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.3 initialized');
+  console.log('Tutorial Creator v12.4 initialized');
 })();
 </script>
 </body>
