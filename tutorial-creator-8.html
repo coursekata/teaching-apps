@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.17</title>
+<title>Interactive Tutorial Creator - v12.18</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.17</div>
+    <div class="version-number">v12.18</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2759,13 +2759,18 @@
     
     console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
-    // Minimum separation between events (in ms) - small visual gap (~3px at 50px/s scale = 60ms)
-    const MIN_SEPARATION = 60;
+    // Minimum separation between events - constant 2px visual space regardless of scale
+    // Convert 2 pixels to time based on current timelineScale
+    const MIN_SEPARATION = (2 / timelineScale) * 1000; // 2px in milliseconds
+    console.log('  MIN_SEPARATION =', MIN_SEPARATION.toFixed(1), 'ms (2px at scale', timelineScale, 'px/s)');
     
     // Calculate the duration of the event being dragged
     let draggedEventDuration = 0;
     if (draggingEvent.isDragEvent) {
       draggedEventDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
+    } else {
+      // Single events have visual width (8px marker)
+      draggedEventDuration = (8 / timelineScale) * 1000;
     }
     const draggedEventEnd = newTimestamp + draggedEventDuration;
     
@@ -2820,13 +2825,14 @@
         
         i = endIdx + 1;
       } else if (!action.includes('drag') && !action.includes('Drag')) {
-        // Single event (not a drag)
+        // Single event (not a drag) - give it visual width for collision (8px marker)
+        const visualWidth = (8 / timelineScale) * 1000; // 8px marker width in ms
         otherEvents.push({
           startIdx: i,
           endIdx: i,
           startTime: snapshot.timestamp,
-          endTime: snapshot.timestamp,
-          duration: 0,
+          endTime: snapshot.timestamp + visualWidth,
+          duration: visualWidth,
           isDrag: false
         });
         i++;
@@ -3610,7 +3616,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.17 initialized');
+  console.log('Tutorial Creator v12.18 initialized');
 })();
 </script>
 </body>
