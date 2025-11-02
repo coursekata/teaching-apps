@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.7</title>
+<title>Interactive Tutorial Creator - v12.8</title>
 <script>
   window.MathJax = {
     tex: {
@@ -108,6 +108,10 @@
   }
   
   button.record.recording{
+    animation:pulse 1.5s infinite;
+  }
+  
+  button.primary.playing{
     animation:pulse 1.5s infinite;
   }
   
@@ -610,10 +614,8 @@
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="addAnnotation" class="teal" style="display:none;" disabled title="Add text annotation">+Text</button>
         <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
-        <button id="previewRecording" class="primary" style="display:none;" disabled title="Play/pause tutorial">▶</button>
-        <button id="replayPreview" class="primary" style="display:none;" title="Replay from beginning">🔄</button>
+        <button id="previewRecording" class="primary" style="display:none;" disabled title="Play tutorial">▶ Play</button>
         <button id="playPausePreview" style="display:none;"></button><!-- Hidden, kept for compatibility -->
-        <button id="addAnnotationAtPause" class="primary" style="display:none;" title="Add annotation at playhead position">📝</button>
         <button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">🔄</button>
         <button id="exportRecording" class="success" style="display:none;" disabled title="Export tutorial JSON">💾</button>
       </div>
@@ -621,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.7</div>
+    <div class="version-number">v12.8</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1904,19 +1906,6 @@
     }
   });
   
-  replayPreview.addEventListener('click', () => {
-    if (!currentTutorial) return;
-    
-    // Stop if playing
-    if (isPlaying) {
-      stopPlayback();
-    }
-    
-    // Reset pause position and start from beginning
-    playbackPausedAt = 0;
-    startPlayback();
-  });
-  
   playPausePreview.addEventListener('click', () => {
     if (isPlaying) {
       pausePlayback();
@@ -1938,12 +1927,11 @@
     appFrame.classList.add('playback-mode');
     
     // Update button states
-    previewRecording.textContent = '⏸';
+    previewRecording.textContent = '|| Pause';
     previewRecording.title = 'Pause';
-    replayPreview.style.display = 'inline-block';
+    previewRecording.classList.add('playing');
     addAnnotation.style.display = 'none';
     addPause.style.display = 'none';
-    addAnnotationAtPause.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none';
     
@@ -1999,14 +1987,14 @@
     isPlaying = false;
     playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
     
-    previewRecording.textContent = '▶';
+    previewRecording.textContent = '▶ Play';
     previewRecording.title = 'Play';
+    previewRecording.classList.remove('playing');
     playPausePreview.textContent = '▶ Resume Preview';
     addAnnotation.style.display = 'inline-block';
     addAnnotation.disabled = false;
     addPause.style.display = 'inline-block';
     addPause.disabled = false;
-    addAnnotationAtPause.style.display = 'inline-block';
     recordAgain.style.display = 'inline-block';
     exportRecording.style.display = 'none'; // Hide export during preview pause
     
@@ -2019,12 +2007,12 @@
     isPlaying = true;
     playbackStartTime = Date.now() - (playbackPausedAt * 1000);
     
-    previewRecording.textContent = '⏸';
+    previewRecording.textContent = '|| Pause';
     previewRecording.title = 'Pause';
+    previewRecording.classList.add('playing');
     playPausePreview.textContent = '⏸ Pause Preview';
     addAnnotation.style.display = 'none';
     addPause.style.display = 'none';
-    addAnnotationAtPause.style.display = 'none';
     recordAgain.style.display = 'none';
     exportRecording.style.display = 'none'; // Keep export hidden during playback
     
@@ -2032,49 +2020,6 @@
     
     console.log('▶️ Playback resumed');
   }
-  
-  addAnnotationAtPause.addEventListener('click', () => {
-    if (isPlaying) return; // Should only work when paused
-    
-    // Open annotation modal with timestamp set to current playback position
-    const currentTime = playbackPausedAt * 1000; // Convert to ms
-    
-    annTitle.value = '';
-    annText.value = '';
-    annDuration.value = 5;
-    annotationEditorModal.classList.add('visible');
-    
-    // Override the createAnnotation handler to use the paused time
-    const originalHandler = createAnnotation.onclick;
-    createAnnotation.onclick = () => {
-      const title = annTitle.value.trim();
-      const text = annText.value.trim();
-      const duration = parseFloat(annDuration.value) * 1000;
-      
-      if (!title || !text) {
-        alert('Please enter both title and text');
-        return;
-      }
-      
-      const annotation = {
-        timestamp: currentTime,
-        title: title,
-        text: text,
-        duration: duration,
-        position: null
-      };
-      
-      currentTutorial.annotations.push(annotation);
-      
-      annotationEditorModal.classList.remove('visible');
-      
-      // Show annotation for positioning
-      showAnnotationForPositioning(annotation, currentTutorial.annotations.length - 1);
-      
-      // Restore original handler
-      createAnnotation.onclick = originalHandler;
-    };
-  });
   
   function playbackLoop() {
     if (!isPlaying || !currentTutorial) return;
@@ -2240,9 +2185,9 @@
     
     // If we were previewing from paused, just restore the preview button
     if (wasPreviewingFromPaused) {
-      previewRecording.textContent = '▶';
+      previewRecording.textContent = '▶ Play';
       previewRecording.title = 'Play';
-      replayPreview.style.display = 'none';
+      previewRecording.classList.remove('playing');
       
       // Apply current state from last snapshot
       const api = getAPI();
@@ -2256,7 +2201,6 @@
       addAnnotation.disabled = false;
       addPause.style.display = 'inline-block';
       addPause.disabled = false;
-      addAnnotationAtPause.style.display = 'none';
       exportRecording.style.display = 'inline-block';
       recordAgain.style.display = 'inline-block';
       
@@ -2274,11 +2218,10 @@
       }
       
       previewRecording.style.display = 'inline-block';
-      previewRecording.textContent = '▶';
+      previewRecording.textContent = '▶ Play';
       previewRecording.title = 'Play';
+      previewRecording.classList.remove('playing');
       playPausePreview.style.display = 'none';
-      replayPreview.style.display = 'inline-block';
-      addAnnotationAtPause.style.display = 'none';
       recordAgain.style.display = 'inline-block';
       exportRecording.style.display = 'inline-block';
       
@@ -3304,7 +3247,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.7 initialized');
+  console.log('Tutorial Creator v12.8 initialized');
 })();
 </script>
 </body>
