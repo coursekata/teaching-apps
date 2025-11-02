@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.11</title>
+<title>Interactive Tutorial Creator - v12.12</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.11</div>
+    <div class="version-number">v12.12</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1172,7 +1172,31 @@
       // Move playhead to end of tutorial before resuming
       if (currentTutorial) {
         const timelineStartOffset = getTimelineStartOffset();
-        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Adjust playhead for single event endings to align with right edge of visual marker
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let annotationExtendsPast = false;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          
+          // Add visual adjustment for single events
+          if (lastIsSingleEvent && !annotationExtendsPast) {
+            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          }
+        }
+        
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
         
@@ -1262,7 +1286,31 @@
       // Move playhead to end of tutorial before resuming
       if (currentTutorial) {
         const timelineStartOffset = getTimelineStartOffset();
-        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Adjust playhead for single event endings to align with right edge of visual marker
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let annotationExtendsPast = false;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          
+          // Add visual adjustment for single events
+          if (lastIsSingleEvent && !annotationExtendsPast) {
+            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          }
+        }
+        
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
         
@@ -2271,7 +2319,31 @@
       // Was previewing from finished recording - show final state with playhead
       if (currentTutorial) {
         const timelineStartOffset = getTimelineStartOffset();
-        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Adjust playhead for single event endings to align with right edge of visual marker
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let annotationExtendsPast = false;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          
+          // Add small visual adjustment for single events (8px marker width)
+          if (lastIsSingleEvent && !annotationExtendsPast) {
+            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          }
+        }
+        
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
       }
@@ -3126,9 +3198,9 @@
     }
     
     // Add small buffer for single events so playhead aligns with right edge of visual marker
-    // Single events are rendered as 8px wide markers, so add ~0.15s buffer for visual consistency
+    // Single events are rendered as 8px wide markers, so add buffer for visual consistency
     if (lastSnapshotIsSingleEvent) {
-      calculatedDuration += 150; // Add 150ms buffer
+      calculatedDuration += 200; // Add 200ms buffer (8px at ~40-50 px/s scale)
       console.log('📊 Added visual buffer for single event ending');
     }
     
@@ -3322,7 +3394,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.11 initialized');
+  console.log('Tutorial Creator v12.12 initialized');
 })();
 </script>
 </body>
