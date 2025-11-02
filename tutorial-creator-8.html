@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.2</title>
+<title>Interactive Tutorial Creator - v12.3</title>
 <script>
   window.MathJax = {
     tex: {
@@ -610,7 +610,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.2</div>
+    <div class="version-number">v12.3</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1638,13 +1638,15 @@
     console.log('🗑️ Deleting event:', eventToDelete);
     
     if (eventToDelete.endIdx !== null) {
-      // Delete drag event (start and end)
-      // Remove in reverse order to maintain indices
-      const indices = [eventToDelete.startIdx, eventToDelete.endIdx].sort((a, b) => b - a);
-      indices.forEach(idx => {
-        currentTutorial.snapshots.splice(idx, 1);
-      });
-      console.log(`  Deleted drag event pair at indices ${eventToDelete.startIdx} and ${eventToDelete.endIdx}`);
+      // Delete drag event (start and end, plus all intermediate events)
+      // Delete from endIdx down to startIdx to maintain indices
+      const startIdx = eventToDelete.startIdx;
+      const endIdx = eventToDelete.endIdx;
+      const numToDelete = endIdx - startIdx + 1;
+      
+      console.log(`  Deleting drag sequence: ${numToDelete} events from index ${startIdx} to ${endIdx}`);
+      currentTutorial.snapshots.splice(startIdx, numToDelete);
+      console.log(`  Deleted ${numToDelete} events for drag sequence`);
     } else {
       // Delete single event
       currentTutorial.snapshots.splice(eventToDelete.startIdx, 1);
@@ -3183,7 +3185,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.2 initialized');
+  console.log('Tutorial Creator v12.3 initialized');
 })();
 </script>
 </body>
