@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.10</title>
+<title>Interactive Tutorial Creator - v12.11</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.10</div>
+    <div class="version-number">v12.11</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3091,10 +3091,16 @@
     
     // Get last snapshot time
     let lastSnapshotTime = 0;
+    let lastSnapshotIsSingleEvent = false;
     if (currentTutorial.snapshots.length > 0) {
-      lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+      const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+      lastSnapshotTime = lastSnapshot.timestamp;
       calculatedDuration = lastSnapshotTime;
       durationSource = 'snapshot';
+      
+      // Check if last snapshot is a single event (not dragEnd)
+      const action = lastSnapshot.event.action;
+      lastSnapshotIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
     }
     
     // Get last annotation end time
@@ -3104,6 +3110,7 @@
       if (lastAnnotationEnd > calculatedDuration) {
         calculatedDuration = lastAnnotationEnd;
         durationSource = 'annotation';
+        lastSnapshotIsSingleEvent = false; // Override if annotation extends further
       }
     }
     
@@ -3114,10 +3121,17 @@
       if (lastPauseTime > calculatedDuration) {
         calculatedDuration = lastPauseTime;
         durationSource = 'pause';
+        lastSnapshotIsSingleEvent = false; // Override if pause extends further
       }
     }
     
-    // No buffer needed - playback loop applies snapshots before checking duration
+    // Add small buffer for single events so playhead aligns with right edge of visual marker
+    // Single events are rendered as 8px wide markers, so add ~0.15s buffer for visual consistency
+    if (lastSnapshotIsSingleEvent) {
+      calculatedDuration += 150; // Add 150ms buffer
+      console.log('📊 Added visual buffer for single event ending');
+    }
+    
     currentTutorial.duration = calculatedDuration;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
     console.log('  Last snapshot:', (lastSnapshotTime / 1000).toFixed(2) + 's');
@@ -3308,7 +3322,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.10 initialized');
+  console.log('Tutorial Creator v12.11 initialized');
 })();
 </script>
 </body>
