@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.16</title>
+<title>Interactive Tutorial Creator - v12.17</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.16</div>
+    <div class="version-number">v12.17</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2759,8 +2759,8 @@
     
     console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
-    // Minimum separation between events (in ms) - about 300ms to give visual space
-    const MIN_SEPARATION = 300;
+    // Minimum separation between events (in ms) - small visual gap (~3px at 50px/s scale = 60ms)
+    const MIN_SEPARATION = 60;
     
     // Calculate the duration of the event being dragged
     let draggedEventDuration = 0;
@@ -2820,13 +2820,13 @@
         
         i = endIdx + 1;
       } else if (!action.includes('drag') && !action.includes('Drag')) {
-        // Single event (not a drag) - add MIN_SEPARATION as its "duration" for collision purposes
+        // Single event (not a drag)
         otherEvents.push({
           startIdx: i,
           endIdx: i,
           startTime: snapshot.timestamp,
-          endTime: snapshot.timestamp + MIN_SEPARATION,
-          duration: MIN_SEPARATION,
+          endTime: snapshot.timestamp,
+          duration: 0,
           isDrag: false
         });
         i++;
@@ -2836,7 +2836,7 @@
       }
     }
     
-    // Check for collisions and implement pushing behavior
+    // Check for collisions and implement pushing behavior with cascading
     let finalTimestamp = newTimestamp;
     const eventsPushed = [];
     
@@ -2862,6 +2862,40 @@
             event: nextEvent,
             pushAmount: overlap
           });
+          
+          // Check for cascading collisions - if pushing nextEvent would cause it to hit another event
+          const cascadeCheck = (pushedEvent, pushAmt) => {
+            const newEndTime = pushedEvent.endTime + pushAmt;
+            
+            // Find the next event after the one being pushed
+            const followingEvents = otherEvents.filter(evt => 
+              evt.startIdx !== pushedEvent.startIdx && // Not the same event
+              evt.startTime > pushedEvent.startTime // After the pushed event (in original position)
+            );
+            followingEvents.sort((a, b) => a.startTime - b.startTime);
+            
+            if (followingEvents.length > 0) {
+              const followingEvent = followingEvents[0];
+              
+              // Check if the pushed event would now collide with the following event
+              if (newEndTime + MIN_SEPARATION > followingEvent.startTime) {
+                const cascadeOverlap = newEndTime + MIN_SEPARATION - followingEvent.startTime;
+                
+                // Add this event to the push list
+                eventsPushed.push({
+                  event: followingEvent,
+                  pushAmount: cascadeOverlap
+                });
+                
+                console.log('⏩⏩ Cascade push: event needs to push next event by', cascadeOverlap, 'ms');
+                
+                // Recursively check if this causes another collision
+                cascadeCheck(followingEvent, cascadeOverlap);
+              }
+            }
+          };
+          
+          cascadeCheck(nextEvent, overlap);
           
           console.log('⏩ Collision detected, pushing next event by', overlap, 'ms');
         }
@@ -2889,6 +2923,40 @@
             event: prevEvent,
             pushAmount: -overlap
           });
+          
+          // Check for cascading collisions - if pushing prevEvent would cause it to hit another event
+          const cascadeCheck = (pushedEvent, pushAmt) => {
+            const newStartTime = pushedEvent.startTime + pushAmt;
+            
+            // Find the previous event before the one being pushed
+            const precedingEvents = otherEvents.filter(evt => 
+              evt.startIdx !== pushedEvent.startIdx && // Not the same event
+              evt.endTime < pushedEvent.startTime // Before the pushed event (in original position)
+            );
+            precedingEvents.sort((a, b) => b.endTime - a.endTime);
+            
+            if (precedingEvents.length > 0) {
+              const precedingEvent = precedingEvents[0];
+              
+              // Check if the pushed event would now collide with the preceding event
+              if (newStartTime < precedingEvent.endTime + MIN_SEPARATION) {
+                const cascadeOverlap = precedingEvent.endTime + MIN_SEPARATION - newStartTime;
+                
+                // Add this event to the push list
+                eventsPushed.push({
+                  event: precedingEvent,
+                  pushAmount: -cascadeOverlap
+                });
+                
+                console.log('⏪⏪ Cascade push: event needs to push previous event by', -cascadeOverlap, 'ms');
+                
+                // Recursively check if this causes another collision
+                cascadeCheck(precedingEvent, -cascadeOverlap);
+              }
+            }
+          };
+          
+          cascadeCheck(prevEvent, -overlap);
           
           console.log('⏪ Collision detected, pushing previous event by', -overlap, 'ms');
         }
@@ -2918,7 +2986,7 @@
       // Push all snapshots in this event
       for (let i = evt.startIdx; i <= evt.endIdx; i++) {
         const newTime = currentTutorial.snapshots[i].timestamp + pushAmount;
-        // Ensure we don't push events to negative time, with a minimum of MIN_SEPARATION
+        // Ensure we don't push events to negative time
         currentTutorial.snapshots[i].timestamp = Math.max(MIN_SEPARATION, newTime);
       }
     }
@@ -3542,7 +3610,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.16 initialized');
+  console.log('Tutorial Creator v12.17 initialized');
 })();
 </script>
 </body>
