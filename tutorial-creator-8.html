@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.18</title>
+<title>Interactive Tutorial Creator - v12.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.18</div>
+    <div class="version-number">v12.19</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2812,13 +2812,16 @@
           }
         }
         
+        // Drag events have -18px subtracted from their visual width (see renderTimeline)
+        // So the visual end is 18 pixels before the endTime timestamp
+        const visualEndAdjustment = (18 / timelineScale) * 1000; // 18px in ms
         const eventDuration = currentTutorial.snapshots[endIdx].timestamp - currentTutorial.snapshots[i].timestamp;
         
         otherEvents.push({
           startIdx: i,
           endIdx: endIdx,
           startTime: currentTutorial.snapshots[i].timestamp,
-          endTime: currentTutorial.snapshots[endIdx].timestamp,
+          endTime: currentTutorial.snapshots[endIdx].timestamp - visualEndAdjustment, // Visual end, not timestamp end
           duration: eventDuration,
           isDrag: true
         });
@@ -3616,7 +3619,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.18 initialized');
+  console.log('Tutorial Creator v12.19 initialized');
 })();
 </script>
 </body>
