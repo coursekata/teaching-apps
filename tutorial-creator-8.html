@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.6</title>
+<title>Interactive Tutorial Creator - v12.7</title>
 <script>
   window.MathJax = {
     tex: {
@@ -621,7 +621,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.6</div>
+    <div class="version-number">v12.7</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3103,11 +3103,22 @@
       }
     }
     
+    // Get last pause time
+    let lastPauseTime = 0;
+    if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+      lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+      if (lastPauseTime > calculatedDuration) {
+        calculatedDuration = lastPauseTime;
+        durationSource = 'pause';
+      }
+    }
+    
     // No buffer needed - playback loop applies snapshots before checking duration
     currentTutorial.duration = calculatedDuration;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
     console.log('  Last snapshot:', (lastSnapshotTime / 1000).toFixed(2) + 's');
     console.log('  Last annotation end:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
+    console.log('  Last pause:', (lastPauseTime / 1000).toFixed(2) + 's');
     console.log('  Duration determined by:', durationSource);
   }
   
@@ -3293,7 +3304,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.6 initialized');
+  console.log('Tutorial Creator v12.7 initialized');
 })();
 </script>
 </body>
