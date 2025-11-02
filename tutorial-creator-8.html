@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.15</title>
+<title>Interactive Tutorial Creator - v12.16</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.15</div>
+    <div class="version-number">v12.16</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2759,6 +2759,9 @@
     
     console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
+    // Minimum separation between events (in ms) - about 300ms to give visual space
+    const MIN_SEPARATION = 300;
+    
     // Calculate the duration of the event being dragged
     let draggedEventDuration = 0;
     if (draggingEvent.isDragEvent) {
@@ -2804,22 +2807,26 @@
           }
         }
         
+        const eventDuration = currentTutorial.snapshots[endIdx].timestamp - currentTutorial.snapshots[i].timestamp;
+        
         otherEvents.push({
           startIdx: i,
           endIdx: endIdx,
           startTime: currentTutorial.snapshots[i].timestamp,
           endTime: currentTutorial.snapshots[endIdx].timestamp,
+          duration: eventDuration,
           isDrag: true
         });
         
         i = endIdx + 1;
       } else if (!action.includes('drag') && !action.includes('Drag')) {
-        // Single event (not a drag) - for single events, start and end are the same
+        // Single event (not a drag) - add MIN_SEPARATION as its "duration" for collision purposes
         otherEvents.push({
           startIdx: i,
           endIdx: i,
           startTime: snapshot.timestamp,
-          endTime: snapshot.timestamp,
+          endTime: snapshot.timestamp + MIN_SEPARATION,
+          duration: MIN_SEPARATION,
           isDrag: false
         });
         i++;
@@ -2842,13 +2849,13 @@
       if (nextEvents.length > 0) {
         const nextEvent = nextEvents[0];
         
-        // Check if our new position would overlap with next event
-        if (draggedEventEnd > nextEvent.startTime) {
+        // Check if our new position would overlap with next event (including MIN_SEPARATION)
+        if (draggedEventEnd + MIN_SEPARATION > nextEvent.startTime) {
           // Calculate how much we're trying to push into the next event
-          const overlap = draggedEventEnd - nextEvent.startTime;
+          const overlap = draggedEventEnd + MIN_SEPARATION - nextEvent.startTime;
           
-          // Constrain our position to abut the next event
-          finalTimestamp = nextEvent.startTime - draggedEventDuration;
+          // Constrain our position to maintain MIN_SEPARATION from next event
+          finalTimestamp = nextEvent.startTime - MIN_SEPARATION - draggedEventDuration;
           
           // Push the next event forward by the overlap amount
           eventsPushed.push({
@@ -2869,13 +2876,13 @@
       if (prevEvents.length > 0) {
         const prevEvent = prevEvents[0];
         
-        // Check if our new position would overlap with previous event
-        if (newTimestamp < prevEvent.endTime) {
+        // Check if our new position would overlap with previous event (including MIN_SEPARATION)
+        if (newTimestamp < prevEvent.endTime + MIN_SEPARATION) {
           // Calculate how much we're trying to push into the previous event
-          const overlap = prevEvent.endTime - newTimestamp;
+          const overlap = prevEvent.endTime + MIN_SEPARATION - newTimestamp;
           
-          // Constrain our position to abut the previous event
-          finalTimestamp = prevEvent.endTime;
+          // Constrain our position to maintain MIN_SEPARATION from previous event
+          finalTimestamp = prevEvent.endTime + MIN_SEPARATION;
           
           // Push the previous event backward
           eventsPushed.push({
@@ -2910,7 +2917,9 @@
       
       // Push all snapshots in this event
       for (let i = evt.startIdx; i <= evt.endIdx; i++) {
-        currentTutorial.snapshots[i].timestamp = Math.max(0, currentTutorial.snapshots[i].timestamp + pushAmount);
+        const newTime = currentTutorial.snapshots[i].timestamp + pushAmount;
+        // Ensure we don't push events to negative time, with a minimum of MIN_SEPARATION
+        currentTutorial.snapshots[i].timestamp = Math.max(MIN_SEPARATION, newTime);
       }
     }
     
@@ -3533,7 +3542,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.15 initialized');
+  console.log('Tutorial Creator v12.16 initialized');
 })();
 </script>
 </body>
