@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.9</title>
+<title>Interactive Tutorial Creator - v12.10</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.9</div>
+    <div class="version-number">v12.10</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1945,11 +1945,10 @@
     previewRecording.title = 'Pause';
     previewRecording.classList.add('playing');
     replayPreview.style.display = 'none';
-    addAnnotation.style.display = 'none';
-    addPause.style.display = 'none';
+    addAnnotation.disabled = true;
+    addPause.disabled = true;
     addAnnotationAtPause.style.display = 'none';
-    recordAgain.style.display = 'none';
-    exportRecording.style.display = 'none';
+    // Keep recordAgain and exportRecording visible and enabled
     
     api.setState(currentTutorial.initialState);
     
@@ -2007,13 +2006,10 @@
     previewRecording.title = 'Play';
     previewRecording.classList.remove('playing');
     playPausePreview.textContent = '▶ Resume Preview';
-    addAnnotation.style.display = 'inline-block';
     addAnnotation.disabled = false;
-    addPause.style.display = 'inline-block';
     addPause.disabled = false;
     addAnnotationAtPause.style.display = 'inline-block';
-    recordAgain.style.display = 'inline-block';
-    exportRecording.style.display = 'none'; // Hide export during preview pause
+    // Keep all buttons visible
     
     console.log('⏸ Playback paused at', playbackPausedAt.toFixed(1) + 's');
   }
@@ -2028,11 +2024,10 @@
     previewRecording.title = 'Pause';
     previewRecording.classList.add('playing');
     playPausePreview.textContent = '⏸ Pause Preview';
-    addAnnotation.style.display = 'none';
-    addPause.style.display = 'none';
+    addAnnotation.disabled = true;
+    addPause.disabled = true;
     addAnnotationAtPause.style.display = 'none';
-    recordAgain.style.display = 'none';
-    exportRecording.style.display = 'none'; // Keep export hidden during playback
+    // Keep recordAgain and exportRecording visible and enabled
     
     requestAnimationFrame(playbackLoop);
     
@@ -3313,7 +3308,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.9 initialized');
+  console.log('Tutorial Creator v12.10 initialized');
 })();
 </script>
 </body>
