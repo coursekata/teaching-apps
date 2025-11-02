@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.25</title>
+<title>Interactive Tutorial Creator - v12.26</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.25</div>
+    <div class="version-number">v12.26</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3020,12 +3020,12 @@
             
             // Start positioning from the wall event (which doesn't move)
             // Wall event stays at its current position
-            // Next event must start after the wall's TRUE end (not visual end)
-            let currentPosition = wallEvent.startTime + wallEvent.duration + MIN_SEPARATION;
+            // Next event must start after the wall's VISUAL end (not TRUE end)
+            // Use endTime which has visual adjustments already applied
+            let currentPosition = wallEvent.endTime + MIN_SEPARATION;
             
             console.log('  Starting reposition from currentPosition:', currentPosition.toFixed(2), 'ms');
-            console.log('    (wall start:', wallEvent.startTime.toFixed(2), '+ duration:', wallEvent.duration.toFixed(2), 
-                       '+ MIN_SEPARATION:', MIN_SEPARATION.toFixed(2), ')');
+            console.log('    (wall VISUAL end:', wallEvent.endTime.toFixed(2), '+ MIN_SEPARATION:', MIN_SEPARATION.toFixed(2), ')');
             
             // Find wall event in the chain and process events after it (toward the right)
             const wallIndex = pushChain.findIndex(item => item.event.startIdx === wallEvent.startIdx);
@@ -3738,7 +3738,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.25 initialized');
+  console.log('Tutorial Creator v12.26 initialized');
 })();
 </script>
 </body>
