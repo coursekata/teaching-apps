@@ -2722,62 +2722,7 @@
       return;
     }
     
-    // Store ORIGINAL timestamps for ALL events at drag start
-    const originalEventPositions = [];
-    let i = 0;
-    while (i < currentTutorial.snapshots.length) {
-      const snapshot = currentTutorial.snapshots[i];
-      const action = snapshot.event.action;
-      
-      // Check if this is the start of a drag sequence
-      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
-                         action === 'dragBStart' || action === 'dragAxisStart';
-      
-      if (isDragStart) {
-        // Find the corresponding dragEnd
-        const dragType = action.replace('Start', '');
-        const dragEndAction = dragType + 'End';
-        
-        let end = i;
-        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
-          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
-            end = j;
-            break;
-          }
-        }
-        
-        // Drag events have visual end adjustment
-        const visualEndAdjustment = (18 / timelineScale) * 1000; // 18px in ms
-        
-        originalEventPositions.push({
-          startIdx: i,
-          endIdx: end,
-          startTime: currentTutorial.snapshots[i].timestamp,
-          endTime: currentTutorial.snapshots[end].timestamp - visualEndAdjustment,
-          duration: currentTutorial.snapshots[end].timestamp - currentTutorial.snapshots[i].timestamp,
-          isDrag: true
-        });
-        
-        i = end + 1;
-      } else if (!action.includes('drag') && !action.includes('Drag')) {
-        // Single event - give it visual width (8px marker)
-        const visualWidth = (8 / timelineScale) * 1000;
-        originalEventPositions.push({
-          startIdx: i,
-          endIdx: i,
-          startTime: snapshot.timestamp,
-          endTime: snapshot.timestamp + visualWidth,
-          duration: visualWidth,
-          isDrag: false
-        });
-        i++;
-      } else {
-        // Skip orphan drag events
-        i++;
-      }
-    }
-    
-    // Store original timestamps for the dragged event's snapshots
+    // Store original timestamps for all snapshots in the drag sequence
     const originalTimestamps = {};
     if (isDragEvent) {
       for (let i = startIdx; i <= endIdx; i++) {
@@ -2792,8 +2737,7 @@
       startX: e.clientX,
       originalTimestamp: currentTutorial.snapshots[startIdx].timestamp,
       originalEndTimestamp: isDragEvent ? currentTutorial.snapshots[endIdx].timestamp : null,
-      originalTimestamps: originalTimestamps,
-      originalEventPositions: originalEventPositions, // Store original positions of ALL events
+      originalTimestamps: originalTimestamps, // Store all original timestamps
       hasMoved: false
     };
     
@@ -2815,7 +2759,8 @@
     
     console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
-    // Minimum separation between events - constant 2px visual space
+    // Minimum separation between events - constant 2px visual space regardless of scale
+    // Convert 2 pixels to time based on current timelineScale
     const MIN_SEPARATION = (2 / timelineScale) * 1000; // 2px in milliseconds
     console.log('  MIN_SEPARATION =', MIN_SEPARATION.toFixed(1), 'ms (2px at scale', timelineScale, 'px/s)');
     
@@ -2829,14 +2774,76 @@
     }
     const draggedEventEnd = newTimestamp + draggedEventDuration;
     
-    // Use ORIGINAL positions for all other events
-    const otherEvents = draggingEvent.originalEventPositions.filter(evt => {
+    // Find all other events (excluding the one being dragged)
+    // Build array of event ranges with CURRENT positions
+    const otherEvents = [];
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      // Skip if this is part of the event being dragged
       if (draggingEvent.isDragEvent) {
-        return evt.startIdx !== draggingEvent.startIdx;
+        if (i >= draggingEvent.startIdx && i <= draggingEvent.endIdx) {
+          i++;
+          continue;
+        }
       } else {
-        return evt.startIdx !== draggingEvent.startIdx;
+        if (i === draggingEvent.startIdx) {
+          i++;
+          continue;
+        }
       }
-    });
+      
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
+      
+      // Check if this is the start of a drag sequence
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+                         action === 'dragBStart' || action === 'dragAxisStart';
+      
+      if (isDragStart) {
+        // Find the corresponding dragEnd
+        const dragType = action.replace('Start', '');
+        const dragEndAction = dragType + 'End';
+        
+        let endIdx = i;
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
+            endIdx = j;
+            break;
+          }
+        }
+        
+        // Drag events have -18px subtracted from their visual width (see renderTimeline)
+        // So the visual end is 18 pixels before the endTime timestamp
+        const visualEndAdjustment = (18 / timelineScale) * 1000; // 18px in ms
+        const eventDuration = currentTutorial.snapshots[endIdx].timestamp - currentTutorial.snapshots[i].timestamp;
+        
+        otherEvents.push({
+          startIdx: i,
+          endIdx: endIdx,
+          startTime: currentTutorial.snapshots[i].timestamp,
+          endTime: currentTutorial.snapshots[endIdx].timestamp - visualEndAdjustment, // Visual end, not timestamp end
+          duration: eventDuration,
+          isDrag: true
+        });
+        
+        i = endIdx + 1;
+      } else if (!action.includes('drag') && !action.includes('Drag')) {
+        // Single event (not a drag) - give it visual width for collision (8px marker)
+        const visualWidth = (8 / timelineScale) * 1000; // 8px marker width in ms
+        otherEvents.push({
+          startIdx: i,
+          endIdx: i,
+          startTime: snapshot.timestamp,
+          endTime: snapshot.timestamp + visualWidth,
+          duration: visualWidth,
+          isDrag: false
+        });
+        i++;
+      } else {
+        // Skip orphan drag events
+        i++;
+      }
+    }
     
     // Check for collisions and implement pushing behavior with cascading
     let finalTimestamp = newTimestamp;
@@ -2851,7 +2858,7 @@
     
     // Check if dragging forward (right)
     if (dt > 0) {
-      // Find events that are ahead of where we're trying to move (in ORIGINAL position)
+      // Find events that are ahead of where we're trying to move
       const nextEvents = otherEvents.filter(evt => evt.startTime >= draggingEvent.originalTimestamp);
       nextEvents.sort((a, b) => a.startTime - b.startTime);
       
@@ -2877,10 +2884,10 @@
           const cascadeCheck = (pushedEvent, pushAmt) => {
             const pushedEventNewEnd = getEffectiveTime(pushedEvent, false);
             
-            // Find the next event after the one being pushed (in ORIGINAL position)
+            // Find the next event after the one being pushed
             const followingEvents = otherEvents.filter(evt => 
               evt.startIdx !== pushedEvent.startIdx && // Not the same event
-              evt.startTime > pushedEvent.startTime // After the pushed event in ORIGINAL position
+              evt.startTime > pushedEvent.startTime // After the pushed event (in original position)
             );
             followingEvents.sort((a, b) => a.startTime - b.startTime);
             
@@ -2915,7 +2922,7 @@
     }
     // Check if dragging backward (left)
     else if (dt < 0) {
-      // Find events that are behind where we're trying to move (in ORIGINAL position)
+      // Find events that are behind where we're trying to move
       const prevEvents = otherEvents.filter(evt => evt.endTime <= draggingEvent.originalTimestamp);
       prevEvents.sort((a, b) => b.endTime - a.endTime);
       
@@ -2927,53 +2934,107 @@
           // Calculate how much we're trying to push into the previous event
           const overlap = getEffectiveTime(prevEvent, false) + MIN_SEPARATION - newTimestamp;
           
-          // Constrain our position to maintain MIN_SEPARATION from previous event
-          finalTimestamp = getEffectiveTime(prevEvent, false) + MIN_SEPARATION;
+          // Check if pushing the previous event would cause it to go below MIN_SEPARATION
+          const prevEventEffectiveStart = getEffectiveTime(prevEvent, true);
+          const maxAllowedPush = prevEventEffectiveStart - MIN_SEPARATION;
           
-          // Push the previous event backward
-          eventsPushed.push({
-            event: prevEvent,
-            pushAmount: -overlap
-          });
-          accumulatedPushes.set(prevEvent.startIdx, -overlap);
-          
-          // Check for cascading collisions - if pushing prevEvent would cause it to hit another event
-          const cascadeCheck = (pushedEvent, pushAmt) => {
-            const pushedEventNewStart = getEffectiveTime(pushedEvent, true);
+          if (overlap > maxAllowedPush && maxAllowedPush >= 0) {
+            // Can't push the full amount - would go negative
+            // Limit the push to what's possible
+            const limitedOverlap = maxAllowedPush;
             
-            // Find the previous event before the one being pushed (in ORIGINAL position)
-            const precedingEvents = otherEvents.filter(evt => 
-              evt.startIdx !== pushedEvent.startIdx && // Not the same event
-              evt.endTime < pushedEvent.startTime // Before the pushed event in ORIGINAL position
-            );
-            precedingEvents.sort((a, b) => b.endTime - a.endTime);
+            // Constrain our position based on the limited push
+            finalTimestamp = prevEventEffectiveStart - limitedOverlap + MIN_SEPARATION;
             
-            if (precedingEvents.length > 0) {
-              const precedingEvent = precedingEvents[0];
-              
-              // Check if the pushed event would now collide with the preceding event (using effective positions)
-              if (pushedEventNewStart < getEffectiveTime(precedingEvent, false) + MIN_SEPARATION) {
-                const cascadeOverlap = getEffectiveTime(precedingEvent, false) + MIN_SEPARATION - pushedEventNewStart;
-                
-                // Add this event to the push list and track accumulated push
-                eventsPushed.push({
-                  event: precedingEvent,
-                  pushAmount: -cascadeOverlap
-                });
-                const currentPush = accumulatedPushes.get(precedingEvent.startIdx) || 0;
-                accumulatedPushes.set(precedingEvent.startIdx, currentPush - cascadeOverlap);
-                
-                console.log('⏪⏪ Cascade push: event at idx', precedingEvent.startIdx, 'needs push by', -cascadeOverlap, 'ms (total:', (currentPush - cascadeOverlap), 'ms)');
-                
-                // Recursively check if this causes another collision
-                cascadeCheck(precedingEvent, -cascadeOverlap);
-              }
+            if (limitedOverlap > 0) {
+              // Push the previous event by the limited amount only
+              eventsPushed.push({
+                event: prevEvent,
+                pushAmount: -limitedOverlap
+              });
+              accumulatedPushes.set(prevEvent.startIdx, -limitedOverlap);
             }
-          };
-          
-          cascadeCheck(prevEvent, -overlap);
-          
-          console.log('⏪ Collision detected, pushing previous event by', -overlap, 'ms');
+            
+            console.log('⏪ Collision detected, but limited push to', -limitedOverlap, 'ms to avoid negative time');
+          } else {
+            // Normal case - can push the full overlap amount
+            // Constrain our position to maintain MIN_SEPARATION from previous event
+            finalTimestamp = getEffectiveTime(prevEvent, false) + MIN_SEPARATION;
+            
+            // Push the previous event backward
+            eventsPushed.push({
+              event: prevEvent,
+              pushAmount: -overlap
+            });
+            accumulatedPushes.set(prevEvent.startIdx, -overlap);
+            
+            // Check for cascading collisions - if pushing prevEvent would cause it to hit another event
+            const cascadeCheck = (pushedEvent, pushAmt) => {
+              const pushedEventNewStart = getEffectiveTime(pushedEvent, true);
+              
+              // Check if this push would cause the event to go below MIN_SEPARATION
+              // If so, stop the cascade here
+              if (pushedEventNewStart < MIN_SEPARATION) {
+                console.log('⏪ Cascade stopped: would push event below MIN_SEPARATION');
+                return;
+              }
+              
+              // Find the previous event before the one being pushed
+              const precedingEvents = otherEvents.filter(evt => 
+                evt.startIdx !== pushedEvent.startIdx && // Not the same event
+                evt.endTime < pushedEvent.startTime // Before the pushed event (in original position)
+              );
+              precedingEvents.sort((a, b) => b.endTime - a.endTime);
+              
+              if (precedingEvents.length > 0) {
+                const precedingEvent = precedingEvents[0];
+                
+                // Check if the pushed event would now collide with the preceding event (using effective positions)
+                if (pushedEventNewStart < getEffectiveTime(precedingEvent, false) + MIN_SEPARATION) {
+                  const cascadeOverlap = getEffectiveTime(precedingEvent, false) + MIN_SEPARATION - pushedEventNewStart;
+                  
+                  // Check if pushing the preceding event would cause it to go below MIN_SEPARATION
+                  const precedingEventEffectiveStart = getEffectiveTime(precedingEvent, true);
+                  const maxAllowedCascadePush = precedingEventEffectiveStart - MIN_SEPARATION;
+                  
+                  if (cascadeOverlap > maxAllowedCascadePush && maxAllowedCascadePush >= 0) {
+                    // Can't push the full cascade amount
+                    const limitedCascadeOverlap = maxAllowedCascadePush;
+                    
+                    if (limitedCascadeOverlap > 0) {
+                      eventsPushed.push({
+                        event: precedingEvent,
+                        pushAmount: -limitedCascadeOverlap
+                      });
+                      const currentPush = accumulatedPushes.get(precedingEvent.startIdx) || 0;
+                      accumulatedPushes.set(precedingEvent.startIdx, currentPush - limitedCascadeOverlap);
+                      
+                      console.log('⏪⏪ Limited cascade push: event at idx', precedingEvent.startIdx, 'by', -limitedCascadeOverlap, 'ms to avoid negative time');
+                    }
+                    // Stop cascading here
+                    return;
+                  }
+                  
+                  // Add this event to the push list and track accumulated push
+                  eventsPushed.push({
+                    event: precedingEvent,
+                    pushAmount: -cascadeOverlap
+                  });
+                  const currentPush = accumulatedPushes.get(precedingEvent.startIdx) || 0;
+                  accumulatedPushes.set(precedingEvent.startIdx, currentPush - cascadeOverlap);
+                  
+                  console.log('⏪⏪ Cascade push: event at idx', precedingEvent.startIdx, 'needs push by', -cascadeOverlap, 'ms (total:', (currentPush - cascadeOverlap), 'ms)');
+                  
+                  // Recursively check if this causes another collision
+                  cascadeCheck(precedingEvent, -cascadeOverlap);
+                }
+              }
+            };
+            
+            cascadeCheck(prevEvent, -overlap);
+            
+            console.log('⏪ Collision detected, pushing previous event by', -overlap, 'ms');
+          }
         }
       }
     }
@@ -2993,39 +3054,15 @@
       currentTutorial.snapshots[draggingEvent.startIdx].timestamp = finalTimestamp;
     }
     
-    // Apply pushing to other events using ACCUMULATED pushes
-    // Use a Map to ensure each event is only pushed once by its total accumulated amount
-    const totalPushes = new Map();
+    // Apply pushing to other events
     for (const pushed of eventsPushed) {
       const evt = pushed.event;
-      const currentTotal = totalPushes.get(evt.startIdx) || 0;
-      totalPushes.set(evt.startIdx, currentTotal + pushed.pushAmount);
-    }
-    
-    // Apply each event's total push
-    for (const [eventStartIdx, totalPush] of totalPushes) {
-      // Find the original event position to get its endIdx
-      const originalEvent = draggingEvent.originalEventPositions.find(e => e.startIdx === eventStartIdx);
-      if (originalEvent) {
-        // Push all snapshots in this event by the TOTAL accumulated amount
-        for (let i = originalEvent.startIdx; i <= originalEvent.endIdx; i++) {
-          // Get the ORIGINAL timestamp and apply the total push
-          const originalTimestamp = draggingEvent.originalEventPositions
-            .find(e => e.startIdx <= i && e.endIdx >= i)?.startTime || currentTutorial.snapshots[i].timestamp;
-          
-          // For drag events, we need to maintain relative positions within the drag
-          let newTime;
-          if (originalEvent.isDrag && i !== originalEvent.startIdx) {
-            // Calculate position within the drag
-            const originalPos = draggingEvent.originalEventPositions.find(e => e.startIdx === originalEvent.startIdx);
-            const relativePos = (currentTutorial.snapshots[i].timestamp - originalPos.startTime) / originalEvent.duration;
-            newTime = originalPos.startTime + totalPush + (relativePos * originalEvent.duration);
-          } else {
-            newTime = currentTutorial.snapshots[i].timestamp + totalPush;
-          }
-          
-          currentTutorial.snapshots[i].timestamp = Math.max(MIN_SEPARATION, newTime);
-        }
+      const pushAmount = pushed.pushAmount;
+      
+      // Push all snapshots in this event
+      // No clamping needed - we already limited pushes to prevent going below MIN_SEPARATION
+      for (let i = evt.startIdx; i <= evt.endIdx; i++) {
+        currentTutorial.snapshots[i].timestamp = currentTutorial.snapshots[i].timestamp + pushAmount;
       }
     }
     
@@ -3235,4 +3272,421 @@
     const dx = e.clientX - trimmingEvent.startX;
     const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
     
-    // Store
+    // Store current mouse position for stopEventTrim
+    trimmingEvent.currentX = e.clientX;
+    
+    if (trimmingEvent.edge === 'left') {
+      // Trim from start: move start time forward
+      const newStartTime = Math.max(
+        trimmingEvent.originalStartTime + dt,
+        trimmingEvent.originalStartTime // Can't go before original start
+      );
+      
+      // Ensure we don't go past the end (leave at least 100ms)
+      const maxStartTime = trimmingEvent.originalEndTime - 100;
+      const clampedStartTime = Math.min(newStartTime, maxStartTime);
+      
+      // Find which snapshot index corresponds to the new start time
+      let newStartIdx = trimmingEvent.startIdx;
+      for (let i = trimmingEvent.startIdx; i <= trimmingEvent.endIdx; i++) {
+        if (currentTutorial.snapshots[i].timestamp >= clampedStartTime) {
+          newStartIdx = i;
+          break;
+        }
+      }
+      
+      // Ensure at least 2 snapshots remain
+      if (newStartIdx >= trimmingEvent.endIdx - 1) {
+        newStartIdx = trimmingEvent.endIdx - 1;
+      }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newStartIdx = newStartIdx;
+      
+      // Visual feedback: update the event span
+      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
+      if (eventSpan) {
+        const newStartTimeSec = currentTutorial.snapshots[newStartIdx].timestamp / 1000;
+        const endTimeSec = trimmingEvent.originalEndTime / 1000;
+        const newWidth = Math.max(8, (endTimeSec - newStartTimeSec) * timelineScale - 18);
+        eventSpan.style.left = (newStartTimeSec * timelineScale) + 'px';
+        eventSpan.style.width = newWidth + 'px';
+      }
+    } else {
+      // Trim from end: move end time backward
+      const newEndTime = Math.min(
+        trimmingEvent.originalEndTime + dt,
+        trimmingEvent.originalEndTime // Can't go past original end
+      );
+      
+      // Ensure we don't go before the start (leave at least 100ms)
+      const minEndTime = trimmingEvent.originalStartTime + 100;
+      const clampedEndTime = Math.max(newEndTime, minEndTime);
+      
+      // Find which snapshot index corresponds to the new end time
+      let newEndIdx = trimmingEvent.endIdx;
+      for (let i = trimmingEvent.endIdx; i >= trimmingEvent.startIdx; i--) {
+        if (currentTutorial.snapshots[i].timestamp <= clampedEndTime) {
+          newEndIdx = i;
+          break;
+        }
+      }
+      
+      // Ensure at least 2 snapshots remain
+      if (newEndIdx <= trimmingEvent.startIdx + 1) {
+        newEndIdx = trimmingEvent.startIdx + 1;
+      }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newEndIdx = newEndIdx;
+      
+      // Visual feedback: update the event span
+      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
+      if (eventSpan) {
+        const startTimeSec = trimmingEvent.originalStartTime / 1000;
+        const newEndTimeSec = currentTutorial.snapshots[newEndIdx].timestamp / 1000;
+        const newWidth = Math.max(8, (newEndTimeSec - startTimeSec) * timelineScale - 18);
+        eventSpan.style.width = newWidth + 'px';
+      }
+    }
+  }
+  
+  function stopEventTrim() {
+    if (!trimmingEvent) return;
+    
+    console.log('🔪 stopEventTrim called:', trimmingEvent);
+    
+    if (trimmingEvent.edge === 'left') {
+      // Actually delete the trimmed snapshots from the start
+      const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
+      const deleteCount = newStartIdx - trimmingEvent.startIdx;
+      
+      console.log(`  Trimming from left: startIdx=${trimmingEvent.startIdx}, newStartIdx=${newStartIdx}, deleteCount=${deleteCount}`);
+      
+      if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
+        console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
+      }
+    } else {
+      // Actually delete the trimmed snapshots from the end
+      const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
+      const deleteCount = trimmingEvent.endIdx - newEndIdx;
+      
+      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}, deleteCount=${deleteCount}`);
+      
+      if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
+        console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
+      }
+    }
+    
+    trimmingEvent = null;
+    document.removeEventListener('mousemove', doEventTrim);
+    document.removeEventListener('mouseup', stopEventTrim);
+    
+    // Recalculate duration and re-render timeline
+    recalculateTutorialDuration();
+    renderTimeline();
+  }
+  
+  function stopAnnotationDrag() {
+    if (!draggingAnnotation) return;
+    
+    // Only do overlap checking and re-rendering if user actually dragged
+    if (!draggingAnnotation.hasMoved) {
+      draggingAnnotation = null;
+      document.removeEventListener('mousemove', doAnnotationDrag);
+      document.removeEventListener('mouseup', stopAnnotationDrag);
+      return;
+    }
+    
+    const draggedIndex = draggingAnnotation.index;
+    const draggedAnn = currentTutorial.annotations[draggedIndex];
+    
+    // Check for overlap with previous annotation (dragging right over left)
+    if (draggedIndex > 0) {
+      const prevAnn = currentTutorial.annotations[draggedIndex - 1];
+      const prevEnd = prevAnn.timestamp + prevAnn.duration;
+      
+      if (draggedAnn.timestamp < prevEnd) {
+        // Current annotation overlaps previous one
+        // Shorten the previous annotation so it ends where current one starts
+        const newPrevDuration = draggedAnn.timestamp - prevAnn.timestamp;
+        if (newPrevDuration >= 1000) { // Minimum 1 second
+          prevAnn.duration = newPrevDuration;
+          console.log('⚠️ Shortened previous annotation to avoid overlap');
+        } else {
+          // If shortening would make it too small, push the dragged annotation forward instead
+          draggedAnn.timestamp = prevAnn.timestamp + prevAnn.duration;
+          console.log('⚠️ Moved annotation forward to avoid making previous one too short');
+        }
+      }
+    }
+    
+    // Check for overlap with next annotation (dragging left over right)
+    if (draggedIndex < currentTutorial.annotations.length - 1) {
+      const nextAnn = currentTutorial.annotations[draggedIndex + 1];
+      const draggedEnd = draggedAnn.timestamp + draggedAnn.duration;
+      
+      if (draggedEnd > nextAnn.timestamp) {
+        // Dragged annotation overlaps next one
+        // Move the next annotation to start where dragged one ends
+        nextAnn.timestamp = draggedEnd;
+        console.log('⚠️ Moved next annotation forward to avoid overlap');
+      }
+    }
+    
+    draggingAnnotation = null;
+    document.removeEventListener('mousemove', doAnnotationDrag);
+    document.removeEventListener('mouseup', stopAnnotationDrag);
+    
+    // Recalculate tutorial duration after moving
+    recalculateTutorialDuration();
+    renderTimeline();
+  }
+  
+  // Recalculate tutorial duration based on snapshots and annotations
+  function recalculateTutorialDuration() {
+    if (!currentTutorial) return;
+    
+    let calculatedDuration = 0;
+    let durationSource = 'none';
+    
+    // Get last snapshot time
+    let lastSnapshotTime = 0;
+    let lastSnapshotIsSingleEvent = false;
+    if (currentTutorial.snapshots.length > 0) {
+      const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+      lastSnapshotTime = lastSnapshot.timestamp;
+      calculatedDuration = lastSnapshotTime;
+      durationSource = 'snapshot';
+      
+      // Check if last snapshot is a single event (not dragEnd)
+      const action = lastSnapshot.event.action;
+      lastSnapshotIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+    }
+    
+    // Get last annotation end time
+    let lastAnnotationEnd = 0;
+    if (currentTutorial.annotations.length > 0) {
+      lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+      if (lastAnnotationEnd > calculatedDuration) {
+        calculatedDuration = lastAnnotationEnd;
+        durationSource = 'annotation';
+        lastSnapshotIsSingleEvent = false; // Override if annotation extends further
+      }
+    }
+    
+    // Get last pause time
+    let lastPauseTime = 0;
+    if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+      lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+      if (lastPauseTime > calculatedDuration) {
+        calculatedDuration = lastPauseTime;
+        durationSource = 'pause';
+        lastSnapshotIsSingleEvent = false; // Override if pause extends further
+      }
+    }
+    
+    // Add small buffer for single events so playhead aligns with right edge of visual marker
+    // Single events are rendered as 8px wide markers, so add buffer for visual consistency
+    if (lastSnapshotIsSingleEvent) {
+      calculatedDuration += 200; // Add 200ms buffer (8px at ~40-50 px/s scale)
+      console.log('📊 Added visual buffer for single event ending');
+    }
+    
+    currentTutorial.duration = calculatedDuration;
+    console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
+    console.log('  Last snapshot:', (lastSnapshotTime / 1000).toFixed(2) + 's');
+    console.log('  Last annotation end:', (lastAnnotationEnd / 1000).toFixed(2) + 's');
+    console.log('  Last pause:', (lastPauseTime / 1000).toFixed(2) + 's');
+    console.log('  Duration determined by:', durationSource);
+  }
+  
+  // ========== ANNOTATION EDITING ==========
+  
+  // ========== EXPORT/IMPORT ==========
+  
+  exportRecording.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    // Don't finalize - just export the current state
+    // User can continue recording after exporting
+    
+    snapshotCount.textContent = currentTutorial.snapshots.length;
+    annotationCount.textContent = currentTutorial.annotations.length;
+    exportTextarea.value = JSON.stringify(currentTutorial, null, 2);
+    exportModal.classList.add('visible');
+  });
+  
+  downloadExport.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    const jsonStr = JSON.stringify(currentTutorial, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tutorial-' + Date.now() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    downloadExport.textContent = '✓ Downloaded!';
+    setTimeout(() => {
+      downloadExport.textContent = '💾 Download JSON';
+    }, 2000);
+  });
+  
+  copyExport.addEventListener('click', () => {
+    exportTextarea.select();
+    document.execCommand('copy');
+    copyExport.textContent = '✓ Copied!';
+    setTimeout(() => {
+      copyExport.textContent = '📋 Copy to Clipboard';
+    }, 2000);
+  });
+  
+  closeExportModal.addEventListener('click', () => {
+    exportModal.classList.remove('visible');
+  });
+  
+  loadJSON.addEventListener('click', () => {
+    jsonFileInput.click();
+  });
+  
+  jsonFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        
+        if (!imported.initialState || !imported.snapshots || !imported.annotations) {
+          throw new Error('Invalid tutorial format');
+        }
+        
+        // Backward compatibility: add pauses array if it doesn't exist
+        if (!imported.pauses) {
+          imported.pauses = [];
+        }
+        
+        currentTutorial = imported;
+        
+        // Load the app if not already loaded
+        if (!isAppLoaded && imported.initialState) {
+          // We can't auto-load without a URL, so just inform user
+          alert('Tutorial loaded! Please load the app first using "Load App", then the tutorial will be ready to edit.');
+        } else if (isAppLoaded) {
+          const api = getAPI();
+          if (api) {
+            // Apply the last snapshot's state instead of initial state
+            // This shows the final state with all settings that were active at the end
+            if (currentTutorial.snapshots.length > 0) {
+              const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+              api.setState(lastSnapshot.state);
+            } else {
+              api.setState(currentTutorial.initialState);
+            }
+          }
+          
+          // Set up recording state as if we just paused
+          isRecording = true;
+          isPaused = true;
+          recordingStartTime = Date.now(); // Start recording from NOW
+          pauseStartTime = Date.now(); // Set pause start time for correct resume calculation
+          totalPausedTime = 0;
+          importedDurationOffset = currentTutorial.duration || 0; // Offset new events by imported duration
+          
+          // Set up event listener (so we can continue recording)
+          eventListener = (event) => {
+            const timestamp = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+            const snapshot = {
+              timestamp: timestamp,
+              event: event,
+              state: api.getState()
+            };
+            currentTutorial.snapshots.push(snapshot);
+            renderTimeline();
+          };
+          api.onAction(eventListener);
+          
+          // Show paused recording UI
+          startRecording.style.display = 'inline-block';
+          startRecording.textContent = '⏺ Record';
+          startRecording.classList.remove('recording-active');
+          startRecording.className = 'record';
+          loadJSON.style.display = 'none';
+          playPauseRecording.style.display = 'none';
+          recordingIndicator.style.display = 'none';
+          pausedIndicator.style.display = 'none';
+          addAnnotation.style.display = 'inline-block';
+          addAnnotation.disabled = false;
+          addAnnotationAtPause.style.display = 'none';
+          addPause.style.display = 'inline-block';
+          addPause.disabled = false;
+          previewRecording.style.display = 'inline-block';
+          previewRecording.disabled = false;
+          recordAgain.style.display = 'inline-block';
+          recordAgain.disabled = false;
+          exportRecording.style.display = 'inline-block';
+          exportRecording.disabled = false;
+          
+          renderTimeline();
+          
+          // Position playhead at the end of the imported tutorial
+          const timelineStartOffset = getTimelineStartOffset();
+          const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+          timelinePlayhead.style.left = timelineEndPosition + 'px';
+          timelinePlayhead.style.display = 'block';
+          
+          alert('✓ Tutorial loaded!\n\nYou can now:\n• Preview it\n• Resume recording to add more\n• Add/edit annotations\n• Export when done');
+        }
+        
+        console.log('📤 Tutorial imported');
+      } catch (err) {
+        alert('Error importing tutorial: ' + err.message);
+        console.error('Import error:', err);
+      }
+    };
+    
+    reader.readAsText(file);
+    jsonFileInput.value = '';
+  });
+  
+  // ========== HELP ==========
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('visible');
+  });
+  
+  closeHelpModal.addEventListener('click', () => {
+    helpModal.classList.remove('visible');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('visible');
+    }
+  });
+  
+  exportModal.addEventListener('click', (e) => {
+    if (e.target === exportModal) {
+      exportModal.classList.remove('visible');
+    }
+  });
+  
+  annotationEditorModal.addEventListener('click', (e) => {
+    if (e.target === annotationEditorModal) {
+      annotationEditorModal.classList.remove('visible');
+    }
+  });
+  
+  console.log('Tutorial Creator v12.21 initialized');
+})();
+</script>
+</body>
+</html>
