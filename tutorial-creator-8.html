@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.24</title>
+<title>Interactive Tutorial Creator - v12.25</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.24</div>
+    <div class="version-number">v12.25</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2926,6 +2926,19 @@
       const prevEvents = otherEvents.filter(evt => evt.endTime <= draggingEvent.originalTimestamp);
       prevEvents.sort((a, b) => b.endTime - a.endTime);
       
+      console.log('🔍 BACKWARD DRAG DEBUG:');
+      console.log('  Dragging event idx', draggingEvent.startIdx, 'to', draggingEvent.endIdx);
+      console.log('  Original timestamp:', draggingEvent.originalTimestamp.toFixed(2), 'ms');
+      console.log('  New timestamp:', newTimestamp.toFixed(2), 'ms');
+      console.log('  All otherEvents:');
+      otherEvents.forEach(evt => {
+        console.log('    idx', evt.startIdx, '-', evt.endIdx, ':', 
+                    evt.isDrag ? 'DRAG' : 'CLICK',
+                    'start=', evt.startTime.toFixed(2), 
+                    'end=', evt.endTime.toFixed(2),
+                    'duration=', evt.duration.toFixed(2));
+      });
+      
       if (prevEvents.length > 0) {
         const prevEvent = prevEvents[0];
         
@@ -2934,12 +2947,15 @@
           // Calculate how much we're trying to push into the previous event
           const overlap = getEffectiveTime(prevEvent, false) + MIN_SEPARATION - newTimestamp;
           
+          console.log('  Will collide with prev event idx', prevEvent.startIdx, 'overlap=', overlap.toFixed(2), 'ms');
+          
           // Build the complete chain of events that need to be pushed
           const pushChain = [];
           
           // Helper function to build push chain recursively
           const buildPushChain = (pushedEvent, requiredPushAmount) => {
             pushChain.push({ event: pushedEvent, requestedPush: requiredPushAmount });
+            console.log('    Chain: adding event idx', pushedEvent.startIdx, 'needs push by', requiredPushAmount.toFixed(2), 'ms');
             
             const pushedEventNewStart = pushedEvent.startTime - requiredPushAmount;
             
@@ -2964,6 +2980,8 @@
           // Build the chain starting from prevEvent
           buildPushChain(prevEvent, overlap);
           
+          console.log('  📋 Complete push chain:', pushChain.length, 'events');
+          
           // Check if any event in the chain would go below MIN_SEPARATION
           // Find the leftmost event that would hit the wall
           let hitWall = false;
@@ -2974,10 +2992,18 @@
             const evt = item.event;
             const newStartTime = evt.startTime - item.requestedPush;
             
+            console.log('    Check event idx', evt.startIdx, 'would move from', evt.startTime.toFixed(2), 
+                       'to', newStartTime.toFixed(2), 'ms');
+            
             if (newStartTime < MIN_SEPARATION) {
               hitWall = true;
               wallEvent = evt;
               console.log('🧱 Hit wall at event idx', evt.startIdx, 'which cannot be pushed below', MIN_SEPARATION, 'ms');
+              console.log('    Wall is', evt.isDrag ? 'DRAG event' : 'CLICK event');
+              console.log('    Wall startTime:', evt.startTime.toFixed(2), 'ms');
+              console.log('    Wall duration:', evt.duration.toFixed(2), 'ms');
+              console.log('    Wall TRUE endTime:', (evt.startTime + evt.duration).toFixed(2), 'ms');
+              console.log('    Wall visual endTime:', evt.endTime.toFixed(2), 'ms');
               break;
             }
           }
@@ -2997,16 +3023,28 @@
             // Next event must start after the wall's TRUE end (not visual end)
             let currentPosition = wallEvent.startTime + wallEvent.duration + MIN_SEPARATION;
             
+            console.log('  Starting reposition from currentPosition:', currentPosition.toFixed(2), 'ms');
+            console.log('    (wall start:', wallEvent.startTime.toFixed(2), '+ duration:', wallEvent.duration.toFixed(2), 
+                       '+ MIN_SEPARATION:', MIN_SEPARATION.toFixed(2), ')');
+            
             // Find wall event in the chain and process events after it (toward the right)
             const wallIndex = pushChain.findIndex(item => item.event.startIdx === wallEvent.startIdx);
+            console.log('  Wall is at chain index', wallIndex, 'out of', pushChain.length, 'events');
             
             // Process events from wall toward the dragged event
             for (let i = wallIndex - 1; i >= 0; i--) {
               const item = pushChain[i];
               const evt = item.event;
               
+              console.log('    Positioning event idx', evt.startIdx, '(', evt.isDrag ? 'DRAG' : 'CLICK', ')');
+              console.log('      Original position:', evt.startTime.toFixed(2), 'ms');
+              console.log('      New position:', currentPosition.toFixed(2), 'ms');
+              console.log('      Duration:', evt.duration.toFixed(2), 'ms');
+              
               // This event should start at currentPosition
               const pushAmount = currentPosition - evt.startTime;
+              
+              console.log('      Push amount:', pushAmount.toFixed(2), 'ms');
               
               if (Math.abs(pushAmount) > 0.001) {
                 eventsPushed.push({
@@ -3019,6 +3057,7 @@
               // Next event (to the right) must start after this one ends
               // Use the stored duration, not endTime - startTime (endTime has visual adjustments)
               currentPosition = currentPosition + evt.duration + MIN_SEPARATION;
+              console.log('      Next event will start at:', currentPosition.toFixed(2), 'ms');
             }
             
             // The dragged event must be positioned after the last event
@@ -3063,14 +3102,20 @@
     }
     
     // Apply pushing to other events
+    console.log('📦 Applying', eventsPushed.length, 'pushes to other events:');
     for (const pushed of eventsPushed) {
       const evt = pushed.event;
       const pushAmount = pushed.pushAmount;
       
+      console.log('  Event idx', evt.startIdx, '-', evt.endIdx, 'pushing by', pushAmount.toFixed(2), 'ms');
+      
       // Push all snapshots in this event
       // No clamping needed - we already limited pushes to prevent going below MIN_SEPARATION
       for (let i = evt.startIdx; i <= evt.endIdx; i++) {
-        currentTutorial.snapshots[i].timestamp = currentTutorial.snapshots[i].timestamp + pushAmount;
+        const oldTime = currentTutorial.snapshots[i].timestamp;
+        const newTime = oldTime + pushAmount;
+        currentTutorial.snapshots[i].timestamp = newTime;
+        console.log('    Snapshot', i, ':', oldTime.toFixed(2), '->', newTime.toFixed(2), 'ms');
       }
     }
     
@@ -3693,7 +3738,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.24 initialized');
+  console.log('Tutorial Creator v12.25 initialized');
 })();
 </script>
 </body>
