@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.14</title>
+<title>Interactive Tutorial Creator - v12.15</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.14</div>
+    <div class="version-number">v12.15</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2755,24 +2755,163 @@
     const dx = e.clientX - draggingEvent.startX;
     const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
     
-    const newTimestamp = Math.max(0, draggingEvent.originalTimestamp + dt);
+    let newTimestamp = Math.max(0, draggingEvent.originalTimestamp + dt);
     
     console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
     
+    // Calculate the duration of the event being dragged
+    let draggedEventDuration = 0;
+    if (draggingEvent.isDragEvent) {
+      draggedEventDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
+    }
+    const draggedEventEnd = newTimestamp + draggedEventDuration;
+    
+    // Find all other events (excluding the one being dragged)
+    // Build array of event ranges with CURRENT positions
+    const otherEvents = [];
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      // Skip if this is part of the event being dragged
+      if (draggingEvent.isDragEvent) {
+        if (i >= draggingEvent.startIdx && i <= draggingEvent.endIdx) {
+          i++;
+          continue;
+        }
+      } else {
+        if (i === draggingEvent.startIdx) {
+          i++;
+          continue;
+        }
+      }
+      
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
+      
+      // Check if this is the start of a drag sequence
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+                         action === 'dragBStart' || action === 'dragAxisStart';
+      
+      if (isDragStart) {
+        // Find the corresponding dragEnd
+        const dragType = action.replace('Start', '');
+        const dragEndAction = dragType + 'End';
+        
+        let endIdx = i;
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
+            endIdx = j;
+            break;
+          }
+        }
+        
+        otherEvents.push({
+          startIdx: i,
+          endIdx: endIdx,
+          startTime: currentTutorial.snapshots[i].timestamp,
+          endTime: currentTutorial.snapshots[endIdx].timestamp,
+          isDrag: true
+        });
+        
+        i = endIdx + 1;
+      } else if (!action.includes('drag') && !action.includes('Drag')) {
+        // Single event (not a drag) - for single events, start and end are the same
+        otherEvents.push({
+          startIdx: i,
+          endIdx: i,
+          startTime: snapshot.timestamp,
+          endTime: snapshot.timestamp,
+          isDrag: false
+        });
+        i++;
+      } else {
+        // Skip orphan drag events
+        i++;
+      }
+    }
+    
+    // Check for collisions and implement pushing behavior
+    let finalTimestamp = newTimestamp;
+    const eventsPushed = [];
+    
+    // Check if dragging forward (right)
+    if (dt > 0) {
+      // Find events that are ahead of where we're trying to move
+      const nextEvents = otherEvents.filter(evt => evt.startTime >= draggingEvent.originalTimestamp);
+      nextEvents.sort((a, b) => a.startTime - b.startTime);
+      
+      if (nextEvents.length > 0) {
+        const nextEvent = nextEvents[0];
+        
+        // Check if our new position would overlap with next event
+        if (draggedEventEnd > nextEvent.startTime) {
+          // Calculate how much we're trying to push into the next event
+          const overlap = draggedEventEnd - nextEvent.startTime;
+          
+          // Constrain our position to abut the next event
+          finalTimestamp = nextEvent.startTime - draggedEventDuration;
+          
+          // Push the next event forward by the overlap amount
+          eventsPushed.push({
+            event: nextEvent,
+            pushAmount: overlap
+          });
+          
+          console.log('⏩ Collision detected, pushing next event by', overlap, 'ms');
+        }
+      }
+    }
+    // Check if dragging backward (left)
+    else if (dt < 0) {
+      // Find events that are behind where we're trying to move
+      const prevEvents = otherEvents.filter(evt => evt.endTime <= draggingEvent.originalTimestamp);
+      prevEvents.sort((a, b) => b.endTime - a.endTime);
+      
+      if (prevEvents.length > 0) {
+        const prevEvent = prevEvents[0];
+        
+        // Check if our new position would overlap with previous event
+        if (newTimestamp < prevEvent.endTime) {
+          // Calculate how much we're trying to push into the previous event
+          const overlap = prevEvent.endTime - newTimestamp;
+          
+          // Constrain our position to abut the previous event
+          finalTimestamp = prevEvent.endTime;
+          
+          // Push the previous event backward
+          eventsPushed.push({
+            event: prevEvent,
+            pushAmount: -overlap
+          });
+          
+          console.log('⏪ Collision detected, pushing previous event by', -overlap, 'ms');
+        }
+      }
+    }
+    
+    // Apply the final timestamp to the dragged event
     if (draggingEvent.isDragEvent) {
       // For drag events, update ALL snapshots between start and end proportionally
       const originalDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
       
       for (let i = draggingEvent.startIdx; i <= draggingEvent.endIdx; i++) {
-        // Use stored original timestamp, not current value
         const originalTimestamp = draggingEvent.originalTimestamps[i];
         const relativePosition = (originalTimestamp - draggingEvent.originalTimestamp) / originalDuration;
-        // Apply the same relative position at the new time
-        currentTutorial.snapshots[i].timestamp = newTimestamp + (relativePosition * originalDuration);
+        currentTutorial.snapshots[i].timestamp = finalTimestamp + (relativePosition * originalDuration);
       }
     } else {
       // For single events, just update the one snapshot
-      currentTutorial.snapshots[draggingEvent.startIdx].timestamp = newTimestamp;
+      currentTutorial.snapshots[draggingEvent.startIdx].timestamp = finalTimestamp;
+    }
+    
+    // Apply pushing to other events
+    for (const pushed of eventsPushed) {
+      const evt = pushed.event;
+      const pushAmount = pushed.pushAmount;
+      
+      // Push all snapshots in this event
+      for (let i = evt.startIdx; i <= evt.endIdx; i++) {
+        currentTutorial.snapshots[i].timestamp = Math.max(0, currentTutorial.snapshots[i].timestamp + pushAmount);
+      }
     }
     
     // Re-render to show the updated position
@@ -3394,7 +3533,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.14 initialized');
+  console.log('Tutorial Creator v12.15 initialized');
 })();
 </script>
 </body>
