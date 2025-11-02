@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.26</title>
+<title>Interactive Tutorial Creator - v12.27</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.26</div>
+    <div class="version-number">v12.27</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2539,16 +2539,21 @@
         
         // Create a span from dragStart to dragEnd
         const startTime = (snapshot.timestamp - timelineStartOffset) / 1000;
-        const endTime = (currentTutorial.snapshots[endIdx].timestamp - timelineStartOffset) / 1000;
-        const duration = endTime - startTime;
+        const trueEndTime = (currentTutorial.snapshots[endIdx].timestamp - timelineStartOffset) / 1000;
+        const trueDuration = trueEndTime - startTime;
         
-        console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', endTime.toFixed(2) + 's', `(${endIdx - i + 1} events)`);
+        // Calculate visual end time (accounting for the 18px width reduction)
+        const visualEndAdjustment = (18 / timelineScale); // in seconds
+        const visualEndTime = trueEndTime - visualEndAdjustment;
+        const visualDuration = visualEndTime - startTime;
+        
+        console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', visualEndTime.toFixed(2) + 's (visual)', `(${endIdx - i + 1} events)`);
         
         const span = document.createElement('div');
         span.className = 'timeline-event drag-event';
         span.style.left = (startTime * timelineScale) + 'px';
-        span.style.width = Math.max(8, duration * timelineScale - 18) + 'px'; // Subtract for border-radius + box-shadow
-        span.title = `${dragType} (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s) - Double-click to delete`;
+        span.style.width = Math.max(8, visualDuration * timelineScale) + 'px'; // Use visual duration directly
+        span.title = `${dragType} (${startTime.toFixed(2)}s - ${visualEndTime.toFixed(2)}s) - Double-click to delete`;
         span.dataset.startIdx = i;
         span.dataset.endIdx = endIdx;
         
@@ -3738,7 +3743,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.26 initialized');
+  console.log('Tutorial Creator v12.27 initialized');
 })();
 </script>
 </body>
