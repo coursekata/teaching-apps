@@ -4,6 +4,28 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Tutorial Player</title>
+
+<!--
+  EMBEDDING A TUTORIAL:
+  
+  To embed a tutorial JSON directly (so students don't need to load a file),
+  add a script tag before the other scripts that sets window.TUTORIAL_DATA:
+  
+  <script>
+  window.TUTORIAL_DATA = {
+    "version": "9.32",
+    "appUrl": "https://your-app-url.com",
+    "initialState": { ... },
+    "snapshots": [ ... ],
+    "annotations": [ ... ],
+    "pauses": [ ... ],
+    "duration": 12345
+  };
+  </script>
+  
+  Just copy your exported JSON and paste it as the value of TUTORIAL_DATA.
+-->
+
 <script>
   window.MathJax = {
     tex: {
@@ -68,6 +90,15 @@
   
   button.primary:hover:not(:disabled) {
     background: #1d4ed8;
+  }
+  
+  button.flash {
+    animation: flashButton 1s ease-in-out infinite;
+  }
+  
+  @keyframes flashButton {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
   
   .scrubber {
@@ -242,6 +273,32 @@
   let annotationText = null;
   let currentAnnotationIndex = -1;
   let annotationTimeout = null;
+  let triggeredPauses = new Set(); // Track which pauses we've already triggered
+  
+  // Check for embedded tutorial
+  const embeddedTutorial = window.TUTORIAL_DATA || null;
+  
+  // Auto-load embedded tutorial if present
+  if (embeddedTutorial) {
+    try {
+      tutorial = embeddedTutorial;
+      
+      // Validate tutorial
+      if (!tutorial.initialState || !tutorial.snapshots || !tutorial.annotations) {
+        throw new Error('Invalid tutorial format');
+      }
+      
+      // Check for app URL
+      if (!tutorial.appUrl) {
+        showError('This tutorial does not contain an app URL. Please use a tutorial created with v12.31 or later.');
+      } else {
+        // Load the app
+        loadApp();
+      }
+    } catch (err) {
+      showError('Error loading embedded tutorial: ' + err.message);
+    }
+  }
   
   // Load tutorial from file
   tutorialFile.addEventListener('change', (e) => {
@@ -388,6 +445,7 @@
     isPlaying = true;
     playbackStartTime = Date.now() - currentTime;
     playPauseBtn.textContent = '⏸ Pause';
+    playPauseBtn.classList.remove('flash'); // Stop flashing when user clicks play
     
     animationFrame = requestAnimationFrame(playbackLoop);
   }
@@ -429,9 +487,14 @@
     
     // Handle pauses
     if (tutorial.pauses) {
-      for (const pauseEvent of tutorial.pauses) {
-        if (pauseEvent.timestamp <= currentTime && pauseEvent.timestamp > currentTime - 100) {
+      for (let i = 0; i < tutorial.pauses.length; i++) {
+        const pauseEvent = tutorial.pauses[i];
+        
+        // Only trigger if we haven't triggered this pause yet
+        if (!triggeredPauses.has(i) && pauseEvent.timestamp <= currentTime) {
+          triggeredPauses.add(i);
           pause();
+          playPauseBtn.classList.add('flash'); // Flash the button to signal user needs to click
           console.log('⏸ Paused at', (pauseEvent.timestamp / 1000).toFixed(2) + 's');
           return;
         }
@@ -528,6 +591,7 @@
   restartBtn.addEventListener('click', () => {
     currentTime = 0;
     currentAnnotationIndex = -1;
+    triggeredPauses.clear(); // Reset triggered pauses
     hideAnnotation();
     
     const api = getAPI();
@@ -537,6 +601,8 @@
     
     scrubberProgress.style.width = '0%';
     updateTimeDisplay();
+    
+    playPauseBtn.classList.remove('flash'); // Stop flashing if it was
     
     if (isPlaying) {
       playbackStartTime = Date.now();
@@ -554,6 +620,17 @@
     const percent = clickX / rect.width;
     
     currentTime = percent * tutorial.duration;
+    
+    // Mark any pauses before current time as triggered
+    if (tutorial.pauses) {
+      for (let i = 0; i < tutorial.pauses.length; i++) {
+        if (tutorial.pauses[i].timestamp <= currentTime) {
+          triggeredPauses.add(i);
+        } else {
+          triggeredPauses.delete(i); // Remove if we scrubbed backward past it
+        }
+      }
+    }
     
     if (isPlaying) {
       playbackStartTime = Date.now() - currentTime;
