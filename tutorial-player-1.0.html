@@ -6,10 +6,24 @@
 <title>Tutorial Player</title>
 
 <!--
-  EMBEDDING A TUTORIAL:
+  LOADING TUTORIALS - THREE METHODS:
   
-  To embed a tutorial JSON directly (so students don't need to load a file),
-  add a script tag before the other scripts that sets window.TUTORIAL_DATA:
+  METHOD 1 (RECOMMENDED): Load from URL parameter
+  =====================================================
+  Upload your tutorial JSON to GitHub (or any static host), then link to the player with:
+  
+  player.html?tutorial=https://username.github.io/tutorials/lesson1.json
+  
+  This is the cleanest approach:
+  - One player file for all tutorials
+  - Update tutorials without touching the player
+  - Easy to share and maintain
+  
+  
+  METHOD 2: Embed tutorial in HTML
+  =====================================================
+  For a completely self-contained single file, add a script tag before the other
+  scripts that sets window.TUTORIAL_DATA:
   
   <script>
   window.TUTORIAL_DATA = {
@@ -24,6 +38,12 @@
   </script>
   
   Just copy your exported JSON and paste it as the value of TUTORIAL_DATA.
+  
+  
+  METHOD 3: File upload
+  =====================================================
+  The player shows a file picker by default if no tutorial is provided.
+  Good for local testing.
 -->
 
 <script>
@@ -278,8 +298,49 @@
   // Check for embedded tutorial
   const embeddedTutorial = window.TUTORIAL_DATA || null;
   
+  // Check for tutorial URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const tutorialUrl = urlParams.get('tutorial') || urlParams.get('json');
+  
+  // Auto-load tutorial from URL parameter if present
+  if (tutorialUrl) {
+    loadSection.style.display = 'none';
+    const loadingMsg = document.createElement('div');
+    loadingMsg.style.cssText = 'text-align:center;padding:40px;color:#666;';
+    loadingMsg.textContent = 'Loading tutorial...';
+    document.querySelector('.player-container').insertBefore(loadingMsg, playerSection);
+    
+    fetch(tutorialUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load tutorial: ' + response.statusText);
+        }
+        return response.json();
+      })
+      .then(data => {
+        tutorial = data;
+        
+        // Validate tutorial
+        if (!tutorial.initialState || !tutorial.snapshots || !tutorial.annotations) {
+          throw new Error('Invalid tutorial format');
+        }
+        
+        // Check for app URL
+        if (!tutorial.appUrl) {
+          throw new Error('This tutorial does not contain an app URL. Please use a tutorial created with v12.31 or later.');
+        }
+        
+        loadingMsg.remove();
+        loadApp();
+      })
+      .catch(err => {
+        loadingMsg.remove();
+        loadSection.style.display = 'block';
+        showError('Error loading tutorial from URL: ' + err.message);
+      });
+  }
   // Auto-load embedded tutorial if present
-  if (embeddedTutorial) {
+  else if (embeddedTutorial) {
     try {
       tutorial = embeddedTutorial;
       
