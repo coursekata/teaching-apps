@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.28</title>
+<title>Interactive Tutorial Creator - v12.30</title>
 <script>
   window.MathJax = {
     tex: {
@@ -977,6 +977,10 @@
         
         // Show timeline
         timelineContainer.classList.add('visible');
+        
+        // Show playhead at position 0 (ready to start)
+        timelinePlayhead.style.left = '60px'; // 60px for label offset
+        timelinePlayhead.style.display = 'block';
       }
     }, 100);
     
@@ -1166,8 +1170,12 @@
     } else if (isPaused) {
       // Resume recording
       
+      // Check if we're resuming from a playback pause
+      const isResumingFromPlaybackPause = (playbackPausedAt > 0 || isPlaying);
+      
       // Ensure iframe is interactive (remove playback mode if it was left on)
       appFrame.classList.remove('playback-mode');
+      appFrame.style.pointerEvents = 'auto';
       
       // Move playhead to end of tutorial before resuming
       if (currentTutorial) {
@@ -1214,6 +1222,43 @@
         importedDurationOffset = currentTutorial.duration;
       }
       
+      // If preview is playing or was paused, stop it first
+      if (isPlaying || playbackPausedAt > 0) {
+        isPlaying = false;
+        isPreviewingFromPaused = false;
+        appFrame.classList.remove('playback-mode');
+        appFrame.style.pointerEvents = 'auto';
+        previewRecording.textContent = '▶ Play';
+        previewRecording.title = 'Play';
+        previewRecording.classList.remove('playing');
+        playbackPausedAt = 0; // Reset playback position
+        
+        // Apply the last snapshot's state if not already done above
+        const api = getAPI();
+        if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
+        }
+      }
+      
+      // If resuming from playback pause, stay in paused state (don't immediately start recording)
+      // This gives user a chance to see where recording will resume from
+      if (isResumingFromPlaybackPause) {
+        // Keep recording paused - user can click Record again to actually resume
+        startRecording.textContent = '⏺ Record';
+        startRecording.classList.remove('recording-active');
+        startRecording.className = 'record';
+        addAnnotation.disabled = false;
+        addPause.disabled = false;
+        previewRecording.disabled = false;
+        recordAgain.disabled = false;
+        exportRecording.disabled = false;
+        
+        console.log('⏸ Moved to end of timeline, ready to resume recording');
+        return; // Exit without starting active recording
+      }
+      
+      // Otherwise, resume active recording normally
       isPaused = false;
       
       startRecording.textContent = '⏸ Pause';
@@ -1226,23 +1271,7 @@
       recordAgain.disabled = true; // Disable Start Over when actively recording
       exportRecording.disabled = true; // Disable Export when actively recording
       
-      // If preview is playing, stop it first
-      if (isPlaying) {
-        isPlaying = false;
-        isPreviewingFromPaused = false;
-        appFrame.classList.remove('playback-mode');
-        previewRecording.textContent = '▶ Play';
-        previewRecording.title = 'Play';
-        
-        // Apply current state from last snapshot
-        const api = getAPI();
-        if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
-          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-          api.setState(lastSnapshot.state);
-        }
-      }
-      
-      // Hide timeline playhead when resuming
+      // Hide timeline playhead when resuming active recording
       timelinePlayhead.style.display = 'none';
       
       console.log('▶️ Recording resumed');
@@ -1269,6 +1298,38 @@
       
       // Render timeline to show any events captured so far (including drags in progress)
       renderTimeline();
+      
+      // Position playhead at the end of the timeline
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Adjust playhead for single event endings to align with right edge of visual marker
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let annotationExtendsPast = false;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          
+          // Add visual adjustment for single events
+          if (lastIsSingleEvent && !annotationExtendsPast) {
+            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          }
+        }
+        
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+      }
       
       console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
     }
@@ -3825,7 +3886,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.28 initialized');
+  console.log('Tutorial Creator v12.30 initialized');
 })();
 </script>
 </body>
