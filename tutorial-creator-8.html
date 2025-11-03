@@ -1482,10 +1482,21 @@
   // ========== ANNOTATIONS ==========
   
   addAnnotation.addEventListener('click', () => {
-    if (!isPaused) return;
+    if (!isPaused && playbackPausedAt === 0) return;
     
-    // Use current tutorial duration as the timestamp (end of existing content)
-    let timestamp = currentTutorial.duration || 0;
+    // Determine timestamp based on context:
+    // - If paused during playback preview, use playback position
+    // - Otherwise use end of tutorial (normal recording behavior)
+    let timestamp;
+    if (playbackPausedAt > 0) {
+      // Paused during playback - use current playback position
+      timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
+      console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
+    } else {
+      // Normal paused recording - use end of tutorial
+      timestamp = currentTutorial.duration || 0;
+      console.log('📝 Creating annotation at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
+    }
     
     // Check if there are existing annotations
     // If so, place this one after the last one to avoid overlap
@@ -1499,8 +1510,6 @@
         console.log('📝 Adjusted annotation timestamp to avoid overlap:', (timestamp / 1000).toFixed(2) + 's');
       }
     }
-    
-    console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
     
     // Create annotation with default text
     const annotation = {
@@ -1521,12 +1530,21 @@
   });
   
   addPause.addEventListener('click', () => {
-    if (!isPaused) return;
+    if (!isPaused && playbackPausedAt === 0) return;
     
-    // Use current tutorial duration as the timestamp (end of existing content)
-    const timestamp = currentTutorial.duration || 0;
-    
-    console.log('⏸ Creating pause at timestamp:', (timestamp / 1000).toFixed(2) + 's');
+    // Determine timestamp based on context:
+    // - If paused during playback preview, use playback position
+    // - Otherwise use end of tutorial (normal recording behavior)
+    let timestamp;
+    if (playbackPausedAt > 0) {
+      // Paused during playback - use current playback position
+      timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
+      console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
+    } else {
+      // Normal paused recording - use end of tutorial
+      timestamp = currentTutorial.duration || 0;
+      console.log('⏸ Creating pause at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
+    }
     
     // Create pause (just a timestamp)
     const pause = {
@@ -1988,6 +2006,9 @@
     // Don't hide recording controls - just add playback mode to iframe
     appFrame.classList.add('playback-mode');
     
+    // Disable iframe interaction during playback
+    appFrame.style.pointerEvents = 'none';
+    
     // Update button states
     previewRecording.textContent = '|| Pause';
     previewRecording.title = 'Pause';
@@ -2050,6 +2071,9 @@
     isPlaying = false;
     playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
     
+    // Enable iframe interaction when paused
+    appFrame.style.pointerEvents = 'auto';
+    
     previewRecording.textContent = '▶ Play';
     previewRecording.title = 'Play';
     previewRecording.classList.remove('playing');
@@ -2067,6 +2091,9 @@
     
     isPlaying = true;
     playbackStartTime = Date.now() - (playbackPausedAt * 1000);
+    
+    // Disable iframe interaction during playback
+    appFrame.style.pointerEvents = 'none';
     
     previewRecording.textContent = '|| Pause';
     previewRecording.title = 'Pause';
@@ -2287,6 +2314,9 @@
     }
     
     appFrame.classList.remove('playback-mode');
+    
+    // Restore iframe interaction
+    appFrame.style.pointerEvents = 'auto';
     
     // If we were previewing from paused, just restore the preview button
     if (wasPreviewingFromPaused) {
