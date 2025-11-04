@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.32</title>
+<title>Interactive Tutorial Creator - v12.33</title>
 <script>
   window.MathJax = {
     tex: {
@@ -184,13 +184,8 @@
   }
   
   .annotation-box.draggable{
-    overflow:hidden;
     cursor:move;
-    border-color:var(--warning);
-    border-style:dashed;
-    border-width:4px;
-    background:#fff;
-    box-shadow:0 12px 32px rgba(0,0,0,0.3);
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);
     z-index:10001;
   }
   
@@ -203,9 +198,9 @@
     position:absolute;
     bottom:0;
     right:0;
-    width:20px;
-    height:20px;
-    background:var(--warning);
+    width:16px;
+    height:16px;
+    background:rgba(37, 99, 235, 0.3);
     cursor:nwse-resize;
     border-top-left-radius:4px;
     border-bottom-right-radius:12px;
@@ -217,8 +212,8 @@
     top:50%;
     left:50%;
     transform:translate(-50%, -50%);
-    color:#fff;
-    font-size:14px;
+    color:rgba(37, 99, 235, 0.7);
+    font-size:12px;
     line-height:1;
   }
   
@@ -627,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.32</div>
+    <div class="version-number">v12.33</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1033,19 +1028,18 @@
       }
       .annotation-box.custom-position{max-width:none;}
       .annotation-box.draggable{
-        overflow:hidden;
         cursor:move;
-        border-color:#f59e0b;
-        border-style:dashed;
+        box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        z-index:10001;
       }
       .annotation-box.visible{display:block;animation:slideIn 0.3s ease-out;}
       .annotation-box.draggable .resize-handle{
         position:absolute;
         bottom:0;
         right:0;
-        width:20px;
-        height:20px;
-        background:#f59e0b;
+        width:16px;
+        height:16px;
+        background:rgba(37, 99, 235, 0.3);
         cursor:nwse-resize;
         border-top-left-radius:4px;
         border-bottom-right-radius:12px;
@@ -1056,8 +1050,8 @@
         top:50%;
         left:50%;
         transform:translate(-50%, -50%);
-        color:#fff;
-        font-size:14px;
+        color:rgba(37, 99, 235, 0.7);
+        font-size:12px;
         line-height:1;
       }
       @keyframes slideIn{from{opacity:0;}to{opacity:1;}}
@@ -3894,7 +3888,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.32 initialized');
+  console.log('Tutorial Creator v12.33 initialized');
 })();
 </script>
 </body>
