@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.43</title>
+<title>Interactive Tutorial Creator - v12.44</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.43</div>
+    <div class="version-number">v12.44</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3853,18 +3853,20 @@
     }
     
     // Add small buffer for single events so playhead aligns with right edge of visual marker
-    // Single events are rendered as 8px wide markers, so add buffer for visual consistency
+    // Single events are rendered as 8px wide markers
     if (lastElementType === 'singleEvent') {
-      calculatedDuration += 200; // Add 200ms buffer (8px at ~40-50 px/s scale)
-      console.log('📊 Added visual buffer for single event ending');
+      const bufferMs = (8 / timelineScale) * 1000; // Convert 8px to milliseconds
+      calculatedDuration += bufferMs;
+      console.log('📊 Added visual buffer for single event ending:', bufferMs.toFixed(1), 'ms');
     }
     
     // Add buffer for pauses so playhead aligns with center of diamond marker
-    // Pause diamonds are 12px wide, centered on timestamp. To reach visual center,
-    // we need to account for the left-offset rendering (pauseLeft - 6px)
+    // Pause diamonds are 12px wide, positioned at (pauseLeft - 6px) to center them
+    // To reach the visual center, add 6px worth of time
     if (lastElementType === 'pause') {
-      calculatedDuration += 150; // Add buffer to center playhead on diamond (~6px at ~40-50 px/s scale)
-      console.log('📊 Added visual buffer for pause ending (centering on diamond)');
+      const bufferMs = (6 / timelineScale) * 1000; // Convert 6px to milliseconds
+      calculatedDuration += bufferMs;
+      console.log('📊 Added visual buffer for pause ending (centering on diamond):', bufferMs.toFixed(1), 'ms');
     }
     
     currentTutorial.duration = calculatedDuration;
@@ -4057,7 +4059,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.43 initialized');
+  console.log('Tutorial Creator v12.44 initialized');
 })();
 </script>
 </body>
