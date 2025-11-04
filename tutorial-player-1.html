@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v1.1</title>
+<title>Tutorial Player - v1.2</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -420,6 +420,13 @@
           playPauseBtn.disabled = false;
           
           console.log('Tutorial loaded:', tutorial.snapshots.length, 'snapshots,', tutorial.annotations.length, 'annotations');
+          if (tutorial.annotations && tutorial.annotations.length > 0) {
+            console.log('Annotation details:');
+            tutorial.annotations.forEach((ann, i) => {
+              console.log(`  [${i}] "${ann.title}" at ${(ann.timestamp / 1000).toFixed(2)}s for ${(ann.duration / 1000).toFixed(2)}s`);
+              console.log(`      Position:`, ann.position);
+            });
+          }
         }
       }, 100);
       
@@ -594,7 +601,9 @@
   }
   
   function handleAnnotations() {
-    if (!tutorial.annotations || tutorial.annotations.length === 0) return;
+    if (!tutorial.annotations || tutorial.annotations.length === 0) {
+      return;
+    }
     
     for (let i = 0; i < tutorial.annotations.length; i++) {
       const ann = tutorial.annotations[i];
@@ -604,6 +613,7 @@
       // Show annotation if we're in its time range
       if (currentTime >= annStart && currentTime < annEnd) {
         if (currentAnnotationIndex !== i) {
+          console.log(`📍 Time ${(currentTime / 1000).toFixed(2)}s: Showing annotation ${i} "${ann.title}" (range: ${(annStart / 1000).toFixed(2)}s-${(annEnd / 1000).toFixed(2)}s)`);
           showAnnotation(ann);
           currentAnnotationIndex = i;
         }
@@ -613,13 +623,24 @@
     
     // Hide annotation if we're not in any range
     if (currentAnnotationIndex !== -1) {
+      console.log(`📍 Time ${(currentTime / 1000).toFixed(2)}s: Hiding annotation`);
       hideAnnotation();
       currentAnnotationIndex = -1;
     }
   }
   
   function showAnnotation(ann) {
-    if (!annotationBox) return;
+    console.log('🎯 showAnnotation called:', ann);
+    
+    if (!annotationBox) {
+      console.error('❌ annotationBox is null!');
+      return;
+    }
+    
+    console.log('  Annotation box exists');
+    console.log('  Title:', ann.title);
+    console.log('  Text:', ann.text);
+    console.log('  Position:', ann.position);
     
     annotationTitle.textContent = ann.title;
     annotationText.innerHTML = ann.text;
@@ -629,6 +650,12 @@
     
     // Position annotation
     if (ann.position) {
+      console.log('  Using custom position');
+      console.log('    left:', ann.position.left);
+      console.log('    top:', ann.position.top);
+      console.log('    width:', ann.position.width);
+      console.log('    height:', ann.position.height);
+      
       // Custom positioned annotation
       annotationBox.classList.add('custom-position');
       annotationBox.style.left = ann.position.left + 'px';
@@ -644,6 +671,7 @@
         annotationBox.style.height = 'auto'; // Reset to default
       }
     } else {
+      console.log('  Using default center position');
       // Default center position
       annotationBox.classList.remove('custom-position');
       annotationBox.style.left = '50%';
@@ -654,6 +682,15 @@
     }
     
     annotationBox.classList.add('visible');
+    console.log('  ✓ Annotation box visible class added');
+    console.log('  Final styles:', {
+      display: annotationBox.style.display,
+      left: annotationBox.style.left,
+      top: annotationBox.style.top,
+      width: annotationBox.style.width,
+      height: annotationBox.style.height,
+      className: annotationBox.className
+    });
     
     // Typeset math if present
     if (window.MathJax && ann.text.includes('$')) {
@@ -728,7 +765,7 @@
     handleAnnotations();
   });
   
-  console.log('Tutorial Player v1.1 initialized');
+  console.log('Tutorial Player v1.2 initialized');
 })();
 </script>
 </body>
