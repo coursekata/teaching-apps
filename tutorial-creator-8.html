@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.38</title>
+<title>Interactive Tutorial Creator - v12.39</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.38</div>
+    <div class="version-number">v12.39</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3295,113 +3295,114 @@
   
   // Repair broken drag sequences after sorting
   function repairDragSequences() {
-    console.log('🔧 Repairing drag sequences after sort...');
+    console.log('🔧 Identifying drag sequences before sorting broke them...');
     
-    // Identify all dragStart and dragEnd pairs by matching them by type and proximity
-    const starts = [];
-    const ends = [];
-    
-    currentTutorial.snapshots.forEach((snap, idx) => {
-      const action = snap.event.action;
-      if (action.endsWith('Start')) {
-        starts.push({ idx, type: action.slice(0, -5), timestamp: snap.timestamp });
-      } else if (action.endsWith('End')) {
-        ends.push({ idx, type: action.slice(0, -3), timestamp: snap.timestamp });
-      }
-    });
-    
-    console.log(`  Found ${starts.length} Start(s) and ${ends.length} End(s)`);
-    
-    // Match each Start with closest End of same type
+    // Build a map of which indices belong to which drag sequence
+    // by walking through and matching Start/End pairs in the ORIGINAL sorted order
     const sequences = [];
-    const matched = new Set();
+    const usedIndices = new Set();
     
-    for (const start of starts) {
-      let bestEnd = null;
-      let minDist = Infinity;
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      if (usedIndices.has(i)) {
+        i++;
+        continue;
+      }
       
-      ends.forEach((end, endIdx) => {
-        if (!matched.has(endIdx) && end.type === start.type && end.timestamp > start.timestamp) {
-          const dist = end.timestamp - start.timestamp;
-          if (dist < minDist) {
-            minDist = dist;
-            bestEnd = { ...end, endIdx };
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
+      
+      // Check if this is a dragStart
+      if (action.endsWith('Start')) {
+        const dragType = action.slice(0, -5);
+        const dragEndAction = dragType + 'End';
+        
+        // Find the matching dragEnd by scanning forward
+        let endIdx = -1;
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (usedIndices.has(j)) continue;
+          
+          const jAction = currentTutorial.snapshots[j].event.action;
+          if (jAction === dragEndAction) {
+            endIdx = j;
+            break;
           }
         }
-      });
-      
-      if (bestEnd) {
-        matched.add(bestEnd.endIdx);
         
-        // Collect ALL snapshots between these indices in the CURRENT sorted array
-        const seqSnaps = [];
-        for (let i = 0; i < currentTutorial.snapshots.length; i++) {
-          const snap = currentTutorial.snapshots[i];
-          if (snap.timestamp >= start.timestamp && snap.timestamp <= bestEnd.timestamp) {
-            // Include if it's part of this drag type
-            const action = snap.event.action;
-            if (action.includes(start.type)) {
-              seqSnaps.push({ snap, originalIndex: i });
+        if (endIdx !== -1) {
+          // Collect ALL indices from i to endIdx that are drag-related for this type
+          const seqIndices = [];
+          for (let k = i; k <= endIdx; k++) {
+            if (usedIndices.has(k)) continue;
+            
+            const kAction = currentTutorial.snapshots[k].event.action;
+            if (kAction.includes(dragType)) {
+              seqIndices.push(k);
+              usedIndices.add(k);
             }
           }
+          
+          if (seqIndices.length > 0) {
+            // Store the actual snapshot objects (not just indices)
+            const seqSnapshots = seqIndices.map(idx => currentTutorial.snapshots[idx]);
+            sequences.push({
+              type: dragType,
+              startTime: seqSnapshots[0].timestamp,
+              snapshots: seqSnapshots
+            });
+            
+            console.log(`  Found ${dragType} sequence: ${seqSnapshots.length} events, start=${seqSnapshots[0].timestamp.toFixed(0)}ms`);
+          }
         }
         
-        sequences.push({
-          type: start.type,
-          startTime: start.timestamp,
-          endTime: bestEnd.timestamp,
-          snapshots: seqSnaps
-        });
-        
-        console.log(`  Sequence: ${start.type} from ${start.timestamp.toFixed(0)}ms to ${bestEnd.timestamp.toFixed(0)}ms (${seqSnaps.length} events)`);
+        i++;
+      } else {
+        i++;
       }
     }
     
-    // Collect non-drag events
-    const usedIndices = new Set();
-    sequences.forEach(seq => {
-      seq.snapshots.forEach(s => usedIndices.add(s.originalIndex));
-    });
-    
-    const nonDragSnaps = [];
-    currentTutorial.snapshots.forEach((snap, idx) => {
-      if (!usedIndices.has(idx)) {
-        nonDragSnaps.push(snap);
+    // Collect non-sequence snapshots
+    const nonSeqSnapshots = [];
+    for (let i = 0; i < currentTutorial.snapshots.length; i++) {
+      if (!usedIndices.has(i)) {
+        nonSeqSnapshots.push(currentTutorial.snapshots[i]);
       }
-    });
+    }
     
-    // Rebuild: sequences in start-time order, keeping each sequence intact
+    console.log(`  Found ${sequences.length} sequences and ${nonSeqSnapshots.length} non-sequence events`);
+    
+    // Sort sequences by start time
     sequences.sort((a, b) => a.startTime - b.startTime);
     
+    // Rebuild snapshots array: interleave sequences and non-sequence events by timestamp
     const newSnapshots = [];
     let seqIdx = 0;
-    let nonDragIdx = 0;
+    let nonSeqIdx = 0;
     
-    // Interleave sequences and non-drag events by timestamp
-    while (seqIdx < sequences.length || nonDragIdx < nonDragSnaps.length) {
+    while (seqIdx < sequences.length || nonSeqIdx < nonSeqSnapshots.length) {
       const nextSeq = seqIdx < sequences.length ? sequences[seqIdx] : null;
-      const nextNonDrag = nonDragIdx < nonDragSnaps.length ? nonDragSnaps[nonDragIdx] : null;
+      const nextNonSeq = nonSeqIdx < nonSeqSnapshots.length ? nonSeqSnapshots[nonSeqIdx] : null;
       
       if (!nextSeq) {
-        newSnapshots.push(nextNonDrag);
-        nonDragIdx++;
-      } else if (!nextNonDrag) {
-        nextSeq.snapshots.forEach(s => newSnapshots.push(s.snap));
+        newSnapshots.push(nextNonSeq);
+        nonSeqIdx++;
+      } else if (!nextNonSeq) {
+        newSnapshots.push(...nextSeq.snapshots);
         seqIdx++;
       } else {
-        // Add whichever comes first by timestamp
-        if (nextSeq.startTime <= nextNonDrag.timestamp) {
-          nextSeq.snapshots.forEach(s => newSnapshots.push(s.snap));
+        // Add whichever comes first
+        if (nextSeq.startTime <= nextNonSeq.timestamp) {
+          newSnapshots.push(...nextSeq.snapshots);
           seqIdx++;
         } else {
-          newSnapshots.push(nextNonDrag);
-          nonDragIdx++;
+          newSnapshots.push(nextNonSeq);
+          nonSeqIdx++;
         }
       }
     }
     
     currentTutorial.snapshots = newSnapshots;
-    console.log(`  ✓ Rebuilt with ${currentTutorial.snapshots.length} snapshots`);
+    console.log(`  ✓ Rebuilt with ${currentTutorial.snapshots.length} snapshots (no duplicates)`);
   }
   
   function stopEventDrag() {
@@ -4028,7 +4029,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.38 initialized');
+  console.log('Tutorial Creator v12.39 initialized');
 })();
 </script>
 </body>
