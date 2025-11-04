@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v1.2</title>
+<title>Tutorial Player - v1.3</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -146,6 +146,12 @@
     text-align: right;
   }
   
+  .version-number {
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
   .app-frame-container {
     position: relative;
     background: #fff;
@@ -257,6 +263,7 @@
         <div class="scrubber-progress" id="scrubberProgress"></div>
       </div>
       <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+      <div class="version-number">v1.3</div>
     </div>
     
     <div class="app-frame-container">
@@ -318,9 +325,25 @@
       .then(data => {
         tutorial = data;
         
-        // Validate tutorial
-        if (!tutorial.initialState || !tutorial.snapshots || !tutorial.annotations) {
+        // Validate tutorial - only initialState and snapshots are required
+        if (!tutorial.initialState || !tutorial.snapshots) {
           throw new Error('Invalid tutorial format');
+        }
+        
+        // Backward compatibility: add empty arrays if missing
+        if (!tutorial.annotations) {
+          tutorial.annotations = [];
+        }
+        if (!tutorial.pauses) {
+          tutorial.pauses = [];
+        }
+        
+        console.log('📤 Tutorial parsed from URL');
+        console.log('  Snapshots:', tutorial.snapshots.length);
+        console.log('  Annotations in data:', tutorial.annotations.length);
+        console.log('  Pauses:', tutorial.pauses ? tutorial.pauses.length : 0);
+        if (tutorial.annotations && tutorial.annotations.length > 0) {
+          console.log('  First annotation:', tutorial.annotations[0]);
         }
         
         // Check for app URL
@@ -342,9 +365,17 @@
     try {
       tutorial = embeddedTutorial;
       
-      // Validate tutorial
-      if (!tutorial.initialState || !tutorial.snapshots || !tutorial.annotations) {
+      // Validate tutorial - only initialState and snapshots are required
+      if (!tutorial.initialState || !tutorial.snapshots) {
         throw new Error('Invalid tutorial format');
+      }
+      
+      // Backward compatibility: add empty arrays if missing
+      if (!tutorial.annotations) {
+        tutorial.annotations = [];
+      }
+      if (!tutorial.pauses) {
+        tutorial.pauses = [];
       }
       
       // Check for app URL
@@ -369,9 +400,25 @@
       try {
         tutorial = JSON.parse(event.target.result);
         
-        // Validate tutorial
-        if (!tutorial.initialState || !tutorial.snapshots || !tutorial.annotations) {
+        // Validate tutorial - only initialState and snapshots are required
+        if (!tutorial.initialState || !tutorial.snapshots) {
           throw new Error('Invalid tutorial format');
+        }
+        
+        // Backward compatibility: add empty arrays if missing
+        if (!tutorial.annotations) {
+          tutorial.annotations = [];
+        }
+        if (!tutorial.pauses) {
+          tutorial.pauses = [];
+        }
+        
+        console.log('📤 Tutorial parsed from file');
+        console.log('  Snapshots:', tutorial.snapshots.length);
+        console.log('  Annotations in data:', tutorial.annotations.length);
+        console.log('  Pauses:', tutorial.pauses ? tutorial.pauses.length : 0);
+        if (tutorial.annotations && tutorial.annotations.length > 0) {
+          console.log('  First annotation:', tutorial.annotations[0]);
         }
         
         // Check for app URL
@@ -765,7 +812,7 @@
     handleAnnotations();
   });
   
-  console.log('Tutorial Player v1.2 initialized');
+  console.log('Tutorial Player v1.3 initialized');
 })();
 </script>
 </body>
