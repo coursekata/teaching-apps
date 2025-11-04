@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.33</title>
+<title>Interactive Tutorial Creator - v12.34</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.33</div>
+    <div class="version-number">v12.34</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2664,13 +2664,17 @@
         // Double-click to delete
         span.addEventListener('dblclick', (e) => {
           e.stopPropagation();
+          e.preventDefault();
           const startIdx = parseInt(span.dataset.startIdx);
           const endIdx = parseInt(span.dataset.endIdx);
           console.log('🖱️ Double-clicked drag event for deletion:', { startIdx, endIdx, dragType });
+          console.log('  eventDeletionModal:', eventDeletionModal);
+          console.log('  eventDeletionText:', eventDeletionText);
           
           eventToDelete = { startIdx, endIdx };
           eventDeletionText.textContent = `Delete "${dragType}" drag event (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)?`;
           eventDeletionModal.classList.add('visible');
+          console.log('  Modal should now be visible');
         });
         
         // Make drag event draggable (will move start and end together)
@@ -3888,7 +3892,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.33 initialized');
+  console.log('Tutorial Creator v12.34 initialized');
 })();
 </script>
 </body>
