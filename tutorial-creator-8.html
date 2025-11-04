@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.36</title>
+<title>Interactive Tutorial Creator - v12.37</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.36</div>
+    <div class="version-number">v12.37</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3293,6 +3293,154 @@
     renderTimeline();
   }
   
+  // Repair broken drag sequences after sorting
+  // When drag events are moved and sorted, a drag sequence can end up interleaved with another,
+  // causing orphaned drag events. This function identifies and reorders them.
+  function repairDragSequences() {
+    console.log('🔧 Checking for broken drag sequences...');
+    
+    // Find all dragStart and dragEnd events
+    const dragStarts = [];
+    const dragEnds = [];
+    
+    for (let i = 0; i < currentTutorial.snapshots.length; i++) {
+      const action = currentTutorial.snapshots[i].event.action;
+      
+      if (action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+          action === 'dragBStart' || action === 'dragAxisStart') {
+        const dragType = action.replace('Start', '');
+        dragStarts.push({ index: i, dragType, timestamp: currentTutorial.snapshots[i].timestamp });
+      }
+      
+      if (action === 'dragEnd' || action === 'dragBetaEnd' || action === 'dragBetaPrimeEnd' || 
+          action === 'dragBEnd' || action === 'dragAxisEnd') {
+        const dragType = action.replace('End', '');
+        dragEnds.push({ index: i, dragType, timestamp: currentTutorial.snapshots[i].timestamp });
+      }
+    }
+    
+    console.log(`  Found ${dragStarts.length} dragStart(s) and ${dragEnds.length} dragEnd(s)`);
+    
+    // Check if any drag sequences are broken (dragStart followed by another dragStart of same type before dragEnd)
+    let foundBroken = false;
+    for (let i = 0; i < dragStarts.length; i++) {
+      const start = dragStarts[i];
+      
+      // Find the matching dragEnd
+      let foundEnd = false;
+      for (let j = start.index + 1; j < currentTutorial.snapshots.length; j++) {
+        const action = currentTutorial.snapshots[j].event.action;
+        
+        // If we hit another dragStart of the same type before finding dragEnd, sequence is broken
+        if (action === start.dragType + 'Start') {
+          console.log(`  ⚠️ Broken sequence: ${start.dragType}Start at ${start.timestamp.toFixed(2)}ms followed by another Start before End`);
+          foundBroken = true;
+          break;
+        }
+        
+        if (action === start.dragType + 'End') {
+          foundEnd = true;
+          break;
+        }
+      }
+      
+      if (!foundEnd) {
+        console.log(`  ⚠️ Orphaned ${start.dragType}Start at ${start.timestamp.toFixed(2)}ms - no matching End found`);
+        foundBroken = true;
+      }
+    }
+    
+    if (!foundBroken) {
+      console.log('  ✓ All drag sequences are intact');
+      return;
+    }
+    
+    // Repair by matching dragStart/dragEnd pairs by type and reordering snapshots
+    console.log('  🔨 Repairing broken sequences...');
+    
+    // Group snapshots by drag sequences
+    const sequences = [];
+    let nonDragSnapshots = [];
+    
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
+      
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+                         action === 'dragBStart' || action === 'dragAxisStart';
+      
+      if (isDragStart) {
+        const dragType = action.replace('Start', '');
+        const dragEndAction = dragType + 'End';
+        
+        // Collect ALL snapshots until we find the matching dragEnd
+        // This includes drag events AND any non-drag events that fell in between
+        const sequence = [snapshot];
+        let foundEnd = false;
+        
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          const nextSnapshot = currentTutorial.snapshots[j];
+          const nextAction = nextSnapshot.event.action;
+          
+          sequence.push(nextSnapshot);
+          
+          if (nextAction === dragEndAction) {
+            foundEnd = true;
+            sequences.push({
+              type: dragType,
+              startTime: snapshot.timestamp,
+              endTime: nextSnapshot.timestamp,
+              snapshots: sequence
+            });
+            i = j + 1;
+            break;
+          }
+        }
+        
+        if (!foundEnd) {
+          // Orphaned dragStart - treat as non-drag
+          nonDragSnapshots.push(snapshot);
+          i++;
+        }
+      } else {
+        // Non-drag event - collect these separately
+        nonDragSnapshots.push(snapshot);
+        i++;
+      }
+    }
+    
+    console.log(`  Identified ${sequences.length} complete drag sequence(s) and ${nonDragSnapshots.length} non-drag snapshot(s)`);
+    
+    // Rebuild the snapshots array by sorting all sequences and non-drag events by timestamp
+    const allItems = [];
+    
+    // Add sequences
+    for (const seq of sequences) {
+      allItems.push({ timestamp: seq.startTime, isSequence: true, data: seq });
+    }
+    
+    // Add non-drag snapshots
+    for (const snap of nonDragSnapshots) {
+      allItems.push({ timestamp: snap.timestamp, isSequence: false, data: snap });
+    }
+    
+    // Sort by timestamp
+    allItems.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Rebuild snapshots array
+    currentTutorial.snapshots = [];
+    for (const item of allItems) {
+      if (item.isSequence) {
+        currentTutorial.snapshots.push(...item.data.snapshots);
+      } else {
+        currentTutorial.snapshots.push(item.data);
+      }
+    }
+    
+    console.log('  ✓ Drag sequences repaired');
+  }
+  
   function stopEventDrag() {
     if (!draggingEvent) return;
     
@@ -3312,6 +3460,9 @@
     
     console.log('  After sort, first 5 timestamps:', currentTutorial.snapshots.slice(0, 5).map((s, idx) => `[${idx}]=${s.timestamp.toFixed(2)}`).join(', '));
     console.log('  After sort, last 5 timestamps:', currentTutorial.snapshots.slice(-5).map((s, idx) => `[${currentTutorial.snapshots.length - 5 + idx}]=${s.timestamp.toFixed(2)}`).join(', '));
+    
+    // Repair any broken drag sequences caused by sorting
+    repairDragSequences();
     
     draggingEvent = null;
     document.removeEventListener('mousemove', doEventDrag);
@@ -3914,7 +4065,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.36 initialized');
+  console.log('Tutorial Creator v12.37 initialized');
 })();
 </script>
 </body>
