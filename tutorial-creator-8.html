@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.42</title>
+<title>Interactive Tutorial Creator - v12.43</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.42</div>
+    <div class="version-number">v12.43</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3801,17 +3801,12 @@
   function recalculateTutorialDuration() {
     if (!currentTutorial) return;
     
-    let calculatedDuration = 0;
-    let durationSource = 'none';
-    
     // Get last snapshot time
     let lastSnapshotTime = 0;
     let lastSnapshotIsSingleEvent = false;
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
       lastSnapshotTime = lastSnapshot.timestamp;
-      calculatedDuration = lastSnapshotTime;
-      durationSource = 'snapshot';
       
       // Check if last snapshot is a single event (not dragEnd)
       const action = lastSnapshot.event.action;
@@ -3822,29 +3817,44 @@
     let lastAnnotationEnd = 0;
     if (currentTutorial.annotations.length > 0) {
       lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-      if (lastAnnotationEnd > calculatedDuration) {
-        calculatedDuration = lastAnnotationEnd;
-        durationSource = 'annotation';
-        lastSnapshotIsSingleEvent = false; // Override if annotation extends further
-      }
     }
     
     // Get last pause time
     let lastPauseTime = 0;
-    let lastPauseIsLast = false;
     if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
       lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-      if (lastPauseTime > calculatedDuration) {
-        calculatedDuration = lastPauseTime;
-        durationSource = 'pause';
-        lastSnapshotIsSingleEvent = false; // Override if pause extends further
-        lastPauseIsLast = true; // Track that pause is the last element
-      }
+    }
+    
+    // Determine which element is chronologically last (considering pause needs to beat ties)
+    let calculatedDuration = 0;
+    let durationSource = 'none';
+    let lastElementType = 'none';
+    
+    // Compare all three to find the maximum
+    const maxTime = Math.max(lastSnapshotTime, lastAnnotationEnd, lastPauseTime);
+    
+    if (maxTime === 0) {
+      calculatedDuration = 0;
+      durationSource = 'none';
+      lastElementType = 'none';
+    } else if (lastPauseTime >= maxTime - 10) {
+      // Pause is last (or within 10ms of last, which means it's effectively last)
+      calculatedDuration = lastPauseTime;
+      durationSource = 'pause';
+      lastElementType = 'pause';
+    } else if (lastAnnotationEnd === maxTime) {
+      calculatedDuration = lastAnnotationEnd;
+      durationSource = 'annotation';
+      lastElementType = 'annotation';
+    } else {
+      calculatedDuration = lastSnapshotTime;
+      durationSource = 'snapshot';
+      lastElementType = lastSnapshotIsSingleEvent ? 'singleEvent' : 'dragEvent';
     }
     
     // Add small buffer for single events so playhead aligns with right edge of visual marker
     // Single events are rendered as 8px wide markers, so add buffer for visual consistency
-    if (lastSnapshotIsSingleEvent) {
+    if (lastElementType === 'singleEvent') {
       calculatedDuration += 200; // Add 200ms buffer (8px at ~40-50 px/s scale)
       console.log('📊 Added visual buffer for single event ending');
     }
@@ -3852,7 +3862,7 @@
     // Add buffer for pauses so playhead aligns with center of diamond marker
     // Pause diamonds are 12px wide, centered on timestamp. To reach visual center,
     // we need to account for the left-offset rendering (pauseLeft - 6px)
-    if (lastPauseIsLast) {
+    if (lastElementType === 'pause') {
       calculatedDuration += 150; // Add buffer to center playhead on diamond (~6px at ~40-50 px/s scale)
       console.log('📊 Added visual buffer for pause ending (centering on diamond)');
     }
@@ -4047,7 +4057,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.42 initialized');
+  console.log('Tutorial Creator v12.43 initialized');
 })();
 </script>
 </body>
