@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.35</title>
+<title>Interactive Tutorial Creator - v12.36</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.35</div>
+    <div class="version-number">v12.36</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3245,10 +3245,26 @@
       // For drag events, update ALL snapshots between start and end proportionally
       const originalDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
       
+      console.log('🔧 Updating drag sequence timestamps:');
+      console.log('  Indices:', draggingEvent.startIdx, 'to', draggingEvent.endIdx);
+      console.log('  Original duration:', originalDuration.toFixed(2), 'ms');
+      console.log('  Final timestamp:', finalTimestamp.toFixed(2), 'ms');
+      
       for (let i = draggingEvent.startIdx; i <= draggingEvent.endIdx; i++) {
         const originalTimestamp = draggingEvent.originalTimestamps[i];
-        const relativePosition = (originalTimestamp - draggingEvent.originalTimestamp) / originalDuration;
-        currentTutorial.snapshots[i].timestamp = finalTimestamp + (relativePosition * originalDuration);
+        
+        if (originalTimestamp === undefined) {
+          console.error('❌ Missing originalTimestamp for index', i);
+          console.error('   originalTimestamps:', draggingEvent.originalTimestamps);
+          continue;
+        }
+        
+        const relativePosition = originalDuration > 0 ? (originalTimestamp - draggingEvent.originalTimestamp) / originalDuration : 0;
+        const newTimestamp = finalTimestamp + (relativePosition * originalDuration);
+        const oldTimestamp = currentTutorial.snapshots[i].timestamp;
+        
+        currentTutorial.snapshots[i].timestamp = newTimestamp;
+        console.log(`  Snapshot ${i}: ${oldTimestamp.toFixed(2)} -> ${newTimestamp.toFixed(2)} (rel: ${relativePosition.toFixed(3)})`);
       }
     } else {
       // For single events, just update the one snapshot
@@ -3289,7 +3305,13 @@
     }
     
     // Sort snapshots by timestamp to maintain proper order
+    console.log('📦 Sorting snapshots...');
+    console.log('  Before sort, first 5 timestamps:', currentTutorial.snapshots.slice(0, 5).map((s, idx) => `[${idx}]=${s.timestamp.toFixed(2)}`).join(', '));
+    
     currentTutorial.snapshots.sort((a, b) => a.timestamp - b.timestamp);
+    
+    console.log('  After sort, first 5 timestamps:', currentTutorial.snapshots.slice(0, 5).map((s, idx) => `[${idx}]=${s.timestamp.toFixed(2)}`).join(', '));
+    console.log('  After sort, last 5 timestamps:', currentTutorial.snapshots.slice(-5).map((s, idx) => `[${currentTutorial.snapshots.length - 5 + idx}]=${s.timestamp.toFixed(2)}`).join(', '));
     
     draggingEvent = null;
     document.removeEventListener('mousemove', doEventDrag);
@@ -3892,7 +3914,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.35 initialized');
+  console.log('Tutorial Creator v12.36 initialized');
 })();
 </script>
 </body>
