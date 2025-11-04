@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player</title>
+<title>Tutorial Player - v1.1</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -631,8 +631,8 @@
     if (ann.position) {
       // Custom positioned annotation
       annotationBox.classList.add('custom-position');
-      annotationBox.style.left = ann.position.x + 'px';
-      annotationBox.style.top = ann.position.y + 'px';
+      annotationBox.style.left = ann.position.left + 'px';
+      annotationBox.style.top = ann.position.top + 'px';
       if (ann.position.width) {
         annotationBox.style.width = ann.position.width + 'px';
       } else {
@@ -728,7 +728,7 @@
     handleAnnotations();
   });
   
-  console.log('Tutorial Player initialized');
+  console.log('Tutorial Player v1.1 initialized');
 })();
 </script>
 </body>
