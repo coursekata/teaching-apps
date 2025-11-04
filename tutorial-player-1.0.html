@@ -253,7 +253,6 @@
   <div id="playerSection" style="display:none;">
     <div class="controls">
       <button id="playPauseBtn" class="primary">▶ Play</button>
-      <button id="restartBtn">⟲ Restart</button>
       <div class="scrubber" id="scrubber">
         <div class="scrubber-progress" id="scrubberProgress"></div>
       </div>
@@ -276,7 +275,6 @@
   const tutorialFile = document.getElementById('tutorialFile');
   const errorMsg = document.getElementById('errorMsg');
   const playPauseBtn = document.getElementById('playPauseBtn');
-  const restartBtn = document.getElementById('restartBtn');
   const scrubber = document.getElementById('scrubber');
   const scrubberProgress = document.getElementById('scrubberProgress');
   const timeDisplay = document.getElementById('timeDisplay');
@@ -420,7 +418,6 @@
           
           // Enable controls
           playPauseBtn.disabled = false;
-          restartBtn.disabled = false;
           
           console.log('Tutorial loaded:', tutorial.snapshots.length, 'snapshots,', tutorial.annotations.length, 'annotations');
         }
@@ -502,6 +499,22 @@
   
   function play() {
     if (!tutorial) return;
+    
+    // If we're at the end, reset to beginning (replay)
+    if (currentTime >= tutorial.duration) {
+      currentTime = 0;
+      currentAnnotationIndex = -1;
+      triggeredPauses.clear();
+      hideAnnotation();
+      
+      const api = getAPI();
+      if (api) {
+        api.setState(tutorial.initialState);
+      }
+      
+      scrubberProgress.style.width = '0%';
+      updateTimeDisplay();
+    }
     
     isPlaying = true;
     playbackStartTime = Date.now() - currentTime;
@@ -647,30 +660,6 @@
       `${currentMin}:${currentSec.toString().padStart(2, '0')} / ` +
       `${totalMin}:${totalSec.toString().padStart(2, '0')}`;
   }
-  
-  // Restart
-  restartBtn.addEventListener('click', () => {
-    currentTime = 0;
-    currentAnnotationIndex = -1;
-    triggeredPauses.clear(); // Reset triggered pauses
-    hideAnnotation();
-    
-    const api = getAPI();
-    if (api) {
-      api.setState(tutorial.initialState);
-    }
-    
-    scrubberProgress.style.width = '0%';
-    updateTimeDisplay();
-    
-    playPauseBtn.classList.remove('flash'); // Stop flashing if it was
-    
-    if (isPlaying) {
-      playbackStartTime = Date.now();
-    } else {
-      playPauseBtn.textContent = '▶ Play';
-    }
-  });
   
   // Scrubber
   scrubber.addEventListener('click', (e) => {
