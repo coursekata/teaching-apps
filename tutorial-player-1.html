@@ -464,9 +464,13 @@
         display: none;
         overflow-y: auto;
         overflow-x: hidden;
+        box-sizing: border-box;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
         font-size: 15px;
         line-height: 1.6;
+      }
+      .annotation-box.custom-position {
+        max-width: none;
       }
       .annotation-box.visible {
         display: block;
@@ -620,21 +624,33 @@
     annotationTitle.textContent = ann.title;
     annotationText.innerHTML = ann.text;
     
+    // Reset transform and size constraints
+    annotationBox.style.transform = '';
+    
     // Position annotation
     if (ann.position) {
+      // Custom positioned annotation
+      annotationBox.classList.add('custom-position');
       annotationBox.style.left = ann.position.x + 'px';
       annotationBox.style.top = ann.position.y + 'px';
       if (ann.position.width) {
         annotationBox.style.width = ann.position.width + 'px';
+      } else {
+        annotationBox.style.width = '250px'; // Reset to default
       }
       if (ann.position.height) {
         annotationBox.style.height = ann.position.height + 'px';
+      } else {
+        annotationBox.style.height = 'auto'; // Reset to default
       }
     } else {
       // Default center position
+      annotationBox.classList.remove('custom-position');
       annotationBox.style.left = '50%';
       annotationBox.style.top = '50%';
       annotationBox.style.transform = 'translate(-50%, -50%)';
+      annotationBox.style.width = '250px';
+      annotationBox.style.height = 'auto';
     }
     
     annotationBox.classList.add('visible');
@@ -648,6 +664,7 @@
   function hideAnnotation() {
     if (annotationBox) {
       annotationBox.classList.remove('visible');
+      annotationBox.classList.remove('custom-position');
     }
   }
   
