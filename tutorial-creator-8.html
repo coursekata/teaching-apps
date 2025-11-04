@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.44</title>
+<title>Interactive Tutorial Creator - v12.46</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.44</div>
+    <div class="version-number">v12.46</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3825,31 +3825,31 @@
       lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
     }
     
-    // Determine which element is chronologically last (considering pause needs to beat ties)
+    // Determine which element should set the endpoint
+    // Priority: Pauses always win (they stop playback), then annotations, then snapshots
     let calculatedDuration = 0;
     let durationSource = 'none';
     let lastElementType = 'none';
     
-    // Compare all three to find the maximum
-    const maxTime = Math.max(lastSnapshotTime, lastAnnotationEnd, lastPauseTime);
-    
-    if (maxTime === 0) {
-      calculatedDuration = 0;
-      durationSource = 'none';
-      lastElementType = 'none';
-    } else if (lastPauseTime >= maxTime - 10) {
-      // Pause is last (or within 10ms of last, which means it's effectively last)
+    if (lastPauseTime > 0) {
+      // If there's a pause, the tutorial ends there (that's the point of a pause)
       calculatedDuration = lastPauseTime;
       durationSource = 'pause';
       lastElementType = 'pause';
-    } else if (lastAnnotationEnd === maxTime) {
+    } else if (lastAnnotationEnd > 0 && lastAnnotationEnd >= lastSnapshotTime) {
+      // No pause, so use annotation if it extends beyond snapshot
       calculatedDuration = lastAnnotationEnd;
       durationSource = 'annotation';
       lastElementType = 'annotation';
-    } else {
+    } else if (lastSnapshotTime > 0) {
+      // No pause or extending annotation, use snapshot
       calculatedDuration = lastSnapshotTime;
       durationSource = 'snapshot';
       lastElementType = lastSnapshotIsSingleEvent ? 'singleEvent' : 'dragEvent';
+    } else {
+      calculatedDuration = 0;
+      durationSource = 'none';
+      lastElementType = 'none';
     }
     
     // Add small buffer for single events so playhead aligns with right edge of visual marker
@@ -3861,10 +3861,10 @@
     }
     
     // Add buffer for pauses so playhead aligns with center of diamond marker
-    // Pause diamonds are 12px wide, positioned at (pauseLeft - 6px) to center them
-    // To reach the visual center, add 6px worth of time
+    // Pause diamonds are 12px wide, positioned at (pauseLeft - 6px) to center them on timestamp
+    // Need to add enough buffer to move playhead from pause timestamp to visual center
     if (lastElementType === 'pause') {
-      const bufferMs = (6 / timelineScale) * 1000; // Convert 6px to milliseconds
+      const bufferMs = (28 / timelineScale) * 1000; // Convert 28px to milliseconds (measured offset + center adjustment)
       calculatedDuration += bufferMs;
       console.log('📊 Added visual buffer for pause ending (centering on diamond):', bufferMs.toFixed(1), 'ms');
     }
@@ -4059,7 +4059,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.44 initialized');
+  console.log('Tutorial Creator v12.46 initialized');
 })();
 </script>
 </body>
