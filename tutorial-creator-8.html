@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.51</title>
+<title>Interactive Tutorial Creator - v12.52</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.51</div>
+    <div class="version-number">v12.52</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3937,9 +3937,48 @@
       lastElementType = lastSnapshotIsSingleEvent ? 'singleEvent' : 'dragEvent';
     }
     
-    // Don't add buffers to duration here - they create circular dependency with timelineScale
-    // Instead, add pixel adjustments when positioning playhead using current scale
-    // This matches how annotations work (adjust at render time with current scale)
+    // Add pixel-based buffers for visual alignment
+    // Must iterate because adding buffer changes scale, which changes buffer amount
+    if (lastElementType === 'singleEvent' || lastElementType === 'pause') {
+      const containerWidth = timelineContainer.offsetWidth || 1200;
+      const availableWidth = containerWidth - 80;
+      const minScale = 20;
+      const maxScale = 100;
+      
+      // Iterate to find stable buffer (scale depends on duration, buffer depends on scale)
+      let iterDuration = calculatedDuration;
+      let iterScale = 50; // Initial guess
+      for (let iteration = 0; iteration < 5; iteration++) {
+        // Calculate what scale will be for this duration
+        const durationSeconds = (iterDuration - getTimelineStartOffset()) / 1000;
+        if (durationSeconds > 0) {
+          const calculatedScale = availableWidth / durationSeconds;
+          iterScale = Math.max(minScale, Math.min(maxScale, calculatedScale));
+        }
+        
+        // Calculate buffer using this scale
+        let bufferPixels = 0;
+        if (lastElementType === 'singleEvent') {
+          bufferPixels = 50; // Click events
+        } else if (lastElementType === 'pause') {
+          bufferPixels = 26; // Pause events
+        }
+        
+        const bufferMs = (bufferPixels / iterScale) * 1000;
+        const newDuration = calculatedDuration + bufferMs;
+        
+        // Check convergence
+        if (Math.abs(newDuration - iterDuration) < 1) {
+          iterDuration = newDuration;
+          break;
+        }
+        
+        iterDuration = newDuration;
+      }
+      
+      calculatedDuration = iterDuration;
+      console.log('📊 Added iterative buffer for', lastElementType, ':', (iterDuration - calculatedDuration).toFixed(1), 'ms');
+    }
     
     currentTutorial.duration = calculatedDuration;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
@@ -4141,7 +4180,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.51 initialized');
+  console.log('Tutorial Creator v12.52 initialized');
 })();
 </script>
 </body>
