@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.57</title>
+<title>Interactive Tutorial Creator - v12.58 (Debug)</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.57</div>
+    <div class="version-number">v12.58 (Debug)</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1647,6 +1647,22 @@
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
+      console.log('  playbackPausedAt =', playbackPausedAt.toFixed(3), 's');
+      console.log('  timestamp =', timestamp.toFixed(2), 'ms');
+      
+      // Debug: Where is the playhead right now?
+      const currentPlayheadLeft = timelinePlayhead.style.left;
+      console.log('  Current playhead position:', currentPlayheadLeft);
+      
+      // Debug: Where will the pause be rendered?
+      const timelineStartOffset = getTimelineStartOffset();
+      const pauseTime = (timestamp - timelineStartOffset) / 1000;
+      const pauseLeft = pauseTime * timelineScale;
+      console.log('  timelineStartOffset =', (timelineStartOffset / 1000).toFixed(3), 's');
+      console.log('  pauseTime (relative to timeline) =', pauseTime.toFixed(3), 's');
+      console.log('  timelineScale =', timelineScale.toFixed(2), 'px/s');
+      console.log('  pauseLeft (calculated) =', pauseLeft.toFixed(2), 'px');
+      console.log('  pauseEl.style.left will be:', (pauseLeft - 6).toFixed(2), 'px (centered)');
     } else {
       // Normal paused recording - use end of tutorial
       timestamp = currentTutorial.duration || 0;
@@ -4206,7 +4222,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.57 initialized');
+  console.log('Tutorial Creator v12.58 (Debug) initialized');
 })();
 </script>
 </body>
