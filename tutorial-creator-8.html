@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.48</title>
+<title>Interactive Tutorial Creator - v12.49</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.48</div>
+    <div class="version-number">v12.49</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3868,22 +3868,22 @@
       lastElementType = lastSnapshotIsSingleEvent ? 'singleEvent' : 'dragEvent';
     }
     
-    // Add small buffer for single events so playhead aligns with right edge of visual marker
-    // Single events are rendered as 8px wide markers
+    // Add buffer for single events so playhead aligns with right edge of visual marker
+    // Single events are 8px wide markers, but we need to account for visual effects
+    // Empirically determined: need 26px total to reach visual right edge
     if (lastElementType === 'singleEvent') {
-      const bufferMs = (8 / timelineScale) * 1000; // Convert 8px to milliseconds
+      const bufferMs = (26 / timelineScale) * 1000; // Convert 26px to milliseconds
       calculatedDuration += bufferMs;
       console.log('📊 Added visual buffer for single event ending:', bufferMs.toFixed(1), 'ms');
     }
     
     // Add buffer for pauses so playhead aligns with center of diamond marker
-    // Pause diamonds are 12x12px rotated 45°, positioned with left edge at (timestamp - 6px)
-    // Since the diamond is 12px wide, its center is at: left edge + 6px = timestamp
-    // Therefore no buffer needed - the timestamp itself is already at the diamond center
+    // Pause diamonds are 12x12px rotated 45°, positioned with left at (timestamp - 6px)
+    // Empirically determined: need 20px to reach visual center from timestamp
     if (lastElementType === 'pause') {
-      const bufferMs = 0; // No buffer needed - timestamp already at diamond center
+      const bufferMs = (20 / timelineScale) * 1000; // Convert 20px to milliseconds
       calculatedDuration += bufferMs;
-      console.log('📊 No buffer needed for pause ending - timestamp is already at diamond center');
+      console.log('📊 Added visual buffer for pause ending (to diamond center):', bufferMs.toFixed(1), 'ms');
     }
     
     currentTutorial.duration = calculatedDuration;
@@ -4086,7 +4086,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.48 initialized');
+  console.log('Tutorial Creator v12.49 initialized');
 })();
 </script>
 </body>
