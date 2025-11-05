@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.54</title>
+<title>Interactive Tutorial Creator - v12.55</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.54</div>
+    <div class="version-number">v12.55</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2345,6 +2345,18 @@
         if (elapsedMs >= pause.timestamp && !playbackLoop.triggeredPauses.has(pauseKey)) {
           playbackLoop.triggeredPauses.add(pauseKey);
           console.log('⏸ Pause reached at', (pause.timestamp / 1000).toFixed(2) + 's - pausing playback');
+          
+          // Adjust playhead to visual center of pause diamond before pausing
+          // The 47px value accounts for the diamond's visual effects (rotation, border, box-shadow)
+          const timelineStartOffset = getTimelineStartOffset();
+          const pauseTimelinePosition = ((pause.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+          const visualCenterAdjustment = 47 / timelineScale * 1000; // Convert pixels to milliseconds at current scale
+          
+          // Temporarily advance elapsed time to position playhead at visual center
+          const adjustedElapsedMs = pause.timestamp + visualCenterAdjustment;
+          const adjustedTimelineElapsed = (adjustedElapsedMs - timelineStartOffset) / 1000;
+          timelinePlayhead.style.left = (adjustedTimelineElapsed * timelineScale + 60) + 'px';
+          
           pausePlayback();
           return;
         }
@@ -4181,7 +4193,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.54 initialized');
+  console.log('Tutorial Creator v12.55 initialized');
 })();
 </script>
 </body>
