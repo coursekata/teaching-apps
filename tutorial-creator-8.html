@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.46</title>
+<title>Interactive Tutorial Creator - v12.48</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.46</div>
+    <div class="version-number">v12.48</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2470,6 +2470,17 @@
       finalizeRecording();
     }
     
+    // Try to reset the app to initial state before clearing everything
+    const api = getAPI();
+    if (api && currentTutorial && currentTutorial.initialState) {
+      console.log('Resetting app to initial state before clearing');
+      try {
+        api.setState(currentTutorial.initialState);
+      } catch (e) {
+        console.error('Error resetting state:', e);
+      }
+    }
+    
     // Clear current tutorial
     currentTutorial = null;
     importedDurationOffset = 0; // Reset offset
@@ -2498,21 +2509,27 @@
     // Hide playhead
     timelinePlayhead.style.display = 'none';
     
+    // Hide timeline container
+    timelineContainer.classList.remove('visible');
+    
     // Clear timeline
     renderTimeline();
     
     // Reload the iframe to start completely fresh
     const currentUrl = appFrame.src;
     if (currentUrl) {
-      console.log('Reloading app:', currentUrl);
+      console.log('🔄 Reloading app:', currentUrl);
       apiReady = false;
       isAppLoaded = false;
       
-      // Reload iframe
-      appFrame.src = currentUrl;
+      // Force a complete reload by clearing src first, then setting it again
+      appFrame.src = 'about:blank';
+      setTimeout(() => {
+        appFrame.src = currentUrl;
+      }, 50);
     }
     
-    console.log('🔄 Starting over');
+    console.log('🔄 Starting over - tutorial cleared');
   });
   
   
@@ -3951,6 +3968,16 @@
         
         currentTutorial = imported;
         
+        console.log('📤 Tutorial imported successfully');
+        console.log('  Snapshots:', currentTutorial.snapshots.length);
+        console.log('  Annotations:', currentTutorial.annotations.length);
+        console.log('  Pauses:', currentTutorial.pauses ? currentTutorial.pauses.length : 0);
+        if (currentTutorial.annotations.length > 0) {
+          console.log('  Annotation details:', currentTutorial.annotations.map(a => 
+            `"${a.title}" at ${a.timestamp}ms for ${a.duration}ms`
+          ));
+        }
+        
         // Load the app if not already loaded
         if (!isAppLoaded && imported.initialState) {
           // We can't auto-load without a URL, so just inform user
@@ -4060,7 +4087,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.46 initialized');
+  console.log('Tutorial Creator v12.48 initialized');
 })();
 </script>
 </body>
