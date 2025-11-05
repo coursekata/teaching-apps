@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.59 (Debug)</title>
+<title>Interactive Tutorial Creator - v12.60 (Debug)</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.59 (Debug)</div>
+    <div class="version-number">v12.60 (Debug)</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1684,6 +1684,17 @@
     // Recalculate duration and re-render timeline
     recalculateTutorialDuration();
     renderTimeline();
+    
+    // Debug: Check if playhead moved after re-rendering
+    if (playbackPausedAt > 0) {
+      setTimeout(() => {
+        const playheadRect = timelinePlayhead.getBoundingClientRect();
+        const containerRect = timelineContainer.getBoundingClientRect();
+        const playheadAfter = playheadRect.left - containerRect.left;
+        console.log('  📍 AFTER re-render: Playhead is now at:', playheadAfter.toFixed(2), 'px (container-relative)');
+        console.log('  📍 Playhead CSS left:', timelinePlayhead.style.left);
+      }, 0);
+    }
   });
   
   createAnnotation.addEventListener('click', () => {
@@ -4235,7 +4246,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.59 (Debug) initialized');
+  console.log('Tutorial Creator v12.60 (Debug) initialized');
 })();
 </script>
 </body>
