@@ -2431,10 +2431,8 @@
             if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
           }
           
-          // Add small visual adjustment for single events (8px marker width)
-          if (lastIsSingleEvent && !annotationExtendsPast) {
-            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
-          }
+          // No additional adjustment needed here - the duration buffer already accounts for it
+          // The 8px buffer in recalculateTutorialDuration aligns playhead with marker right edge
         }
         
         timelinePlayhead.style.left = timelineEndPosition + 'px';
@@ -3879,12 +3877,13 @@
     }
     
     // Add buffer for pauses so playhead aligns with center of diamond marker
-    // Pause diamonds are 12x12px rotated 45°, creating ~17px visual width
-    // Empirically measured: need 22px to reach visual center from pause timestamp
+    // Pause diamonds are 12x12px rotated 45°, positioned with left edge at (timestamp - 6px)
+    // Since the diamond is 12px wide, its center is at: left edge + 6px = timestamp
+    // Therefore no buffer needed - the timestamp itself is already at the diamond center
     if (lastElementType === 'pause') {
-      const bufferMs = (22 / timelineScale) * 1000; // Convert 22px to milliseconds
+      const bufferMs = 0; // No buffer needed - timestamp already at diamond center
       calculatedDuration += bufferMs;
-      console.log('📊 Added visual buffer for pause ending (centering on rotated diamond):', bufferMs.toFixed(1), 'ms');
+      console.log('📊 No buffer needed for pause ending - timestamp is already at diamond center');
     }
     
     currentTutorial.duration = calculatedDuration;
