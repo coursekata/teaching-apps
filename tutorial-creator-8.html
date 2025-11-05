@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.55</title>
+<title>Interactive Tutorial Creator - v12.57</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.55</div>
+    <div class="version-number">v12.57</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2346,18 +2346,35 @@
           playbackLoop.triggeredPauses.add(pauseKey);
           console.log('⏸ Pause reached at', (pause.timestamp / 1000).toFixed(2) + 's - pausing playback');
           
-          // Adjust playhead to visual center of pause diamond before pausing
-          // The 47px value accounts for the diamond's visual effects (rotation, border, box-shadow)
-          const timelineStartOffset = getTimelineStartOffset();
-          const pauseTimelinePosition = ((pause.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
-          const visualCenterAdjustment = 47 / timelineScale * 1000; // Convert pixels to milliseconds at current scale
+          // Check if this pause is the final element (no snapshots or annotations after it)
+          let pauseIsFinalElement = true;
           
-          // Temporarily advance elapsed time to position playhead at visual center
-          const adjustedElapsedMs = pause.timestamp + visualCenterAdjustment;
-          const adjustedTimelineElapsed = (adjustedElapsedMs - timelineStartOffset) / 1000;
-          timelinePlayhead.style.left = (adjustedTimelineElapsed * timelineScale + 60) + 'px';
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > pause.timestamp) pauseIsFinalElement = false;
+          }
           
-          pausePlayback();
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > pause.timestamp) pauseIsFinalElement = false;
+          }
+          
+          // Check if there are other pauses after this one
+          for (let j = i + 1; j < currentTutorial.pauses.length; j++) {
+            if (currentTutorial.pauses[j].timestamp > pause.timestamp) {
+              pauseIsFinalElement = false;
+              break;
+            }
+          }
+          
+          if (pauseIsFinalElement) {
+            // This is the final element - stop playback instead of pausing to avoid double-pause
+            console.log('⏸ Pause is final element - stopping playback');
+            stopPlayback();
+          } else {
+            // Pause in the middle - just pause naturally at the timestamp
+            pausePlayback();
+          }
           return;
         }
       }
@@ -3952,7 +3969,8 @@
     
     // Add pixel-based buffers for visual alignment
     // Must iterate because adding buffer changes scale, which changes buffer amount
-    if (lastElementType === 'singleEvent' || lastElementType === 'pause') {
+    // Only add buffer for click events (single events), NOT for pauses
+    if (lastElementType === 'singleEvent') {
       const containerWidth = timelineContainer.offsetWidth || 1200;
       const availableWidth = containerWidth - 80;
       const minScale = 20;
@@ -3970,12 +3988,7 @@
         }
         
         // Calculate buffer using this scale
-        let bufferPixels = 0;
-        if (lastElementType === 'singleEvent') {
-          bufferPixels = 26; // Click events - empirically calibrated
-        } else if (lastElementType === 'pause') {
-          bufferPixels = 47; // Pause events - empirically calibrated
-        }
+        let bufferPixels = 26; // Click events only - empirically calibrated
         
         const bufferMs = (bufferPixels / iterScale) * 1000;
         const newDuration = calculatedDuration + bufferMs;
@@ -3990,7 +4003,7 @@
       }
       
       calculatedDuration = iterDuration;
-      console.log('📊 Added buffer for', lastElementType, ':', ((calculatedDuration - (lastElementType === 'singleEvent' ? lastSnapshotTime : lastPauseTime)) / 1000).toFixed(3) + 's');
+      console.log('📊 Added buffer for', lastElementType, ':', ((calculatedDuration - lastSnapshotTime) / 1000).toFixed(3) + 's');
     }
     
     currentTutorial.duration = calculatedDuration;
@@ -4193,7 +4206,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.55 initialized');
+  console.log('Tutorial Creator v12.57 initialized');
 })();
 </script>
 </body>
