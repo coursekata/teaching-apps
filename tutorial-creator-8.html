@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.49</title>
+<title>Interactive Tutorial Creator - v12.50</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.49</div>
+    <div class="version-number">v12.50</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1184,26 +1184,46 @@
         const timelineStartOffset = getTimelineStartOffset();
         let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         
-        // Adjust playhead for single event endings to align with right edge of visual marker
+        // Add pixel adjustments based on final element type (using current timelineScale)
         if (currentTutorial.snapshots.length > 0) {
           const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
           const action = lastSnapshot.event.action;
           const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
           
           // Check if annotation or pause extends past last snapshot
-          let annotationExtendsPast = false;
+          let snapshotIsLastElement = true;
           if (currentTutorial.annotations.length > 0) {
             const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
             const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           
-          // Add visual adjustment for single events
-          if (lastIsSingleEvent && !annotationExtendsPast) {
-            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          // Add pixel adjustment for single events (30px like finalizeRecording)
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 30;
+          }
+        }
+        
+        // Check if pause is the final element
+        if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+          const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+          let pauseIsLastElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
+          }
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for pause to reach center
+          if (pauseIsLastElement) {
+            timelineEndPosition += 6;
           }
         }
         
@@ -1306,26 +1326,46 @@
         const timelineStartOffset = getTimelineStartOffset();
         let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         
-        // Adjust playhead for single event endings to align with right edge of visual marker
+        // Add pixel adjustments based on final element type (using current timelineScale)
         if (currentTutorial.snapshots.length > 0) {
           const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
           const action = lastSnapshot.event.action;
           const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
           
           // Check if annotation or pause extends past last snapshot
-          let annotationExtendsPast = false;
+          let snapshotIsLastElement = true;
           if (currentTutorial.annotations.length > 0) {
             const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
             const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           
-          // Add visual adjustment for single events
-          if (lastIsSingleEvent && !annotationExtendsPast) {
-            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          // Add pixel adjustment for single events (30px like finalizeRecording)
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 30;
+          }
+        }
+        
+        // Check if pause is the final element
+        if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+          const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+          let pauseIsLastElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
+          }
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for pause to reach center
+          if (pauseIsLastElement) {
+            timelineEndPosition += 6;
           }
         }
         
@@ -2414,25 +2454,49 @@
         const timelineStartOffset = getTimelineStartOffset();
         let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         
-        // Adjust playhead for single event endings to align with right edge of visual marker
+        // Add pixel adjustments based on final element type (using current timelineScale)
+        // This matches how annotations adjust width at render time
         if (currentTutorial.snapshots.length > 0) {
           const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
           const action = lastSnapshot.event.action;
           const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
           
           // Check if annotation or pause extends past last snapshot
-          let annotationExtendsPast = false;
+          let snapshotIsLastElement = true;
           if (currentTutorial.annotations.length > 0) {
             const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
             const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           
-          // No additional adjustment needed here - the duration buffer already accounts for it
-          // The 8px buffer in recalculateTutorialDuration aligns playhead with marker right edge
+          // Add pixel adjustment for single events to reach visual right edge
+          // Use 30px like finalizeRecording does (line 1504)
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 30;
+          }
+        }
+        
+        // Check if pause is the final element
+        if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+          const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+          let pauseIsLastElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
+          }
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for pause to reach visual center of diamond
+          if (pauseIsLastElement) {
+            timelineEndPosition += 6; // Pause left edge is at timestamp - 6, so add 6 to reach center
+          }
         }
         
         timelinePlayhead.style.left = timelineEndPosition + 'px';
@@ -3868,23 +3932,9 @@
       lastElementType = lastSnapshotIsSingleEvent ? 'singleEvent' : 'dragEvent';
     }
     
-    // Add buffer for single events so playhead aligns with right edge of visual marker
-    // Single events are 8px wide markers, but we need to account for visual effects
-    // Empirically determined: need 26px total to reach visual right edge
-    if (lastElementType === 'singleEvent') {
-      const bufferMs = (26 / timelineScale) * 1000; // Convert 26px to milliseconds
-      calculatedDuration += bufferMs;
-      console.log('📊 Added visual buffer for single event ending:', bufferMs.toFixed(1), 'ms');
-    }
-    
-    // Add buffer for pauses so playhead aligns with center of diamond marker
-    // Pause diamonds are 12x12px rotated 45°, positioned with left at (timestamp - 6px)
-    // Empirically determined: need 20px to reach visual center from timestamp
-    if (lastElementType === 'pause') {
-      const bufferMs = (20 / timelineScale) * 1000; // Convert 20px to milliseconds
-      calculatedDuration += bufferMs;
-      console.log('📊 Added visual buffer for pause ending (to diamond center):', bufferMs.toFixed(1), 'ms');
-    }
+    // Don't add buffers to duration here - they create circular dependency with timelineScale
+    // Instead, add pixel adjustments when positioning playhead using current scale
+    // This matches how annotations work (adjust at render time with current scale)
     
     currentTutorial.duration = calculatedDuration;
     console.log('📊 Duration recalculated:', (calculatedDuration / 1000).toFixed(2) + 's');
@@ -4086,7 +4136,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.49 initialized');
+  console.log('Tutorial Creator v12.50 initialized');
 })();
 </script>
 </body>
