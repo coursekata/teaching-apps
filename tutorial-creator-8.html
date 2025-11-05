@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.50</title>
+<title>Interactive Tutorial Creator - v12.51</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.50</div>
+    <div class="version-number">v12.51</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1201,9 +1201,10 @@
             if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           
-          // Add pixel adjustment for single events (30px like finalizeRecording)
+          // Add pixel adjustment for single events
+          // Empirically determined: 50px needed
           if (lastIsSingleEvent && snapshotIsLastElement) {
-            timelineEndPosition += 30;
+            timelineEndPosition += 50;
           }
         }
         
@@ -1222,8 +1223,9 @@
           }
           
           // Add pixel adjustment for pause to reach center
+          // Empirically determined: 26px needed
           if (pauseIsLastElement) {
-            timelineEndPosition += 6;
+            timelineEndPosition += 26;
           }
         }
         
@@ -1343,9 +1345,10 @@
             if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
           }
           
-          // Add pixel adjustment for single events (30px like finalizeRecording)
+          // Add pixel adjustment for single events
+          // Empirically determined: 50px needed
           if (lastIsSingleEvent && snapshotIsLastElement) {
-            timelineEndPosition += 30;
+            timelineEndPosition += 50;
           }
         }
         
@@ -1364,8 +1367,9 @@
           }
           
           // Add pixel adjustment for pause to reach center
+          // Empirically determined: 26px needed
           if (pauseIsLastElement) {
-            timelineEndPosition += 6;
+            timelineEndPosition += 26;
           }
         }
         
@@ -2473,9 +2477,9 @@
           }
           
           // Add pixel adjustment for single events to reach visual right edge
-          // Use 30px like finalizeRecording does (line 1504)
+          // Empirically determined: 50px needed
           if (lastIsSingleEvent && snapshotIsLastElement) {
-            timelineEndPosition += 30;
+            timelineEndPosition += 50;
           }
         }
         
@@ -2494,8 +2498,9 @@
           }
           
           // Add pixel adjustment for pause to reach visual center of diamond
+          // Empirically determined: 26px needed
           if (pauseIsLastElement) {
-            timelineEndPosition += 6; // Pause left edge is at timestamp - 6, so add 6 to reach center
+            timelineEndPosition += 26;
           }
         }
         
@@ -4136,7 +4141,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.50 initialized');
+  console.log('Tutorial Creator v12.51 initialized');
 })();
 </script>
 </body>
