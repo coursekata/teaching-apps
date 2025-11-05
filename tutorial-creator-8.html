@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.53 (Debug)</title>
+<title>Interactive Tutorial Creator - v12.54</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.53 (Debug)</div>
+    <div class="version-number">v12.54</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2279,12 +2279,6 @@
     timelinePlayhead.style.display = 'block';
     timelinePlayhead.style.left = playheadLeft + 'px';
     
-    // Log playhead position every 500ms
-    if (!playbackLoop.lastLogTime || Date.now() - playbackLoop.lastLogTime > 500) {
-      console.log(`⏵ Playback: elapsed=${(elapsedMs / 1000).toFixed(3)}s, scale=${timelineScale.toFixed(2)}, playheadLeft=${playheadLeft.toFixed(1)}px`);
-      playbackLoop.lastLogTime = Date.now();
-    }
-    
     // Find the most recent snapshot that should be active at this time
     let targetSnapshot = null;
     for (let i = currentTutorial.snapshots.length - 1; i >= 0; i--) {
@@ -2513,8 +2507,6 @@
         
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
-        
-        console.log(`⏹ stopPlayback final position: timelineEndPosition=${timelineEndPosition.toFixed(1)}px, duration=${(currentTutorial.duration / 1000).toFixed(3)}s, scale=${timelineScale.toFixed(2)}`);
       }
       
       previewRecording.style.display = 'inline-block';
@@ -3954,11 +3946,6 @@
       const minScale = 20;
       const maxScale = 100;
       
-      console.log('🔧 BUFFER CALCULATION START');
-      console.log('  Last element type:', lastElementType);
-      console.log('  Base duration (no buffer):', (calculatedDuration / 1000).toFixed(3) + 's');
-      console.log('  Container width:', containerWidth, 'Available:', availableWidth);
-      
       // Iterate to find stable buffer (scale depends on duration, buffer depends on scale)
       let iterDuration = calculatedDuration;
       let iterScale = 50; // Initial guess
@@ -3973,20 +3960,17 @@
         // Calculate buffer using this scale
         let bufferPixels = 0;
         if (lastElementType === 'singleEvent') {
-          bufferPixels = 50; // Click events
+          bufferPixels = 26; // Click events - empirically calibrated
         } else if (lastElementType === 'pause') {
-          bufferPixels = 26; // Pause events
+          bufferPixels = 47; // Pause events - empirically calibrated
         }
         
         const bufferMs = (bufferPixels / iterScale) * 1000;
         const newDuration = calculatedDuration + bufferMs;
         
-        console.log(`  Iteration ${iteration}: scale=${iterScale.toFixed(2)}, bufferMs=${bufferMs.toFixed(2)}, newDuration=${(newDuration / 1000).toFixed(3)}s`);
-        
         // Check convergence
         if (Math.abs(newDuration - iterDuration) < 1) {
           iterDuration = newDuration;
-          console.log('  ✓ Converged at iteration', iteration);
           break;
         }
         
@@ -3994,7 +3978,7 @@
       }
       
       calculatedDuration = iterDuration;
-      console.log('🔧 FINAL: duration =', (calculatedDuration / 1000).toFixed(3) + 's, buffer =', (calculatedDuration - (lastElementType === 'singleEvent' ? lastSnapshotTime : lastPauseTime)).toFixed(2) + 'ms');
+      console.log('📊 Added buffer for', lastElementType, ':', ((calculatedDuration - (lastElementType === 'singleEvent' ? lastSnapshotTime : lastPauseTime)) / 1000).toFixed(3) + 's');
     }
     
     currentTutorial.duration = calculatedDuration;
@@ -4197,7 +4181,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.53 (Debug) initialized');
+  console.log('Tutorial Creator v12.54 initialized');
 })();
 </script>
 </body>
