@@ -281,185 +281,284 @@
     left:4px;
     top:50%;
     transform:translateY(-50%);
-    font-size:11px;
+    font-size:9px;
     font-weight:600;
     color:#666;
-    z-index:1;
+    pointer-events:none;
+    z-index:0;
+    width:55px;
+    text-align:right;
+    padding-right:5px;
   }
   
   .timeline-event{
     position:absolute;
-    height:20px;
-    top:3px;
-    border-radius:3px;
+    top:2px;
+    bottom:2px;
+    width:8px;
+    background:#6366f1;
+    border-radius:2px;
     cursor:move;
+    z-index:1;
+    box-shadow:0 1px 3px rgba(99,102,241,0.3);
+  }
+  
+  .timeline-event.drag-event{
+    width:auto;
+    background:#8b5cf6;
+    box-shadow:0 1px 3px rgba(139,92,246,0.3);
+  }
+  
+  .timeline-event:not(.drag-event):hover{
+    background:#4f46e5;
+    transform:scaleX(1.3);
+  }
+  
+  .timeline-event.drag-event:hover{
+    background:#7c3aed;
+  }
+  
+  .event-trim-handle{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:6px;
+    background:rgba(255,255,255,0.3);
+    cursor:ew-resize;
+    opacity:0;
+    transition:opacity 0.2s;
+    z-index:10;
+  }
+  
+  .timeline-event.drag-event:hover .event-trim-handle{
+    opacity:1;
+  }
+  
+  .event-trim-handle.left{
+    left:0;
+    border-right:2px solid rgba(255,255,255,0.6);
+  }
+  
+  .event-trim-handle.right{
+    right:0;
+    border-left:2px solid rgba(255,255,255,0.6);
+  }
+  
+  .event-trim-handle:hover{
+    background:rgba(255,255,255,0.5);
+  }
+  
+  .timeline-annotation{
+    position:absolute;
+    top:2px;
+    bottom:2px;
+    background:linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    border-radius:3px;
+    color:#fff;
+    font-size:9px;
+    padding:0 6px;
     display:flex;
     align-items:center;
-    padding:0 6px;
-    font-size:10px;
-    color:#fff;
-    font-weight:600;
+    cursor:move;
     white-space:nowrap;
     overflow:hidden;
-    user-select:none;
+    text-overflow:ellipsis;
+    z-index:2;
+    box-shadow:0 2px 4px rgba(6,182,212,0.3);
+    border:1px solid rgba(255,255,255,0.2);
   }
   
-  .timeline-event.click{
-    background:var(--accent);
-    width:16px;
-    min-width:16px;
-    padding:0;
-    justify-content:center;
+  .timeline-annotation:hover{
+    background:linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    box-shadow:0 2px 6px rgba(6,182,212,0.4);
   }
   
-  .timeline-event.drag{
-    background:var(--teal);
+  .timeline-annotation .resize-edge{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:5px;
+    cursor:ew-resize;
+    background:rgba(255,255,255,0.2);
   }
   
-  .timeline-event.annotation{
-    background:var(--success);
-    height:16px;
-    top:5px;
+  .timeline-annotation .resize-edge.left{
+    left:0;
+    border-radius:3px 0 0 3px;
   }
   
-  .timeline-event.pause{
-    background:var(--warning);
-    width:16px;
-    min-width:16px;
-    padding:0;
-    justify-content:center;
+  .timeline-annotation .resize-edge.right{
+    right:0;
+    border-radius:0 3px 3px 0;
   }
   
-  .timeline-event:hover{
-    opacity:0.85;
-    box-shadow:0 2px 4px rgba(0,0,0,0.2);
+  .timeline-annotation .resize-edge:hover{
+    background:rgba(255,255,255,0.4);
   }
   
-  .timeline-event.dragging{
-    opacity:0.7;
-    z-index:1000;
+  .timeline-pause{
+    position:absolute;
+    top:50%;
+    width:12px;
+    height:12px;
+    background:#f59e0b;
+    transform:translateY(-50%) rotate(45deg);
+    cursor:move;
+    z-index:3;
+    box-shadow:0 2px 4px rgba(245,158,11,0.4);
+    border:1px solid rgba(255,255,255,0.3);
+  }
+  
+  .timeline-pause:hover{
+    background:#d97706;
+    box-shadow:0 3px 6px rgba(245,158,11,0.5);
+    transform:translateY(-50%) rotate(45deg) scale(1.15);
   }
   
   .timeline-playhead{
     position:absolute;
-    top:0;
-    width:2px;
-    height:100%;
-    background:var(--record);
+    top:14px;
+    height:56px;
+    width:3px;
+    background:#ef4444;
     pointer-events:none;
-    z-index:10;
-    display:none;
+    z-index:9999;
+    box-shadow:0 0 8px rgba(239,68,68,0.5);
   }
   
   .timeline-playhead::before{
     content:'';
     position:absolute;
-    top:-4px;
-    left:-4px;
-    width:10px;
-    height:10px;
-    background:var(--record);
+    top:-8px;
+    left:50%;
+    transform:translateX(-50%);
+    width:12px;
+    height:12px;
+    background:#ef4444;
     border-radius:50%;
+    border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    z-index:10000;
+    cursor:grab;
+    pointer-events:auto;
   }
   
-  /* Modals */
+  .timeline-playhead::before:active{
+    cursor:grabbing;
+  }
+  
   .modal-overlay{
-    display:none;
     position:fixed;
     top:0;
     left:0;
     right:0;
     bottom:0;
     background:rgba(0,0,0,0.5);
-    z-index:10000;
+    display:none;
     align-items:center;
     justify-content:center;
+    z-index:1000;
   }
   
   .modal-overlay.visible{
     display:flex;
   }
   
-  .modal-content{
+  .modal{
     background:#fff;
     border-radius:12px;
     padding:24px;
-    max-width:600px;
+    max-width:700px;
     width:90%;
     max-height:80vh;
     overflow-y:auto;
-    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
   }
   
-  .modal-content h2{
+  .modal h2{
     margin:0 0 16px;
-    color:var(--accent);
+    color:#111;
   }
   
-  .modal-content h3{
-    margin:20px 0 8px;
-    color:#333;
-    font-size:16px;
-  }
-  
-  .modal-content p{
-    margin:8px 0;
-    line-height:1.6;
-  }
-  
-  .modal-content ul{
-    margin:8px 0;
-    padding-left:24px;
-  }
-  
-  .modal-content li{
-    margin:4px 0;
-    line-height:1.6;
-  }
-  
-  .modal-actions{
-    display:flex;
-    gap:12px;
-    margin-top:20px;
-    justify-content:flex-end;
-  }
-  
-  textarea{
+  .modal textarea{
     width:100%;
     min-height:300px;
+    max-height:400px;
     font-family:monospace;
     font-size:12px;
     padding:12px;
     border:1px solid #ddd;
-    border-radius:6px;
+    border-radius:8px;
     resize:vertical;
+    overflow-y:auto;
   }
   
-  .stats{
+  .modal input[type=text]{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    margin-bottom:12px;
+  }
+  
+  .modal-buttons{
     display:flex;
-    gap:20px;
-    margin:12px 0;
-    padding:12px;
-    background:#f9f9f9;
-    border-radius:6px;
+    gap:8px;
+    margin-top:16px;
+    justify-content:flex-end;
   }
   
-  .stat{
-    display:flex;
-    flex-direction:column;
-  }
-  
-  .stat-label{
-    font-size:11px;
+  .help-text{
+    font-size:13px;
     color:#666;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
+    margin:8px 0;
+    line-height:1.5;
   }
   
-  .stat-value{
-    font-size:24px;
-    font-weight:700;
-    color:var(--accent);
+  ol.help-text{
+    margin-left:20px;
+    padding-left:0;
+  }
+  
+  ol.help-text li{
+    margin:6px 0;
+  }
+  
+  .control-group{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  
+  label{
+    font-size:12px;
+    color:#666;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  
+  input[type=text]{
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid #ddd;
+    font-size:13px;
+    width:300px;
+  }
+  
+  .info-box{
+    background:#e0f2fe;
+    border:1px solid #0284c7;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+    font-size:13px;
+    color:#0c4a6e;
+  }
+  
+  .info-box strong{
+    color:#075985;
   }
   
   .form-group{
@@ -470,294 +569,375 @@
     display:block;
     margin-bottom:6px;
     font-weight:600;
-    color:#333;
+    color:#374151;
   }
   
-  .form-group input[type="text"],
-  .form-group input[type="number"],
   .form-group textarea{
     width:100%;
+    min-height:100px;
     padding:8px 12px;
     border:1px solid #ddd;
-    border-radius:6px;
+    border-radius:8px;
     font-size:14px;
     font-family:inherit;
-  }
-  
-  .form-group textarea{
-    min-height:100px;
     resize:vertical;
-    font-family:inherit;
   }
   
-  .form-group input[type="number"]{
-    width:120px;
-  }
-  
-  .inline-inputs{
-    display:flex;
-    gap:12px;
-    align-items:center;
-  }
-  
-  .inline-inputs .form-group{
-    margin-bottom:0;
-  }
-  
-  input[type="file"]{
-    display:none;
+  .version-number{
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    font-size: 11px;
+    color: #999;
+    background: rgba(255,255,255,0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    z-index: 1000;
+    font-family: monospace;
   }
 </style>
 </head>
 <body>
-
-<div class="tutorial-header">
-  <div>
-    <span class="version-number">v12.61 - Annotation positioning fixed</span>
-  </div>
-  <div class="tutorial-controls">
-    <input type="text" id="appUrl" placeholder="App URL" style="width:300px;padding:8px;border-radius:6px;border:1px solid #ddd;">
-    <button id="loadApp" class="primary">Load App</button>
-    <button id="startRecording" class="record" style="display:none">⏺ Start Recording</button>
-    <button id="playPauseRecording" style="display:none">⏸ Pause</button>
-    <span id="recordingIndicator" class="recording-indicator" style="display:none">● REC</span>
-    <span id="pausedIndicator" class="paused-indicator" style="display:none">⏸ PAUSED</span>
-    <button id="addAnnotation" style="display:none" disabled>💬 Add Annotation</button>
-    <button id="addAnnotationAtPause" style="display:none">💬 Add Annotation at Pause</button>
-    <button id="addPause" style="display:none" disabled>⏸ Add Pause</button>
-    <button id="previewRecording" style="display:none" disabled>▶ Preview</button>
-    <button id="recordAgain" style="display:none" disabled>🔄 Record Again</button>
-    <button id="exportRecording" style="display:none" disabled>💾 Export</button>
-    <button id="loadJSON" style="display:none">📂 Load JSON</button>
-    <input type="file" id="jsonFileInput" accept=".json">
-    <button id="helpBtn">❓ Help</button>
-  </div>
-</div>
-
-<div class="app-container" id="appContainer">
-  <iframe id="appFrame"></iframe>
-  <div class="annotation-box" id="annotationBox"></div>
-</div>
-
-<div class="timeline-container" id="timelineContainer">
-  <div class="timeline-ruler" id="timelineRuler"></div>
-  <div class="timeline-playhead" id="timelinePlayhead"></div>
-  <div class="timeline-track">
-    <div class="timeline-track-label">Clicks</div>
-  </div>
-  <div class="timeline-track">
-    <div class="timeline-track-label">Drags</div>
-  </div>
-  <div class="timeline-track">
-    <div class="timeline-track-label">Annotations</div>
-  </div>
-  <div class="timeline-track">
-    <div class="timeline-track-label">Pauses</div>
-  </div>
-</div>
-
-<!-- Export Modal -->
-<div class="modal-overlay" id="exportModal">
-  <div class="modal-content">
-    <h2>📤 Export Tutorial</h2>
-    <div class="stats">
-      <div class="stat">
-        <span class="stat-label">Snapshots</span>
-        <span class="stat-value" id="snapshotCount">0</span>
+  <div class="tutorial-header">
+    <div class="tutorial-controls">
+      <div id="recordingControls" class="control-group">
+        <label>
+          App URL:
+          <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
+        </label>
+        <button id="loadApp" class="primary">Load App</button>
+        <button id="startRecording" class="record" style="display:none;" title="Start recording interactions">⏺ Record</button>
+        <button id="loadJSON" class="success" style="display:none;" title="Import existing tutorial JSON">Import</button>
+        <button id="playPauseRecording" class="warning" style="display:none;" title="Pause recording">⏸</button>
+        <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
+        <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
+        <button id="addAnnotation" class="teal" style="display:none;" disabled title="Add text annotation">+Text</button>
+        <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
+        <button id="previewRecording" class="primary" style="display:none;" disabled title="Play tutorial">▶ Play</button>
+        <button id="playPausePreview" style="display:none;"></button><!-- Hidden, kept for compatibility -->
+        <button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">New Tutorial</button>
+        <button id="exportRecording" class="success" style="display:none;" disabled title="Export tutorial JSON">Export</button>
       </div>
-      <div class="stat">
-        <span class="stat-label">Annotations</span>
-        <span class="stat-value" id="annotationCount">0</span>
-      </div>
+      
+      <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <textarea id="exportTextarea" readonly></textarea>
-    <div class="modal-actions">
-      <button id="copyExport" class="success">📋 Copy to Clipboard</button>
-      <button id="downloadExport" class="primary">💾 Download JSON</button>
-      <button id="closeExportModal">Close</button>
-    </div>
+    <div class="version-number">v12.61</div>
   </div>
-</div>
-
-<!-- Annotation Editor Modal -->
-<div class="modal-overlay" id="annotationEditorModal">
-  <div class="modal-content">
-    <h2>✏️ Edit Annotation</h2>
-    <p style="margin-bottom:16px;color:#666;">Drag the blue box over the app to position it, then edit the content below.</p>
+  
+  <!-- Timeline Editor (moved outside header so it scrolls independently) -->
+  <div id="timelineContainer" class="timeline-container">
+    <div id="timelineRuler" class="timeline-ruler"></div>
     
-    <div class="form-group">
-      <label>Title</label>
-      <input type="text" id="annotationTitle" placeholder="Annotation title">
+    <div class="timeline-track">
+      <div class="timeline-track-label">Events</div>
+      <div id="eventsTrack" style="position:relative;height:100%;"></div>
     </div>
     
-    <div class="form-group">
-      <label>Content (supports LaTeX: $x^2$ for inline, $$x^2$$ for display)</label>
-      <textarea id="annotationContent" placeholder="Annotation content with optional $LaTeX$ math"></textarea>
+    <div class="timeline-track">
+      <div class="timeline-track-label">Annotations</div>
+      <div id="annotationsTrack" style="position:relative;height:100%;"></div>
     </div>
     
-    <div class="inline-inputs">
+    <div id="timelinePlayhead" class="timeline-playhead" style="display:none;"></div>
+  </div>
+  
+  <div class="app-container">
+    <iframe id="appFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+  
+  <!-- Annotation Editor Modal -->
+  <div id="annotationEditorModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Add Annotation</h2>
+      
+      <div class="info-box">
+        <strong>📝 Instructions:</strong> Fill in the fields below and click "Create Annotation". The annotation will appear on screen where you can drag it to position it perfectly.
+      </div>
+      
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="annTitle" placeholder="Enter annotation title..."/>
+      </div>
+      
+      <div class="form-group">
+        <label>Text</label>
+        <textarea id="annText" placeholder="Enter annotation description..."></textarea>
+      </div>
+      
       <div class="form-group">
         <label>Duration (seconds)</label>
-        <input type="number" id="annotationDuration" value="5" min="0.5" step="0.5">
+        <input type="number" id="annDuration" value="5" min="1" max="60" style="width:100px;"/>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="cancelAnnotation">Cancel</button>
+        <button id="createAnnotation" class="primary">✨ Create Annotation</button>
       </div>
     </div>
-    
-    <div class="modal-actions">
-      <button id="saveAnnotationEdit" class="success">💾 Save</button>
-      <button id="deleteAnnotationEdit" class="record">🗑️ Delete</button>
-      <button id="cancelAnnotationEdit">Cancel</button>
+  </div>
+  
+  <!-- Position Editor Overlay -->
+  <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:transparent;z-index:99;pointer-events:none;">
+    <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
+      <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag to move, resize from corner. Double-click title or text to edit.</div>
+      <div style="display:flex;gap:8px;">
+        <button id="savePosition" class="success">Save</button>
+        <button id="deleteAnnotationFromOverlay" class="record">Delete</button>
+        <button id="cancelPosition">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
-
-<!-- Help Modal -->
-<div class="modal-overlay" id="helpModal">
-  <div class="modal-content">
-    <h2>❓ Tutorial Creator Help</h2>
-    
-    <h3>🎬 Recording a Tutorial</h3>
-    <ol>
-      <li>Enter your app's URL and click "Load App"</li>
-      <li>Click "Start Recording" (red button)</li>
-      <li>Interact with your app - all clicks and drags are captured</li>
-      <li>Click "Pause" to pause recording</li>
-      <li>Add annotations or pauses while paused</li>
-      <li>Click "Record" again to resume</li>
-      <li>When done, click "Export" to save your tutorial</li>
-    </ol>
-    
-    <h3>💬 Adding Annotations</h3>
-    <ul>
-      <li>While paused, click "Add Annotation"</li>
-      <li>Drag the blue box to position it over your app</li>
-      <li>Enter title and content (supports LaTeX math)</li>
-      <li>Set how long it should display (in seconds)</li>
-      <li>Click "Save"</li>
-    </ul>
-    
-    <h3>⏸ Adding Pauses</h3>
-    <ul>
-      <li>While paused, click "Add Pause"</li>
-      <li>Pauses allow students to stop and read before continuing</li>
-      <li>Tutorial will pause at that moment during playback</li>
-    </ul>
-    
-    <h3>✏️ Editing in Timeline</h3>
-    <ul>
-      <li>Drag any event left/right to change its timing</li>
-      <li>Drag annotation right edge to change duration</li>
-      <li>Click annotation to edit its content and position</li>
-      <li>Click pause or snapshot to delete it</li>
-    </ul>
-    
-    <h3>▶️ Preview & Export</h3>
-    <ul>
-      <li>Click "Preview" to watch your tutorial</li>
-      <li>Use Play/Pause to control playback</li>
-      <li>Click "Export" to save as JSON</li>
-      <li>Load JSON later to continue editing</li>
-    </ul>
-    
-    <div class="modal-actions">
-      <button id="closeHelpModal" class="primary">Got it!</button>
+  
+  <!-- Event Deletion Modal -->
+  <div id="eventDeletionModal" class="modal-overlay">
+    <div class="modal" style="max-width:400px;">
+      <h2>Delete Event?</h2>
+      <p id="eventDeletionText" style="margin:16px 0;color:#666;">Are you sure you want to delete this event?</p>
+      <div class="modal-buttons">
+        <button id="cancelEventDeletion">Cancel</button>
+        <button id="confirmEventDeletion" class="warning">🗑 Delete</button>
+      </div>
     </div>
   </div>
-</div>
+  
+  <!-- Pause Deletion Modal -->
+  <div id="pauseDeletionModal" class="modal-overlay">
+    <div class="modal" style="max-width:400px;">
+      <h2>Delete Pause?</h2>
+      <p id="pauseDeletionText" style="margin:16px 0;color:#666;">Are you sure you want to delete this pause?</p>
+      <div class="modal-buttons">
+        <button id="cancelPauseDeletion">Cancel</button>
+        <button id="confirmPauseDeletion" class="warning">🗑 Delete</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Export Tutorial</h2>
+      
+      <div class="info-box">
+        <strong>✓ Recording Complete!</strong><br>
+        Your tutorial has been recorded with <strong id="snapshotCount">0</strong> snapshots and <strong id="annotationCount">0</strong> annotations.
+      </div>
+      
+      <p class="help-text">Download the JSON file to save your tutorial. You can load it later using the "Import Tutorial" button.</p>
+      
+      <textarea id="exportTextarea" readonly></textarea>
+      
+      <div class="modal-buttons">
+        <button id="downloadExport" class="success">💾 Download JSON</button>
+        <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
+        <button id="closeExportModal">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal">
+      <h2>How to Use</h2>
+      
+      <h3>Recording Mode:</h3>
+      <ol class="help-text">
+        <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
+        <li><strong>Load App</strong> - Click "Load App" to load the app in the iframe</li>
+        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" when you're ready to begin the tutorial</li>
+        <li><strong>Interact Normally</strong> - Use your app normally. All interactions are being captured via the API!</li>
+        <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations or review your work</li>
+        <li><strong>Add Annotations</strong> - While paused:
+          <ul style="margin-left:20px;">
+            <li>Click "➕ Add Annotation"</li>
+            <li>Enter title, text, and duration</li>
+            <li>Click "✨ Create Annotation"</li>
+            <li>Drag the annotation box to position it exactly where you want</li>
+            <li>Click "Save" when ready</li>
+          </ul>
+        </li>
+        <li><strong>Preview While Recording</strong> - While paused, click "👁 Preview" to see your work so far, then click "↩️ Resume Recording" to continue</li>
+        <li><strong>Resume Recording</strong> - Click "⏺ Resume" to continue recording</li>
+        <li><strong>Finish Recording</strong> - When you're done, pause the recording. You can then Preview your work or Export it.</li>
+        <li><strong>Preview Final</strong> - Click "👁 Preview" to watch the complete replay with annotations</li>
+        <li><strong>Export</strong> - Click "💾 Export Tutorial" to get the JSON, then copy it to save. This also finalizes the recording.</li>
+        <li><strong>Start Over</strong> - Click "🔄 Start Over" at any time to reset and create a new tutorial</li>
+      </ol>
+      
+      <h3>Timeline:</h3>
+      <ul class="help-text">
+        <li><strong style="color:#6366f1;">Blue markers</strong> - Single events (simulate, parameter changes, etc.)</li>
+        <li><strong style="color:#8b5cf6;">Purple bars</strong> - Drag operations (from mouse down to mouse up)</li>
+        <li><strong style="color:#f59e0b;">Amber diamonds</strong> - Pauses (students must click to continue)</li>
+        <li><strong style="color:#06b6d4;">Cyan bars</strong> - Annotations (text overlays during playback)</li>
+      </ul>
+      
+      <div class="modal-buttons">
+        <button id="closeHelpModal" class="primary">Got it!</button>
+      </div>
+    </div>
+  </div>
 
 <script>
 (function() {
   'use strict';
   
-  // ========== DOM ELEMENTS ==========
-  
+  // DOM Elements
   const appUrl = document.getElementById('appUrl');
-  const loadApp = document.getElementById('loadApp');
   const appFrame = document.getElementById('appFrame');
-  const appContainer = document.getElementById('appContainer');
+  const appContainer = document.querySelector('.app-container');
+  const loadApp = document.getElementById('loadApp');
   const startRecording = document.getElementById('startRecording');
   const playPauseRecording = document.getElementById('playPauseRecording');
-  const recordingIndicator = document.getElementById('recordingIndicator');
-  const pausedIndicator = document.getElementById('pausedIndicator');
   const addAnnotation = document.getElementById('addAnnotation');
-  const addAnnotationAtPause = document.getElementById('addAnnotationAtPause');
   const addPause = document.getElementById('addPause');
   const previewRecording = document.getElementById('previewRecording');
+  const playPausePreview = document.getElementById('playPausePreview');
+  const replayPreview = { style: { display: 'none' } }; // Button removed in v12.8, stub to prevent errors
+  const addAnnotationAtPause = { style: { display: 'none' } }; // Button removed in v12.8, stub to prevent errors
   const recordAgain = document.getElementById('recordAgain');
   const exportRecording = document.getElementById('exportRecording');
-  const loadJSON = document.getElementById('loadJSON');
-  const jsonFileInput = document.getElementById('jsonFileInput');
-  const helpBtn = document.getElementById('helpBtn');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const pausedIndicator = document.getElementById('pausedIndicator');
   
-  const annotationBox = document.getElementById('annotationBox');
+  const annotationEditorModal = document.getElementById('annotationEditorModal');
+  const annTitle = document.getElementById('annTitle');
+  const annText = document.getElementById('annText');
+  const annDuration = document.getElementById('annDuration');
+  const createAnnotation = document.getElementById('createAnnotation');
+  const cancelAnnotation = document.getElementById('cancelAnnotation');
+  
+  // Fix cursor positioning in annotation fields with detailed logging
+  [annTitle, annText, annDuration].forEach(field => {
+    const fieldName = field.id;
+    
+    field.addEventListener('focus', function(e) {
+      console.log(`[${fieldName}] FOCUS - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
+    });
+    
+    field.addEventListener('mousedown', function(e) {
+      console.log(`[${fieldName}] MOUSEDOWN - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}, value length: ${this.value.length}`);
+      // If the entire field is selected when user clicks, clear selection first
+      if (this.selectionStart === 0 && this.selectionEnd === this.value.length) {
+        console.log(`[${fieldName}] - All text selected, clearing selection`);
+        this.setSelectionRange(0, 0);
+      }
+    });
+    
+    field.addEventListener('mouseup', function(e) {
+      console.log(`[${fieldName}] MOUSEUP - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+    
+    field.addEventListener('click', function(e) {
+      console.log(`[${fieldName}] CLICK - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+    
+    field.addEventListener('select', function(e) {
+      console.log(`[${fieldName}] SELECT event - selectionStart: ${this.selectionStart}, selectionEnd: ${this.selectionEnd}`);
+    });
+  });
+  
+  const positionEditorOverlay = document.getElementById('positionEditorOverlay');
+  const savePosition = document.getElementById('savePosition');
+  const deleteAnnotationFromOverlay = document.getElementById('deleteAnnotationFromOverlay');
+  const cancelPosition = document.getElementById('cancelPosition');
+  
+  const eventDeletionModal = document.getElementById('eventDeletionModal');
+  const eventDeletionText = document.getElementById('eventDeletionText');
+  const confirmEventDeletion = document.getElementById('confirmEventDeletion');
+  const cancelEventDeletion = document.getElementById('cancelEventDeletion');
+  
+  // Event deletion state
+  let eventToDelete = null; // Will store {startIdx, endIdx} or {startIdx} for single events
+  
+  const pauseDeletionModal = document.getElementById('pauseDeletionModal');
+  const pauseDeletionText = document.getElementById('pauseDeletionText');
+  const confirmPauseDeletion = document.getElementById('confirmPauseDeletion');
+  const cancelPauseDeletion = document.getElementById('cancelPauseDeletion');
+  
+  // Pause deletion state
+  let pauseToDelete = null; // Will store pause index
+  
   
   const exportModal = document.getElementById('exportModal');
   const exportTextarea = document.getElementById('exportTextarea');
   const snapshotCount = document.getElementById('snapshotCount');
   const annotationCount = document.getElementById('annotationCount');
-  const copyExport = document.getElementById('copyExport');
   const downloadExport = document.getElementById('downloadExport');
+  const copyExport = document.getElementById('copyExport');
   const closeExportModal = document.getElementById('closeExportModal');
   
-  const annotationEditorModal = document.getElementById('annotationEditorModal');
-  const annotationTitle = document.getElementById('annotationTitle');
-  const annotationContent = document.getElementById('annotationContent');
-  const annotationDuration = document.getElementById('annotationDuration');
-  const saveAnnotationEdit = document.getElementById('saveAnnotationEdit');
-  const deleteAnnotationEdit = document.getElementById('deleteAnnotationEdit');
-  const cancelAnnotationEdit = document.getElementById('cancelAnnotationEdit');
-  
   const helpModal = document.getElementById('helpModal');
+  const helpBtn = document.getElementById('helpBtn');
   const closeHelpModal = document.getElementById('closeHelpModal');
+  
+  const loadJSON = document.getElementById('loadJSON');
+  const jsonFileInput = document.getElementById('jsonFileInput');
   
   const timelineContainer = document.getElementById('timelineContainer');
   const timelineRuler = document.getElementById('timelineRuler');
+  const eventsTrack = document.getElementById('eventsTrack');
+  const annotationsTrack = document.getElementById('annotationsTrack');
   const timelinePlayhead = document.getElementById('timelinePlayhead');
-  const timelineTracks = document.querySelectorAll('.timeline-track');
   
-  // ========== STATE ==========
-  
+  // State
   let isAppLoaded = false;
+  let apiReady = false;
   let isRecording = false;
   let isPaused = false;
-  let recordingStartTime = 0;
-  let pauseStartTime = 0;
+  let isPlaying = false;
+  let isPreviewingFromPaused = false;
+  let recordingStartTime = null;
+  let pauseStartTime = null;
   let totalPausedTime = 0;
-  let importedDurationOffset = 0;
-  
   let currentTutorial = null;
   let eventListener = null;
+  let playbackStartTime = null;
+  let playbackPausedAt = 0;
+  let currentAnnotationIndex = -1;
+  let annotationTimeout = null;
+  let editingAnnotationIndex = -1;
+  let timelineScale = 50; // pixels per second
+  let annotationBox = null; // Will be injected into iframe
+  let annotationTitle = null;
+  let annotationText = null;
+  let activeRecordingAnnotation = null; // Track annotation that should remain visible during recording
+  let importedDurationOffset = 0; // Offset to add to timestamps for imported tutorials
   
-  let isPlaying = false;
-  let playbackStartTime = 0;
-  let playbackPosition = 0;
-  let playbackTimer = null;
-  let currentAnnotationTimeout = null;
-  let currentPauseTimeout = null;
+  // Calculate timeline start offset to remove blank space at beginning
+  function getTimelineStartOffset() {
+    if (!currentTutorial) return 0;
+    
+    if (currentTutorial.snapshots.length === 0 && currentTutorial.annotations.length === 0 && (!currentTutorial.pauses || currentTutorial.pauses.length === 0)) {
+      return 0;
+    }
+    
+    let firstEventTime = Infinity;
+    
+    if (currentTutorial.snapshots.length > 0) {
+      firstEventTime = Math.min(firstEventTime, currentTutorial.snapshots[0].timestamp);
+    }
+    
+    if (currentTutorial.annotations.length > 0) {
+      const firstAnnotationTime = Math.min(...currentTutorial.annotations.map(ann => ann.timestamp));
+      firstEventTime = Math.min(firstEventTime, firstAnnotationTime);
+    }
+    
+    if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+      const firstPauseTime = Math.min(...currentTutorial.pauses.map(p => p.timestamp));
+      firstEventTime = Math.min(firstEventTime, firstPauseTime);
+    }
+    
+    return (firstEventTime !== Infinity && firstEventTime > 0) ? firstEventTime : 0;
+  }
   
-  let editingAnnotation = null;
-  let isDraggingAnnotation = false;
-  let isResizingAnnotation = false;
-  let dragOffsetX = 0;
-  let dragOffsetY = 0;
-  let resizeStartX = 0;
-  let resizeStartY = 0;
-  let resizeStartWidth = 0;
-  let resizeStartHeight = 0;
-  
-  let isDraggingTimelineEvent = false;
-  let draggedTimelineEvent = null;
-  let draggedEventType = null;
-  let draggedEventIndex = null;
-  let timelineScale = 50;
-  
-  // ========== IFRAME API ==========
-  
+  // Get tutorialAPI from iframe
   function getAPI() {
-    try {
-      return appFrame.contentWindow.tutorialAPI;
-    } catch (e) {
+    if (!appFrame.contentWindow || !appFrame.contentWindow.tutorialAPI) {
       return null;
     }
+    return appFrame.contentWindow.tutorialAPI;
   }
   
   // ========== APP LOADING ==========
@@ -770,133 +950,574 @@
     }
     
     appFrame.src = url;
-    
-    appFrame.onload = () => {
-      console.log('📱 App loaded');
-      
-      setTimeout(() => {
-        const api = getAPI();
-        if (api) {
-          console.log('✓ Tutorial API detected');
-          isAppLoaded = true;
-          startRecording.style.display = 'inline-block';
-          loadJSON.style.display = 'inline-block';
-        } else {
-          console.log('⚠ No tutorial API found');
-          alert('Warning: App does not have tutorial API.\nMake sure the app includes the tutorial API code.');
-        }
-      }, 500);
-    };
+    loadApp.disabled = true;
+    loadApp.textContent = 'Loading...';
   });
+  
+  appFrame.addEventListener('load', () => {
+    console.log('Iframe loaded, checking for API...');
+    
+    // Poll for API availability
+    const checkAPI = setInterval(() => {
+      const api = getAPI();
+      if (api) {
+        clearInterval(checkAPI);
+        apiReady = true;
+        isAppLoaded = true;
+        console.log('✓ tutorialAPI ready');
+        
+        loadApp.style.display = 'none';
+        loadApp.textContent = 'Load App'; // Reset text for next time
+        appUrl.disabled = true;
+        startRecording.style.display = 'inline-block';
+        loadJSON.style.display = 'inline-block';
+        
+        // Inject annotation box into iframe
+        injectAnnotationBox();
+        
+        // Show timeline
+        timelineContainer.classList.add('visible');
+        
+        // Show playhead at position 0 (ready to start)
+        timelinePlayhead.style.left = '60px'; // 60px for label offset
+        timelinePlayhead.style.display = 'block';
+      }
+    }, 100);
+    
+    setTimeout(() => {
+      if (!apiReady) {
+        clearInterval(checkAPI);
+        console.error('tutorialAPI not available after 5 seconds');
+        alert('Error: This app does not have the tutorialAPI. Make sure you are loading the correct confidence demo app.');
+        loadApp.disabled = false;
+        loadApp.textContent = 'Load App';
+      }
+    }, 5000);
+  });
+  
+  function injectAnnotationBox() {
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    annotationBox = iframeDoc.createElement('div');
+    annotationBox.className = 'annotation-box';
+    annotationBox.innerHTML = '<h3 id="annotationTitle"></h3><p id="annotationText"></p>';
+    
+    annotationTitle = annotationBox.querySelector('#annotationTitle');
+    annotationText = annotationBox.querySelector('#annotationText');
+    
+    // Inject the CSS styles for annotation box
+    const style = iframeDoc.createElement('style');
+    style.textContent = `
+      .annotation-box{
+        position:absolute;
+        width:250px;
+        max-width:500px;
+        background:rgba(255,255,255,0.98);
+        border:3px solid #2563eb;
+        border-radius:12px;
+        padding:20px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:100;
+        display:none;
+        overflow-y:auto;
+        overflow-x:hidden;
+        box-sizing:border-box;
+        font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+        font-size:15px;
+        line-height:1.6;
+      }
+      .annotation-box.custom-position{max-width:none;}
+      .annotation-box.draggable{
+        cursor:move;
+        box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        z-index:10001;
+      }
+      .annotation-box.visible{display:block;animation:slideIn 0.3s ease-out;}
+      .annotation-box.draggable .resize-handle{
+        position:absolute;
+        bottom:0;
+        right:0;
+        width:16px;
+        height:16px;
+        background:rgba(37, 99, 235, 0.3);
+        cursor:nwse-resize;
+        border-top-left-radius:4px;
+        border-bottom-right-radius:12px;
+      }
+      .annotation-box.draggable .resize-handle::after{
+        content:'⋰';
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%, -50%);
+        color:rgba(37, 99, 235, 0.7);
+        font-size:12px;
+        line-height:1;
+      }
+      @keyframes slideIn{from{opacity:0;}to{opacity:1;}}
+      .annotation-box h3{margin:0 0 12px;color:#2563eb;font-size:18px;line-height:1.3;}
+      .annotation-box p{margin:0;line-height:inherit;font-size:inherit;}
+    `;
+    
+    iframeDoc.head.appendChild(style);
+    iframeDoc.body.appendChild(annotationBox);
+    
+    console.log('✓ Annotation box injected into iframe');
+  }
   
   // ========== RECORDING ==========
   
   startRecording.addEventListener('click', () => {
-    if (!isAppLoaded) return;
-    
-    const api = getAPI();
-    if (!api) {
-      alert('Tutorial API not available');
-      return;
-    }
-    
     if (!isRecording) {
-      // Start new recording
+      // Start recording
+      if (!apiReady) {
+        alert('App not ready');
+        return;
+      }
+      
+      const api = getAPI();
+      if (!api) {
+        alert('App not ready');
+        return;
+      }
+      
+      // Initialize tutorial
       currentTutorial = {
+        version: '9.32',
+        appUrl: appUrl.value.trim(),
         initialState: api.getState(),
         snapshots: [],
         annotations: [],
         pauses: [],
-        duration: 0
+        duration: 0,
+        createdAt: new Date().toISOString()
       };
       
       isRecording = true;
       isPaused = false;
       recordingStartTime = Date.now();
       totalPausedTime = 0;
-      importedDurationOffset = 0;
+      importedDurationOffset = 0; // Reset offset for new recording
       
+      // Start listening to events
       eventListener = (event) => {
-        const timestamp = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
-        const snapshot = {
-          timestamp: timestamp,
-          event: event,
-          state: api.getState()
-        };
-        currentTutorial.snapshots.push(snapshot);
-        renderTimeline();
+        if (isPaused) return;
+        
+        // For simulate actions, we need to delay capturing the state slightly
+        // because the simulation is asynchronous and the state isn't updated yet
+        if (event.action === 'simulate') {
+          setTimeout(() => {
+            if (isPaused || !isRecording) return; // Don't capture if recording was paused/stopped
+            
+            // Capture timestamp NOW, when state is actually ready
+            const captureTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+            
+            const snapshot = {
+              timestamp: captureTime,
+              state: api.getState(),
+              event: event
+            };
+            
+            currentTutorial.snapshots.push(snapshot);
+            console.log('📸 Simulate snapshot captured (delayed) at', (captureTime / 1000).toFixed(2) + 's', '- data.length:', snapshot.state.data.length);
+          }, 50); // 50ms delay to allow simulation to complete
+        } else {
+          // For all other events, capture immediately
+          const relativeTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+          
+          const snapshot = {
+            timestamp: relativeTime,
+            state: api.getState(),
+            event: event
+          };
+          
+          currentTutorial.snapshots.push(snapshot);
+          
+          // Log drag-related events for debugging
+          if (event.action.includes('drag') || event.action.includes('Drag')) {
+            console.log('📸 Drag event captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+          }
+          
+          // Log other important events
+          if (event.action === 'changeBeta' || event.action === 'changeN') {
+            console.log('📸 Key snapshot captured at', (relativeTime / 1000).toFixed(2) + 's', '- Action:', event.action, 'Params:', event.params);
+          }
+        }
       };
       
       api.onAction(eventListener);
       
-      startRecording.textContent = '⏺ Recording...';
+      // Update UI - button now shows Pause and blinks
+      startRecording.textContent = '⏸ Pause';
       startRecording.classList.add('recording-active');
-      playPauseRecording.style.display = 'inline-block';
-      playPauseRecording.textContent = '⏸ Pause';
-      recordingIndicator.style.display = 'inline-block';
-      pausedIndicator.style.display = 'none';
-      loadJSON.style.display = 'none';
+      startRecording.className = 'record recording-active'; // Keep red, add animation
+      loadJSON.style.display = 'none'; // Hide Import Tutorial during recording
+      playPauseRecording.style.display = 'none'; // Not used anymore
+      addAnnotation.style.display = 'inline-block';
+      addAnnotation.disabled = true; // Disabled during active recording
+      addAnnotationAtPause.style.display = 'none';
+      addPause.style.display = 'inline-block';
+      addPause.disabled = true; // Disabled during active recording
+      previewRecording.style.display = 'inline-block';
+      previewRecording.disabled = true; // Disabled until paused
+      recordingIndicator.style.display = 'none'; // Indicator not shown - button blinks instead
+      pausedIndicator.style.display = 'none'; // Indicator not shown
+      recordAgain.style.display = 'inline-block';
+      recordAgain.disabled = true; // Disabled while actively recording
+      exportRecording.style.display = 'inline-block';
+      exportRecording.disabled = true; // Disabled while actively recording
+      appUrl.disabled = true;
       
-      renderTimeline();
-      
-      console.log('🎬 Recording started');
+      console.log('🔴 Recording started');
     } else if (isPaused) {
       // Resume recording
-      isPaused = false;
-      const pauseDuration = Date.now() - pauseStartTime;
-      totalPausedTime += pauseDuration;
       
-      startRecording.textContent = '⏺ Recording...';
+      // Check if we're resuming from a playback pause
+      const isResumingFromPlaybackPause = (playbackPausedAt > 0 || isPlaying);
+      
+      // Ensure iframe is interactive (remove playback mode if it was left on)
+      appFrame.classList.remove('playback-mode');
+      appFrame.style.pointerEvents = 'auto';
+      
+      // Move playhead to end of tutorial before resuming
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Add pixel adjustments based on final element type (using current timelineScale)
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let snapshotIsLastElement = true;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for single events
+          // Empirically determined: 50px needed
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 50;
+          }
+        }
+        
+        // Check if pause is the final element
+        if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+          const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+          let pauseIsLastElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
+          }
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for pause to reach center
+          // Empirically determined: 26px needed
+          if (pauseIsLastElement) {
+            timelineEndPosition += 26;
+          }
+        }
+        
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+        
+        // Apply the last snapshot's state so visual state matches the end
+        const api = getAPI();
+        if (api && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
+        }
+        
+        // Reset time calculations so new events start at current duration
+        // This prevents gaps from preview time being added to timestamps
+        recordingStartTime = Date.now();
+        totalPausedTime = 0;
+        importedDurationOffset = currentTutorial.duration;
+      }
+      
+      // If preview is playing or was paused, stop it first
+      if (isPlaying || playbackPausedAt > 0) {
+        isPlaying = false;
+        isPreviewingFromPaused = false;
+        appFrame.classList.remove('playback-mode');
+        appFrame.style.pointerEvents = 'auto';
+        previewRecording.textContent = '▶ Play';
+        previewRecording.title = 'Play';
+        previewRecording.classList.remove('playing');
+        playbackPausedAt = 0; // Reset playback position
+        
+        // Apply the last snapshot's state if not already done above
+        const api = getAPI();
+        if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
+        }
+      }
+      
+      // If resuming from playback pause, stay in paused state (don't immediately start recording)
+      // This gives user a chance to see where recording will resume from
+      if (isResumingFromPlaybackPause) {
+        // Keep recording paused - user can click Record again to actually resume
+        startRecording.textContent = '⏺ Record';
+        startRecording.classList.remove('recording-active');
+        startRecording.className = 'record';
+        addAnnotation.disabled = false;
+        addPause.disabled = false;
+        previewRecording.disabled = false;
+        recordAgain.disabled = false;
+        exportRecording.disabled = false;
+        
+        console.log('⏸ Moved to end of timeline, ready to resume recording');
+        return; // Exit without starting active recording
+      }
+      
+      // Otherwise, resume active recording normally
+      isPaused = false;
+      
+      startRecording.textContent = '⏸ Pause';
       startRecording.classList.add('recording-active');
-      playPauseRecording.style.display = 'inline-block';
-      playPauseRecording.textContent = '⏸ Pause';
-      recordingIndicator.style.display = 'inline-block';
-      pausedIndicator.style.display = 'none';
-      addAnnotation.style.display = 'none';
+      startRecording.className = 'record recording-active'; // Keep red, add animation
+      addAnnotation.disabled = true;
       addAnnotationAtPause.style.display = 'none';
-      addPause.style.display = 'none';
-      previewRecording.style.display = 'none';
-      recordAgain.style.display = 'none';
-      exportRecording.style.display = 'none';
+      addPause.disabled = true;
+      previewRecording.disabled = true; // Disable when resuming
+      recordAgain.disabled = true; // Disable Start Over when actively recording
+      exportRecording.disabled = true; // Disable Export when actively recording
+      
+      // Hide timeline playhead when resuming active recording
+      timelinePlayhead.style.display = 'none';
       
       console.log('▶️ Recording resumed');
+    } else {
+      // Pause recording
+      pauseStartTime = Date.now();
+      isPaused = true;
+      
+      const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+      
+      startRecording.textContent = '⏺ Record';
+      startRecording.classList.remove('recording-active');
+      startRecording.className = 'record'; // Keep red
+      addAnnotation.disabled = false;
+      addPause.disabled = false;
+      previewRecording.disabled = false; // Enable when paused
+      previewRecording.textContent = '▶ Play';
+      previewRecording.title = 'Play';
+      recordAgain.disabled = false; // Enable Start Over when paused
+      exportRecording.disabled = false; // Enable Export when paused
+      
+      // Calculate duration so preview works
+      recalculateTutorialDuration();
+      
+      // Render timeline to show any events captured so far (including drags in progress)
+      renderTimeline();
+      
+      // Position playhead at the end of the timeline
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Add pixel adjustments based on final element type (using current timelineScale)
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let snapshotIsLastElement = true;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for single events
+          // Empirically determined: 50px needed
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 50;
+          }
+        }
+        
+        // Check if pause is the final element
+        if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+          const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+          let pauseIsLastElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
+          }
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for pause to reach center
+          // Empirically determined: 26px needed
+          if (pauseIsLastElement) {
+            timelineEndPosition += 26;
+          }
+        }
+        
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+      }
+      
+      console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
     }
   });
   
   playPauseRecording.addEventListener('click', () => {
-    if (!isRecording || isPaused) return;
+    if (!isRecording) return;
     
-    // Pause recording
-    isPaused = true;
-    pauseStartTime = Date.now();
-    
-    startRecording.textContent = '⏺ Record';
-    startRecording.classList.remove('recording-active');
-    startRecording.className = 'record';
-    playPauseRecording.style.display = 'none';
-    recordingIndicator.style.display = 'none';
-    pausedIndicator.style.display = 'none';
-    addAnnotation.style.display = 'inline-block';
-    addAnnotation.disabled = false;
-    addAnnotationAtPause.style.display = 'none';
-    addPause.style.display = 'inline-block';
-    addPause.disabled = false;
-    previewRecording.style.display = 'inline-block';
-    previewRecording.disabled = false;
-    recordAgain.style.display = 'inline-block';
-    recordAgain.disabled = false;
-    exportRecording.style.display = 'inline-block';
-    exportRecording.disabled = false;
-    
-    recalculateDuration();
-    renderTimeline();
-    
-    console.log('⏸ Recording paused');
+    if (isPaused) {
+      // Resume recording
+      
+      // Ensure iframe is interactive (remove playback mode if it was left on)
+      appFrame.classList.remove('playback-mode');
+      
+      // Move playhead to end of tutorial before resuming
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Adjust playhead for single event endings to align with right edge of visual marker
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let annotationExtendsPast = false;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) annotationExtendsPast = true;
+          }
+          
+          // Add visual adjustment for single events
+          if (lastIsSingleEvent && !annotationExtendsPast) {
+            timelineEndPosition += 10; // Add 10px for better visual alignment with marker end
+          }
+        }
+        
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+        
+        // Apply the last snapshot's state so visual state matches the end
+        const api = getAPI();
+        if (api && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
+        }
+        
+        // Reset time calculations so new events start at current duration
+        // This prevents gaps from preview time being added to timestamps
+        recordingStartTime = Date.now();
+        totalPausedTime = 0;
+        importedDurationOffset = currentTutorial.duration;
+      }
+      
+      isPaused = false;
+      
+      playPauseRecording.textContent = '⏸ Pause';
+      playPauseRecording.className = 'warning'; // Yellow for pause
+      pausedIndicator.style.display = 'none';
+      recordingIndicator.style.display = 'inline-block';
+      addAnnotation.disabled = true;
+      addAnnotationAtPause.style.display = 'none';
+      addPause.disabled = true;
+      previewRecording.disabled = true; // Disable when resuming
+      recordAgain.disabled = true; // Disable Start Over when actively recording
+      exportRecording.disabled = true; // Disable Export when actively recording
+      
+      // If preview is playing, stop it first
+      if (isPlaying) {
+        isPlaying = false;
+        isPreviewingFromPaused = false;
+        appFrame.classList.remove('playback-mode');
+        previewRecording.textContent = '▶ Play';
+        
+        // Apply current state from last snapshot
+        const api = getAPI();
+        if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          api.setState(lastSnapshot.state);
+        }
+      }
+      
+      // If there's an active annotation, schedule it to hide after its duration
+      if (activeRecordingAnnotation && annotationBox) {
+        const remainingDuration = activeRecordingAnnotation.duration;
+        console.log('▶️ Recording resumed - annotation will hide in', (remainingDuration / 1000).toFixed(1) + 's');
+        
+        if (annotationTimeout) clearTimeout(annotationTimeout);
+        annotationTimeout = setTimeout(() => {
+          if (annotationBox) {
+            annotationBox.classList.remove('visible');
+            console.log('✓ Annotation hidden after duration expired');
+          }
+          activeRecordingAnnotation = null;
+        }, remainingDuration);
+      } else {
+        console.log('▶️ Recording resumed');
+      }
+    } else {
+      // Pause recording
+      pauseStartTime = Date.now();
+      isPaused = true;
+      
+      const pauseTimestamp = pauseStartTime - recordingStartTime - totalPausedTime;
+      
+      playPauseRecording.textContent = '⏺ Resume';
+      playPauseRecording.className = 'success'; // Green for resume
+      recordingIndicator.style.display = 'none';
+      pausedIndicator.style.display = 'inline-block';
+      addAnnotation.disabled = false;
+      addPause.disabled = false;
+      previewRecording.disabled = false; // Enable when paused
+      previewRecording.textContent = '▶ Play'; // Reset button text
+      recordAgain.disabled = false; // Enable Start Over when paused
+      exportRecording.disabled = false; // Enable Export when paused
+      
+      // Calculate duration so preview works
+      recalculateTutorialDuration();
+      
+      // Render timeline to show any events captured so far (including drags in progress)
+      renderTimeline();
+      
+      console.log('⏸ Recording paused at', (pauseTimestamp / 1000).toFixed(2) + 's');
+    }
   });
   
-  recordAgain.addEventListener('click', () => {
-    if (!confirm('This will discard the current recording. Continue?')) {
-      return;
+  // Helper function to finalize recording (stop listening to events and calculate final duration)
+  function finalizeRecording() {
+    if (!isRecording) return;
+    
+    // If preview is playing, stop it first
+    if (isPlaying && isPreviewingFromPaused) {
+      isPlaying = false;
+      isPreviewingFromPaused = false;
+      appFrame.classList.remove('playback-mode');
+      previewRecording.textContent = '▶ Play';
     }
     
     const api = getAPI();
@@ -904,713 +1525,2441 @@
       api.offAction(eventListener);
     }
     
-    isRecording = false;
-    isPaused = false;
-    currentTutorial = null;
+    // Calculate the actual end time of the tutorial
+    let calculatedDuration = 0;
     
-    startRecording.style.display = 'inline-block';
-    startRecording.textContent = '⏺ Start Recording';
-    startRecording.className = 'record';
-    playPauseRecording.style.display = 'none';
-    recordingIndicator.style.display = 'none';
-    pausedIndicator.style.display = 'none';
-    addAnnotation.style.display = 'none';
-    addAnnotationAtPause.style.display = 'none';
-    addPause.style.display = 'none';
-    previewRecording.style.display = 'none';
-    recordAgain.style.display = 'none';
-    exportRecording.style.display = 'none';
-    loadJSON.style.display = 'inline-block';
-    timelineContainer.classList.remove('visible');
+    console.log('⏹ FINALIZING RECORDING - Duration Calculation:');
+    console.log('  Total snapshots:', currentTutorial.snapshots.length);
     
-    console.log('🔄 Ready for new recording');
-  });
-  
-  // ========== ANNOTATION SYSTEM ==========
-  
-  addAnnotation.addEventListener('click', () => {
-    if (!currentTutorial || !isPaused) return;
-    
-    const currentTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
-    
-    const annotation = {
-      timestamp: currentTime,
-      duration: 5000,
-      title: 'New Annotation',
-      content: 'Enter your annotation text here. You can use $LaTeX$ math notation.',
-      position: null
-    };
-    
-    currentTutorial.annotations.push(annotation);
-    editingAnnotation = annotation;
-    
-    openAnnotationEditor(annotation);
-    renderTimeline();
-  });
-  
-  addAnnotationAtPause.addEventListener('click', () => {
-    if (!currentTutorial || !isPlaying) return;
-    
-    const annotation = {
-      timestamp: playbackPosition,
-      duration: 5000,
-      title: 'New Annotation',
-      content: 'Enter your annotation text here. You can use $LaTeX$ math notation.',
-      position: null
-    };
-    
-    currentTutorial.annotations.push(annotation);
-    editingAnnotation = annotation;
-    
-    openAnnotationEditor(annotation);
-    renderTimeline();
-  });
-  
-  function openAnnotationEditor(annotation) {
-    annotationTitle.value = annotation.title || '';
-    annotationContent.value = annotation.content || '';
-    annotationDuration.value = (annotation.duration || 5000) / 1000;
-    
-    // Show annotation box in draggable mode
-    annotationBox.innerHTML = `
-      <h3>${annotation.title || 'New Annotation'}</h3>
-      <p>${annotation.content || 'Content'}</p>
-      <div class="resize-handle"></div>
-    `;
-    
-    // Position annotation - use stored position relative to app container
-    const containerRect = appContainer.getBoundingClientRect();
-    
-    if (annotation.position) {
-      // Convert relative position to absolute viewport position
-      annotationBox.style.left = (containerRect.left + annotation.position.left) + 'px';
-      annotationBox.style.top = (containerRect.top + annotation.position.top) + 'px';
-      annotationBox.style.width = annotation.position.width + 'px';
-      annotationBox.style.height = annotation.position.height + 'px';
-    } else {
-      // Default position (centered in app container)
-      annotationBox.style.left = (containerRect.left + 50) + 'px';
-      annotationBox.style.top = (containerRect.top + 50) + 'px';
-      annotationBox.style.width = '250px';
-      annotationBox.style.height = 'auto';
-    }
-    
-    annotationBox.classList.add('visible', 'draggable', 'custom-position');
-    
-    // Set up drag and resize handlers
-    setupAnnotationDragAndResize();
-    
-    annotationEditorModal.classList.add('visible');
-    
-    console.log('✏️ Editing annotation at', annotation.timestamp + 'ms');
-  }
-  
-  function setupAnnotationDragAndResize() {
-    const resizeHandle = annotationBox.querySelector('.resize-handle');
-    
-    function startAnnotationDrag(e) {
-      if (e.target === resizeHandle) return;
-      e.preventDefault();
-      isDraggingAnnotation = true;
-      const rect = annotationBox.getBoundingClientRect();
-      dragOffsetX = e.clientX - rect.left;
-      dragOffsetY = e.clientY - rect.top;
-      annotationBox.style.cursor = 'grabbing';
-    }
-    
-    function startAnnotationResize(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      isResizingAnnotation = true;
-      resizeStartX = e.clientX;
-      resizeStartY = e.clientY;
-      resizeStartWidth = annotationBox.offsetWidth;
-      resizeStartHeight = annotationBox.offsetHeight;
-    }
-    
-    function dragAnnotation(e) {
-      if (!isDraggingAnnotation) return;
+    if (currentTutorial.snapshots.length > 0) {
+      const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+      const lastAction = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].event.action;
       
-      const newLeft = e.clientX - dragOffsetX;
-      const newTop = e.clientY - dragOffsetY;
+      calculatedDuration = lastSnapshotTime;
+      console.log('  Last snapshot time:', (lastSnapshotTime / 1000).toFixed(3) + 's');
+      console.log('  Last snapshot action:', lastAction);
       
-      annotationBox.style.left = newLeft + 'px';
-      annotationBox.style.top = newTop + 'px';
-    }
-    
-    function resizeAnnotation(e) {
-      if (!isResizingAnnotation) return;
+      // Check if last event is a single click event (not a drag)
+      const isDragEnd = lastAction === 'dragEnd' || lastAction === 'dragBetaEnd' || 
+                        lastAction === 'dragBetaPrimeEnd' || lastAction === 'dragBEnd' || 
+                        lastAction === 'dragAxisEnd';
       
-      const deltaX = e.clientX - resizeStartX;
-      const deltaY = e.clientY - resizeStartY;
-      
-      const newWidth = Math.max(200, resizeStartWidth + deltaX);
-      const newHeight = Math.max(100, resizeStartHeight + deltaY);
-      
-      annotationBox.style.width = newWidth + 'px';
-      annotationBox.style.height = newHeight + 'px';
-    }
-    
-    function stopDragAndResize() {
-      isDraggingAnnotation = false;
-      isResizingAnnotation = false;
-      annotationBox.style.cursor = 'move';
-    }
-    
-    annotationBox.addEventListener('mousedown', startAnnotationDrag);
-    if (resizeHandle) {
-      resizeHandle.addEventListener('mousedown', startAnnotationResize);
-    }
-    document.addEventListener('mousemove', dragAnnotation);
-    document.addEventListener('mousemove', resizeAnnotation);
-    document.addEventListener('mouseup', stopDragAndResize);
-  }
-  
-  saveAnnotationEdit.addEventListener('click', () => {
-    if (!editingAnnotation) return;
-    
-    editingAnnotation.title = annotationTitle.value || 'Annotation';
-    editingAnnotation.content = annotationContent.value || '';
-    editingAnnotation.duration = parseFloat(annotationDuration.value) * 1000;
-    
-    // Save position RELATIVE to app container
-    const containerRect = appContainer.getBoundingClientRect();
-    const boxRect = annotationBox.getBoundingClientRect();
-    
-    const position = {
-      left: boxRect.left - containerRect.left,
-      top: boxRect.top - containerRect.top,
-      width: annotationBox.offsetWidth,
-      height: annotationBox.offsetHeight
-    };
-    
-    editingAnnotation.position = position;
-    
-    console.log('💾 Saved annotation position relative to container:', position);
-    
-    closeAnnotationEditor();
-    recalculateDuration();
-    renderTimeline();
-  });
-  
-  deleteAnnotationEdit.addEventListener('click', () => {
-    if (!editingAnnotation || !currentTutorial) return;
-    
-    if (!confirm('Delete this annotation?')) return;
-    
-    const index = currentTutorial.annotations.indexOf(editingAnnotation);
-    if (index > -1) {
-      currentTutorial.annotations.splice(index, 1);
-    }
-    
-    closeAnnotationEditor();
-    recalculateDuration();
-    renderTimeline();
-  });
-  
-  cancelAnnotationEdit.addEventListener('click', () => {
-    // If this is a new annotation with no position, remove it
-    if (editingAnnotation && !editingAnnotation.position) {
-      const index = currentTutorial.annotations.indexOf(editingAnnotation);
-      if (index > -1) {
-        currentTutorial.annotations.splice(index, 1);
+      if (!isDragEnd) {
+        // For single events, add visual width so playhead stops at right edge of marker
+        const visualWidthMs = (30 / timelineScale) * 1000;
+        calculatedDuration = lastSnapshotTime + visualWidthMs;
+        console.log('  Added visual width for single event:', visualWidthMs.toFixed(1) + 'ms');
+        console.log('  Adjusted duration:', (calculatedDuration / 1000).toFixed(3) + 's');
       }
     }
     
-    closeAnnotationEditor();
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+      console.log('  Last annotation ends at:', (lastAnnotationEnd / 1000).toFixed(3) + 's');
+      calculatedDuration = Math.max(calculatedDuration, lastAnnotationEnd);
+    }
+    
+    currentTutorial.duration = calculatedDuration;
+    console.log('  Calculated duration:', (currentTutorial.duration / 1000).toFixed(3) + 's');
+    
+    // Clear any active annotation and timeout
+    if (annotationTimeout) {
+      clearTimeout(annotationTimeout);
+      annotationTimeout = null;
+    }
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+    }
+    activeRecordingAnnotation = null;
+    
+    isRecording = false;
+    isPaused = false;
+    
+    // Update UI
+    playPauseRecording.style.display = 'none';
+    addAnnotation.style.display = 'none';
+    addPause.style.display = 'none';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    previewRecording.disabled = false;
+    
+    console.log('✓ Recording finalized');
     renderTimeline();
-  });
-  
-  function closeAnnotationEditor() {
-    annotationBox.classList.remove('visible', 'draggable', 'custom-position');
-    annotationEditorModal.classList.remove('visible');
-    editingAnnotation = null;
   }
   
-  function showAnnotation(annotation) {
-    // Position annotation using stored position RELATIVE to app container
-    const containerRect = appContainer.getBoundingClientRect();
+  // ========== ANNOTATIONS ==========
+  
+  addAnnotation.addEventListener('click', () => {
+    if (!isPaused && playbackPausedAt === 0) return;
     
-    annotationBox.innerHTML = `
-      <h3>${annotation.title}</h3>
-      <p>${annotation.content}</p>
-    `;
-    
-    if (annotation.position) {
-      // Convert relative position to absolute viewport position
-      annotationBox.style.left = (containerRect.left + annotation.position.left) + 'px';
-      annotationBox.style.top = (containerRect.top + annotation.position.top) + 'px';
-      annotationBox.style.width = annotation.position.width + 'px';
-      annotationBox.style.height = annotation.position.height + 'px';
-      annotationBox.classList.add('custom-position');
+    // Determine timestamp based on context:
+    // - If paused during playback preview, use playback position
+    // - Otherwise use end of tutorial (normal recording behavior)
+    let timestamp;
+    if (playbackPausedAt > 0) {
+      // Paused during playback - use current playback position
+      timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
+      console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
     } else {
-      // Default position (centered in app container)
-      annotationBox.style.left = (containerRect.left + 50) + 'px';
-      annotationBox.style.top = (containerRect.top + 50) + 'px';
-      annotationBox.style.width = '250px';
-      annotationBox.style.height = 'auto';
-      annotationBox.classList.remove('custom-position');
+      // Normal paused recording - use end of tutorial
+      timestamp = currentTutorial.duration || 0;
+      console.log('📝 Creating annotation at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
     }
     
-    annotationBox.classList.add('visible');
-    annotationBox.classList.remove('draggable');
-    
-    if (window.MathJax && window.MathJax.typesetPromise) {
-      window.MathJax.typesetPromise([annotationBox]).catch((err) => {
-        console.warn('MathJax typeset error:', err);
-      });
+    // Check if there are existing annotations
+    // If so, place this one after the last one to avoid overlap
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      const lastAnnEnd = lastAnn.timestamp + lastAnn.duration;
+      
+      // If the new annotation would overlap, place it after the last one
+      if (timestamp < lastAnnEnd) {
+        timestamp = lastAnnEnd;
+        console.log('📝 Adjusted annotation timestamp to avoid overlap:', (timestamp / 1000).toFixed(2) + 's');
+      }
     }
-  }
-  
-  function hideAnnotation() {
-    annotationBox.classList.remove('visible');
-  }
-  
-  // ========== PAUSE SYSTEM ==========
+    
+    // Create annotation with default text
+    const annotation = {
+      timestamp: timestamp,
+      title: 'New Annotation',
+      text: 'Double-click to edit this text',
+      duration: 5000, // 5 seconds default
+      position: null // Will be set after positioning
+    };
+    
+    currentTutorial.annotations.push(annotation);
+    
+    // Store index for save handler
+    editingAnnotationIndex = currentTutorial.annotations.length - 1;
+    
+    // Directly show annotation for positioning/editing
+    showAnnotationForPositioning(annotation, editingAnnotationIndex);
+  });
   
   addPause.addEventListener('click', () => {
-    if (!currentTutorial || !isPaused) return;
+    if (!isPaused && playbackPausedAt === 0) return;
     
-    const currentTime = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+    // Determine timestamp based on context:
+    // - If paused during playback preview, use playback position
+    // - Otherwise use end of tutorial (normal recording behavior)
+    let timestamp;
+    if (playbackPausedAt > 0) {
+      // Paused during playback - use current playback position
+      timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
+      console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
+      console.log('  playbackPausedAt =', playbackPausedAt.toFixed(3), 's');
+      console.log('  timestamp =', timestamp.toFixed(2), 'ms');
+      
+      // Debug: Where is the playhead right now?
+      const currentPlayheadLeft = timelinePlayhead.style.left;
+      console.log('  Current playhead position (CSS):', currentPlayheadLeft);
+      
+      // Get actual rendered position
+      const playheadRect = timelinePlayhead.getBoundingClientRect();
+      const containerRect = timelineContainer.getBoundingClientRect();
+      console.log('  Current playhead position (rendered, container-relative):', (playheadRect.left - containerRect.left).toFixed(2), 'px');
+      
+      // Debug: Where will the pause be rendered?
+      const timelineStartOffset = getTimelineStartOffset();
+      const pauseTime = (timestamp - timelineStartOffset) / 1000;
+      const pauseLeft = pauseTime * timelineScale;
+      console.log('  timelineStartOffset =', (timelineStartOffset / 1000).toFixed(3), 's');
+      console.log('  pauseTime (relative to timeline) =', pauseTime.toFixed(3), 's');
+      console.log('  timelineScale =', timelineScale.toFixed(2), 'px/s');
+      console.log('  pauseLeft (calculated) =', pauseLeft.toFixed(2), 'px');
+      console.log('  pauseEl.style.left will be:', (pauseLeft - 6).toFixed(2), 'px (centered)');
+    } else {
+      // Normal paused recording - use end of tutorial
+      timestamp = currentTutorial.duration || 0;
+      console.log('⏸ Creating pause at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
+    }
     
-    currentTutorial.pauses.push({
-      timestamp: currentTime
-    });
+    // Create pause (just a timestamp)
+    const pause = {
+      timestamp: timestamp
+    };
     
-    recalculateDuration();
+    currentTutorial.pauses.push(pause);
+    
+    // Recalculate duration and re-render timeline
+    recalculateTutorialDuration();
     renderTimeline();
     
-    console.log('⏸ Pause added at', currentTime + 'ms');
+    // Debug: Check if playhead moved after re-rendering
+    if (playbackPausedAt > 0) {
+      setTimeout(() => {
+        const playheadRect = timelinePlayhead.getBoundingClientRect();
+        const containerRect = timelineContainer.getBoundingClientRect();
+        const playheadAfter = playheadRect.left - containerRect.left;
+        console.log('  📍 AFTER re-render: Playhead is now at:', playheadAfter.toFixed(2), 'px (container-relative)');
+        console.log('  📍 Playhead CSS left:', timelinePlayhead.style.left);
+      }, 0);
+    }
   });
   
-  // ========== PLAYBACK ==========
+  createAnnotation.addEventListener('click', () => {
+    const title = annTitle.value.trim();
+    const text = annText.value.trim();
+    const duration = parseFloat(annDuration.value) * 1000;
+    
+    if (!title || !text) {
+      alert('Please enter both title and text');
+      return;
+    }
+    
+    // Use current tutorial duration as the timestamp (end of existing content)
+    let timestamp = currentTutorial.duration || 0;
+    
+    // Check if there are existing annotations
+    // If so, place this one after the last one to avoid overlap
+    if (currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      const lastAnnEnd = lastAnn.timestamp + lastAnn.duration;
+      
+      // If the new annotation would overlap, place it after the last one
+      if (timestamp < lastAnnEnd) {
+        timestamp = lastAnnEnd;
+        console.log('📝 Adjusted annotation timestamp to avoid overlap:', (timestamp / 1000).toFixed(2) + 's');
+      }
+    }
+    
+    console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
+    
+    const annotation = {
+      timestamp: timestamp,
+      title: title,
+      text: text,
+      duration: duration,
+      position: null // Will be set after positioning
+    };
+    
+    currentTutorial.annotations.push(annotation);
+    
+    annotationEditorModal.classList.remove('visible');
+    
+    // Show annotation for positioning
+    showAnnotationForPositioning(annotation, currentTutorial.annotations.length - 1);
+  });
+  
+  cancelAnnotation.addEventListener('click', () => {
+    annotationEditorModal.classList.remove('visible');
+  });
+  
+  function showAnnotationForPositioning(ann, index) {
+    if (!annotationBox) {
+      console.error('showAnnotationForPositioning: annotationBox is null');
+      return;
+    }
+    
+    console.log('showAnnotationForPositioning called for:', ann.title);
+    
+    annotationBox.className = 'annotation-box visible draggable custom-position';
+    annotationBox.style.position = 'absolute';
+    
+    // Position relative to app container
+    const containerRect = appContainer.getBoundingClientRect();
+    annotationBox.style.left = (containerRect.left + 300) + 'px';
+    annotationBox.style.top = (containerRect.top + 200) + 'px';
+    
+    annotationBox.style.width = '400px';
+    annotationBox.style.height = 'auto';
+    annotationBox.style.transform = 'none';
+    annotationBox.style.zIndex = '10000';
+    
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    console.log('Annotation box styles set, display:', window.getComputedStyle(annotationBox).display);
+    
+    // Make title and text editable on double-click
+    annotationTitle.ondblclick = (e) => {
+      e.stopPropagation();
+      console.log('🖱️ Double-clicked title to edit');
+      const currentText = annotationTitle.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentText;
+      input.style.width = '100%';
+      input.style.fontSize = '18px';
+      input.style.fontWeight = 'bold';
+      input.style.border = '2px solid var(--accent)';
+      input.style.padding = '4px';
+      input.style.borderRadius = '4px';
+      
+      annotationTitle.innerHTML = '';
+      annotationTitle.appendChild(input);
+      input.focus();
+      
+      // CRITICAL: Stop propagation to prevent annotation box drag handler from interfering
+      input.addEventListener('mousedown', function(e) {
+        console.log('  Title input mousedown - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
+      });
+      
+      input.addEventListener('click', function(e) {
+        console.log('  Title input click - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
+      });
+      
+      const saveEdit = () => {
+        console.log('  Saving title edit:', input.value);
+        ann.title = input.value.trim() || currentText;
+        annotationTitle.innerHTML = ann.title;
+      };
+      
+      input.onblur = saveEdit;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          saveEdit();
+        } else if (e.key === 'Escape') {
+          annotationTitle.innerHTML = currentText;
+        }
+      };
+    };
+    
+    annotationText.ondblclick = (e) => {
+      e.stopPropagation();
+      console.log('🖱️ Double-clicked text to edit');
+      const currentText = annotationText.textContent;
+      const textarea = document.createElement('textarea');
+      textarea.value = currentText;
+      textarea.style.width = '100%';
+      textarea.style.minHeight = '60px';
+      textarea.style.fontSize = '15px';
+      textarea.style.border = '2px solid var(--accent)';
+      textarea.style.padding = '4px';
+      textarea.style.borderRadius = '4px';
+      textarea.style.fontFamily = 'inherit';
+      
+      annotationText.innerHTML = '';
+      annotationText.appendChild(textarea);
+      textarea.focus();
+      
+      // CRITICAL: Stop propagation to prevent annotation box drag handler from interfering
+      textarea.addEventListener('mousedown', function(e) {
+        console.log('  Text textarea mousedown - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
+      });
+      
+      textarea.addEventListener('click', function(e) {
+        console.log('  Text textarea click - selectionStart:', this.selectionStart, 'selectionEnd:', this.selectionEnd);
+        e.stopPropagation(); // Prevent drag handler from triggering
+      });
+      
+      const saveEdit = () => {
+        console.log('  Saving text edit:', textarea.value);
+        ann.text = textarea.value.trim() || currentText;
+        annotationText.innerHTML = ann.text;
+      };
+      
+      textarea.onblur = saveEdit;
+      textarea.onkeydown = (e) => {
+        if (e.key === 'Escape') {
+          annotationText.innerHTML = currentText;
+        }
+        // Allow Enter for new lines, don't close on Enter
+      };
+    };
+    
+    // Add resize handle
+    if (!annotationBox.querySelector('.resize-handle')) {
+      const handle = document.createElement('div');
+      handle.className = 'resize-handle';
+      annotationBox.appendChild(handle);
+      console.log('Resize handle added');
+    }
+    
+    makeDraggable();
+    positionEditorOverlay.style.display = 'block';
+    
+    // Override save handler
+    savePosition.onclick = () => {
+      const rect = annotationBox.getBoundingClientRect();
+      const containerRect = appContainer.getBoundingClientRect();
+      
+      ann.position = {
+        left: rect.left - containerRect.left,
+        top: rect.top - containerRect.top,
+        width: rect.width,
+        height: rect.height
+      };
+      
+      positionEditorOverlay.style.display = 'none';
+      annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
+      
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+      
+      // Clear editing index
+      editingAnnotationIndex = -1;
+      
+      // Keep annotation visible during recording
+      // Store it so we can hide it when recording resumes and duration expires
+      activeRecordingAnnotation = ann;
+      
+      console.log('✓ Annotation positioned:', ann.position);
+      console.log('  Annotation will remain visible until recording resumes and duration expires');
+      
+      // Recalculate duration in case annotation extends beyond current duration
+      recalculateTutorialDuration();
+      renderTimeline();
+    };
+  }
+  
+  cancelPosition.addEventListener('click', () => {
+    // Remove the last annotation that wasn't positioned
+    if (currentTutorial && currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      if (!lastAnn.position) {
+        currentTutorial.annotations.pop();
+      }
+    }
+    
+    editingAnnotationIndex = -1;
+    
+    positionEditorOverlay.style.display = 'none';
+    if (annotationBox) {
+      annotationBox.classList.remove('visible', 'draggable');
+      const handles = annotationBox.querySelectorAll('.resize-handle');
+      handles.forEach(h => h.remove());
+    }
+  });
+  
+  deleteAnnotationFromOverlay.addEventListener('click', () => {
+    if (editingAnnotationIndex >= 0 && currentTutorial && currentTutorial.annotations[editingAnnotationIndex]) {
+      if (confirm('Delete this annotation?')) {
+        currentTutorial.annotations.splice(editingAnnotationIndex, 1);
+        editingAnnotationIndex = -1;
+        
+        positionEditorOverlay.style.display = 'none';
+        if (annotationBox) {
+          annotationBox.classList.remove('visible', 'draggable');
+          const handles = annotationBox.querySelectorAll('.resize-handle');
+          handles.forEach(h => h.remove());
+        }
+        
+        recalculateTutorialDuration();
+        renderTimeline();
+      }
+    }
+  });
+  
+  // Event deletion modal handlers
+  confirmEventDeletion.addEventListener('click', () => {
+    if (!eventToDelete || !currentTutorial) return;
+    
+    console.log('🗑️ Deleting event:', eventToDelete);
+    
+    if (eventToDelete.endIdx !== null) {
+      // Delete drag event (start and end, plus all intermediate events)
+      // Delete from endIdx down to startIdx to maintain indices
+      const startIdx = eventToDelete.startIdx;
+      const endIdx = eventToDelete.endIdx;
+      const numToDelete = endIdx - startIdx + 1;
+      
+      console.log(`  Deleting drag sequence: ${numToDelete} events from index ${startIdx} to ${endIdx}`);
+      currentTutorial.snapshots.splice(startIdx, numToDelete);
+      console.log(`  Deleted ${numToDelete} events for drag sequence`);
+    } else {
+      // Delete single event
+      currentTutorial.snapshots.splice(eventToDelete.startIdx, 1);
+      console.log(`  Deleted single event at index ${eventToDelete.startIdx}`);
+    }
+    
+    eventDeletionModal.classList.remove('visible');
+    eventToDelete = null;
+    recalculateTutorialDuration();
+    renderTimeline();
+  });
+  
+  cancelEventDeletion.addEventListener('click', () => {
+    eventDeletionModal.classList.remove('visible');
+    eventToDelete = null;
+  });
+  
+  eventDeletionModal.addEventListener('click', (e) => {
+    if (e.target === eventDeletionModal) {
+      eventDeletionModal.classList.remove('visible');
+      eventToDelete = null;
+    }
+  });
+  
+  // Pause deletion modal handlers
+  confirmPauseDeletion.addEventListener('click', () => {
+    if (pauseToDelete === null || !currentTutorial) return;
+    
+    console.log('🗑️ Deleting pause at index:', pauseToDelete);
+    currentTutorial.pauses.splice(pauseToDelete, 1);
+    
+    pauseDeletionModal.classList.remove('visible');
+    pauseToDelete = null;
+    recalculateTutorialDuration();
+    renderTimeline();
+  });
+  
+  cancelPauseDeletion.addEventListener('click', () => {
+    pauseDeletionModal.classList.remove('visible');
+    pauseToDelete = null;
+  });
+  
+  pauseDeletionModal.addEventListener('click', (e) => {
+    if (e.target === pauseDeletionModal) {
+      pauseDeletionModal.classList.remove('visible');
+      pauseToDelete = null;
+    }
+  });
+  
+  function makeDraggable() {
+    if (!annotationBox) {
+      console.error('makeDraggable: annotationBox is null');
+      return;
+    }
+    
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) {
+      console.error('makeDraggable: cannot get iframe document');
+      return;
+    }
+    
+    console.log('makeDraggable: Setting up drag handlers');
+    
+    // State variables
+    let isDragging = false;
+    let isResizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    let startLeft = 0;
+    let startTop = 0;
+    
+    // Get the resize handle
+    const handle = annotationBox.querySelector('.resize-handle');
+    
+    // Handle resize
+    if (handle) {
+      handle.onmousedown = function(e) {
+        console.log('Resize handle mousedown');
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = annotationBox.offsetWidth;
+        startHeight = annotationBox.offsetHeight;
+        e.stopPropagation();
+        e.preventDefault();
+      };
+    }
+    
+    // Handle drag
+    annotationBox.onmousedown = function(e) {
+      if (e.target.classList.contains('resize-handle')) return;
+      
+      console.log('Annotation box mousedown');
+      isDragging = true;
+      
+      // Get current position
+      const rect = annotationBox.getBoundingClientRect();
+      startLeft = rect.left;
+      startTop = rect.top;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      e.preventDefault();
+    };
+    
+    // Mouse move handler
+    iframeDoc.onmousemove = function(e) {
+      if (isDragging) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        annotationBox.style.transform = 'none';
+        annotationBox.style.left = (startLeft + dx) + 'px';
+        annotationBox.style.top = (startTop + dy) + 'px';
+      } else if (isResizing) {
+        const newWidth = startWidth + (e.clientX - startX);
+        const newHeight = startHeight + (e.clientY - startY);
+        annotationBox.style.width = Math.max(80, newWidth) + 'px';
+        annotationBox.style.height = Math.max(40, newHeight) + 'px';
+      }
+    };
+    
+    // Mouse up handler
+    iframeDoc.onmouseup = function() {
+      if (isDragging || isResizing) {
+        console.log('Mouse up - ending drag/resize');
+      }
+      isDragging = false;
+      isResizing = false;
+    };
+    
+    console.log('✓ Drag handlers attached');
+  }
+  
+  // ========== PREVIEW/PLAYBACK ==========
   
   previewRecording.addEventListener('click', () => {
     if (!currentTutorial) return;
     
-    if (!isPlaying) {
-      startPlayback();
-    } else {
+    // Toggle play/pause
+    if (isPlaying) {
       pausePlayback();
+    } else {
+      // Resume if paused, otherwise start from beginning
+      if (playbackPausedAt > 0) {
+        resumePlayback();
+      } else {
+        startPlayback();
+      }
+    }
+  });
+  
+  // replayPreview button removed in v12.8
+  // replayPreview.addEventListener('click', () => {
+  //   if (!currentTutorial) return;
+  //   
+  //   // Stop if playing
+  //   if (isPlaying) {
+  //     stopPlayback();
+  //   }
+  //   
+  //   // Reset pause position and start from beginning
+  //   playbackPausedAt = 0;
+  //   startPlayback();
+  // });
+  
+  playPausePreview.addEventListener('click', () => {
+    if (isPlaying) {
+      pausePlayback();
+    } else {
+      resumePlayback();
     }
   });
   
   function startPlayback() {
+    if (!currentTutorial) return;
+    
     const api = getAPI();
     if (!api) return;
     
-    if (playbackPosition === 0) {
-      api.setState(currentTutorial.initialState);
+    // Detect if we're previewing from paused recording state
+    isPreviewingFromPaused = isRecording && isPaused;
+    
+    // Don't hide recording controls - just add playback mode to iframe
+    appFrame.classList.add('playback-mode');
+    
+    // Disable iframe interaction during playback
+    appFrame.style.pointerEvents = 'none';
+    
+    // Update button states
+    previewRecording.textContent = '|| Pause';
+    previewRecording.title = 'Pause';
+    previewRecording.classList.add('playing');
+    replayPreview.style.display = 'none';
+    addAnnotation.disabled = true;
+    addPause.disabled = true;
+    addAnnotationAtPause.style.display = 'none';
+    // Keep recordAgain and exportRecording visible and enabled
+    
+    api.setState(currentTutorial.initialState);
+    
+    // Hide any visible annotation before starting
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
     }
+    if (annotationTimeout) {
+      clearTimeout(annotationTimeout);
+      annotationTimeout = null;
+    }
+    currentAnnotationIndex = -1;
     
     isPlaying = true;
-    playbackStartTime = Date.now() - playbackPosition;
     
-    appFrame.classList.add('playback-mode');
-    previewRecording.textContent = '⏸ Pause';
-    previewRecording.classList.add('playing');
-    addAnnotation.disabled = true;
-    addAnnotationAtPause.style.display = 'none';
-    addPause.disabled = true;
-    recordAgain.disabled = true;
-    exportRecording.disabled = true;
-    startRecording.disabled = true;
+    // Start playback at the earliest timestamp (0, first annotation, or first snapshot)
+    let startOffset = 0;
     
-    timelinePlayhead.style.display = 'block';
+    // Check if there are annotations before the first snapshot
+    if (currentTutorial.annotations.length > 0) {
+      const firstAnnTimestamp = Math.min(...currentTutorial.annotations.map(ann => ann.timestamp));
+      if (currentTutorial.snapshots.length > 0) {
+        const firstSnapshotTimestamp = currentTutorial.snapshots[0].timestamp;
+        // Start at whichever comes first: annotation or snapshot
+        startOffset = Math.min(firstAnnTimestamp, firstSnapshotTimestamp);
+      } else {
+        // No snapshots, just annotations
+        startOffset = firstAnnTimestamp;
+      }
+      console.log('▶️ Starting playback at first event:', (startOffset / 1000).toFixed(2) + 's');
+    } else if (currentTutorial.snapshots.length > 0) {
+      // No annotations, start at first snapshot
+      startOffset = currentTutorial.snapshots[0].timestamp;
+      console.log('▶️ Starting playback at first event:', (startOffset / 1000).toFixed(2) + 's');
+    }
+    // If neither snapshots nor annotations exist, startOffset stays 0
     
-    scheduleNextEvents();
-    updatePlayback();
+    playbackStartTime = Date.now() - startOffset;
+    playbackPausedAt = 0;
     
-    console.log('▶️ Playback started from', playbackPosition + 'ms');
+    playPausePreview.textContent = '⏸ Pause Preview';
+    
+    requestAnimationFrame(playbackLoop);
+    
+    console.log('▶️ Playback started');
   }
   
   function pausePlayback() {
+    if (!isPlaying) return;
+    
     isPlaying = false;
-    playbackPosition = Date.now() - playbackStartTime;
+    playbackPausedAt = (Date.now() - playbackStartTime) / 1000;
     
-    if (playbackTimer) {
-      cancelAnimationFrame(playbackTimer);
-      playbackTimer = null;
-    }
+    // Enable iframe interaction when paused
+    appFrame.style.pointerEvents = 'auto';
     
-    if (currentAnnotationTimeout) {
-      clearTimeout(currentAnnotationTimeout);
-      currentAnnotationTimeout = null;
-    }
-    
-    if (currentPauseTimeout) {
-      clearTimeout(currentPauseTimeout);
-      currentPauseTimeout = null;
-    }
-    
-    appFrame.classList.remove('playback-mode');
-    previewRecording.textContent = '▶ Resume';
+    previewRecording.textContent = '▶ Play';
+    previewRecording.title = 'Play';
     previewRecording.classList.remove('playing');
+    playPausePreview.textContent = '▶ Resume Preview';
     addAnnotation.disabled = false;
-    addAnnotationAtPause.style.display = 'inline-block';
     addPause.disabled = false;
-    recordAgain.disabled = false;
-    exportRecording.disabled = false;
-    startRecording.disabled = false;
+    addAnnotationAtPause.style.display = 'inline-block';
+    // Keep all buttons visible
     
-    console.log('⏸ Playback paused at', playbackPosition + 'ms');
+    console.log('⏸ Playback paused at', playbackPausedAt.toFixed(1) + 's');
+  }
+  
+  function resumePlayback() {
+    if (isPlaying) return;
+    
+    isPlaying = true;
+    playbackStartTime = Date.now() - (playbackPausedAt * 1000);
+    
+    // Disable iframe interaction during playback
+    appFrame.style.pointerEvents = 'none';
+    
+    previewRecording.textContent = '|| Pause';
+    previewRecording.title = 'Pause';
+    previewRecording.classList.add('playing');
+    playPausePreview.textContent = '⏸ Pause Preview';
+    addAnnotation.disabled = true;
+    addPause.disabled = true;
+    addAnnotationAtPause.style.display = 'none';
+    // Keep recordAgain and exportRecording visible and enabled
+    
+    requestAnimationFrame(playbackLoop);
+    
+    console.log('▶️ Playback resumed');
+  }
+  
+  // addAnnotationAtPause button removed in v12.8
+  // addAnnotationAtPause.addEventListener('click', () => {
+  //   if (isPlaying) return; // Should only work when paused
+  //   
+  //   // Open annotation modal with timestamp set to current playback position
+  //   const currentTime = playbackPausedAt * 1000; // Convert to ms
+  //   
+  //   annTitle.value = '';
+  //   annText.value = '';
+  //   annDuration.value = 5;
+  //   annotationEditorModal.classList.add('visible');
+  //   
+  //   // Override the createAnnotation handler to use the paused time
+  //   const originalHandler = createAnnotation.onclick;
+  //   createAnnotation.onclick = () => {
+  //     const title = annTitle.value.trim();
+  //     const text = annText.value.trim();
+  //     const duration = parseFloat(annDuration.value) * 1000;
+  //     
+  //     if (!title || !text) {
+  //       alert('Please enter both title and text');
+  //       return;
+  //     }
+  //     
+  //     const annotation = {
+  //       timestamp: currentTime,
+  //       title: title,
+  //       text: text,
+  //       duration: duration,
+  //       position: null
+  //     };
+  //     
+  //     currentTutorial.annotations.push(annotation);
+  //     
+  //     annotationEditorModal.classList.remove('visible');
+  //     
+  //     // Show annotation for positioning
+  //     showAnnotationForPositioning(annotation, currentTutorial.annotations.length - 1);
+  //     
+  //     // Restore original handler
+  //     createAnnotation.onclick = originalHandler;
+  //   };
+  // });
+  
+  function playbackLoop() {
+    if (!isPlaying || !currentTutorial) return;
+    
+    const api = getAPI();
+    if (!api) {
+      stopPlayback();
+      return;
+    }
+    
+    const elapsed = (Date.now() - playbackStartTime) / 1000;
+    const elapsedMs = elapsed * 1000;
+    
+    // Update timeline playhead (adjusted for timeline start offset)
+    const timelineStartOffset = getTimelineStartOffset();
+    const timelineElapsed = (elapsedMs - timelineStartOffset) / 1000;
+    const playheadLeft = timelineElapsed * timelineScale + 60;
+    timelinePlayhead.style.display = 'block';
+    timelinePlayhead.style.left = playheadLeft + 'px';
+    
+    // Find the most recent snapshot that should be active at this time
+    let targetSnapshot = null;
+    for (let i = currentTutorial.snapshots.length - 1; i >= 0; i--) {
+      if (currentTutorial.snapshots[i].timestamp <= elapsedMs) {
+        targetSnapshot = currentTutorial.snapshots[i];
+        break;
+      }
+    }
+    
+    // Apply the most recent applicable snapshot BEFORE checking if finished
+    if (targetSnapshot) {
+      // Use a simple flag to avoid re-applying the same snapshot
+      if (!playbackLoop.lastAppliedTimestamp || 
+          targetSnapshot.timestamp !== playbackLoop.lastAppliedTimestamp) {
+        api.setState(targetSnapshot.state);
+        playbackLoop.lastAppliedTimestamp = targetSnapshot.timestamp;
+        
+        // Log important state changes
+        if (targetSnapshot.event.action === 'simulate') {
+          console.log('▶️ Applying simulate event - data length:', targetSnapshot.state.data.length, 'currentN:', targetSnapshot.state.currentN);
+        }
+      }
+    }
+    
+    // Handle annotations
+    let annotationShowing = false;
+    for (let i = 0; i < currentTutorial.annotations.length; i++) {
+      const ann = currentTutorial.annotations[i];
+      const annStart = ann.timestamp;
+      const annEnd = ann.timestamp + ann.duration;
+      
+      // Check if annotation should be visible at current time
+      if (elapsedMs >= annStart && elapsedMs <= annEnd) {
+        annotationShowing = true;
+        if (currentAnnotationIndex !== i) {
+          console.log(`📍 Showing annotation "${ann.title}" at ${(elapsedMs / 1000).toFixed(2)}s (should be ${(annStart / 1000).toFixed(2)}s-${(annEnd / 1000).toFixed(2)}s)`);
+          showAnnotation(ann);
+          currentAnnotationIndex = i;
+        }
+        break;
+      }
+    }
+    
+    // Hide annotation if no longer in range
+    if (!annotationShowing && currentAnnotationIndex >= 0) {
+      if (annotationBox) {
+        annotationBox.classList.remove('visible');
+      }
+      currentAnnotationIndex = -1;
+    }
+    
+    // Check for pause events - track which have been triggered
+    if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+      // Initialize the Set if it doesn't exist
+      if (!playbackLoop.triggeredPauses) {
+        playbackLoop.triggeredPauses = new Set();
+      }
+      
+      for (let i = 0; i < currentTutorial.pauses.length; i++) {
+        const pause = currentTutorial.pauses[i];
+        const pauseKey = `pause_${i}_${pause.timestamp}`;
+        
+        // Check if we've reached this pause and haven't triggered it yet
+        if (elapsedMs >= pause.timestamp && !playbackLoop.triggeredPauses.has(pauseKey)) {
+          playbackLoop.triggeredPauses.add(pauseKey);
+          console.log('⏸ Pause reached at', (pause.timestamp / 1000).toFixed(2) + 's - pausing playback');
+          
+          // Check if this pause is the final element (no snapshots or annotations after it)
+          let pauseIsFinalElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > pause.timestamp) pauseIsFinalElement = false;
+          }
+          
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > pause.timestamp) pauseIsFinalElement = false;
+          }
+          
+          // Check if there are other pauses after this one
+          for (let j = i + 1; j < currentTutorial.pauses.length; j++) {
+            if (currentTutorial.pauses[j].timestamp > pause.timestamp) {
+              pauseIsFinalElement = false;
+              break;
+            }
+          }
+          
+          if (pauseIsFinalElement) {
+            // This is the final element - stop playback instead of pausing to avoid double-pause
+            console.log('⏸ Pause is final element - stopping playback');
+            stopPlayback();
+          } else {
+            // Pause in the middle - just pause naturally at the timestamp
+            pausePlayback();
+          }
+          return;
+        }
+      }
+    }
+    
+    // Check if finished AFTER applying all state/annotations/pauses
+    // This ensures the last snapshot gets applied before stopping
+    if (elapsedMs >= currentTutorial.duration) {
+      console.log(`⏹ Stopping playback: elapsed=${(elapsedMs / 1000).toFixed(3)}s duration=${(currentTutorial.duration / 1000).toFixed(3)}s`);
+      stopPlayback();
+      return;
+    }
+    
+    requestAnimationFrame(playbackLoop);
+  }
+  
+  function showAnnotation(ann) {
+    if (!annotationBox) return;
+    
+    annotationTitle.innerHTML = ann.title;
+    annotationText.innerHTML = ann.text;
+    
+    if (ann.position) {
+      annotationBox.className = 'annotation-box visible custom-position';
+      
+      // Convert relative position (relative to appContainer) to absolute viewport position
+      const containerRect = appContainer.getBoundingClientRect();
+      annotationBox.style.left = (containerRect.left + ann.position.left) + 'px';
+      annotationBox.style.top = (containerRect.top + ann.position.top) + 'px';
+      annotationBox.style.width = ann.position.width + 'px';
+      annotationBox.style.height = ann.position.height + 'px';
+      annotationBox.style.transform = 'none';
+    }
+    
+    // Render MathJax
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([annotationBox]).catch(err => console.error('MathJax error:', err));
+    }
   }
   
   function stopPlayback() {
     isPlaying = false;
-    playbackPosition = 0;
+    playbackPausedAt = 0;
     
-    if (playbackTimer) {
-      cancelAnimationFrame(playbackTimer);
-      playbackTimer = null;
+    // Save the preview context before resetting
+    const wasPreviewingFromPaused = isPreviewingFromPaused;
+    isPreviewingFromPaused = false;
+    
+    playbackLoop.lastAppliedTimestamp = null; // Reset the flag
+    playbackLoop.triggeredPauses = null; // Reset triggered pauses for replay
+    
+    // Check if tutorial ends with an annotation (within 100ms tolerance)
+    let tutorialEndsWithAnnotation = false;
+    if (currentTutorial && currentTutorial.annotations.length > 0) {
+      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
+      const annEnd = lastAnn.timestamp + lastAnn.duration;
+      const tolerance = 100; // 100ms tolerance
+      
+      if (Math.abs(annEnd - currentTutorial.duration) < tolerance) {
+        tutorialEndsWithAnnotation = true;
+        // Show the last annotation
+        showAnnotation(lastAnn);
+        currentAnnotationIndex = currentTutorial.annotations.length - 1;
+        console.log('✓ Tutorial ends with annotation - keeping it visible');
+      }
     }
     
-    if (currentAnnotationTimeout) {
-      clearTimeout(currentAnnotationTimeout);
-      currentAnnotationTimeout = null;
+    // Hide annotation only if tutorial doesn't end with one
+    if (annotationBox && !tutorialEndsWithAnnotation) {
+      annotationBox.classList.remove('visible');
+      currentAnnotationIndex = -1;
     }
     
-    if (currentPauseTimeout) {
-      clearTimeout(currentPauseTimeout);
-      currentPauseTimeout = null;
+    if (annotationTimeout) {
+      clearTimeout(annotationTimeout);
+      annotationTimeout = null;
     }
-    
-    hideAnnotation();
     
     appFrame.classList.remove('playback-mode');
-    previewRecording.textContent = '▶ Preview';
-    previewRecording.classList.remove('playing');
-    addAnnotation.disabled = false;
-    addAnnotationAtPause.style.display = 'none';
-    addPause.disabled = false;
-    recordAgain.disabled = false;
-    exportRecording.disabled = false;
-    startRecording.disabled = false;
     
-    const timelineStartOffset = getTimelineStartOffset();
-    timelinePlayhead.style.left = (60 - (timelineStartOffset / 1000) * timelineScale) + 'px';
+    // Restore iframe interaction
+    appFrame.style.pointerEvents = 'auto';
     
-    console.log('⏹ Playback stopped');
-  }
-  
-  function scheduleNextEvents() {
-    if (!isPlaying) return;
-    
-    const currentTime = Date.now() - playbackStartTime;
-    
-    // Schedule next snapshot
-    const nextSnapshot = currentTutorial.snapshots.find(s => s.timestamp > currentTime);
-    if (nextSnapshot) {
-      const delay = nextSnapshot.timestamp - currentTime;
-      setTimeout(() => {
-        if (!isPlaying) return;
-        const api = getAPI();
-        if (api) {
-          api.setState(nextSnapshot.state);
-        }
-        scheduleNextEvents();
-      }, delay);
-    }
-    
-    // Schedule next annotation
-    const nextAnnotation = currentTutorial.annotations.find(a => 
-      a.timestamp > currentTime && a.timestamp <= currentTime + 100
-    );
-    if (nextAnnotation) {
-      const delay = nextAnnotation.timestamp - currentTime;
-      currentAnnotationTimeout = setTimeout(() => {
-        if (!isPlaying) return;
-        showAnnotation(nextAnnotation);
+    // If we were previewing from paused, just restore the preview button
+    if (wasPreviewingFromPaused) {
+      previewRecording.textContent = '▶ Play';
+      previewRecording.title = 'Play';
+      previewRecording.classList.remove('playing');
+      replayPreview.style.display = 'none';
+      
+      // Apply current state from last snapshot
+      const api = getAPI();
+      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+        const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+        api.setState(lastSnapshot.state);
+      }
+      
+      // Restore paused recording button states
+      addAnnotation.style.display = 'inline-block';
+      addAnnotation.disabled = false;
+      addPause.style.display = 'inline-block';
+      addPause.disabled = false;
+      addAnnotationAtPause.style.display = 'none';
+      exportRecording.style.display = 'inline-block';
+      recordAgain.style.display = 'inline-block';
+      
+      // Update pauseStartTime so preview time doesn't count as pause time
+      pauseStartTime = Date.now();
+      
+      console.log('⏹ Preview finished - returned to paused state');
+    } else {
+      // Was previewing from finished recording - show final state with playhead
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         
-        // Hide after duration
-        setTimeout(() => {
-          if (!isPlaying) return;
-          hideAnnotation();
-        }, nextAnnotation.duration);
-      }, delay);
-    }
-    
-    // Schedule next pause
-    const nextPause = currentTutorial.pauses?.find(p => 
-      p.timestamp > currentTime && p.timestamp <= currentTime + 100
-    );
-    if (nextPause) {
-      const delay = nextPause.timestamp - currentTime;
-      currentPauseTimeout = setTimeout(() => {
-        if (!isPlaying) return;
-        pausePlayback();
-        console.log('⏸ Auto-paused at', nextPause.timestamp + 'ms');
-      }, delay);
-    }
-    
-    // Check if playback complete
-    if (currentTime >= currentTutorial.duration) {
-      stopPlayback();
+        // Add pixel adjustments based on final element type (using current timelineScale)
+        // This matches how annotations adjust width at render time
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let snapshotIsLastElement = true;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for single events to reach visual right edge
+          // Empirically determined: 50px needed
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 50;
+          }
+        }
+        
+        // Check if pause is the final element
+        if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+          const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+          let pauseIsLastElement = true;
+          
+          if (currentTutorial.snapshots.length > 0) {
+            const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
+            if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
+          }
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
+          }
+          
+          // Add pixel adjustment for pause to reach visual center of diamond
+          // Empirically determined: 26px needed
+          if (pauseIsLastElement) {
+            timelineEndPosition += 26;
+          }
+        }
+        
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+      }
+      
+      previewRecording.style.display = 'inline-block';
+      previewRecording.textContent = '▶ Play';
+      previewRecording.title = 'Play';
+      previewRecording.classList.remove('playing');
+      playPausePreview.style.display = 'none';
+      replayPreview.style.display = 'inline-block';
+      addAnnotationAtPause.style.display = 'none';
+      recordAgain.style.display = 'inline-block';
+      exportRecording.style.display = 'inline-block';
+      
+      playPausePreview.textContent = '⏸ Pause Preview';
+      
+      // Apply final state
+      const api = getAPI();
+      if (api && currentTutorial && currentTutorial.snapshots.length > 0) {
+        const finalSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+        api.setState(finalSnapshot.state);
+      }
+      
+      console.log('⏹ Playback stopped');
     }
   }
   
-  function updatePlayback() {
-    if (!isPlaying) return;
-    
-    playbackPosition = Date.now() - playbackStartTime;
-    
-    // Update playhead position
-    const timelineStartOffset = getTimelineStartOffset();
-    const playheadPosition = ((playbackPosition - timelineStartOffset) / 1000) * timelineScale + 60;
-    timelinePlayhead.style.left = playheadPosition + 'px';
-    
-    if (playbackPosition >= currentTutorial.duration) {
-      stopPlayback();
-      return;
+  recordAgain.addEventListener('click', () => {
+    // Finalize recording if still in recording mode
+    if (isRecording || isPaused) {
+      finalizeRecording();
     }
     
-    playbackTimer = requestAnimationFrame(updatePlayback);
-  }
+    // Try to reset the app to initial state before clearing everything
+    const api = getAPI();
+    if (api && currentTutorial && currentTutorial.initialState) {
+      console.log('Resetting app to initial state before clearing');
+      try {
+        api.setState(currentTutorial.initialState);
+      } catch (e) {
+        console.error('Error resetting state:', e);
+      }
+    }
+    
+    // Clear current tutorial
+    currentTutorial = null;
+    importedDurationOffset = 0; // Reset offset
+    
+    // Reset UI
+    startRecording.style.display = 'inline-block';
+    startRecording.textContent = '⏺ Record';
+    startRecording.classList.remove('recording-active');
+    startRecording.className = 'record';
+    playPauseRecording.style.display = 'none';
+    addAnnotation.style.display = 'none';
+    addPause.style.display = 'none';
+    previewRecording.style.display = 'none';
+    previewRecording.disabled = true;
+    playPausePreview.style.display = 'none';
+    replayPreview.style.display = 'none';
+    addAnnotationAtPause.style.display = 'none';
+    recordingIndicator.style.display = 'none';
+    pausedIndicator.style.display = 'none';
+    
+    // Hide these buttons - they should not appear
+    recordAgain.style.display = 'none';
+    exportRecording.style.display = 'none';
+    loadJSON.style.display = 'inline-block';
+    
+    // Hide playhead
+    timelinePlayhead.style.display = 'none';
+    
+    // Hide timeline container
+    timelineContainer.classList.remove('visible');
+    
+    // Clear timeline
+    renderTimeline();
+    
+    // Reload the iframe to start completely fresh
+    const currentUrl = appFrame.src;
+    if (currentUrl) {
+      console.log('🔄 Reloading app:', currentUrl);
+      apiReady = false;
+      isAppLoaded = false;
+      
+      // Force a complete reload by clearing src first, then setting it again
+      appFrame.src = 'about:blank';
+      setTimeout(() => {
+        appFrame.src = currentUrl;
+      }, 50);
+    }
+    
+    console.log('🔄 Starting over - tutorial cleared');
+  });
   
-  // ========== TIMELINE RENDERING ==========
   
-  function getTimelineStartOffset() {
-    if (!currentTutorial) return 0;
+  // ========== TIMELINE ==========
+  
+  function replayToTimestamp(timestamp) {
+    // Replay all events from the beginning up to the given timestamp
+    // This ensures proper context when editing annotations
+    const api = getAPI();
+    if (!api || !currentTutorial) return;
     
-    let minTime = Infinity;
+    // Start with initial state
+    api.setState(currentTutorial.initialState);
     
-    if (currentTutorial.snapshots.length > 0) {
-      minTime = Math.min(minTime, currentTutorial.snapshots[0].timestamp);
+    // Apply all snapshots up to the target timestamp in sequence
+    for (let i = 0; i < currentTutorial.snapshots.length; i++) {
+      const snapshot = currentTutorial.snapshots[i];
+      if (snapshot.timestamp <= timestamp) {
+        api.setState(snapshot.state);
+      } else {
+        break; // Past our target time, stop
+      }
     }
     
-    if (currentTutorial.annotations.length > 0) {
-      minTime = Math.min(minTime, ...currentTutorial.annotations.map(a => a.timestamp));
-    }
-    
-    if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
-      minTime = Math.min(minTime, ...currentTutorial.pauses.map(p => p.timestamp));
-    }
-    
-    return minTime === Infinity ? 0 : minTime;
+    console.log('⏭️ Replayed events up to', (timestamp / 1000).toFixed(2) + 's');
   }
   
   function renderTimeline() {
     if (!currentTutorial) {
-      timelineContainer.classList.remove('visible');
+      timelineRuler.innerHTML = '';
+      eventsTrack.innerHTML = '';
+      annotationsTrack.innerHTML = '';
       return;
     }
     
-    timelineContainer.classList.add('visible');
-    
+    // Calculate timeline start offset (first event or annotation)
     const timelineStartOffset = getTimelineStartOffset();
-    const durationSeconds = (currentTutorial.duration - timelineStartOffset) / 1000;
     
-    // Calculate scale
-    const containerWidth = timelineContainer.offsetWidth || 1200;
-    const availableWidth = containerWidth - 80;
-    const minScale = 20;
-    const maxScale = 100;
+    const duration = (currentTutorial.duration - timelineStartOffset) / 1000;
     
-    if (durationSeconds > 0) {
-      const calculatedScale = availableWidth / durationSeconds;
+    // Calculate dynamic scale to fit timeline in available width
+    // Account for the 60px label offset
+    const containerWidth = timelineContainer.offsetWidth || 1200; // Fallback to 1200px
+    const availableWidth = containerWidth - 80; // Leave some padding
+    const minScale = 20; // Minimum pixels per second (very zoomed out)
+    const maxScale = 100; // Maximum pixels per second (very zoomed in)
+    
+    // Calculate scale to fit duration in available width
+    if (duration > 0) {
+      const calculatedScale = availableWidth / duration;
       timelineScale = Math.max(minScale, Math.min(maxScale, calculatedScale));
     } else {
-      timelineScale = 50;
+      timelineScale = 50; // Default for empty timeline
     }
     
-    // Render ruler
-    renderTimelineRuler(timelineStartOffset, durationSeconds);
+    const timelineWidth = Math.max(duration * timelineScale, 200); // Minimum 200px
     
-    // Render events
-    renderTimelineEvents(timelineStartOffset);
-  }
-  
-  function renderTimelineRuler(startOffset, durationSeconds) {
+    console.log('📊 Timeline render - Duration:', duration.toFixed(2) + 's', 'Scale:', timelineScale.toFixed(1) + 'px/s', 'Snapshots:', currentTutorial.snapshots.length);
+    
+    if (currentTutorial.snapshots.length > 0) {
+      const firstTime = (currentTutorial.snapshots[0].timestamp / 1000).toFixed(2);
+      const lastTime = (currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp / 1000).toFixed(2);
+      console.log('📊 First snapshot:', firstTime + 's', 'Last snapshot:', lastTime + 's');
+    }
+    
+    // Set the width of timeline tracks
+    timelineRuler.style.minWidth = timelineWidth + 'px';
+    eventsTrack.parentElement.style.minWidth = timelineWidth + 'px';
+    annotationsTrack.parentElement.style.minWidth = timelineWidth + 'px';
+    
+    // Render time ticks with adaptive interval
     timelineRuler.innerHTML = '';
     
-    const tickInterval = durationSeconds > 30 ? 5 : durationSeconds > 10 ? 2 : 1;
+    // Choose tick interval based on duration to avoid crowding
+    let tickInterval = 1; // Default: every second
+    if (duration > 60) tickInterval = 5;      // Over 1 min: every 5 seconds
+    if (duration > 180) tickInterval = 10;    // Over 3 min: every 10 seconds
+    if (duration > 600) tickInterval = 30;    // Over 10 min: every 30 seconds
+    if (duration > 1800) tickInterval = 60;   // Over 30 min: every minute
     
-    for (let i = 0; i <= Math.ceil(durationSeconds); i += tickInterval) {
+    for (let t = 0; t <= duration; t += tickInterval) {
       const tick = document.createElement('div');
       tick.className = 'timeline-tick';
-      tick.style.left = (i * timelineScale) + 'px';
-      tick.textContent = i + 's';
+      tick.style.left = (t * timelineScale) + 'px';
+      tick.textContent = t + 's';
       timelineRuler.appendChild(tick);
     }
-  }
-  
-  function renderTimelineEvents(timelineStartOffset) {
-    const tracks = timelineContainer.querySelectorAll('.timeline-track');
-    const [clickTrack, dragTrack, annotationTrack, pauseTrack] = tracks;
     
-    // Clear existing events
-    tracks.forEach(track => {
-      Array.from(track.children).forEach(child => {
-        if (child.classList.contains('timeline-event')) {
-          child.remove();
+    // Render event markers - group drag sequences (dragStart -> drag... -> dragEnd) into spans
+    eventsTrack.innerHTML = '';
+    
+    console.log('📊 Rendering', currentTutorial.snapshots.length, 'snapshots to timeline');
+    
+    // Group events by drag sequences
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
+      
+      // Check if this is the start of a drag sequence
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+                         action === 'dragBStart' || action === 'dragAxisStart';
+      
+      if (isDragStart) {
+        // Find the corresponding dragEnd
+        const dragType = action.replace('Start', ''); // e.g., 'drag', 'dragBeta', etc.
+        const dragEndAction = dragType + 'End';
+        
+        let endIdx = i;
+        // Look for the dragEnd event - only count drag-related snapshots
+        let dragSnapshotCount = 1; // Count the dragStart
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          const jAction = currentTutorial.snapshots[j].event.action;
+          
+          // Check if this snapshot is part of the drag sequence (drag-related action)
+          const isDragRelated = jAction.includes('drag') || jAction.includes('Drag');
+          
+          if (jAction === dragEndAction) {
+            endIdx = j;
+            dragSnapshotCount++;
+            break;
+          } else if (isDragRelated) {
+            dragSnapshotCount++;
+          }
+          // If it's not drag-related, we DON'T increment dragSnapshotCount
+          // This means non-drag events inserted between dragStart and dragEnd won't be grouped
         }
+        
+        // Create a span from dragStart to dragEnd
+        const startTime = (currentTutorial.snapshots[i].timestamp - timelineStartOffset) / 1000;
+        const trueEndTime = (currentTutorial.snapshots[endIdx].timestamp - timelineStartOffset) / 1000;
+        const trueDuration = trueEndTime - startTime;
+        
+        // Calculate visual end time (accounting for the 18px width reduction)
+        const visualEndAdjustment = (18 / timelineScale); // in seconds
+        const visualEndTime = trueEndTime - visualEndAdjustment;
+        const visualDuration = visualEndTime - startTime;
+        
+        console.log('  📍 Grouped drag:', dragType, 'from', startTime.toFixed(2) + 's', 'to', visualEndTime.toFixed(2) + 's (visual)', `(${dragSnapshotCount} drag events)`);
+        
+        const span = document.createElement('div');
+        span.className = 'timeline-event drag-event';
+        span.style.left = (startTime * timelineScale) + 'px';
+        span.style.width = Math.max(8, visualDuration * timelineScale) + 'px'; // Use visual duration directly
+        span.title = `${dragType} (${startTime.toFixed(2)}s - ${visualEndTime.toFixed(2)}s) - Double-click to delete`;
+        span.dataset.startIdx = i;
+        span.dataset.endIdx = endIdx;
+        
+        // Double-click to delete
+        span.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const startIdx = parseInt(span.dataset.startIdx);
+          const endIdx = parseInt(span.dataset.endIdx);
+          console.log('🖱️ Double-clicked drag event for deletion:', { startIdx, endIdx, dragType });
+          console.log('  eventDeletionModal:', eventDeletionModal);
+          console.log('  eventDeletionText:', eventDeletionText);
+          
+          eventToDelete = { startIdx, endIdx };
+          eventDeletionText.textContent = `Delete "${dragType}" drag event (${startTime.toFixed(2)}s - ${visualEndTime.toFixed(2)}s)?`;
+          eventDeletionModal.classList.add('visible');
+          console.log('  Modal should now be visible');
+        });
+        
+        // Make drag event draggable (will move start and end together)
+        // Use dataset values to avoid closure issues with loop variable
+        span.addEventListener('mousedown', (e) => {
+          const startIdx = parseInt(span.dataset.startIdx);
+          const endIdx = parseInt(span.dataset.endIdx);
+          startEventDrag(e, startIdx, endIdx);
+        });
+        
+        eventsTrack.appendChild(span);
+        
+        // Check for any non-drag events that fell between dragStart and dragEnd
+        // These need to be rendered as separate single events
+        for (let j = i + 1; j < endIdx; j++) {
+          const jSnapshot = currentTutorial.snapshots[j];
+          const jAction = jSnapshot.event.action;
+          const isDragRelated = jAction.includes('drag') || jAction.includes('Drag');
+          
+          if (!isDragRelated) {
+            // This is a non-drag event that fell within the drag's timestamp range
+            // Render it as a single event marker
+            const eventTime = (jSnapshot.timestamp - timelineStartOffset) / 1000;
+            const eventLeft = eventTime * timelineScale;
+            console.log(`  📍 Single event (within drag range): ${jAction} at ${eventTime.toFixed(3)}s, left=${eventLeft.toFixed(1)}px`);
+            
+            const marker = document.createElement('div');
+            marker.className = 'timeline-event';
+            marker.style.left = eventLeft + 'px';
+            marker.title = jAction + ' at ' + eventTime.toFixed(2) + 's - Double-click to delete';
+            marker.dataset.snapshotIdx = j;
+            
+            // Double-click to delete
+            marker.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+              console.log('🖱️ Double-clicked single event for deletion:', { snapshotIdx, action: jAction });
+              
+              eventToDelete = { startIdx: snapshotIdx, endIdx: null };
+              eventDeletionText.textContent = `Delete "${jAction}" event at ${eventTime.toFixed(2)}s?`;
+              eventDeletionModal.classList.add('visible');
+            });
+            
+            // Make event draggable - use dataset value to avoid closure issues
+            marker.addEventListener('mousedown', (e) => {
+              const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+              startEventDrag(e, snapshotIdx, null);
+            });
+            
+            eventsTrack.appendChild(marker);
+          }
+        }
+        
+        i = endIdx + 1; // Skip to after dragEnd
+      } else if (action.includes('drag') || action.includes('Drag')) {
+        // Skip intermediate drag events that weren't part of a Start/End sequence
+        console.log('  ⚠️ Orphan drag event:', action, 'at', (snapshot.timestamp / 1000).toFixed(2) + 's');
+        i++;
+      } else {
+        // Single event marker (simulate, changeBeta, etc.)
+        const eventTime = (snapshot.timestamp - timelineStartOffset) / 1000;
+        const eventLeft = eventTime * timelineScale;
+        console.log(`  📍 Single event: ${action} at ${eventTime.toFixed(3)}s, left=${eventLeft.toFixed(1)}px (within track, absolute would be ${(eventLeft + 60).toFixed(1)}px)`);
+        const marker = document.createElement('div');
+        marker.className = 'timeline-event';
+        marker.style.left = eventLeft + 'px';
+        marker.title = action + ' at ' + eventTime.toFixed(2) + 's - Double-click to delete';
+        marker.dataset.snapshotIdx = i;
+        
+        // Double-click to delete
+        marker.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+          console.log('🖱️ Double-clicked single event for deletion:', { snapshotIdx, action });
+          
+          eventToDelete = { startIdx: snapshotIdx, endIdx: null };
+          eventDeletionText.textContent = `Delete "${action}" event at ${eventTime.toFixed(2)}s?`;
+          eventDeletionModal.classList.add('visible');
+        });
+        
+        // Make event draggable - use dataset value to avoid closure issues
+        marker.addEventListener('mousedown', (e) => {
+          const snapshotIdx = parseInt(marker.dataset.snapshotIdx);
+          startEventDrag(e, snapshotIdx, null);
+        });
+        
+        eventsTrack.appendChild(marker);
+        i++;
+      }
+    }
+    
+    // Render pauses (diamond markers on events track)
+    if (currentTutorial.pauses) {
+      currentTutorial.pauses.forEach((pause, i) => {
+        const pauseTime = (pause.timestamp - timelineStartOffset) / 1000;
+        const pauseLeft = pauseTime * timelineScale;
+        
+        const pauseEl = document.createElement('div');
+        pauseEl.className = 'timeline-pause';
+        pauseEl.style.left = (pauseLeft - 6) + 'px'; // Center the diamond (12px wide / 2 = 6px offset)
+        pauseEl.title = `Pause at ${pauseTime.toFixed(2)}s - Double-click to delete`;
+        pauseEl.dataset.pauseIdx = i;
+        
+        // Double-click to delete
+        pauseEl.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
+          console.log('🖱️ Double-clicked pause for deletion:', { pauseIdx, pauseTime });
+          
+          pauseDeletionText.textContent = `Are you sure you want to delete pause at ${pauseTime.toFixed(2)}s?`;
+          pauseToDelete = pauseIdx;
+          pauseDeletionModal.classList.add('visible');
+        });
+        
+        // Make pause draggable
+        pauseEl.addEventListener('mousedown', (e) => {
+          const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
+          startPauseDrag(e, pauseIdx);
+        });
+        
+        eventsTrack.appendChild(pauseEl);
+        console.log(`  ⏸ Pause: left=${pauseLeft}px (${pauseTime.toFixed(2)}s)`);
+        
+        // Debug: Log actual rendered position
+        setTimeout(() => {
+          const rect = pauseEl.getBoundingClientRect();
+          const trackRect = eventsTrack.getBoundingClientRect();
+          const containerRect = timelineContainer.getBoundingClientRect();
+          console.log(`  ⏸ Pause rendered: track-relative=${pauseEl.style.left}, screen-absolute=${rect.left}px, container-relative=${rect.left - containerRect.left}px`);
+        }, 0);
       });
+    }
+    
+    // Render annotations
+    annotationsTrack.innerHTML = '';
+    currentTutorial.annotations.forEach((ann, i) => {
+      const annEl = document.createElement('div');
+      annEl.className = 'timeline-annotation';
+      const leftPos = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale;
+      // Subtract padding + border + box-shadow + border-radius visual effects = 30px total
+      const width = ((ann.duration / 1000) * timelineScale) - 30;
+      annEl.style.left = leftPos + 'px';
+      annEl.style.width = width + 'px';
+      console.log(`  📊 Annotation "${ann.title}": left=${leftPos}px (${(ann.timestamp / 1000).toFixed(2)}s) width=${width}px (${(ann.duration / 1000).toFixed(2)}s) visual-end=${leftPos + width + 30}px (${((ann.timestamp + ann.duration) / 1000).toFixed(2)}s)`);
+      annEl.textContent = ann.title;
+      annEl.title = ann.title + ' (double-click to edit)';
+      
+      // Double-click to edit - directly show moveable/resizable box
+      annEl.addEventListener('dblclick', () => {
+        console.log('🖱️ Double-clicked annotation in timeline, opening positioning overlay for index:', i);
+        
+        // Replay all events up to the annotation's timestamp so user can see context
+        replayToTimestamp(ann.timestamp);
+        
+        // Move playhead to annotation timestamp
+        const timelineStartOffset = getTimelineStartOffset();
+        const timelinePosition = ((ann.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = timelinePosition + 'px';
+        timelinePlayhead.style.display = 'block';
+        
+        // Store the editing index for the save handler
+        editingAnnotationIndex = i;
+        
+        // Show the moveable/resizable box directly
+        showAnnotationForPositioning(ann, i);
+      });
+      
+      // Drag to move
+      annEl.addEventListener('mousedown', (e) => startAnnotationDrag(e, i));
+      
+      // Resize edges
+      const leftEdge = document.createElement('div');
+      leftEdge.className = 'resize-edge left';
+      leftEdge.addEventListener('mousedown', (e) => startAnnotationResize(e, i, 'left'));
+      
+      const rightEdge = document.createElement('div');
+      rightEdge.className = 'resize-edge right';
+      rightEdge.addEventListener('mousedown', (e) => startAnnotationResize(e, i, 'right'));
+      
+      annEl.appendChild(leftEdge);
+      annEl.appendChild(rightEdge);
+      
+      annotationsTrack.appendChild(annEl);
     });
     
-    // Render snapshots
-    currentTutorial.snapshots.forEach((snapshot, index) => {
-      const relativeTime = snapshot.timestamp - timelineStartOffset;
-      const position = (relativeTime / 1000) * timelineScale;
-      
-      const event = document.createElement('div');
-      event.className = 'timeline-event';
-      event.style.left = position + 'px';
-      
-      if (snapshot.event.type === 'click') {
-        event.classList.add('click');
-        event.textContent = '●';
-        event.title = 'Click at ' + (snapshot.timestamp / 1000).toFixed(2) + 's';
-        clickTrack.appendChild(event);
-      } else if (snapshot.event.type === 'dragStart' || snapshot.event.type === 'dragMove' || snapshot.event.type === 'dragEnd') {
-        // Find drag sequence
-        if (snapshot.event.type === 'dragStart') {
-          let dragEnd = currentTutorial.snapshots.slice(index + 1).find(s => s.event.type === 'dragEnd');
-          if (!dragEnd) {
-            dragEnd = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-          }
-          
-          const dragEndTime = dragEnd.timestamp - timelineStartOffset;
-          const dragEndPosition = (dragEndTime / 1000) * timelineScale;
-          const width = Math.max(20, dragEndPosition - position);
-          
-          event.classList.add('drag');
-          event.style.width = width + 'px';
-          event.textContent = 'Drag';
-          event.title = 'Drag from ' + (snapshot.timestamp / 1000).toFixed(2) + 's';
-          dragTrack.appendChild(event);
+    // Set up event trimming handlers
+    setupEventTrimming();
+  }
+  
+  // ========== EVENT DRAGGING ==========
+  
+  let draggingEvent = null;
+  
+  function startEventDrag(e, startIdx, endIdx) {
+    // endIdx is null for single events, or the end snapshot index for drag events
+    const isDragEvent = endIdx !== null;
+    
+    console.log('🖱️ startEventDrag called:', { startIdx, endIdx, isDragEvent });
+    
+    // Bounds check
+    if (!currentTutorial || !currentTutorial.snapshots[startIdx]) {
+      console.error('❌ Invalid startIdx:', startIdx);
+      return;
+    }
+    if (isDragEvent && !currentTutorial.snapshots[endIdx]) {
+      console.error('❌ Invalid endIdx:', endIdx);
+      return;
+    }
+    
+    // Store original timestamps for all snapshots in the drag sequence
+    const originalTimestamps = {};
+    if (isDragEvent) {
+      for (let i = startIdx; i <= endIdx; i++) {
+        originalTimestamps[i] = currentTutorial.snapshots[i].timestamp;
+      }
+    }
+    
+    draggingEvent = {
+      startIdx: startIdx,
+      endIdx: endIdx,
+      isDragEvent: isDragEvent,
+      startX: e.clientX,
+      originalTimestamp: currentTutorial.snapshots[startIdx].timestamp,
+      originalEndTimestamp: isDragEvent ? currentTutorial.snapshots[endIdx].timestamp : null,
+      originalTimestamps: originalTimestamps, // Store all original timestamps
+      hasMoved: false
+    };
+    
+    document.addEventListener('mousemove', doEventDrag);
+    document.addEventListener('mouseup', stopEventDrag);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  function doEventDrag(e) {
+    if (!draggingEvent) return;
+    
+    draggingEvent.hasMoved = true;
+    
+    const dx = e.clientX - draggingEvent.startX;
+    const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
+    
+    let newTimestamp = Math.max(0, draggingEvent.originalTimestamp + dt);
+    
+    console.log('📍 doEventDrag: dx=' + dx + 'px, dt=' + dt + 'ms, newTimestamp=' + newTimestamp);
+    
+    // Minimum separation between events - constant 2px visual space regardless of scale
+    // Convert 2 pixels to time based on current timelineScale
+    // But enforce a minimum of 10ms to prevent floating point issues
+    const MIN_SEPARATION = Math.max(10, (2 / timelineScale) * 1000); // At least 10ms or 2px in milliseconds
+    console.log('  MIN_SEPARATION =', MIN_SEPARATION.toFixed(1), 'ms (2px at scale', timelineScale, 'px/s)');
+    
+    // Calculate the duration of the event being dragged
+    let draggedEventDuration = 0;
+    if (draggingEvent.isDragEvent) {
+      draggedEventDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
+    } else {
+      // Single events have visual width (8px marker)
+      draggedEventDuration = (8 / timelineScale) * 1000;
+    }
+    const draggedEventEnd = newTimestamp + draggedEventDuration;
+    
+    // Find all other events (excluding the one being dragged)
+    // Build array of event ranges with CURRENT positions
+    const otherEvents = [];
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      // Skip if this is part of the event being dragged
+      if (draggingEvent.isDragEvent) {
+        if (i >= draggingEvent.startIdx && i <= draggingEvent.endIdx) {
+          i++;
+          continue;
+        }
+      } else {
+        if (i === draggingEvent.startIdx) {
+          i++;
+          continue;
         }
       }
       
-      // Click handler for deletion
-      event.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (confirm('Delete this event?')) {
-          currentTutorial.snapshots.splice(index, 1);
-          recalculateDuration();
-          renderTimeline();
-        }
-      });
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
       
-      // Drag handler
-      event.addEventListener('mousedown', (e) => startTimelineDrag(e, 'snapshot', index));
-    });
-    
-    // Render annotations
-    currentTutorial.annotations.forEach((annotation, index) => {
-      const relativeTime = annotation.timestamp - timelineStartOffset;
-      const position = (relativeTime / 1000) * timelineScale;
-      const width = Math.max(20, (annotation.duration / 1000) * timelineScale);
+      // Check if this is the start of a drag sequence
+      const isDragStart = action === 'dragStart' || action === 'dragBetaStart' || action === 'dragBetaPrimeStart' || 
+                         action === 'dragBStart' || action === 'dragAxisStart';
       
-      const event = document.createElement('div');
-      event.className = 'timeline-event annotation';
-      event.style.left = position + 'px';
-      event.style.width = width + 'px';
-      event.textContent = annotation.title || 'Note';
-      event.title = annotation.title + ' at ' + (annotation.timestamp / 1000).toFixed(2) + 's';
-      annotationTrack.appendChild(event);
-      
-      // Click handler for editing
-      event.addEventListener('click', (e) => {
-        e.stopPropagation();
-        editingAnnotation = annotation;
-        openAnnotationEditor(annotation);
-      });
-      
-      // Drag handler
-      event.addEventListener('mousedown', (e) => startTimelineDrag(e, 'annotation', index));
-    });
-    
-    // Render pauses
-    if (currentTutorial.pauses) {
-      currentTutorial.pauses.forEach((pause, index) => {
-        const relativeTime = pause.timestamp - timelineStartOffset;
-        const position = (relativeTime / 1000) * timelineScale;
+      if (isDragStart) {
+        // Find the corresponding dragEnd
+        const dragType = action.replace('Start', '');
+        const dragEndAction = dragType + 'End';
         
-        const event = document.createElement('div');
-        event.className = 'timeline-event pause';
-        event.style.left = position + 'px';
-        event.textContent = '⏸';
-        event.title = 'Pause at ' + (pause.timestamp / 1000).toFixed(2) + 's';
-        pauseTrack.appendChild(event);
-        
-        // Click handler for deletion
-        event.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (confirm('Delete this pause?')) {
-            currentTutorial.pauses.splice(index, 1);
-            recalculateDuration();
-            renderTimeline();
+        let endIdx = i;
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
+            endIdx = j;
+            break;
           }
+        }
+        
+        // Drag events have -18px subtracted from their visual width (see renderTimeline)
+        // So the visual end is 18 pixels before the endTime timestamp
+        const visualEndAdjustment = (18 / timelineScale) * 1000; // 18px in ms
+        const eventDuration = currentTutorial.snapshots[endIdx].timestamp - currentTutorial.snapshots[i].timestamp;
+        
+        otherEvents.push({
+          startIdx: i,
+          endIdx: endIdx,
+          startTime: currentTutorial.snapshots[i].timestamp,
+          endTime: currentTutorial.snapshots[endIdx].timestamp - visualEndAdjustment, // Visual end, not timestamp end
+          duration: eventDuration,
+          isDrag: true
         });
         
-        // Drag handler
-        event.addEventListener('mousedown', (e) => startTimelineDrag(e, 'pause', index));
+        i = endIdx + 1;
+      } else if (!action.includes('drag') && !action.includes('Drag')) {
+        // Single event (not a drag) - give it visual width for collision (8px marker)
+        const visualWidth = (8 / timelineScale) * 1000; // 8px marker width in ms
+        otherEvents.push({
+          startIdx: i,
+          endIdx: i,
+          startTime: snapshot.timestamp,
+          endTime: snapshot.timestamp + visualWidth,
+          duration: visualWidth,
+          isDrag: false
+        });
+        i++;
+      } else {
+        // Skip orphan drag events
+        i++;
+      }
+    }
+    
+    // Check for collisions and implement pushing behavior with cascading
+    let finalTimestamp = newTimestamp;
+    const eventsPushed = [];
+    const accumulatedPushes = new Map(); // Track total push amount for each event
+    
+    // Helper to get effective position of an event accounting for accumulated pushes
+    const getEffectiveTime = (evt, isStart) => {
+      const pushAmount = accumulatedPushes.get(evt.startIdx) || 0;
+      return (isStart ? evt.startTime : evt.endTime) + pushAmount;
+    };
+    
+    // Check if dragging forward (right)
+    if (dt > 0) {
+      // Find events that are ahead of where we're trying to move
+      const nextEvents = otherEvents.filter(evt => evt.startTime >= draggingEvent.originalTimestamp);
+      nextEvents.sort((a, b) => a.startTime - b.startTime);
+      
+      if (nextEvents.length > 0) {
+        const nextEvent = nextEvents[0];
+        
+        // Check if our new position would overlap with next event (including MIN_SEPARATION)
+        if (draggedEventEnd + MIN_SEPARATION > getEffectiveTime(nextEvent, true)) {
+          // Calculate how much we're trying to push into the next event
+          const overlap = draggedEventEnd + MIN_SEPARATION - getEffectiveTime(nextEvent, true);
+          
+          // Constrain our position to maintain MIN_SEPARATION from next event
+          finalTimestamp = getEffectiveTime(nextEvent, true) - MIN_SEPARATION - draggedEventDuration;
+          
+          // Push the next event forward by the overlap amount
+          eventsPushed.push({
+            event: nextEvent,
+            pushAmount: overlap
+          });
+          accumulatedPushes.set(nextEvent.startIdx, overlap);
+          
+          // Check for cascading collisions - if pushing nextEvent would cause it to hit another event
+          const cascadeCheck = (pushedEvent, pushAmt) => {
+            const pushedEventNewEnd = getEffectiveTime(pushedEvent, false);
+            
+            // Find the next event after the one being pushed
+            const followingEvents = otherEvents.filter(evt => 
+              evt.startIdx !== pushedEvent.startIdx && // Not the same event
+              evt.startTime > pushedEvent.startTime // After the pushed event (in original position)
+            );
+            followingEvents.sort((a, b) => a.startTime - b.startTime);
+            
+            if (followingEvents.length > 0) {
+              const followingEvent = followingEvents[0];
+              
+              // Check if the pushed event would now collide with the following event (using effective positions)
+              if (pushedEventNewEnd + MIN_SEPARATION > getEffectiveTime(followingEvent, true)) {
+                const cascadeOverlap = pushedEventNewEnd + MIN_SEPARATION - getEffectiveTime(followingEvent, true);
+                
+                // Add this event to the push list and track accumulated push
+                eventsPushed.push({
+                  event: followingEvent,
+                  pushAmount: cascadeOverlap
+                });
+                const currentPush = accumulatedPushes.get(followingEvent.startIdx) || 0;
+                accumulatedPushes.set(followingEvent.startIdx, currentPush + cascadeOverlap);
+                
+                console.log('⏩⏩ Cascade push: event at idx', followingEvent.startIdx, 'needs push by', cascadeOverlap, 'ms (total:', (currentPush + cascadeOverlap), 'ms)');
+                
+                // Recursively check if this causes another collision
+                cascadeCheck(followingEvent, cascadeOverlap);
+              }
+            }
+          };
+          
+          cascadeCheck(nextEvent, overlap);
+          
+          console.log('⏩ Collision detected, pushing next event by', overlap, 'ms');
+        }
+      }
+    }
+    // Check if dragging backward (left)
+    else if (dt < 0) {
+      // Find events that are behind where we're trying to move
+      const prevEvents = otherEvents.filter(evt => evt.endTime <= draggingEvent.originalTimestamp);
+      prevEvents.sort((a, b) => b.endTime - a.endTime);
+      
+      console.log('🔍 BACKWARD DRAG DEBUG:');
+      console.log('  Dragging event idx', draggingEvent.startIdx, 'to', draggingEvent.endIdx);
+      console.log('  Original timestamp:', draggingEvent.originalTimestamp.toFixed(2), 'ms');
+      console.log('  New timestamp:', newTimestamp.toFixed(2), 'ms');
+      console.log('  All otherEvents:');
+      otherEvents.forEach(evt => {
+        console.log('    idx', evt.startIdx, '-', evt.endIdx, ':', 
+                    evt.isDrag ? 'DRAG' : 'CLICK',
+                    'start=', evt.startTime.toFixed(2), 
+                    'end=', evt.endTime.toFixed(2),
+                    'duration=', evt.duration.toFixed(2));
       });
+      
+      if (prevEvents.length > 0) {
+        const prevEvent = prevEvents[0];
+        
+        // Check if our new position would overlap with previous event (including MIN_SEPARATION)
+        if (newTimestamp < getEffectiveTime(prevEvent, false) + MIN_SEPARATION) {
+          // Calculate how much we're trying to push into the previous event
+          const overlap = getEffectiveTime(prevEvent, false) + MIN_SEPARATION - newTimestamp;
+          
+          console.log('  Will collide with prev event idx', prevEvent.startIdx, 'overlap=', overlap.toFixed(2), 'ms');
+          
+          // Build the complete chain of events that need to be pushed
+          const pushChain = [];
+          
+          // Helper function to build push chain recursively
+          const buildPushChain = (pushedEvent, requiredPushAmount) => {
+            pushChain.push({ event: pushedEvent, requestedPush: requiredPushAmount });
+            console.log('    Chain: adding event idx', pushedEvent.startIdx, 'needs push by', requiredPushAmount.toFixed(2), 'ms');
+            
+            const pushedEventNewStart = pushedEvent.startTime - requiredPushAmount;
+            
+            // Find the preceding event
+            const precedingEvents = otherEvents.filter(evt => 
+              evt.startIdx !== pushedEvent.startIdx && 
+              evt.endTime < pushedEvent.startTime
+            );
+            precedingEvents.sort((a, b) => b.endTime - a.endTime);
+            
+            if (precedingEvents.length > 0) {
+              const precedingEvent = precedingEvents[0];
+              
+              // Check if pushed event would collide with preceding event
+              if (pushedEventNewStart < precedingEvent.endTime + MIN_SEPARATION) {
+                const cascadeOverlap = precedingEvent.endTime + MIN_SEPARATION - pushedEventNewStart;
+                buildPushChain(precedingEvent, cascadeOverlap);
+              }
+            }
+          };
+          
+          // Build the chain starting from prevEvent
+          buildPushChain(prevEvent, overlap);
+          
+          console.log('  📋 Complete push chain:', pushChain.length, 'events');
+          
+          // Check if any event in the chain would go below MIN_SEPARATION
+          // Find the leftmost event that would hit the wall
+          let hitWall = false;
+          let wallEvent = null;
+          
+          for (let i = pushChain.length - 1; i >= 0; i--) {
+            const item = pushChain[i];
+            const evt = item.event;
+            const newStartTime = evt.startTime - item.requestedPush;
+            
+            console.log('    Check event idx', evt.startIdx, 'would move from', evt.startTime.toFixed(2), 
+                       'to', newStartTime.toFixed(2), 'ms');
+            
+            if (newStartTime < MIN_SEPARATION) {
+              hitWall = true;
+              wallEvent = evt;
+              console.log('🧱 Hit wall at event idx', evt.startIdx, 'which cannot be pushed below', MIN_SEPARATION, 'ms');
+              console.log('    Wall is', evt.isDrag ? 'DRAG event' : 'CLICK event');
+              console.log('    Wall startTime:', evt.startTime.toFixed(2), 'ms');
+              console.log('    Wall duration:', evt.duration.toFixed(2), 'ms');
+              console.log('    Wall TRUE endTime:', (evt.startTime + evt.duration).toFixed(2), 'ms');
+              console.log('    Wall visual endTime:', evt.endTime.toFixed(2), 'ms');
+              break;
+            }
+          }
+          
+          if (hitWall) {
+            // We hit a wall - need to recalculate positions
+            // The wall event stays at its current position
+            // All other events must be positioned to the right of it with proper spacing
+            console.log('🔄 Recalculating push chain from immovable wall event');
+            
+            // Clear the accumulated pushes and eventsPushed
+            eventsPushed.length = 0;
+            accumulatedPushes.clear();
+            
+            // Start positioning from the wall event (which doesn't move)
+            // Wall event stays at its current position
+            // Next event must start after the wall's VISUAL end (not TRUE end)
+            // Use endTime which has visual adjustments already applied
+            let currentPosition = wallEvent.endTime + MIN_SEPARATION;
+            
+            console.log('  Starting reposition from currentPosition:', currentPosition.toFixed(2), 'ms');
+            console.log('    (wall VISUAL end:', wallEvent.endTime.toFixed(2), '+ MIN_SEPARATION:', MIN_SEPARATION.toFixed(2), ')');
+            
+            // Find wall event in the chain and process events after it (toward the right)
+            const wallIndex = pushChain.findIndex(item => item.event.startIdx === wallEvent.startIdx);
+            console.log('  Wall is at chain index', wallIndex, 'out of', pushChain.length, 'events');
+            
+            // Process events from wall toward the dragged event
+            for (let i = wallIndex - 1; i >= 0; i--) {
+              const item = pushChain[i];
+              const evt = item.event;
+              
+              console.log('    Positioning event idx', evt.startIdx, '(', evt.isDrag ? 'DRAG' : 'CLICK', ')');
+              console.log('      Original position:', evt.startTime.toFixed(2), 'ms');
+              console.log('      New position:', currentPosition.toFixed(2), 'ms');
+              console.log('      Duration:', evt.duration.toFixed(2), 'ms');
+              
+              // This event should start at currentPosition
+              const pushAmount = currentPosition - evt.startTime;
+              
+              console.log('      Push amount:', pushAmount.toFixed(2), 'ms');
+              
+              if (Math.abs(pushAmount) > 0.001) {
+                eventsPushed.push({
+                  event: evt,
+                  pushAmount: pushAmount
+                });
+                accumulatedPushes.set(evt.startIdx, pushAmount);
+              }
+              
+              // Next event (to the right) must start after this one ends
+              // Use the stored duration, not endTime - startTime (endTime has visual adjustments)
+              currentPosition = currentPosition + evt.duration + MIN_SEPARATION;
+              console.log('      Next event will start at:', currentPosition.toFixed(2), 'ms');
+            }
+            
+            // The dragged event must be positioned after the last event
+            finalTimestamp = currentPosition;
+            
+            console.log('✓ Repositioned', (wallIndex), 'events from wall');
+            console.log('  Wall event at idx', wallEvent.startIdx, 'stays at', wallEvent.startTime.toFixed(2), 'ms');
+            console.log('  Dragged event will be at', finalTimestamp.toFixed(2), 'ms');
+          } else {
+            // Normal case - no wall hit, can push everything as planned
+            finalTimestamp = getEffectiveTime(prevEvent, false) + MIN_SEPARATION;
+            
+            // Apply all pushes from the chain
+            for (const item of pushChain.reverse()) {
+              const evt = item.event;
+              eventsPushed.push({
+                event: evt,
+                pushAmount: -item.requestedPush
+              });
+              accumulatedPushes.set(evt.startIdx, -item.requestedPush);
+            }
+            
+            console.log('⏪ Collision detected, pushing', pushChain.length, 'event(s)');
+          }
+        }
+      }
     }
-  }
-  
-  // ========== TIMELINE DRAGGING ==========
-  
-  function startTimelineDrag(e, eventType, eventIndex) {
-    e.preventDefault();
-    e.stopPropagation();
     
-    isDraggingTimelineEvent = true;
-    draggedEventType = eventType;
-    draggedEventIndex = eventIndex;
-    draggedTimelineEvent = e.target;
-    
-    draggedTimelineEvent.classList.add('dragging');
-    
-    document.addEventListener('mousemove', dragTimelineEvent);
-    document.addEventListener('mouseup', stopTimelineDrag);
-  }
-  
-  function dragTimelineEvent(e) {
-    if (!isDraggingTimelineEvent) return;
-    
-    const trackRect = draggedTimelineEvent.parentElement.getBoundingClientRect();
-    const relativeX = e.clientX - trackRect.left - 60;
-    const newPosition = Math.max(0, relativeX);
-    
-    draggedTimelineEvent.style.left = newPosition + 'px';
-  }
-  
-  function stopTimelineDrag(e) {
-    if (!isDraggingTimelineEvent) return;
-    
-    const trackRect = draggedTimelineEvent.parentElement.getBoundingClientRect();
-    const relativeX = e.clientX - trackRect.left - 60;
-    const newTimeSeconds = Math.max(0, relativeX / timelineScale);
-    const timelineStartOffset = getTimelineStartOffset();
-    const newTimestamp = (newTimeSeconds * 1000) + timelineStartOffset;
-    
-    // Update the event timestamp
-    if (draggedEventType === 'snapshot') {
-      currentTutorial.snapshots[draggedEventIndex].timestamp = newTimestamp;
-    } else if (draggedEventType === 'annotation') {
-      currentTutorial.annotations[draggedEventIndex].timestamp = newTimestamp;
-    } else if (draggedEventType === 'pause') {
-      currentTutorial.pauses[draggedEventIndex].timestamp = newTimestamp;
+    // Apply the final timestamp to the dragged event
+    if (draggingEvent.isDragEvent) {
+      // For drag events, update ALL snapshots between start and end proportionally
+      const originalDuration = draggingEvent.originalEndTimestamp - draggingEvent.originalTimestamp;
+      
+      console.log('🔧 Updating drag sequence timestamps:');
+      console.log('  Indices:', draggingEvent.startIdx, 'to', draggingEvent.endIdx);
+      console.log('  Original duration:', originalDuration.toFixed(2), 'ms');
+      console.log('  Final timestamp:', finalTimestamp.toFixed(2), 'ms');
+      
+      for (let i = draggingEvent.startIdx; i <= draggingEvent.endIdx; i++) {
+        const originalTimestamp = draggingEvent.originalTimestamps[i];
+        
+        if (originalTimestamp === undefined) {
+          console.error('❌ Missing originalTimestamp for index', i);
+          console.error('   originalTimestamps:', draggingEvent.originalTimestamps);
+          continue;
+        }
+        
+        const relativePosition = originalDuration > 0 ? (originalTimestamp - draggingEvent.originalTimestamp) / originalDuration : 0;
+        const newTimestamp = finalTimestamp + (relativePosition * originalDuration);
+        const oldTimestamp = currentTutorial.snapshots[i].timestamp;
+        
+        currentTutorial.snapshots[i].timestamp = newTimestamp;
+        console.log(`  Snapshot ${i}: ${oldTimestamp.toFixed(2)} -> ${newTimestamp.toFixed(2)} (rel: ${relativePosition.toFixed(3)})`);
+      }
+    } else {
+      // For single events, just update the one snapshot
+      currentTutorial.snapshots[draggingEvent.startIdx].timestamp = finalTimestamp;
     }
     
-    draggedTimelineEvent.classList.remove('dragging');
+    // Apply pushing to other events
+    console.log('📦 Applying', eventsPushed.length, 'pushes to other events:');
+    for (const pushed of eventsPushed) {
+      const evt = pushed.event;
+      const pushAmount = pushed.pushAmount;
+      
+      console.log('  Event idx', evt.startIdx, '-', evt.endIdx, 'pushing by', pushAmount.toFixed(2), 'ms');
+      
+      // Push all snapshots in this event
+      // No clamping needed - we already limited pushes to prevent going below MIN_SEPARATION
+      for (let i = evt.startIdx; i <= evt.endIdx; i++) {
+        const oldTime = currentTutorial.snapshots[i].timestamp;
+        const newTime = oldTime + pushAmount;
+        currentTutorial.snapshots[i].timestamp = newTime;
+        console.log('    Snapshot', i, ':', oldTime.toFixed(2), '->', newTime.toFixed(2), 'ms');
+      }
+    }
     
-    isDraggingTimelineEvent = false;
-    draggedTimelineEvent = null;
-    draggedEventType = null;
-    draggedEventIndex = null;
-    
-    document.removeEventListener('mousemove', dragTimelineEvent);
-    document.removeEventListener('mouseup', stopTimelineDrag);
-    
-    recalculateDuration();
+    // Re-render to show the updated position
     renderTimeline();
   }
   
-  // ========== DURATION CALCULATION ==========
+  // Repair broken drag sequences after sorting
+  function repairDragSequences() {
+    console.log('🔧 Repairing drag sequences using sequenceId tags...');
+    
+    // Group snapshots by sequenceId
+    const sequenceGroups = new Map();
+    const nonSequenceSnapshots = [];
+    
+    for (let i = 0; i < currentTutorial.snapshots.length; i++) {
+      const snapshot = currentTutorial.snapshots[i];
+      
+      if (snapshot.sequenceId !== undefined) {
+        // This snapshot belongs to a sequence
+        if (!sequenceGroups.has(snapshot.sequenceId)) {
+          sequenceGroups.set(snapshot.sequenceId, []);
+        }
+        sequenceGroups.get(snapshot.sequenceId).push(snapshot);
+      } else {
+        // This snapshot is not part of a sequence
+        nonSequenceSnapshots.push(snapshot);
+      }
+    }
+    
+    console.log(`  Found ${sequenceGroups.size} sequences and ${nonSequenceSnapshots.length} non-sequence events`);
+    
+    // Build array of sequences with their start times for sorting
+    const sequences = [];
+    for (const [sequenceId, snapshots] of sequenceGroups.entries()) {
+      if (snapshots.length > 0) {
+        sequences.push({
+          sequenceId: sequenceId,
+          startTime: snapshots[0].timestamp,
+          snapshots: snapshots
+        });
+        console.log(`  Sequence ${sequenceId}: ${snapshots.length} events, start=${snapshots[0].timestamp.toFixed(0)}ms`);
+      }
+    }
+    
+    // Sort sequences by start time
+    sequences.sort((a, b) => a.startTime - b.startTime);
+    
+    // Rebuild snapshots array: interleave sequences and non-sequence events by timestamp
+    const newSnapshots = [];
+    let seqIdx = 0;
+    let nonSeqIdx = 0;
+    
+    while (seqIdx < sequences.length || nonSeqIdx < nonSequenceSnapshots.length) {
+      const nextSeq = seqIdx < sequences.length ? sequences[seqIdx] : null;
+      const nextNonSeq = nonSeqIdx < nonSequenceSnapshots.length ? nonSequenceSnapshots[nonSeqIdx] : null;
+      
+      if (!nextSeq) {
+        newSnapshots.push(nextNonSeq);
+        nonSeqIdx++;
+      } else if (!nextNonSeq) {
+        newSnapshots.push(...nextSeq.snapshots);
+        seqIdx++;
+      } else {
+        // Add whichever comes first
+        if (nextSeq.startTime <= nextNonSeq.timestamp) {
+          newSnapshots.push(...nextSeq.snapshots);
+          seqIdx++;
+        } else {
+          newSnapshots.push(nextNonSeq);
+          nonSeqIdx++;
+        }
+      }
+    }
+    
+    currentTutorial.snapshots = newSnapshots;
+    console.log(`  ✓ Rebuilt with ${currentTutorial.snapshots.length} snapshots (sequences preserved)`);
+    
+    // Clean up sequenceId tags after repair
+    for (const snapshot of currentTutorial.snapshots) {
+      delete snapshot.sequenceId;
+    }
+  }
   
-  function recalculateDuration() {
+  function stopEventDrag() {
+    if (!draggingEvent) return;
+    
+    // Only do sorting and cleanup if user actually dragged
+    if (!draggingEvent.hasMoved) {
+      draggingEvent = null;
+      document.removeEventListener('mousemove', doEventDrag);
+      document.removeEventListener('mouseup', stopEventDrag);
+      return;
+    }
+    
+    // Tag all snapshots with sequenceId BEFORE sorting so we can reconstruct sequences after
+    console.log('🏷️ Tagging snapshots with sequenceId before sorting...');
+    let nextSequenceId = 1;
+    let i = 0;
+    while (i < currentTutorial.snapshots.length) {
+      const snapshot = currentTutorial.snapshots[i];
+      const action = snapshot.event.action;
+      
+      // Check if this is a dragStart
+      if (action.endsWith('Start')) {
+        const dragType = action.slice(0, -5);
+        const dragEndAction = dragType + 'End';
+        
+        // Find the matching dragEnd
+        let endIdx = -1;
+        for (let j = i + 1; j < currentTutorial.snapshots.length; j++) {
+          if (currentTutorial.snapshots[j].event.action === dragEndAction) {
+            endIdx = j;
+            break;
+          }
+        }
+        
+        if (endIdx !== -1) {
+          // Tag all snapshots in this sequence with the same sequenceId
+          const currentSequenceId = nextSequenceId++;
+          for (let k = i; k <= endIdx; k++) {
+            const kAction = currentTutorial.snapshots[k].event.action;
+            if (kAction.includes(dragType)) {
+              currentTutorial.snapshots[k].sequenceId = currentSequenceId;
+            }
+          }
+          console.log(`  Tagged ${dragType} sequence (idx ${i}-${endIdx}) with sequenceId ${currentSequenceId}`);
+          i = endIdx + 1;
+        } else {
+          i++;
+        }
+      } else {
+        // Non-sequence events don't get a sequenceId (or get their own unique one)
+        i++;
+      }
+    }
+    
+    // Sort snapshots by timestamp to maintain proper order
+    console.log('📦 Sorting snapshots...');
+    console.log('  Before sort, first 5 timestamps:', currentTutorial.snapshots.slice(0, 5).map((s, idx) => `[${idx}]=${s.timestamp.toFixed(2)}`).join(', '));
+    
+    currentTutorial.snapshots.sort((a, b) => a.timestamp - b.timestamp);
+    
+    console.log('  After sort, first 5 timestamps:', currentTutorial.snapshots.slice(0, 5).map((s, idx) => `[${idx}]=${s.timestamp.toFixed(2)}`).join(', '));
+    console.log('  After sort, last 5 timestamps:', currentTutorial.snapshots.slice(-5).map((s, idx) => `[${currentTutorial.snapshots.length - 5 + idx}]=${s.timestamp.toFixed(2)}`).join(', '));
+    
+    // Repair any broken drag sequences caused by sorting
+    repairDragSequences();
+    
+    draggingEvent = null;
+    document.removeEventListener('mousemove', doEventDrag);
+    document.removeEventListener('mouseup', stopEventDrag);
+    
+    // Recalculate tutorial duration after moving
+    recalculateTutorialDuration();
+    renderTimeline();
+    
+    console.log('✓ Event moved and snapshots re-sorted');
+  }
+  
+  let draggingAnnotation = null;
+  
+  function startAnnotationDrag(e, index) {
+    if (e.target.classList.contains('resize-edge')) return;
+    
+    draggingAnnotation = {
+      index: index,
+      startX: e.clientX,
+      startTime: currentTutorial.annotations[index].timestamp,
+      hasMoved: false  // Track if user actually dragged
+    };
+    
+    document.addEventListener('mousemove', doAnnotationDrag);
+    document.addEventListener('mouseup', stopAnnotationDrag);
+    // Don't preventDefault here - let double-click work
+  }
+  
+  function doAnnotationDrag(e) {
+    if (!draggingAnnotation) return;
+    
+    const dx = e.clientX - draggingAnnotation.startX;
+    
+    // Only start dragging if moved more than 3 pixels
+    if (!draggingAnnotation.hasMoved && Math.abs(dx) < 3) {
+      return;
+    }
+    
+    draggingAnnotation.hasMoved = true;
+    
+    const dt = (dx / timelineScale) * 1000;
+    
+    let newTime = Math.max(0, draggingAnnotation.startTime + dt);
+    newTime = Math.min(newTime, currentTutorial.duration);
+    
+    currentTutorial.annotations[draggingAnnotation.index].timestamp = newTime;
+    renderTimeline();
+  }
+  
+  let resizingAnnotation = null;
+  
+  function startAnnotationResize(e, index, edge) {
+    e.stopPropagation();
+    
+    resizingAnnotation = {
+      index: index,
+      edge: edge,
+      startX: e.clientX,
+      startTime: currentTutorial.annotations[index].timestamp,
+      startDuration: currentTutorial.annotations[index].duration
+    };
+    
+    document.addEventListener('mousemove', doAnnotationResize);
+    document.addEventListener('mouseup', stopAnnotationResize);
+    e.preventDefault();
+  }
+  
+  function doAnnotationResize(e) {
+    if (!resizingAnnotation) return;
+    
+    const dx = e.clientX - resizingAnnotation.startX;
+    const dt = (dx / timelineScale) * 1000;
+    
+    const ann = currentTutorial.annotations[resizingAnnotation.index];
+    
+    if (resizingAnnotation.edge === 'left') {
+      let newTime = Math.max(0, resizingAnnotation.startTime + dt);
+      const diff = newTime - resizingAnnotation.startTime;
+      let newDuration = resizingAnnotation.startDuration - diff;
+      
+      if (newDuration < 1000) {
+        newDuration = 1000;
+        newTime = resizingAnnotation.startTime + resizingAnnotation.startDuration - 1000;
+      }
+      
+      ann.timestamp = newTime;
+      ann.duration = newDuration;
+    } else {
+      let newDuration = Math.max(1000, resizingAnnotation.startDuration + dt);
+      ann.duration = newDuration;
+    }
+    
+    renderTimeline();
+  }
+  
+  function stopAnnotationResize() {
+    resizingAnnotation = null;
+    document.removeEventListener('mousemove', doAnnotationResize);
+    document.removeEventListener('mouseup', stopAnnotationResize);
+    
+    // Recalculate tutorial duration after resizing
+    recalculateTutorialDuration();
+  }
+  
+  // ========== PAUSE DRAGGING ==========
+  
+  let draggingPause = null;
+  
+  function startPauseDrag(e, index) {
+    draggingPause = {
+      index: index,
+      startX: e.clientX,
+      startTime: currentTutorial.pauses[index].timestamp,
+      hasMoved: false
+    };
+    
+    document.addEventListener('mousemove', doPauseDrag);
+    document.addEventListener('mouseup', stopPauseDrag);
+  }
+  
+  function doPauseDrag(e) {
+    if (!draggingPause) return;
+    
+    const dx = e.clientX - draggingPause.startX;
+    
+    // Only start dragging if moved more than 3 pixels
+    if (!draggingPause.hasMoved && Math.abs(dx) < 3) {
+      return;
+    }
+    
+    draggingPause.hasMoved = true;
+    
+    const dt = (dx / timelineScale) * 1000;
+    
+    let newTime = Math.max(0, draggingPause.startTime + dt);
+    newTime = Math.min(newTime, currentTutorial.duration);
+    
+    currentTutorial.pauses[draggingPause.index].timestamp = newTime;
+    renderTimeline();
+  }
+  
+  function stopPauseDrag() {
+    draggingPause = null;
+    document.removeEventListener('mousemove', doPauseDrag);
+    document.removeEventListener('mouseup', stopPauseDrag);
+  }
+  
+  // ========== EVENT TRIMMING ==========
+  
+  let trimmingEvent = null;
+  
+  // Set up event trimming listeners (called after rendering events)
+  function setupEventTrimming() {
+    const trimHandles = document.querySelectorAll('.event-trim-handle');
+    trimHandles.forEach(handle => {
+      handle.addEventListener('mousedown', startEventTrim);
+    });
+  }
+  
+  function startEventTrim(e) {
+    e.stopPropagation();
+    
+    const handle = e.target;
+    const eventSpan = handle.parentElement;
+    const edge = handle.classList.contains('left') ? 'left' : 'right';
+    const startIdx = parseInt(eventSpan.dataset.startIdx);
+    const endIdx = parseInt(eventSpan.dataset.endIdx);
+    
+    trimmingEvent = {
+      startIdx: startIdx,
+      endIdx: endIdx,
+      edge: edge,
+      startX: e.clientX,
+      originalStartTime: currentTutorial.snapshots[startIdx].timestamp,
+      originalEndTime: currentTutorial.snapshots[endIdx].timestamp
+    };
+    
+    document.addEventListener('mousemove', doEventTrim);
+    document.addEventListener('mouseup', stopEventTrim);
+    e.preventDefault();
+  }
+  
+  function doEventTrim(e) {
+    if (!trimmingEvent) return;
+    
+    const dx = e.clientX - trimmingEvent.startX;
+    const dt = (dx / timelineScale) * 1000; // Convert pixels to ms
+    
+    // Store current mouse position for stopEventTrim
+    trimmingEvent.currentX = e.clientX;
+    
+    if (trimmingEvent.edge === 'left') {
+      // Trim from start: move start time forward
+      const newStartTime = Math.max(
+        trimmingEvent.originalStartTime + dt,
+        trimmingEvent.originalStartTime // Can't go before original start
+      );
+      
+      // Ensure we don't go past the end (leave at least 100ms)
+      const maxStartTime = trimmingEvent.originalEndTime - 100;
+      const clampedStartTime = Math.min(newStartTime, maxStartTime);
+      
+      // Find which snapshot index corresponds to the new start time
+      let newStartIdx = trimmingEvent.startIdx;
+      for (let i = trimmingEvent.startIdx; i <= trimmingEvent.endIdx; i++) {
+        if (currentTutorial.snapshots[i].timestamp >= clampedStartTime) {
+          newStartIdx = i;
+          break;
+        }
+      }
+      
+      // Ensure at least 2 snapshots remain
+      if (newStartIdx >= trimmingEvent.endIdx - 1) {
+        newStartIdx = trimmingEvent.endIdx - 1;
+      }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newStartIdx = newStartIdx;
+      
+      // Visual feedback: update the event span
+      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
+      if (eventSpan) {
+        const newStartTimeSec = currentTutorial.snapshots[newStartIdx].timestamp / 1000;
+        const endTimeSec = trimmingEvent.originalEndTime / 1000;
+        const newWidth = Math.max(8, (endTimeSec - newStartTimeSec) * timelineScale - 18);
+        eventSpan.style.left = (newStartTimeSec * timelineScale) + 'px';
+        eventSpan.style.width = newWidth + 'px';
+      }
+    } else {
+      // Trim from end: move end time backward
+      const newEndTime = Math.min(
+        trimmingEvent.originalEndTime + dt,
+        trimmingEvent.originalEndTime // Can't go past original end
+      );
+      
+      // Ensure we don't go before the start (leave at least 100ms)
+      const minEndTime = trimmingEvent.originalStartTime + 100;
+      const clampedEndTime = Math.max(newEndTime, minEndTime);
+      
+      // Find which snapshot index corresponds to the new end time
+      let newEndIdx = trimmingEvent.endIdx;
+      for (let i = trimmingEvent.endIdx; i >= trimmingEvent.startIdx; i--) {
+        if (currentTutorial.snapshots[i].timestamp <= clampedEndTime) {
+          newEndIdx = i;
+          break;
+        }
+      }
+      
+      // Ensure at least 2 snapshots remain
+      if (newEndIdx <= trimmingEvent.startIdx + 1) {
+        newEndIdx = trimmingEvent.startIdx + 1;
+      }
+      
+      // Store for stopEventTrim
+      trimmingEvent.newEndIdx = newEndIdx;
+      
+      // Visual feedback: update the event span
+      const eventSpan = document.querySelector(`.timeline-event[data-start-idx="${trimmingEvent.startIdx}"]`);
+      if (eventSpan) {
+        const startTimeSec = trimmingEvent.originalStartTime / 1000;
+        const newEndTimeSec = currentTutorial.snapshots[newEndIdx].timestamp / 1000;
+        const newWidth = Math.max(8, (newEndTimeSec - startTimeSec) * timelineScale - 18);
+        eventSpan.style.width = newWidth + 'px';
+      }
+    }
+  }
+  
+  function stopEventTrim() {
+    if (!trimmingEvent) return;
+    
+    console.log('🔪 stopEventTrim called:', trimmingEvent);
+    
+    if (trimmingEvent.edge === 'left') {
+      // Actually delete the trimmed snapshots from the start
+      const newStartIdx = trimmingEvent.newStartIdx || trimmingEvent.startIdx;
+      const deleteCount = newStartIdx - trimmingEvent.startIdx;
+      
+      console.log(`  Trimming from left: startIdx=${trimmingEvent.startIdx}, newStartIdx=${newStartIdx}, deleteCount=${deleteCount}`);
+      
+      if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(trimmingEvent.startIdx, deleteCount);
+        console.log(`🔪 Trimmed ${deleteCount} snapshots from start`);
+      }
+    } else {
+      // Actually delete the trimmed snapshots from the end
+      const newEndIdx = trimmingEvent.newEndIdx || trimmingEvent.endIdx;
+      const deleteCount = trimmingEvent.endIdx - newEndIdx;
+      
+      console.log(`  Trimming from right: endIdx=${trimmingEvent.endIdx}, newEndIdx=${newEndIdx}, deleteCount=${deleteCount}`);
+      
+      if (deleteCount > 0) {
+        currentTutorial.snapshots.splice(newEndIdx + 1, deleteCount);
+        console.log(`🔪 Trimmed ${deleteCount} snapshots from end`);
+      }
+    }
+    
+    trimmingEvent = null;
+    document.removeEventListener('mousemove', doEventTrim);
+    document.removeEventListener('mouseup', stopEventTrim);
+    
+    // Recalculate duration and re-render timeline
+    recalculateTutorialDuration();
+    renderTimeline();
+  }
+  
+  function stopAnnotationDrag() {
+    if (!draggingAnnotation) return;
+    
+    // Only do overlap checking and re-rendering if user actually dragged
+    if (!draggingAnnotation.hasMoved) {
+      draggingAnnotation = null;
+      document.removeEventListener('mousemove', doAnnotationDrag);
+      document.removeEventListener('mouseup', stopAnnotationDrag);
+      return;
+    }
+    
+    const draggedIndex = draggingAnnotation.index;
+    const draggedAnn = currentTutorial.annotations[draggedIndex];
+    
+    // Check for overlap with previous annotation (dragging right over left)
+    if (draggedIndex > 0) {
+      const prevAnn = currentTutorial.annotations[draggedIndex - 1];
+      const prevEnd = prevAnn.timestamp + prevAnn.duration;
+      
+      if (draggedAnn.timestamp < prevEnd) {
+        // Current annotation overlaps previous one
+        // Shorten the previous annotation so it ends where current one starts
+        const newPrevDuration = draggedAnn.timestamp - prevAnn.timestamp;
+        if (newPrevDuration >= 1000) { // Minimum 1 second
+          prevAnn.duration = newPrevDuration;
+          console.log('⚠️ Shortened previous annotation to avoid overlap');
+        } else {
+          // If shortening would make it too small, push the dragged annotation forward instead
+          draggedAnn.timestamp = prevAnn.timestamp + prevAnn.duration;
+          console.log('⚠️ Moved annotation forward to avoid making previous one too short');
+        }
+      }
+    }
+    
+    // Check for overlap with next annotation (dragging left over right)
+    if (draggedIndex < currentTutorial.annotations.length - 1) {
+      const nextAnn = currentTutorial.annotations[draggedIndex + 1];
+      const draggedEnd = draggedAnn.timestamp + draggedAnn.duration;
+      
+      if (draggedEnd > nextAnn.timestamp) {
+        // Dragged annotation overlaps next one
+        // Move the next annotation to start where dragged one ends
+        nextAnn.timestamp = draggedEnd;
+        console.log('⚠️ Moved next annotation forward to avoid overlap');
+      }
+    }
+    
+    draggingAnnotation = null;
+    document.removeEventListener('mousemove', doAnnotationDrag);
+    document.removeEventListener('mouseup', stopAnnotationDrag);
+    
+    // Recalculate tutorial duration after moving
+    recalculateTutorialDuration();
+    renderTimeline();
+  }
+  
+  // Recalculate tutorial duration based on snapshots and annotations
+  function recalculateTutorialDuration() {
     if (!currentTutorial) return;
     
     // Get last snapshot time
@@ -1619,7 +3968,10 @@
     if (currentTutorial.snapshots.length > 0) {
       const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
       lastSnapshotTime = lastSnapshot.timestamp;
-      lastSnapshotIsSingleEvent = (lastSnapshot.event.type === 'click');
+      
+      // Check if last snapshot is a single event (not dragEnd)
+      const action = lastSnapshot.event.action;
+      lastSnapshotIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
     }
     
     // Get last annotation end time
@@ -1901,7 +4253,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.61 initialized');
+  console.log('Tutorial Creator v12.61 initialized - Fixed: Annotations now positioned relative to app container');
 })();
 </script>
 </body>
