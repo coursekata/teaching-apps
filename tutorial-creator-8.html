@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.65</title>
+<title>Interactive Tutorial Creator - v12.66</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.65</div>
+    <div class="version-number">v12.66</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1757,11 +1757,10 @@
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
     
-    // Position relative to iframe body
-    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-    const iframeBody = iframeDoc.body.getBoundingClientRect();
-    annotationBox.style.left = (iframeBody.left + 300) + 'px';
-    annotationBox.style.top = (iframeBody.top + 200) + 'px';
+    // Position relative to iframe element
+    const iframeRect = appFrame.getBoundingClientRect();
+    annotationBox.style.left = (iframeRect.left + 300) + 'px';
+    annotationBox.style.top = (iframeRect.top + 200) + 'px';
     
     annotationBox.style.width = '400px';
     annotationBox.style.height = 'auto';
@@ -1877,12 +1876,11 @@
     // Override save handler
     savePosition.onclick = () => {
       const rect = annotationBox.getBoundingClientRect();
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      const iframeBody = iframeDoc.body.getBoundingClientRect();
+      const iframeRect = appFrame.getBoundingClientRect();
       
       ann.position = {
-        left: rect.left - iframeBody.left,
-        top: rect.top - iframeBody.top,
+        left: rect.left - iframeRect.left,
+        top: rect.top - iframeRect.top,
         width: rect.width,
         height: rect.height
       };
@@ -2438,12 +2436,11 @@
     if (ann.position) {
       annotationBox.className = 'annotation-box visible custom-position';
       
-      // Convert relative position (relative to iframe body) to absolute viewport position
-      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-      const iframeBody = iframeDoc.body.getBoundingClientRect();
+      // Convert relative position (relative to iframe element) to absolute viewport position
+      const iframeRect = appFrame.getBoundingClientRect();
       
-      annotationBox.style.left = (iframeBody.left + ann.position.left) + 'px';
-      annotationBox.style.top = (iframeBody.top + ann.position.top) + 'px';
+      annotationBox.style.left = (iframeRect.left + ann.position.left) + 'px';
+      annotationBox.style.top = (iframeRect.top + ann.position.top) + 'px';
       annotationBox.style.width = ann.position.width + 'px';
       annotationBox.style.height = ann.position.height + 'px';
       annotationBox.style.transform = 'none';
@@ -4289,16 +4286,15 @@
           annToShow = currentTutorial.annotations[editingAnnotationIndex];
           // Get the CURRENT position of the box to maintain it relative to iframe
           const currentRect = annotationBox.getBoundingClientRect();
-          const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-          const iframeBody = iframeDoc.body.getBoundingClientRect();
+          const iframeRect = appFrame.getBoundingClientRect();
           
           console.log('  - Current box position:', { left: currentRect.left.toFixed(1), top: currentRect.top.toFixed(1) });
-          console.log('  - Iframe body position:', { left: iframeBody.left.toFixed(1), top: iframeBody.top.toFixed(1) });
+          console.log('  - Iframe element position:', { left: iframeRect.left.toFixed(1), top: iframeRect.top.toFixed(1) });
           
           // Calculate relative position at this moment
           storedPosition = {
-            left: currentRect.left - iframeBody.left,
-            top: currentRect.top - iframeBody.top
+            left: currentRect.left - iframeRect.left,
+            top: currentRect.top - iframeRect.top
           };
           console.log('  - Calculated relative position:', { left: storedPosition.left.toFixed(1), top: storedPosition.top.toFixed(1) });
         }
@@ -4321,13 +4317,12 @@
         
         // Reposition if we have a position
         if (storedPosition) {
-          const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-          const iframeBody = iframeDoc.body.getBoundingClientRect();
+          const iframeRect = appFrame.getBoundingClientRect();
           
-          const newLeft = iframeBody.left + storedPosition.left;
-          const newTop = iframeBody.top + storedPosition.top;
+          const newLeft = iframeRect.left + storedPosition.left;
+          const newTop = iframeRect.top + storedPosition.top;
           
-          console.log('  - New iframe body position:', { left: iframeBody.left.toFixed(1), top: iframeBody.top.toFixed(1) });
+          console.log('  - New iframe element position:', { left: iframeRect.left.toFixed(1), top: iframeRect.top.toFixed(1) });
           console.log('  - Stored relative position:', { left: storedPosition.left.toFixed(1), top: storedPosition.top.toFixed(1) });
           console.log('  - Calculated new absolute position:', { left: newLeft.toFixed(1), top: newTop.toFixed(1) });
           
@@ -4344,7 +4339,7 @@
     }, 50); // 50ms debounce
   });
   
-  console.log('Tutorial Creator v12.65 initialized - Enhanced debug logging with coordinates');
+  console.log('Tutorial Creator v12.66 initialized - Fixed: Using iframe element position instead of iframe body');
 })();
 </script>
 </body>
