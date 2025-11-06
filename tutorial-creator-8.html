@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.61</title>
+<title>Interactive Tutorial Creator - v12.62</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.61</div>
+    <div class="version-number">v12.62</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1757,10 +1757,11 @@
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
     
-    // Position relative to app container
-    const containerRect = appContainer.getBoundingClientRect();
-    annotationBox.style.left = (containerRect.left + 300) + 'px';
-    annotationBox.style.top = (containerRect.top + 200) + 'px';
+    // Position relative to iframe body
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    const iframeBody = iframeDoc.body.getBoundingClientRect();
+    annotationBox.style.left = (iframeBody.left + 300) + 'px';
+    annotationBox.style.top = (iframeBody.top + 200) + 'px';
     
     annotationBox.style.width = '400px';
     annotationBox.style.height = 'auto';
@@ -1876,11 +1877,12 @@
     // Override save handler
     savePosition.onclick = () => {
       const rect = annotationBox.getBoundingClientRect();
-      const containerRect = appContainer.getBoundingClientRect();
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeBody = iframeDoc.body.getBoundingClientRect();
       
       ann.position = {
-        left: rect.left - containerRect.left,
-        top: rect.top - containerRect.top,
+        left: rect.left - iframeBody.left,
+        top: rect.top - iframeBody.top,
         width: rect.width,
         height: rect.height
       };
@@ -2436,10 +2438,12 @@
     if (ann.position) {
       annotationBox.className = 'annotation-box visible custom-position';
       
-      // Convert relative position (relative to appContainer) to absolute viewport position
-      const containerRect = appContainer.getBoundingClientRect();
-      annotationBox.style.left = (containerRect.left + ann.position.left) + 'px';
-      annotationBox.style.top = (containerRect.top + ann.position.top) + 'px';
+      // Convert relative position (relative to iframe body) to absolute viewport position
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeBody = iframeDoc.body.getBoundingClientRect();
+      
+      annotationBox.style.left = (iframeBody.left + ann.position.left) + 'px';
+      annotationBox.style.top = (iframeBody.top + ann.position.top) + 'px';
       annotationBox.style.width = ann.position.width + 'px';
       annotationBox.style.height = ann.position.height + 'px';
       annotationBox.style.transform = 'none';
@@ -4253,7 +4257,39 @@
     }
   });
   
-  console.log('Tutorial Creator v12.61 initialized - Fixed: Annotations now positioned relative to app container');
+  // Window resize handler to reposition annotations
+  window.addEventListener('resize', () => {
+    // If annotation box is visible and has a saved position, reposition it
+    if (annotationBox && annotationBox.classList.contains('visible')) {
+      // Don't reposition if it's being dragged
+      if (annotationBox.classList.contains('draggable')) {
+        return;
+      }
+      
+      // Find the annotation that should be displayed
+      let annToShow = null;
+      
+      // Check if there's an active recording annotation
+      if (activeRecordingAnnotation && activeRecordingAnnotation.position) {
+        annToShow = activeRecordingAnnotation;
+      }
+      // Or check if we're in playback mode and have a current annotation index
+      else if (currentAnnotationIndex >= 0 && currentTutorial && currentTutorial.annotations[currentAnnotationIndex]) {
+        annToShow = currentTutorial.annotations[currentAnnotationIndex];
+      }
+      
+      // Reposition if we found the annotation
+      if (annToShow && annToShow.position) {
+        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+        const iframeBody = iframeDoc.body.getBoundingClientRect();
+        
+        annotationBox.style.left = (iframeBody.left + annToShow.position.left) + 'px';
+        annotationBox.style.top = (iframeBody.top + annToShow.position.top) + 'px';
+      }
+    }
+  });
+  
+  console.log('Tutorial Creator v12.62 initialized - Fixed: Annotations positioned relative to iframe body');
 })();
 </script>
 </body>
