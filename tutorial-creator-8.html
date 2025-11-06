@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.64</title>
+<title>Interactive Tutorial Creator - v12.65</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.64</div>
+    <div class="version-number">v12.65</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -4276,7 +4276,7 @@
         console.log('  ✓ Annotation box is visible');
         console.log('  - Has draggable class:', annotationBox.classList.contains('draggable'));
         console.log('  - editingAnnotationIndex:', editingAnnotationIndex);
-        console.log('  - activeRecordingAnnotation:', activeRecordingAnnotation);
+        console.log('  - activeRecordingAnnotation:', activeRecordingAnnotation ? 'EXISTS' : 'null');
         console.log('  - currentAnnotationIndex:', currentAnnotationIndex);
         
         // Get current position if we're editing/positioning
@@ -4292,22 +4292,22 @@
           const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
           const iframeBody = iframeDoc.body.getBoundingClientRect();
           
-          console.log('  - Current box position:', { left: currentRect.left, top: currentRect.top });
-          console.log('  - Iframe body position:', { left: iframeBody.left, top: iframeBody.top });
+          console.log('  - Current box position:', { left: currentRect.left.toFixed(1), top: currentRect.top.toFixed(1) });
+          console.log('  - Iframe body position:', { left: iframeBody.left.toFixed(1), top: iframeBody.top.toFixed(1) });
           
           // Calculate relative position at this moment
           storedPosition = {
             left: currentRect.left - iframeBody.left,
             top: currentRect.top - iframeBody.top
           };
-          console.log('  - Calculated relative position:', storedPosition);
+          console.log('  - Calculated relative position:', { left: storedPosition.left.toFixed(1), top: storedPosition.top.toFixed(1) });
         }
         // Check if there's an active recording annotation
         else if (activeRecordingAnnotation && activeRecordingAnnotation.position) {
           console.log('  → Case: Active recording annotation');
           annToShow = activeRecordingAnnotation;
           storedPosition = annToShow.position;
-          console.log('  - Using saved position:', storedPosition);
+          console.log('  - Using saved position:', { left: storedPosition.left.toFixed(1), top: storedPosition.top.toFixed(1), width: storedPosition.width.toFixed(1), height: storedPosition.height.toFixed(1) });
         }
         // Or check if we're in playback mode and have a current annotation index
         else if (currentAnnotationIndex >= 0 && currentTutorial && currentTutorial.annotations[currentAnnotationIndex]) {
@@ -4327,8 +4327,9 @@
           const newLeft = iframeBody.left + storedPosition.left;
           const newTop = iframeBody.top + storedPosition.top;
           
-          console.log('  - New iframe body position:', { left: iframeBody.left, top: iframeBody.top });
-          console.log('  - Setting annotation to:', { left: newLeft, top: newTop });
+          console.log('  - New iframe body position:', { left: iframeBody.left.toFixed(1), top: iframeBody.top.toFixed(1) });
+          console.log('  - Stored relative position:', { left: storedPosition.left.toFixed(1), top: storedPosition.top.toFixed(1) });
+          console.log('  - Calculated new absolute position:', { left: newLeft.toFixed(1), top: newTop.toFixed(1) });
           
           annotationBox.style.left = newLeft + 'px';
           annotationBox.style.top = newTop + 'px';
@@ -4343,7 +4344,7 @@
     }, 50); // 50ms debounce
   });
   
-  console.log('Tutorial Creator v12.64 initialized - Debug logging added for resize');
+  console.log('Tutorial Creator v12.65 initialized - Enhanced debug logging with coordinates');
 })();
 </script>
 </body>
