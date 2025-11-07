@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.67</title>
+<title>Interactive Tutorial Creator - v12.68</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.67</div>
+    <div class="version-number">v12.68</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1873,19 +1873,15 @@
     
     // Override save handler
     savePosition.onclick = () => {
-      const rect = annotationBox.getBoundingClientRect();
-      const iframeRect = appFrame.getBoundingClientRect();
-      
-      // Calculate position relative to iframe's document (not viewport)
-      // Since annotation box is INSIDE the iframe, we need iframe-document coordinates
+      // Use offsetLeft/offsetTop to get iframe-document coordinates
       ann.position = {
-        left: rect.left - iframeRect.left,
-        top: rect.top - iframeRect.top,
-        width: rect.width,
-        height: rect.height
+        left: annotationBox.offsetLeft,
+        top: annotationBox.offsetTop,
+        width: annotationBox.offsetWidth,
+        height: annotationBox.offsetHeight
       };
       
-      console.log('✓ Annotation positioned (iframe-relative):', ann.position);
+      console.log('✓ Annotation positioned (iframe-document coords):', ann.position);
       
       positionEditorOverlay.style.display = 'none';
       annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
@@ -4258,7 +4254,7 @@
     console.log('🔄 Window resized (annotation box inside iframe moves automatically)');
   });
   
-  console.log('Tutorial Creator v12.67 initialized - Fixed: Annotations use iframe-document coordinates');
+  console.log('Tutorial Creator v12.68 initialized - Fixed: Use offsetLeft/offsetTop for consistent iframe-document coords');
 })();
 </script>
 </body>
