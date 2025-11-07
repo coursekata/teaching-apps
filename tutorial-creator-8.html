@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.71</title>
+<title>Interactive Tutorial Creator - v12.72</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.71</div>
+    <div class="version-number">v12.72</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -996,22 +996,77 @@
   });
   
   function injectAnnotationBox() {
-    // Create annotation box in the MAIN document (not inside iframe)
-    // This allows us to position it relative to the iframe and handle resizing
-    annotationBox = document.createElement('div');
-    annotationBox.className = 'annotation-box';
-    annotationBox.id = 'mainAnnotationBox';
-    annotationBox.innerHTML = '<h3 id="annotationTitle"></h3><p id="annotationText"></p>';
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
     
-    // Append to app container so it moves with the container
-    appContainer.appendChild(annotationBox);
+    // Create annotation box INSIDE the iframe's document
+    // This way it automatically moves with the iframe's content during resize
+    annotationBox = iframeDoc.createElement('div');
+    annotationBox.className = 'annotation-box';
+    annotationBox.innerHTML = '<h3 id="annotationTitle"></h3><p id="annotationText"></p>';
     
     annotationTitle = annotationBox.querySelector('#annotationTitle');
     annotationText = annotationBox.querySelector('#annotationText');
     
-    console.log('✓ Annotation box created in main document');
-    console.log('  - Parent element:', annotationBox.parentElement.className);
-    console.log('  - Parent position style:', window.getComputedStyle(annotationBox.parentElement).position);
+    // Inject the CSS styles for annotation box
+    const style = iframeDoc.createElement('style');
+    style.textContent = `
+      .annotation-box{
+        position:absolute;
+        width:250px;
+        max-width:500px;
+        background:rgba(255,255,255,0.98);
+        border:3px solid #2563eb;
+        border-radius:12px;
+        padding:20px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:100;
+        display:none;
+        overflow-y:auto;
+        overflow-x:hidden;
+        box-sizing:border-box;
+        font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+        font-size:15px;
+        line-height:1.6;
+      }
+      .annotation-box.custom-position{max-width:none;}
+      .annotation-box.draggable{
+        cursor:move;
+        box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        z-index:10001;
+      }
+      .annotation-box.visible{display:block;animation:slideIn 0.3s ease-out;}
+      .annotation-box.draggable .resize-handle{
+        position:absolute;
+        bottom:0;
+        right:0;
+        width:16px;
+        height:16px;
+        background:rgba(37, 99, 235, 0.3);
+        cursor:nwse-resize;
+        border-top-left-radius:4px;
+        border-bottom-right-radius:12px;
+      }
+      .annotation-box.draggable .resize-handle::after{
+        content:'⋰';
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%, -50%);
+        color:rgba(37, 99, 235, 0.7);
+        font-size:12px;
+        line-height:1;
+      }
+      @keyframes slideIn{from{opacity:0;}to{opacity:1;}}
+      .annotation-box h3{margin:0 0 12px;color:#2563eb;font-size:18px;line-height:1.3;}
+      .annotation-box p{margin:0;line-height:inherit;font-size:inherit;}
+    `;
+    
+    iframeDoc.head.appendChild(style);
+    iframeDoc.body.appendChild(annotationBox);
+    
+    console.log('✓ Annotation box injected into iframe document');
+    console.log('  - Will move automatically with iframe content');
   }
   
   // ========== RECORDING ==========
@@ -1710,16 +1765,17 @@
     annotationBox.style.position = 'absolute';
     
     // Use saved position if it exists, otherwise use default position
-    if (ann.position) {
-      annotationBox.style.left = ann.position.left + 'px';
-      annotationBox.style.top = ann.position.top + 'px';
-      annotationBox.style.width = ann.position.width + 'px';
-      annotationBox.style.height = ann.position.height + 'px';
-      console.log('  - Applied saved position');
+    // Use PERCENTAGE-based positioning so annotations scale with iframe content
+    if (ann.position && ann.position.leftPercent !== undefined) {
+      annotationBox.style.left = ann.position.leftPercent + '%';
+      annotationBox.style.top = ann.position.topPercent + '%';
+      annotationBox.style.width = ann.position.widthPercent + '%';
+      annotationBox.style.height = ann.position.heightPercent + '%';
+      console.log('  - Applied saved percentage position');
     } else {
       // Default position for new annotations
-      annotationBox.style.left = '300px';
-      annotationBox.style.top = '200px';
+      annotationBox.style.left = '30%';
+      annotationBox.style.top = '25%';
       annotationBox.style.width = '400px';
       annotationBox.style.height = 'auto';
       console.log('  - Applied default position');
@@ -1731,12 +1787,7 @@
     annotationTitle.innerHTML = ann.title;
     annotationText.innerHTML = ann.text;
     
-    console.log('  - Final computed position:', {
-      left: window.getComputedStyle(annotationBox).left,
-      top: window.getComputedStyle(annotationBox).top,
-      width: window.getComputedStyle(annotationBox).width,
-      height: window.getComputedStyle(annotationBox).height
-    });
+    console.log('  - Final style.left:', annotationBox.style.left, 'style.top:', annotationBox.style.top);
     console.log('  - Display:', window.getComputedStyle(annotationBox).display);
     
     // Make title and text editable on double-click
@@ -1843,21 +1894,28 @@
     // Override save handler
     savePosition.onclick = () => {
       console.log('💾 SAVING ANNOTATION POSITION:');
+      
+      // Get iframe document dimensions for percentage calculation
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const iframeBody = iframeDoc.body;
+      const bodyWidth = iframeBody.scrollWidth || iframeBody.clientWidth;
+      const bodyHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
+      
+      console.log('  - Iframe body dimensions:', bodyWidth, 'x', bodyHeight);
       console.log('  - annotationBox.offsetLeft:', annotationBox.offsetLeft);
       console.log('  - annotationBox.offsetTop:', annotationBox.offsetTop);
       console.log('  - annotationBox.offsetWidth:', annotationBox.offsetWidth);
       console.log('  - annotationBox.offsetHeight:', annotationBox.offsetHeight);
-      console.log('  - annotationBox.offsetParent:', annotationBox.offsetParent?.className);
       
-      // Annotation is child of app-container, so offsetLeft/offsetTop are relative to it
+      // Save as PERCENTAGES so annotation scales with iframe content
       ann.position = {
-        left: annotationBox.offsetLeft,
-        top: annotationBox.offsetTop,
-        width: annotationBox.offsetWidth,
-        height: annotationBox.offsetHeight
+        leftPercent: (annotationBox.offsetLeft / bodyWidth) * 100,
+        topPercent: (annotationBox.offsetTop / bodyHeight) * 100,
+        widthPercent: (annotationBox.offsetWidth / bodyWidth) * 100,
+        heightPercent: (annotationBox.offsetHeight / bodyHeight) * 100
       };
       
-      console.log('  - Saved position object:', ann.position);
+      console.log('  - Saved position (percentages):', ann.position);
       
       positionEditorOverlay.style.display = 'none';
       annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
@@ -1872,7 +1930,7 @@
       // Store it so we can hide it when recording resumes and duration expires
       activeRecordingAnnotation = ann;
       
-      console.log('✓ Annotation positioned (relative to app-container)');
+      console.log('✓ Annotation positioned (percentage-based - will scale with content)');
       console.log('  Annotation will remain visible until recording resumes and duration expires');
       
       // Recalculate duration in case annotation extends beyond current duration
@@ -1990,7 +2048,13 @@
       return;
     }
     
-    console.log('makeDraggable: Setting up drag handlers');
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) {
+      console.error('makeDraggable: cannot get iframe document');
+      return;
+    }
+    
+    console.log('makeDraggable: Setting up drag handlers (using iframe document)');
     
     // State variables
     let isDragging = false;
@@ -2026,7 +2090,7 @@
       console.log('Annotation box mousedown');
       isDragging = true;
       
-      // Get current position relative to app-container
+      // Get current position (offsetLeft/offsetTop are iframe-document coordinates)
       startLeft = annotationBox.offsetLeft;
       startTop = annotationBox.offsetTop;
       startX = e.clientX;
@@ -2035,8 +2099,8 @@
       e.preventDefault();
     };
     
-    // Mouse move handler - use document, not iframe
-    document.onmousemove = function(e) {
+    // Mouse move handler - use iframe document
+    iframeDoc.onmousemove = function(e) {
       if (isDragging) {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -2052,8 +2116,8 @@
       }
     };
     
-    // Mouse up handler - use document, not iframe
-    document.onmouseup = function() {
+    // Mouse up handler - use iframe document
+    iframeDoc.onmouseup = function() {
       if (isDragging || isResizing) {
         console.log('Mouse up - ending drag/resize');
       }
@@ -2409,18 +2473,23 @@
     if (ann.position) {
       annotationBox.className = 'annotation-box visible custom-position';
       
-      // Annotation box is child of app-container, use saved position directly
-      annotationBox.style.left = ann.position.left + 'px';
-      annotationBox.style.top = ann.position.top + 'px';
-      annotationBox.style.width = ann.position.width + 'px';
-      annotationBox.style.height = ann.position.height + 'px';
+      // Use PERCENTAGE-based positioning so annotation scales with iframe content
+      if (ann.position.leftPercent !== undefined) {
+        annotationBox.style.left = ann.position.leftPercent + '%';
+        annotationBox.style.top = ann.position.topPercent + '%';
+        annotationBox.style.width = ann.position.widthPercent + '%';
+        annotationBox.style.height = ann.position.heightPercent + '%';
+      } else {
+        // Fallback for old pixel-based positions (backward compatibility)
+        annotationBox.style.left = ann.position.left + 'px';
+        annotationBox.style.top = ann.position.top + 'px';
+        annotationBox.style.width = ann.position.width + 'px';
+        annotationBox.style.height = ann.position.height + 'px';
+      }
       annotationBox.style.transform = 'none';
       
-      console.log('  - Applied position');
-      console.log('  - Final computed position:', {
-        left: window.getComputedStyle(annotationBox).left,
-        top: window.getComputedStyle(annotationBox).top
-      });
+      console.log('  - Applied percentage position (will scale with iframe content)');
+      console.log('  - Final style.left:', annotationBox.style.left, 'style.top:', annotationBox.style.top);
     }
     
     // Render MathJax
@@ -4233,23 +4302,12 @@
   
   // Window resize handler - NOT NEEDED since annotation box is inside iframe
   // and moves automatically with iframe content
+  // Window resize handler - annotation inside iframe moves automatically with content
   window.addEventListener('resize', () => {
-    console.log('🔄 WINDOW RESIZED');
-    if (annotationBox && annotationBox.classList.contains('visible')) {
-      console.log('  - Annotation box is visible');
-      console.log('  - Current position (computed):', {
-        left: window.getComputedStyle(annotationBox).left,
-        top: window.getComputedStyle(annotationBox).top
-      });
-      console.log('  - App container position:', {
-        left: appContainer.getBoundingClientRect().left,
-        top: appContainer.getBoundingClientRect().top,
-        width: appContainer.getBoundingClientRect().width
-      });
-    }
+    console.log('🔄 WINDOW RESIZED - annotation inside iframe moves automatically');
   });
   
-  console.log('Tutorial Creator v12.71 initialized - Debug logging added');
+  console.log('Tutorial Creator v12.72 initialized - MAJOR FIX: Percentage-based positioning');
 })();
 </script>
 </body>
