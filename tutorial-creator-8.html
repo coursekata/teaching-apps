@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.74</title>
+<title>Interactive Tutorial Creator - v12.72</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +623,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.74</div>
+    <div class="version-number">v12.72</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1902,14 +1903,6 @@
       const bodyHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
       
       console.log('  - Iframe body dimensions:', bodyWidth, 'x', bodyHeight);
-      
-      // Also log SVG dimensions for comparison
-      const svg = iframeDoc.querySelector('svg');
-      if (svg) {
-        const svgRect = svg.getBoundingClientRect();
-        console.log('  - SVG dimensions:', svgRect.width, 'x', svgRect.height);
-      }
-      
       console.log('  - annotationBox.offsetLeft:', annotationBox.offsetLeft);
       console.log('  - annotationBox.offsetTop:', annotationBox.offsetTop);
       console.log('  - annotationBox.offsetWidth:', annotationBox.offsetWidth);
@@ -4312,34 +4305,10 @@
   // and moves automatically with iframe content
   // Window resize handler - annotation inside iframe moves automatically with content
   window.addEventListener('resize', () => {
-    console.log('🔄 WINDOW RESIZED');
-    
-    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
-    if (iframeDoc) {
-      const iframeBody = iframeDoc.body;
-      const bodyWidth = iframeBody.scrollWidth || iframeBody.clientWidth;
-      const bodyHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
-      
-      console.log('  - Iframe body dimensions:', bodyWidth, 'x', bodyHeight);
-      
-      const svg = iframeDoc.querySelector('svg');
-      if (svg) {
-        const svgRect = svg.getBoundingClientRect();
-        console.log('  - SVG dimensions:', svgRect.width, 'x', svgRect.height);
-      }
-      
-      if (annotationBox && annotationBox.classList.contains('visible')) {
-        console.log('  - Annotation computed style:', {
-          left: window.getComputedStyle(annotationBox).left,
-          top: window.getComputedStyle(annotationBox).top,
-          width: window.getComputedStyle(annotationBox).width,
-          height: window.getComputedStyle(annotationBox).height
-        });
-      }
-    }
+    console.log('🔄 WINDOW RESIZED - annotation inside iframe moves automatically');
   });
   
-  console.log('Tutorial Creator v12.74 initialized - Back to 12.72 with dimension logging');
+  console.log('Tutorial Creator v12.72 initialized - MAJOR FIX: Percentage-based positioning');
 })();
 </script>
 </body>
