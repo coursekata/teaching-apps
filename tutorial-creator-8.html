@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.72</title>
+<title>Interactive Tutorial Creator - v13.00</title>
 <script>
   window.MathJax = {
     tex: {
@@ -145,14 +145,17 @@
   
   .app-container{
     position:relative;
-    width:100%;
+    width:1000px;
     height:800px;
-    overflow:hidden;
+    overflow:auto;
+    margin:0 auto;
+    border:1px solid #ddd;
+    border-radius:8px;
     margin-bottom:40px;
   }
   
   iframe{
-    width:100%;
+    width:1000px;
     height:100%;
     border:none;
   }
@@ -622,7 +625,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.72</div>
+    <div class="version-number">v13.00</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2451,12 +2454,7 @@
       console.log('  ann.position.top:', ann.position.top);
       console.log('  ann.position.width:', ann.position.width);
       console.log('  ann.position.height:', ann.position.height);
-      console.log('  Current iframe dimensions:', {
-        offsetWidth: appFrame.offsetWidth,
-        offsetHeight: appFrame.offsetHeight,
-        clientWidth: appFrame.clientWidth,
-        clientHeight: appFrame.clientHeight
-      });
+      console.log('  Fixed iframe dimensions: 1000x800px - no scaling needed');
       
       annotationBox.className = 'annotation-box visible custom-position';
       
@@ -2467,29 +2465,11 @@
       annotationBox.style.height = ann.position.height + 'px';
       annotationBox.style.transform = 'none';
       
-      // Initialize iframe dimensions tracking for resize calculations
-      window.lastIframeDimensions = { 
-        width: appFrame.offsetWidth, 
-        height: appFrame.offsetHeight 
-      };
-      console.log('🔍 SHOW ANNOTATION (PLAYBACK) - Initialized iframe dimensions for resize tracking:', window.lastIframeDimensions);
-      
       console.log('🔍 SHOW ANNOTATION (PLAYBACK) - Applied styles:');
       console.log('  style.left:', annotationBox.style.left);
       console.log('  style.top:', annotationBox.style.top);
       console.log('  style.width:', annotationBox.style.width);
       console.log('  style.height:', annotationBox.style.height);
-      
-      // Log computed values after applying
-      setTimeout(() => {
-        const computed = window.getComputedStyle(annotationBox);
-        console.log('🔍 SHOW ANNOTATION (PLAYBACK) - Computed styles after apply:');
-        console.log('  computed left:', computed.left);
-        console.log('  computed top:', computed.top);
-        console.log('  computed width:', computed.width);
-        console.log('  computed height:', computed.height);
-        console.log('  getBoundingClientRect():', annotationBox.getBoundingClientRect());
-      }, 0);
     }
     
     // Render MathJax
@@ -4300,103 +4280,17 @@
     }
   });
   
-  // Window resize handler - recalculate annotation positions to maintain relative positioning
+  // Window resize handler - simplified for fixed iframe width
   window.addEventListener('resize', () => {
-    console.log('🔍 WINDOW RESIZE - Event triggered');
-    console.log('  New window dimensions:', {
+    console.log('🔍 WINDOW RESIZE - Fixed iframe width (1000px), no scaling needed');
+    console.log('  Browser dimensions:', {
       innerWidth: window.innerWidth,
       innerHeight: window.innerHeight
     });
-    console.log('  New iframe dimensions:', {
-      offsetWidth: appFrame.offsetWidth,
-      offsetHeight: appFrame.offsetHeight,
-      clientWidth: appFrame.clientWidth,
-      clientHeight: appFrame.clientHeight
-    });
-    
-    if (annotationBox && annotationBox.classList.contains('visible')) {
-      console.log('🔍 WINDOW RESIZE - Annotation box is visible, recalculating position');
-      
-      // Store current iframe dimensions
-      if (!window.lastIframeDimensions) {
-        window.lastIframeDimensions = { width: appFrame.offsetWidth, height: appFrame.offsetHeight };
-        console.log('  Initializing lastIframeDimensions:', window.lastIframeDimensions);
-        return;
-      }
-      
-      const oldWidth = window.lastIframeDimensions.width;
-      const oldHeight = window.lastIframeDimensions.height;
-      const newWidth = appFrame.offsetWidth;
-      const newHeight = appFrame.offsetHeight;
-      
-      console.log('  Iframe size change:', oldWidth + 'x' + oldHeight, '→', newWidth + 'x' + newHeight);
-      
-      if (oldWidth !== newWidth || oldHeight !== newHeight) {
-        // Calculate scaling factors
-        const scaleX = newWidth / oldWidth;
-        const scaleY = newHeight / oldHeight;
-        
-        console.log('  Scale factors: X=' + scaleX.toFixed(3) + ', Y=' + scaleY.toFixed(3));
-        
-        // Get current position
-        const currentLeft = parseInt(annotationBox.style.left);
-        const currentTop = parseInt(annotationBox.style.top);
-        const currentWidth = parseInt(annotationBox.style.width);
-        const currentHeight = parseInt(annotationBox.style.height);
-        
-        console.log('  Current position:', currentLeft + ', ' + currentTop, 'size:', currentWidth + 'x' + currentHeight);
-        
-        // Calculate new position (scale position)
-        const newLeft = Math.round(currentLeft * scaleX);
-        const newTop = Math.round(currentTop * scaleY);
-        
-        // Keep size constant (don't scale width/height)
-        const newAnnotationWidth = currentWidth;  // Keep original width
-        const newAnnotationHeight = currentHeight; // Keep original height
-        
-        console.log('  New position:', newLeft + ', ' + newTop, 'size: UNCHANGED', newAnnotationWidth + 'x' + newAnnotationHeight);
-        
-        // Apply new position
-        annotationBox.style.left = newLeft + 'px';
-        annotationBox.style.top = newTop + 'px';
-        annotationBox.style.width = newAnnotationWidth + 'px';
-        annotationBox.style.height = newAnnotationHeight + 'px';
-        
-        // CRITICAL: Update the annotation data so playback uses scaled coordinates
-        if (currentTutorial && currentTutorial.annotations) {
-          currentTutorial.annotations.forEach(ann => {
-            if (ann.position && 
-                ann.position.left === currentLeft && 
-                ann.position.top === currentTop) {
-              // This is likely the currently visible annotation - update its saved position
-              ann.position.left = newLeft;
-              ann.position.top = newTop;
-              // Keep original size in data (don't scale)
-              console.log('🔍 UPDATED annotation data for playback:', {
-                oldPos: currentLeft + ',' + currentTop,
-                newPos: newLeft + ',' + newTop
-              });
-            }
-          });
-        }
-        
-        console.log('🔍 WINDOW RESIZE - Annotation position updated for scale change');
-      }
-      
-      // Update stored dimensions
-      window.lastIframeDimensions = { width: newWidth, height: newHeight };
-    } else {
-      console.log('🔍 WINDOW RESIZE - No visible annotation box');
-      
-      // Still update dimensions for next time
-      window.lastIframeDimensions = { 
-        width: appFrame.offsetWidth, 
-        height: appFrame.offsetHeight 
-      };
-    }
+    console.log('  Iframe remains fixed at 1000x800px - annotations maintain exact positioning');
   });
   
-  console.log('Tutorial Creator v12.72 initialized - Fixed playback to use scaled annotation coordinates');
+  console.log('Tutorial Creator v13.00 initialized - Fixed iframe width (1000px) eliminates annotation scaling issues');
 })();
 </script>
 </body>
