@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.71</title>
+<title>Interactive Tutorial Creator - v12.72</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.71</div>
+    <div class="version-number">v12.72</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -4362,6 +4362,24 @@
         annotationBox.style.width = newAnnotationWidth + 'px';
         annotationBox.style.height = newAnnotationHeight + 'px';
         
+        // CRITICAL: Update the annotation data so playback uses scaled coordinates
+        if (currentTutorial && currentTutorial.annotations) {
+          currentTutorial.annotations.forEach(ann => {
+            if (ann.position && 
+                ann.position.left === currentLeft && 
+                ann.position.top === currentTop) {
+              // This is likely the currently visible annotation - update its saved position
+              ann.position.left = newLeft;
+              ann.position.top = newTop;
+              // Keep original size in data (don't scale)
+              console.log('🔍 UPDATED annotation data for playback:', {
+                oldPos: currentLeft + ',' + currentTop,
+                newPos: newLeft + ',' + newTop
+              });
+            }
+          });
+        }
+        
         console.log('🔍 WINDOW RESIZE - Annotation position updated for scale change');
       }
       
@@ -4378,7 +4396,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.71 initialized - Fixed annotation resize to only scale position, not size');
+  console.log('Tutorial Creator v12.72 initialized - Fixed playback to use scaled annotation coordinates');
 })();
 </script>
 </body>
