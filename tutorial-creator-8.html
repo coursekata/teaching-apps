@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.72</title>
+<title>Interactive Tutorial Creator - v12.73</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.72</div>
+    <div class="version-number">v12.73</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1758,20 +1758,42 @@
     console.log('🔵 SHOWING ANNOTATION FOR POSITIONING:', ann.title);
     console.log('  - Has saved position:', !!ann.position);
     if (ann.position) {
-      console.log('  - Saved position:', ann.position);
+      console.log('  - Saved position (percentages):', ann.position);
     }
     
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
     
+    // Get container dimensions (SVG or body) for percentage calculation
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    const svg = iframeDoc.querySelector('svg');
+    let containerWidth, containerHeight;
+    
+    if (svg) {
+      const svgRect = svg.getBoundingClientRect();
+      containerWidth = svgRect.width;
+      containerHeight = svgRect.height;
+      console.log('  - Using SVG dimensions:', containerWidth, 'x', containerHeight);
+    } else {
+      const iframeBody = iframeDoc.body;
+      containerWidth = iframeBody.scrollWidth || iframeBody.clientWidth;
+      containerHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
+      console.log('  - Using body dimensions:', containerWidth, 'x', containerHeight);
+    }
+    
     // Use saved position if it exists, otherwise use default position
-    // Use PERCENTAGE-based positioning so annotations scale with iframe content
     if (ann.position && ann.position.leftPercent !== undefined) {
-      annotationBox.style.left = ann.position.leftPercent + '%';
-      annotationBox.style.top = ann.position.topPercent + '%';
-      annotationBox.style.width = ann.position.widthPercent + '%';
-      annotationBox.style.height = ann.position.heightPercent + '%';
-      console.log('  - Applied saved percentage position');
+      // Convert percentages to pixels using current container dimensions
+      const leftPx = (ann.position.leftPercent / 100) * containerWidth;
+      const topPx = (ann.position.topPercent / 100) * containerHeight;
+      const widthPx = (ann.position.widthPercent / 100) * containerWidth;
+      const heightPx = (ann.position.heightPercent / 100) * containerHeight;
+      
+      annotationBox.style.left = leftPx + 'px';
+      annotationBox.style.top = topPx + 'px';
+      annotationBox.style.width = widthPx + 'px';
+      annotationBox.style.height = heightPx + 'px';
+      console.log('  - Applied percentage position (converted to pixels):', {leftPx, topPx, widthPx, heightPx});
     } else {
       // Default position for new annotations
       annotationBox.style.left = '30%';
@@ -1895,45 +1917,55 @@
     savePosition.onclick = () => {
       console.log('💾 SAVING ANNOTATION POSITION:');
       
-      // Get iframe document dimensions for percentage calculation
+      // Get iframe document dimensions
       const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
       const iframeBody = iframeDoc.body;
       const bodyWidth = iframeBody.scrollWidth || iframeBody.clientWidth;
       const bodyHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
       
+      // Try to find SVG element (D3 visualizations typically use SVG)
+      const svg = iframeDoc.querySelector('svg');
+      let containerWidth = bodyWidth;
+      let containerHeight = bodyHeight;
+      
+      if (svg) {
+        const svgRect = svg.getBoundingClientRect();
+        containerWidth = svgRect.width;
+        containerHeight = svgRect.height;
+        console.log('  - Found SVG element:', svgRect.width, 'x', svgRect.height);
+      } else {
+        console.log('  - No SVG found, using body dimensions');
+      }
+      
       console.log('  - Iframe body dimensions:', bodyWidth, 'x', bodyHeight);
+      console.log('  - Container dimensions for %:', containerWidth, 'x', containerHeight);
       console.log('  - annotationBox.offsetLeft:', annotationBox.offsetLeft);
       console.log('  - annotationBox.offsetTop:', annotationBox.offsetTop);
       console.log('  - annotationBox.offsetWidth:', annotationBox.offsetWidth);
       console.log('  - annotationBox.offsetHeight:', annotationBox.offsetHeight);
       
-      // Save as PERCENTAGES so annotation scales with iframe content
+      // Save as PERCENTAGES relative to the actual content container (SVG)
       ann.position = {
-        leftPercent: (annotationBox.offsetLeft / bodyWidth) * 100,
-        topPercent: (annotationBox.offsetTop / bodyHeight) * 100,
-        widthPercent: (annotationBox.offsetWidth / bodyWidth) * 100,
-        heightPercent: (annotationBox.offsetHeight / bodyHeight) * 100
+        leftPercent: (annotationBox.offsetLeft / containerWidth) * 100,
+        topPercent: (annotationBox.offsetTop / containerHeight) * 100,
+        widthPercent: (annotationBox.offsetWidth / containerWidth) * 100,
+        heightPercent: (annotationBox.offsetHeight / containerHeight) * 100
       };
       
       console.log('  - Saved position (percentages):', ann.position);
       
       positionEditorOverlay.style.display = 'none';
-      annotationBox.classList.remove('draggable'); // Remove draggable but keep visible
+      annotationBox.classList.remove('draggable');
       
       const handles = annotationBox.querySelectorAll('.resize-handle');
       handles.forEach(h => h.remove());
       
-      // Clear editing index
       editingAnnotationIndex = -1;
-      
-      // Keep annotation visible during recording
-      // Store it so we can hide it when recording resumes and duration expires
       activeRecordingAnnotation = ann;
       
-      console.log('✓ Annotation positioned (percentage-based - will scale with content)');
+      console.log('✓ Annotation positioned (percentage-based relative to SVG/content)');
       console.log('  Annotation will remain visible until recording resumes and duration expires');
       
-      // Recalculate duration in case annotation extends beyond current duration
       recalculateTutorialDuration();
       renderTimeline();
     };
@@ -2464,7 +2496,7 @@
     console.log('🟢 SHOWING ANNOTATION (PLAYBACK):', ann.title);
     console.log('  - Has saved position:', !!ann.position);
     if (ann.position) {
-      console.log('  - Saved position:', ann.position);
+      console.log('  - Saved position (percentages):', ann.position);
     }
     
     annotationTitle.innerHTML = ann.title;
@@ -2473,22 +2505,44 @@
     if (ann.position) {
       annotationBox.className = 'annotation-box visible custom-position';
       
-      // Use PERCENTAGE-based positioning so annotation scales with iframe content
+      // Get container dimensions (SVG or body)
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      const svg = iframeDoc.querySelector('svg');
+      let containerWidth, containerHeight;
+      
+      if (svg) {
+        const svgRect = svg.getBoundingClientRect();
+        containerWidth = svgRect.width;
+        containerHeight = svgRect.height;
+      } else {
+        const iframeBody = iframeDoc.body;
+        containerWidth = iframeBody.scrollWidth || iframeBody.clientWidth;
+        containerHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
+      }
+      
+      // Use percentage-based positioning if available
       if (ann.position.leftPercent !== undefined) {
-        annotationBox.style.left = ann.position.leftPercent + '%';
-        annotationBox.style.top = ann.position.topPercent + '%';
-        annotationBox.style.width = ann.position.widthPercent + '%';
-        annotationBox.style.height = ann.position.heightPercent + '%';
+        // Convert percentages to pixels using current container dimensions
+        const leftPx = (ann.position.leftPercent / 100) * containerWidth;
+        const topPx = (ann.position.topPercent / 100) * containerHeight;
+        const widthPx = (ann.position.widthPercent / 100) * containerWidth;
+        const heightPx = (ann.position.heightPercent / 100) * containerHeight;
+        
+        annotationBox.style.left = leftPx + 'px';
+        annotationBox.style.top = topPx + 'px';
+        annotationBox.style.width = widthPx + 'px';
+        annotationBox.style.height = heightPx + 'px';
+        console.log('  - Applied percentage position (converted to pixels)');
       } else {
         // Fallback for old pixel-based positions (backward compatibility)
         annotationBox.style.left = ann.position.left + 'px';
         annotationBox.style.top = ann.position.top + 'px';
         annotationBox.style.width = ann.position.width + 'px';
         annotationBox.style.height = ann.position.height + 'px';
+        console.log('  - Applied legacy pixel position');
       }
       annotationBox.style.transform = 'none';
       
-      console.log('  - Applied percentage position (will scale with iframe content)');
       console.log('  - Final style.left:', annotationBox.style.left, 'style.top:', annotationBox.style.top);
     }
     
@@ -4303,11 +4357,55 @@
   // Window resize handler - NOT NEEDED since annotation box is inside iframe
   // and moves automatically with iframe content
   // Window resize handler - annotation inside iframe moves automatically with content
+  // Window resize handler - recalculate annotation positions based on current SVG dimensions
   window.addEventListener('resize', () => {
-    console.log('🔄 WINDOW RESIZED - annotation inside iframe moves automatically');
+    console.log('🔄 WINDOW RESIZED');
+    if (annotationBox && annotationBox.classList.contains('visible')) {
+      console.log('  - Annotation box is visible, recalculating position');
+      
+      // Find which annotation is currently displayed
+      let currentAnn = null;
+      if (activeRecordingAnnotation && activeRecordingAnnotation.position) {
+        currentAnn = activeRecordingAnnotation;
+      } else if (currentAnnotationIndex >= 0 && currentTutorial && currentTutorial.annotations[currentAnnotationIndex]) {
+        currentAnn = currentTutorial.annotations[currentAnnotationIndex];
+      }
+      
+      if (currentAnn && currentAnn.position && currentAnn.position.leftPercent !== undefined) {
+        // Get current SVG/container dimensions
+        const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+        const svg = iframeDoc.querySelector('svg');
+        let containerWidth, containerHeight;
+        
+        if (svg) {
+          const svgRect = svg.getBoundingClientRect();
+          containerWidth = svgRect.width;
+          containerHeight = svgRect.height;
+          console.log('  - Current SVG dimensions:', containerWidth, 'x', containerHeight);
+        } else {
+          const iframeBody = iframeDoc.body;
+          containerWidth = iframeBody.scrollWidth || iframeBody.clientWidth;
+          containerHeight = iframeBody.scrollHeight || iframeBody.clientHeight;
+          console.log('  - Current body dimensions:', containerWidth, 'x', containerHeight);
+        }
+        
+        // Recalculate pixel positions from percentages
+        const leftPx = (currentAnn.position.leftPercent / 100) * containerWidth;
+        const topPx = (currentAnn.position.topPercent / 100) * containerHeight;
+        const widthPx = (currentAnn.position.widthPercent / 100) * containerWidth;
+        const heightPx = (currentAnn.position.heightPercent / 100) * containerHeight;
+        
+        annotationBox.style.left = leftPx + 'px';
+        annotationBox.style.top = topPx + 'px';
+        annotationBox.style.width = widthPx + 'px';
+        annotationBox.style.height = heightPx + 'px';
+        
+        console.log('  - Repositioned to:', {leftPx, topPx, widthPx, heightPx});
+      }
+    }
   });
   
-  console.log('Tutorial Creator v12.72 initialized - MAJOR FIX: Percentage-based positioning');
+  console.log('Tutorial Creator v12.73 initialized - Fixed: SVG-relative percentage positioning with resize');
 })();
 </script>
 </body>
