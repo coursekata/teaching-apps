@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.70</title>
+<title>Interactive Tutorial Creator - v12.71</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.70</div>
+    <div class="version-number">v12.71</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -4346,13 +4346,15 @@
         
         console.log('  Current position:', currentLeft + ', ' + currentTop, 'size:', currentWidth + 'x' + currentHeight);
         
-        // Calculate new position
+        // Calculate new position (scale position)
         const newLeft = Math.round(currentLeft * scaleX);
         const newTop = Math.round(currentTop * scaleY);
-        const newAnnotationWidth = Math.round(currentWidth * scaleX);
-        const newAnnotationHeight = Math.round(currentHeight * scaleY);
         
-        console.log('  New position:', newLeft + ', ' + newTop, 'size:', newAnnotationWidth + 'x' + newAnnotationHeight);
+        // Keep size constant (don't scale width/height)
+        const newAnnotationWidth = currentWidth;  // Keep original width
+        const newAnnotationHeight = currentHeight; // Keep original height
+        
+        console.log('  New position:', newLeft + ', ' + newTop, 'size: UNCHANGED', newAnnotationWidth + 'x' + newAnnotationHeight);
         
         // Apply new position
         annotationBox.style.left = newLeft + 'px';
@@ -4376,7 +4378,7 @@
     }
   });
   
-  console.log('Tutorial Creator v12.70 initialized - Fixed annotation positioning during browser resize');
+  console.log('Tutorial Creator v12.71 initialized - Fixed annotation resize to only scale position, not size');
 })();
 </script>
 </body>
