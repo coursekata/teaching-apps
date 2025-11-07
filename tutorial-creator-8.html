@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.69</title>
+<title>Interactive Tutorial Creator - v12.70</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.69</div>
+    <div class="version-number">v12.70</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1703,11 +1703,20 @@
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
     
-    // Annotation box is INSIDE the iframe, so use iframe-document coordinates
-    annotationBox.style.left = '300px';
-    annotationBox.style.top = '200px';
-    annotationBox.style.width = '400px';
-    annotationBox.style.height = 'auto';
+    // Use saved position if it exists, otherwise use default position
+    if (ann.position) {
+      annotationBox.style.left = ann.position.left + 'px';
+      annotationBox.style.top = ann.position.top + 'px';
+      annotationBox.style.width = ann.position.width + 'px';
+      annotationBox.style.height = ann.position.height + 'px';
+    } else {
+      // Default position for new annotations
+      annotationBox.style.left = '300px';
+      annotationBox.style.top = '200px';
+      annotationBox.style.width = '400px';
+      annotationBox.style.height = 'auto';
+    }
+    
     annotationBox.style.transform = 'none';
     annotationBox.style.zIndex = '10000';
     
@@ -2372,7 +2381,7 @@
     if (ann.position) {
       annotationBox.className = 'annotation-box visible custom-position';
       
-      // Annotation box is INSIDE the iframe, so use iframe-document coordinates directly
+      // Annotation box is child of app-container, use saved position directly
       annotationBox.style.left = ann.position.left + 'px';
       annotationBox.style.top = ann.position.top + 'px';
       annotationBox.style.width = ann.position.width + 'px';
@@ -4194,7 +4203,7 @@
     console.log('🔄 Window resized (annotation box inside iframe moves automatically)');
   });
   
-  console.log('Tutorial Creator v12.69 initialized - Major fix: Annotation box now outside iframe');
+  console.log('Tutorial Creator v12.70 initialized - Fixed: Annotation position preservation');
 })();
 </script>
 </body>
