@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.00</title>
+<title>Interactive Tutorial Creator - v13.01</title>
 <script>
   window.MathJax = {
     tex: {
@@ -625,7 +625,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.00</div>
+    <div class="version-number">v13.01</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2394,6 +2394,12 @@
         if (elapsedMs >= pause.timestamp && !playbackLoop.triggeredPauses.has(pauseKey)) {
           playbackLoop.triggeredPauses.add(pauseKey);
           console.log('⏸ Pause reached at', (pause.timestamp / 1000).toFixed(2) + 's - pausing playback');
+          
+          // Position playhead at pause marker center (with same -6px offset as pause marker)
+          const timelineStartOffset = getTimelineStartOffset();
+          const pauseTimelinePosition = ((pause.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+          timelinePlayhead.style.left = (pauseTimelinePosition - 6) + 'px'; // Match pause marker centering
+          console.log('📍 Positioned playhead at pause marker center:', (pauseTimelinePosition - 6) + 'px');
           
           // Check if this pause is the final element (no snapshots or annotations after it)
           let pauseIsFinalElement = true;
@@ -4290,7 +4296,7 @@
     console.log('  Iframe remains fixed at 1000x800px - annotations maintain exact positioning');
   });
   
-  console.log('Tutorial Creator v13.00 initialized - Fixed iframe width (1000px) eliminates annotation scaling issues');
+  console.log('Tutorial Creator v13.01 initialized - Fixed pause marker and playhead alignment');
 })();
 </script>
 </body>
