@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v12.69</title>
+<title>Interactive Tutorial Creator - v12.70</title>
 <script>
   window.MathJax = {
     tex: {
@@ -622,7 +622,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v12.69</div>
+    <div class="version-number">v12.70</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2467,6 +2467,13 @@
       annotationBox.style.height = ann.position.height + 'px';
       annotationBox.style.transform = 'none';
       
+      // Initialize iframe dimensions tracking for resize calculations
+      window.lastIframeDimensions = { 
+        width: appFrame.offsetWidth, 
+        height: appFrame.offsetHeight 
+      };
+      console.log('🔍 SHOW ANNOTATION (PLAYBACK) - Initialized iframe dimensions for resize tracking:', window.lastIframeDimensions);
+      
       console.log('🔍 SHOW ANNOTATION (PLAYBACK) - Applied styles:');
       console.log('  style.left:', annotationBox.style.left);
       console.log('  style.top:', annotationBox.style.top);
@@ -4293,7 +4300,7 @@
     }
   });
   
-  // Window resize handler - adding logging to debug annotation positioning during resize
+  // Window resize handler - recalculate annotation positions to maintain relative positioning
   window.addEventListener('resize', () => {
     console.log('🔍 WINDOW RESIZE - Event triggered');
     console.log('  New window dimensions:', {
@@ -4308,28 +4315,68 @@
     });
     
     if (annotationBox && annotationBox.classList.contains('visible')) {
-      console.log('🔍 WINDOW RESIZE - Annotation box is visible, checking position');
-      console.log('  Current annotation styles:');
-      console.log('    style.left:', annotationBox.style.left);
-      console.log('    style.top:', annotationBox.style.top);
-      console.log('    style.width:', annotationBox.style.width);
-      console.log('    style.height:', annotationBox.style.height);
+      console.log('🔍 WINDOW RESIZE - Annotation box is visible, recalculating position');
       
-      setTimeout(() => {
-        const computed = window.getComputedStyle(annotationBox);
-        console.log('  Computed styles after resize:');
-        console.log('    computed left:', computed.left);
-        console.log('    computed top:', computed.top);
-        console.log('    computed width:', computed.width);
-        console.log('    computed height:', computed.height);
-        console.log('  getBoundingClientRect() after resize:', annotationBox.getBoundingClientRect());
-      }, 0);
+      // Store current iframe dimensions
+      if (!window.lastIframeDimensions) {
+        window.lastIframeDimensions = { width: appFrame.offsetWidth, height: appFrame.offsetHeight };
+        console.log('  Initializing lastIframeDimensions:', window.lastIframeDimensions);
+        return;
+      }
+      
+      const oldWidth = window.lastIframeDimensions.width;
+      const oldHeight = window.lastIframeDimensions.height;
+      const newWidth = appFrame.offsetWidth;
+      const newHeight = appFrame.offsetHeight;
+      
+      console.log('  Iframe size change:', oldWidth + 'x' + oldHeight, '→', newWidth + 'x' + newHeight);
+      
+      if (oldWidth !== newWidth || oldHeight !== newHeight) {
+        // Calculate scaling factors
+        const scaleX = newWidth / oldWidth;
+        const scaleY = newHeight / oldHeight;
+        
+        console.log('  Scale factors: X=' + scaleX.toFixed(3) + ', Y=' + scaleY.toFixed(3));
+        
+        // Get current position
+        const currentLeft = parseInt(annotationBox.style.left);
+        const currentTop = parseInt(annotationBox.style.top);
+        const currentWidth = parseInt(annotationBox.style.width);
+        const currentHeight = parseInt(annotationBox.style.height);
+        
+        console.log('  Current position:', currentLeft + ', ' + currentTop, 'size:', currentWidth + 'x' + currentHeight);
+        
+        // Calculate new position
+        const newLeft = Math.round(currentLeft * scaleX);
+        const newTop = Math.round(currentTop * scaleY);
+        const newAnnotationWidth = Math.round(currentWidth * scaleX);
+        const newAnnotationHeight = Math.round(currentHeight * scaleY);
+        
+        console.log('  New position:', newLeft + ', ' + newTop, 'size:', newAnnotationWidth + 'x' + newAnnotationHeight);
+        
+        // Apply new position
+        annotationBox.style.left = newLeft + 'px';
+        annotationBox.style.top = newTop + 'px';
+        annotationBox.style.width = newAnnotationWidth + 'px';
+        annotationBox.style.height = newAnnotationHeight + 'px';
+        
+        console.log('🔍 WINDOW RESIZE - Annotation position updated for scale change');
+      }
+      
+      // Update stored dimensions
+      window.lastIframeDimensions = { width: newWidth, height: newHeight };
     } else {
       console.log('🔍 WINDOW RESIZE - No visible annotation box');
+      
+      // Still update dimensions for next time
+      window.lastIframeDimensions = { 
+        width: appFrame.offsetWidth, 
+        height: appFrame.offsetHeight 
+      };
     }
   });
   
-  console.log('Tutorial Creator v12.69 initialized - Added debug logging for annotation positioning bugs');
+  console.log('Tutorial Creator v12.70 initialized - Fixed annotation positioning during browser resize');
 })();
 </script>
 </body>
