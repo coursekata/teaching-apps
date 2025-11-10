@@ -20563,10 +20563,10 @@
       "text": "It could be 2.0. But it also could be a little lower or higher than that.",
       "duration": 6720,
       "position": {
-        "left": 432,
-        "top": 208,
-        "width": 341,
-        "height": 169
+        "left": 313,
+        "top": 209,
+        "width": 400,
+        "height": 129
       }
     },
     {
@@ -20575,10 +20575,10 @@
       "text": "Probably not.",
       "duration": 3260.3283671636163,
       "position": {
-        "left": 235,
-        "top": 197,
-        "width": 187,
-        "height": 140
+        "left": 178,
+        "top": 194,
+        "width": 171,
+        "height": 122
       }
     },
     {
@@ -20587,10 +20587,10 @@
       "text": "Probably not.",
       "duration": 5000,
       "position": {
-        "left": 791,
-        "top": 195,
-        "width": 188,
-        "height": 171
+        "left": 671,
+        "top": 198,
+        "width": 200,
+        "height": 131
       }
     },
     {
@@ -20623,10 +20623,10 @@
       "text": "We can build up a sampling distribution by randomly simulating multiple $b_1$s from a distribution centered at $\\beta_1=0$.",
       "duration": 5000,
       "position": {
-        "left": 700,
-        "top": 206,
-        "width": 293,
-        "height": 227
+        "left": 604,
+        "top": 189,
+        "width": 232,
+        "height": 247
       }
     },
     {
@@ -20635,17 +20635,14 @@
       "text": "Let's draw 1000 random samples from the sampling distribution of $b_1$.",
       "duration": 5000,
       "position": {
-        "left": 704,
-        "top": 230,
-        "width": 383,
-        "height": 212
+        "left": 536,
+        "top": 198,
+        "width": 367,
+        "height": 179
       }
     }
   ],
   "pauses": [
-    {
-      "timestamp": 4277
-    },
     {
       "timestamp": 23978.41447639533
     },
