@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.01</title>
+<title>Interactive Tutorial Creator - v13.02</title>
 <script>
   window.MathJax = {
     tex: {
@@ -450,6 +450,16 @@
     cursor:grabbing;
   }
   
+  .timeline-playhead.dragging{
+    z-index:10001;
+  }
+  
+  .timeline-playhead.dragging::before{
+    cursor:grabbing;
+    transform:translateX(-50%) scale(1.1);
+    box-shadow:0 4px 12px rgba(239,68,68,0.4);
+  }
+  
   .modal-overlay{
     position:fixed;
     top:0;
@@ -625,7 +635,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.01</div>
+    <div class="version-number">v13.02</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -907,6 +917,11 @@
   let annotationText = null;
   let activeRecordingAnnotation = null; // Track annotation that should remain visible during recording
   let importedDurationOffset = 0; // Offset to add to timestamps for imported tutorials
+  
+  // Playhead dragging state
+  let isDraggingPlayhead = false;
+  let playheadDragStartX = 0;
+  let playheadDragStartLeft = 0;
   
   // Calculate timeline start offset to remove blank space at beginning
   function getTimelineStartOffset() {
@@ -3777,6 +3792,70 @@
     document.removeEventListener('mouseup', stopPauseDrag);
   }
   
+  // ========== PLAYHEAD DRAGGING ==========
+  
+  function startPlayheadDrag(e) {
+    if (!currentTutorial) return;
+    
+    console.log('🖱️ Starting playhead drag');
+    isDraggingPlayhead = true;
+    playheadDragStartX = e.clientX;
+    playheadDragStartLeft = parseFloat(timelinePlayhead.style.left) || 60;
+    
+    // Add dragging class for visual feedback
+    timelinePlayhead.classList.add('dragging');
+    
+    document.addEventListener('mousemove', doPlayheadDrag);
+    document.addEventListener('mouseup', stopPlayheadDrag);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  function doPlayheadDrag(e) {
+    if (!isDraggingPlayhead || !currentTutorial) return;
+    
+    const deltaX = e.clientX - playheadDragStartX;
+    const newLeft = Math.max(60, playheadDragStartLeft + deltaX); // Minimum 60px (label offset)
+    
+    // Calculate corresponding timestamp
+    const timelineStartOffset = getTimelineStartOffset();
+    const timelinePosition = newLeft - 60; // Remove label offset
+    const timeInSeconds = timelinePosition / timelineScale;
+    const timestamp = (timeInSeconds * 1000) + timelineStartOffset;
+    
+    // Clamp to valid range
+    const maxTimestamp = currentTutorial.duration;
+    const clampedTimestamp = Math.max(0, Math.min(maxTimestamp, timestamp));
+    const clampedLeft = ((clampedTimestamp - timelineStartOffset) / 1000) * timelineScale + 60;
+    
+    // Update playhead position
+    timelinePlayhead.style.left = clampedLeft + 'px';
+    
+    console.log(`🎯 Dragging playhead to ${(clampedTimestamp / 1000).toFixed(2)}s`);
+  }
+  
+  function stopPlayheadDrag(e) {
+    if (!isDraggingPlayhead) return;
+    
+    // Remove dragging class
+    timelinePlayhead.classList.remove('dragging');
+    
+    // Calculate final timestamp
+    const newLeft = parseFloat(timelinePlayhead.style.left) || 60;
+    const timelineStartOffset = getTimelineStartOffset();
+    const timelinePosition = newLeft - 60;
+    const timeInSeconds = timelinePosition / timelineScale;
+    const timestamp = (timeInSeconds * 1000) + timelineStartOffset;
+    
+    // Replay to this timestamp
+    console.log(`🎯 Playhead drag completed, jumping to ${(timestamp / 1000).toFixed(2)}s`);
+    replayToTimestamp(timestamp);
+    
+    isDraggingPlayhead = false;
+    document.removeEventListener('mousemove', doPlayheadDrag);
+    document.removeEventListener('mouseup', stopPlayheadDrag);
+  }
+  
   // ========== EVENT TRIMMING ==========
   
   let trimmingEvent = null;
@@ -4296,7 +4375,10 @@
     console.log('  Iframe remains fixed at 1000x800px - annotations maintain exact positioning');
   });
   
-  console.log('Tutorial Creator v13.01 initialized - Fixed pause marker and playhead alignment');
+  // Add playhead drag event listener
+  timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
+  
+  console.log('Tutorial Creator v13.02 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
