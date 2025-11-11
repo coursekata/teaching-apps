@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.04</title>
+<title>Interactive Tutorial Creator - v13.05</title>
 <script>
   window.MathJax = {
     tex: {
@@ -631,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.04</div>
+    <div class="version-number">v13.05</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1607,11 +1606,15 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp based on context:
-    // - If paused during playback preview, use playback position
-    // - Otherwise use end of tutorial (normal recording behavior)
+    // Determine timestamp: use playhead position if not at end, otherwise current recording time or playback position
     let timestamp;
-    if (playbackPausedAt > 0) {
+    const currentDuration = currentTutorial.duration || 0;
+    
+    if (playbackCurrentTime && playbackCurrentTime < currentDuration) {
+      // Use playhead position when positioned somewhere other than the end
+      timestamp = playbackCurrentTime;
+      console.log('📝 Creating annotation at playhead position:', (timestamp / 1000).toFixed(2) + 's');
+    } else if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
@@ -1655,11 +1658,15 @@
   addPause.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp based on context:
-    // - If paused during playback preview, use playback position
-    // - Otherwise use end of tutorial (normal recording behavior)
+    // Determine timestamp: use playhead position if not at end, otherwise current recording time or playback position
     let timestamp;
-    if (playbackPausedAt > 0) {
+    const currentDuration = currentTutorial.duration || 0;
+    
+    if (playbackCurrentTime && playbackCurrentTime < currentDuration) {
+      // Use playhead position when positioned somewhere other than the end
+      timestamp = playbackCurrentTime;
+      console.log('⏸ Creating pause at playhead position:', (timestamp / 1000).toFixed(2) + 's');
+    } else if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
@@ -4396,7 +4403,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.04 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.05 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
