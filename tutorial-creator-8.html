@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.08</title>
+<title>Interactive Tutorial Creator - v13.09</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.08</div>
+    <div class="version-number">v13.09</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1184,11 +1184,6 @@
       appUrl.disabled = true;
       
       console.log('🔴 Recording started');
-      
-      // Hide any visible annotations when starting to record (but not if editing)
-      if (annotationBox && editingAnnotationIndex === -1) {
-        annotationBox.style.display = 'none';
-      }
     } else if (isPaused) {
       // Resume recording
       
@@ -1304,11 +1299,6 @@
       
       // Otherwise, resume active recording normally
       isPaused = false;
-      
-      // Hide any visible annotations when resuming recording (but not if editing)
-      if (annotationBox && editingAnnotationIndex === -1) {
-        annotationBox.style.display = 'none';
-      }
       
       startRecording.textContent = '⏸ Pause';
       startRecording.classList.add('recording-active');
@@ -1616,7 +1606,7 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp: use playhead position if it was repositioned, otherwise current recording time or playback position
+    // Determine timestamp: use playhead position if repositioned, otherwise existing behavior
     let timestamp;
     const currentDuration = currentTutorial.duration || 0;
     
@@ -1669,7 +1659,7 @@
   addPause.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp: use playhead position if it was repositioned, otherwise current recording time or playback position
+    // Determine timestamp: use playhead position if repositioned, otherwise existing behavior
     let timestamp;
     const currentDuration = currentTutorial.duration || 0;
     
@@ -2765,25 +2755,16 @@
       }
     }
     
-    // Only handle annotation visibility if we're not currently editing an annotation
-    if (editingAnnotationIndex === -1) {
-      // Hide all annotations first
-      if (annotationBox) {
-        annotationBox.style.display = 'none';
-      }
+    // Simple annotation visibility: show annotation if one should be visible at this time
+    if (annotationBox && currentTutorial.annotations) {
+      annotationBox.style.display = 'none'; // Hide first
       
-      // Show annotations that should be visible at this timestamp (only during playback/preview)
-      if (!isPaused || playbackPausedAt > 0) {
-        for (let i = 0; i < currentTutorial.annotations.length; i++) {
-          const annotation = currentTutorial.annotations[i];
-          const annotationStart = annotation.timestamp;
-          const annotationEnd = annotation.timestamp + annotation.duration;
-          
-          if (timestamp >= annotationStart && timestamp < annotationEnd) {
-            // This annotation should be visible
-            showAnnotationForPositioning(annotation, i);
-            break; // Only show one annotation at a time
-          }
+      // Show annotation that should be visible at this timestamp
+      for (let i = 0; i < currentTutorial.annotations.length; i++) {
+        const annotation = currentTutorial.annotations[i];
+        if (timestamp >= annotation.timestamp && timestamp < annotation.timestamp + annotation.duration) {
+          showAnnotationForPositioning(annotation, i);
+          break; // Only show one annotation at a time
         }
       }
     }
@@ -3887,29 +3868,6 @@
     // Update playhead position
     timelinePlayhead.style.left = clampedLeft + 'px';
     
-    // Only handle annotation visibility if we're not currently editing an annotation
-    if (editingAnnotationIndex === -1) {
-      // Hide all annotations first
-      if (annotationBox) {
-        annotationBox.style.display = 'none';
-      }
-      
-      // Show annotation that should be visible at this timestamp (only during playback/preview)
-      if (!isPaused || playbackPausedAt > 0) {
-        for (let i = 0; i < currentTutorial.annotations.length; i++) {
-          const annotation = currentTutorial.annotations[i];
-          const annotationStart = annotation.timestamp;
-          const annotationEnd = annotation.timestamp + annotation.duration;
-          
-          if (clampedTimestamp >= annotationStart && clampedTimestamp < annotationEnd) {
-            // This annotation should be visible
-            showAnnotationForPositioning(annotation, i);
-            break; // Only show one annotation at a time
-          }
-        }
-      }
-    }
-    
     console.log(`🎯 Dragging playhead to ${(clampedTimestamp / 1000).toFixed(2)}s`);
   }
   
@@ -4461,7 +4419,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.08 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.09 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
