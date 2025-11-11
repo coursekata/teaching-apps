@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.06</title>
+<title>Interactive Tutorial Creator - v13.07</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.06</div>
+    <div class="version-number">v13.07</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2758,6 +2758,31 @@
       }
     }
     
+    // Handle annotations - show any that should be visible at this timestamp
+    let annotationShowing = false;
+    for (let i = 0; i < currentTutorial.annotations.length; i++) {
+      const ann = currentTutorial.annotations[i];
+      const annStart = ann.timestamp;
+      const annEnd = ann.timestamp + ann.duration;
+      
+      // Check if annotation should be visible at target time
+      if (timestamp >= annStart && timestamp <= annEnd) {
+        annotationShowing = true;
+        console.log(`📍 Showing annotation "${ann.title}" at replayed timestamp ${(timestamp / 1000).toFixed(2)}s`);
+        showAnnotation(ann);
+        currentAnnotationIndex = i;
+        break; // Only show one annotation at a time
+      }
+    }
+    
+    // Hide annotation if none should be visible
+    if (!annotationShowing) {
+      if (annotationBox) {
+        annotationBox.classList.remove('visible');
+      }
+      currentAnnotationIndex = -1;
+    }
+    
     console.log('⏭️ Replayed events up to', (timestamp / 1000).toFixed(2) + 's');
   }
   
@@ -4408,7 +4433,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.06 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.07 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
