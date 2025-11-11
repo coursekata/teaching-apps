@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.08</title>
+<title>Interactive Tutorial Creator - v13.09</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.08</div>
+    <div class="version-number">v13.09</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1098,7 +1098,13 @@
       
       // Check if playhead is positioned away from the end
       // This happens when user dragged playhead or is paused during playback
+      console.log('🎯 Record clicked - Debug values:');
+      console.log('  playheadRepositionedTo:', playheadRepositionedTo);
+      console.log('  playbackPausedAt:', playbackPausedAt);
+      console.log('  currentTutorial exists:', !!currentTutorial);
+      
       const isPlayheadRepositioned = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
+      console.log('  isPlayheadRepositioned:', isPlayheadRepositioned);
       
       if (isPlayheadRepositioned && currentTutorial) {
         // First click: Move playhead to end, change button text
@@ -1108,16 +1114,13 @@
         const timelineStartOffset = getTimelineStartOffset();
         const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
         
         // Reset position tracking
         playheadRepositionedTo = -1;
         playbackPausedAt = 0;
         
-        // Change button to indicate next click will record
-        startRecording.textContent = '⏺ Record';
-        startRecording.title = 'Click again to start recording';
-        
-        // Replay to end state
+        // Replay to end state to update app visual state
         replayToTimestamp(currentTutorial.duration);
         
         console.log('🎯 Playhead moved to end - click Record again to start recording');
@@ -4461,7 +4464,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.08 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.09 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
