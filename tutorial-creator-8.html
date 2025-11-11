@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.11</title>
+<title>Interactive Tutorial Creator - v13.12</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.11</div>
+    <div class="version-number">v13.12</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1251,6 +1251,56 @@
       
       // Check if we're resuming from a playback pause
       const isResumingFromPlaybackPause = (playbackPausedAt > 0 || isPlaying);
+      
+      // NEW: Check if playhead was repositioned and we need two-step Record behavior
+      // Use a dedicated flag that doesn't get reset by replay logic
+      if (!window.recordButtonRepositioned && (playheadRepositionedTo >= 0 || isResumingFromPlaybackPause)) {
+        // First click: Move playhead to end, set flag for next click
+        console.log('🎯 Record (resume): Moving playhead to end of tutorial first');
+        
+        // Calculate end position  
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        // Add pixel adjustments for final element type
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
+          
+          // Check if annotation or pause extends past last snapshot
+          let snapshotIsLastElement = true;
+          if (currentTutorial.annotations.length > 0) {
+            const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
+            if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
+            const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
+            if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
+          }
+          
+          if (lastIsSingleEvent && snapshotIsLastElement) {
+            timelineEndPosition += 50;
+          }
+        }
+        
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        timelinePlayhead.style.display = 'block';
+        
+        // Replay to end state
+        replayToTimestamp(currentTutorial.duration);
+        
+        // Reset repositioning tracking and set flag for next click
+        playheadRepositionedTo = -1;
+        playbackPausedAt = 0;
+        window.recordButtonRepositioned = true;
+        
+        console.log('🎯 Playhead moved to end - click Record again to resume recording');
+        return; // Exit early, don't resume recording yet
+      }
+      
+      // Reset the flag since we're proceeding with recording
+      window.recordButtonRepositioned = false;
       
       // Ensure iframe is interactive (remove playback mode if it was left on)
       appFrame.classList.remove('playback-mode');
@@ -4495,7 +4545,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.11 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.12 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
