@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.05</title>
+<title>Interactive Tutorial Creator - v13.04</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +631,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.05</div>
+    <div class="version-number">v13.04</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -918,7 +919,6 @@
   let playheadDragStartX = 0;
   let playheadDragStartLeft = 0;
   let playheadRepositionedTo = -1;
-  let waitingForSecondRecordClick = false; // Track if we're in two-step recording mode
   
   // Calculate timeline start offset to remove blank space at beginning
   function getTimelineStartOffset() {
@@ -1186,144 +1186,25 @@
       
       console.log('🔴 Recording started');
     } else if (isPaused) {
-      // Resume recording - check for two-step recording process
+      // Resume recording
       
-      // If playhead was repositioned, implement two-step process
-      if (playheadRepositionedTo >= 0 && !waitingForSecondRecordClick) {
-        // FIRST STEP: Move playhead to end and wait for second click
-        console.log('🎯 First record click after playhead repositioning - moving to end of timeline');
+      // Check if we're resuming from a playback pause
+      const isResumingFromPlaybackPause = (playbackPausedAt > 0 || isPlaying);
+      
+      // Ensure iframe is interactive (remove playback mode if it was left on)
+      appFrame.classList.remove('playback-mode');
+      appFrame.style.pointerEvents = 'auto';
+      
+      // Move playhead to end of tutorial before resuming
+      if (currentTutorial) {
+        const timelineStartOffset = getTimelineStartOffset();
+        let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
         
-        // Check if we're resuming from a playback pause
-        const isResumingFromPlaybackPause = (playbackPausedAt > 0 || isPlaying);
-        
-        // Ensure iframe is interactive (remove playback mode if it was left on)
-        appFrame.classList.remove('playback-mode');
-        appFrame.style.pointerEvents = 'auto';
-        
-        // Move playhead to end of tutorial 
-        if (currentTutorial) {
-          const timelineStartOffset = getTimelineStartOffset();
-          let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
-          
-          // Add pixel adjustments based on final element type (using current timelineScale)
-          if (currentTutorial.snapshots.length > 0) {
-            const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-            const action = lastSnapshot.event.action;
-            const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
-            
-            // Check if annotation or pause extends past last snapshot
-            let snapshotIsLastElement = true;
-            if (currentTutorial.annotations.length > 0) {
-              const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-              if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
-            }
-            if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
-              const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-              if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
-            }
-            
-            // Add pixel adjustment for single events
-            // Empirically determined: 50px needed
-            if (lastIsSingleEvent && snapshotIsLastElement) {
-              timelineEndPosition += 50;
-            }
-          }
-          
-          // Check if pause is the final element
-          if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
-            const lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-            let pauseIsLastElement = true;
-            
-            if (currentTutorial.snapshots.length > 0) {
-              const lastSnapshotTime = currentTutorial.snapshots[currentTutorial.snapshots.length - 1].timestamp;
-              if (lastSnapshotTime > lastPauseTime) pauseIsLastElement = false;
-            }
-            if (currentTutorial.annotations.length > 0) {
-              const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-              if (lastAnnEnd > lastPauseTime) pauseIsLastElement = false;
-            }
-            
-            // Add pixel adjustment for pause to reach center
-            // Empirically determined: 26px needed
-            if (pauseIsLastElement) {
-              timelineEndPosition += 26;
-            }
-          }
-          
-          timelinePlayhead.style.left = timelineEndPosition + 'px';
-          timelinePlayhead.style.display = 'block';
-          
-          // Apply the last snapshot's state so visual state matches the end
-          const api = getAPI();
-          if (api && currentTutorial.snapshots.length > 0) {
-            const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-            api.setState(lastSnapshot.state);
-          }
-          
-          // Reset time calculations so new events start at current duration
-          // This prevents gaps from preview time being added to timestamps
-          recordingStartTime = Date.now();
-          totalPausedTime = 0;
-          importedDurationOffset = currentTutorial.duration;
-          
-          // Clear playhead repositioning and set flag for second click
-          playheadRepositionedTo = -1;
-          waitingForSecondRecordClick = true;
-        }
-        
-        // Update button to show it's ready for second click
-        startRecording.textContent = '⏺ Record (Click to Start)';
-        startRecording.title = 'Click again to start recording from the end of timeline';
-        
-        console.log('🎯 Ready for second record click to actually start recording');
-        return; // Exit without starting recording yet
-        
-      } else if (waitingForSecondRecordClick) {
-        // SECOND STEP: Actually start recording
-        console.log('🎯 Second record click - starting actual recording from end of timeline');
-        waitingForSecondRecordClick = false;
-        
-        // Continue with normal recording resume process...
-      } else {
-        // NORMAL RESUME: No playhead repositioning, proceed normally  
-        console.log('🎯 Normal recording resume');
-        
-        // Check if we're resuming from a playback pause
-        const isResumingFromPlaybackPause = (playbackPausedAt > 0 || isPlaying);
-        
-        // Ensure iframe is interactive (remove playback mode if it was left on)
-        appFrame.classList.remove('playback-mode');
-        appFrame.style.pointerEvents = 'auto';
-        
-        // Move playhead to end of tutorial before resuming
-        if (currentTutorial) {
-          // Always move playhead to end of tutorial (no more repositioning for recording)
-          const timelineStartOffset = getTimelineStartOffset();
-          let timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
-          
-          // Add pixel adjustments based on final element type (using current timelineScale)
-          if (currentTutorial.snapshots.length > 0) {
-            const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
-            const action = lastSnapshot.event.action;
-            const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
-            
-            // Check if annotation or pause extends past last snapshot
-            let snapshotIsLastElement = true;
-            if (currentTutorial.annotations.length > 0) {
-              const lastAnnEnd = Math.max(...currentTutorial.annotations.map(ann => ann.timestamp + ann.duration));
-              if (lastAnnEnd > lastSnapshot.timestamp) snapshotIsLastElement = false;
-            }
-            if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
-              const lastPause = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-              if (lastPause > lastSnapshot.timestamp) snapshotIsLastElement = false;
-            }
-            
-            // Add pixel adjustment for single events
-            // Empirically determined: 50px needed
-            if (lastIsSingleEvent && snapshotIsLastElement) {
-              timelineEndPosition += 50;
-            }
-          }
+        // Add pixel adjustments based on final element type (using current timelineScale)
+        if (currentTutorial.snapshots.length > 0) {
+          const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+          const action = lastSnapshot.event.action;
+          const lastIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
           
           // Check if annotation or pause extends past last snapshot
           let snapshotIsLastElement = true;
@@ -1727,15 +1608,10 @@
     if (!isPaused && playbackPausedAt === 0) return;
     
     // Determine timestamp based on context:
-    // - If playhead was repositioned, use that position
-    // - If paused during playback preview, use playback position  
+    // - If paused during playback preview, use playback position
     // - Otherwise use end of tutorial (normal recording behavior)
     let timestamp;
-    if (playheadRepositionedTo >= 0) {
-      // Use repositioned playhead position
-      timestamp = playheadRepositionedTo;
-      console.log('📝 Creating annotation at repositioned playhead position:', (timestamp / 1000).toFixed(2) + 's');
-    } else if (playbackPausedAt > 0) {
+    if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
@@ -1780,15 +1656,10 @@
     if (!isPaused && playbackPausedAt === 0) return;
     
     // Determine timestamp based on context:
-    // - If playhead was repositioned, use that position
     // - If paused during playback preview, use playback position
     // - Otherwise use end of tutorial (normal recording behavior)
     let timestamp;
-    if (playheadRepositionedTo >= 0) {
-      // Use repositioned playhead position
-      timestamp = playheadRepositionedTo;
-      console.log('⏸ Creating pause at repositioned playhead position:', (timestamp / 1000).toFixed(2) + 's');
-    } else if (playbackPausedAt > 0) {
+    if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
@@ -3998,32 +3869,6 @@
     // Replay to this timestamp to update visual state
     replayToTimestamp(timestamp);
     
-    // Check if any annotation should be visible at this timestamp
-    if (currentTutorial && currentTutorial.annotations && annotationBox) {
-      let foundAnnotation = false;
-      for (let i = 0; i < currentTutorial.annotations.length; i++) {
-        const ann = currentTutorial.annotations[i];
-        const annStart = ann.timestamp;
-        const annEnd = ann.timestamp + ann.duration;
-        
-        // Check if repositioned timestamp falls within annotation time range
-        if (timestamp >= annStart && timestamp <= annEnd) {
-          console.log(`📍 Showing annotation "${ann.title}" at repositioned time ${(timestamp / 1000).toFixed(2)}s`);
-          showAnnotation(ann);
-          currentAnnotationIndex = i;
-          foundAnnotation = true;
-          break; // Show only the first matching annotation
-        }
-      }
-      
-      // Hide annotation if repositioned timestamp is not within any annotation
-      if (!foundAnnotation && annotationBox.classList.contains('visible')) {
-        annotationBox.classList.remove('visible');
-        currentAnnotationIndex = -1;
-        console.log('📍 No annotation at repositioned time - hiding annotation');
-      }
-    }
-    
     isDraggingPlayhead = false;
     document.removeEventListener('mousemove', doPlayheadDrag);
     document.removeEventListener('mouseup', stopPlayheadDrag);
@@ -4551,7 +4396,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.05 initialized - Fixed playhead dragging bugs');
+  console.log('Tutorial Creator v13.04 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
