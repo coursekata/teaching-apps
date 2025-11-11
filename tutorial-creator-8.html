@@ -1606,13 +1606,14 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp: use playhead position if not at end, otherwise current recording time or playback position
+    // Determine timestamp: use playhead position if it was repositioned, otherwise current recording time or playback position
     let timestamp;
     const currentDuration = currentTutorial.duration || 0;
     
-    if (playbackCurrentTime && playbackCurrentTime < currentDuration) {
-      // Use playhead position when positioned somewhere other than the end
-      timestamp = playbackCurrentTime;
+    if (playheadRepositionedTo >= 0 && playheadRepositionedTo < currentDuration) {
+      // Use playhead position when it was repositioned somewhere other than the end
+      timestamp = playheadRepositionedTo;
+      playheadRepositionedTo = -1; // Reset after using
       console.log('📝 Creating annotation at playhead position:', (timestamp / 1000).toFixed(2) + 's');
     } else if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
@@ -1658,13 +1659,14 @@
   addPause.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp: use playhead position if not at end, otherwise current recording time or playback position
+    // Determine timestamp: use playhead position if it was repositioned, otherwise current recording time or playback position
     let timestamp;
     const currentDuration = currentTutorial.duration || 0;
     
-    if (playbackCurrentTime && playbackCurrentTime < currentDuration) {
-      // Use playhead position when positioned somewhere other than the end
-      timestamp = playbackCurrentTime;
+    if (playheadRepositionedTo >= 0 && playheadRepositionedTo < currentDuration) {
+      // Use playhead position when it was repositioned somewhere other than the end
+      timestamp = playheadRepositionedTo;
+      playheadRepositionedTo = -1; // Reset after using
       console.log('⏸ Creating pause at playhead position:', (timestamp / 1000).toFixed(2) + 's');
     } else if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
