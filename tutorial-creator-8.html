@@ -1,9 +1,9 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.09</title>
+<title>Interactive Tutorial Creator - v13.11</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.09</div>
+    <div class="version-number">v13.11</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1084,7 +1084,7 @@
   
   startRecording.addEventListener('click', () => {
     if (!isRecording) {
-      // Starting a new recording
+      // Starting a new recording OR resuming from preview mode
       if (!apiReady) {
         alert('App not ready');
         return;
@@ -1097,16 +1097,21 @@
       }
       
       // Check if playhead is positioned away from the end
-      // This happens when user dragged playhead or is paused during playback
+      // This can happen in two scenarios:
+      // 1. Dragged playhead during preview (playheadRepositionedTo >= 0)  
+      // 2. Paused during playback preview (playbackPausedAt > 0)
+      // 3. We have an existing tutorial from preview mode
       console.log('🎯 Record clicked - Debug values:');
       console.log('  playheadRepositionedTo:', playheadRepositionedTo);
       console.log('  playbackPausedAt:', playbackPausedAt);
       console.log('  currentTutorial exists:', !!currentTutorial);
+      console.log('  isPreviewingFromPaused:', isPreviewingFromPaused);
       
+      const hasExistingTutorial = !!currentTutorial;
       const isPlayheadRepositioned = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
       console.log('  isPlayheadRepositioned:', isPlayheadRepositioned);
       
-      if (isPlayheadRepositioned && currentTutorial) {
+      if ((isPlayheadRepositioned || hasExistingTutorial) && currentTutorial) {
         // First click: Move playhead to end, change button text
         console.log('🎯 Record: Moving playhead to end of tutorial first');
         
@@ -1122,6 +1127,32 @@
         
         // Replay to end state to update app visual state
         replayToTimestamp(currentTutorial.duration);
+        
+        // Set up for recording continuation (not new recording)
+        isRecording = true;
+        isPaused = true; // Start in paused state
+        recordingStartTime = Date.now(); // Reset timing
+        totalPausedTime = 0;
+        pauseStartTime = Date.now();
+        importedDurationOffset = currentTutorial.duration || 0; // Continue from where tutorial left off
+        
+        // Set up event listener for when recording resumes
+        if (eventListener) {
+          api.offAction(eventListener); // Remove old listener
+        }
+        eventListener = (event) => {
+          if (isPaused) return;
+          
+          const timestamp = Date.now() - recordingStartTime - totalPausedTime + importedDurationOffset;
+          const snapshot = {
+            timestamp: timestamp,
+            event: event,
+            state: api.getState()
+          };
+          currentTutorial.snapshots.push(snapshot);
+          renderTimeline();
+        };
+        api.onAction(eventListener);
         
         console.log('🎯 Playhead moved to end - click Record again to start recording');
         return; // Exit early, don't start recording yet
@@ -4464,7 +4495,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.09 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.11 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
