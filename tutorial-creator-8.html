@@ -1,9 +1,11 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.10</title>
+<title>Interactive Tutorial Creator - v13.04</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.10</div>
+    <div class="version-number">v13.04</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1606,16 +1608,11 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp: use playhead position if repositioned, otherwise existing behavior
+    // Determine timestamp based on context:
+    // - If paused during playback preview, use playback position
+    // - Otherwise use end of tutorial (normal recording behavior)
     let timestamp;
-    const currentDuration = currentTutorial.duration || 0;
-    
-    if (playheadRepositionedTo >= 0 && playheadRepositionedTo < currentDuration) {
-      // Use playhead position when it was repositioned somewhere other than the end
-      timestamp = playheadRepositionedTo;
-      playheadRepositionedTo = -1; // Reset after using
-      console.log('📝 Creating annotation at playhead position:', (timestamp / 1000).toFixed(2) + 's');
-    } else if (playbackPausedAt > 0) {
+    if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
@@ -1659,16 +1656,11 @@
   addPause.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp: use playhead position if repositioned, otherwise existing behavior
+    // Determine timestamp based on context:
+    // - If paused during playback preview, use playback position
+    // - Otherwise use end of tutorial (normal recording behavior)
     let timestamp;
-    const currentDuration = currentTutorial.duration || 0;
-    
-    if (playheadRepositionedTo >= 0 && playheadRepositionedTo < currentDuration) {
-      // Use playhead position when it was repositioned somewhere other than the end
-      timestamp = playheadRepositionedTo;
-      playheadRepositionedTo = -1; // Reset after using
-      console.log('⏸ Creating pause at playhead position:', (timestamp / 1000).toFixed(2) + 's');
-    } else if (playbackPausedAt > 0) {
+    if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
       console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
@@ -2752,21 +2744,6 @@
         api.setState(snapshot.state);
       } else {
         break; // Past our target time, stop
-      }
-    }
-    
-    // Show annotation if one should be visible at this time (for viewing, not editing)
-    if (annotationBox && currentTutorial.annotations) {
-      annotationBox.style.display = 'none'; // Hide first
-      
-      // Find annotation that should be visible at this timestamp
-      for (let i = 0; i < currentTutorial.annotations.length; i++) {
-        const annotation = currentTutorial.annotations[i];
-        if (timestamp >= annotation.timestamp && timestamp < annotation.timestamp + annotation.duration) {
-          // Use the playback viewing function, not the editing function
-          showAnnotation(annotation);
-          break; // Only show one annotation at a time
-        }
       }
     }
     
@@ -4420,7 +4397,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.10 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.04 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
