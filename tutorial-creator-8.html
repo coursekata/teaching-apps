@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.07</title>
+<title>Interactive Tutorial Creator - v13.08</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.07</div>
+    <div class="version-number">v13.08</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1185,8 +1185,8 @@
       
       console.log('🔴 Recording started');
       
-      // Hide any visible annotations when starting to record
-      if (annotationBox) {
+      // Hide any visible annotations when starting to record (but not if editing)
+      if (annotationBox && editingAnnotationIndex === -1) {
         annotationBox.style.display = 'none';
       }
     } else if (isPaused) {
@@ -1305,8 +1305,8 @@
       // Otherwise, resume active recording normally
       isPaused = false;
       
-      // Hide any visible annotations when resuming recording
-      if (annotationBox) {
+      // Hide any visible annotations when resuming recording (but not if editing)
+      if (annotationBox && editingAnnotationIndex === -1) {
         annotationBox.style.display = 'none';
       }
       
@@ -2765,22 +2765,26 @@
       }
     }
     
-    // Show/hide annotations based on current timestamp
-    // Hide all annotations first
-    if (annotationBox) {
-      annotationBox.style.display = 'none';
-    }
-    
-    // Show annotations that should be visible at this timestamp
-    for (let i = 0; i < currentTutorial.annotations.length; i++) {
-      const annotation = currentTutorial.annotations[i];
-      const annotationStart = annotation.timestamp;
-      const annotationEnd = annotation.timestamp + annotation.duration;
+    // Only handle annotation visibility if we're not currently editing an annotation
+    if (editingAnnotationIndex === -1) {
+      // Hide all annotations first
+      if (annotationBox) {
+        annotationBox.style.display = 'none';
+      }
       
-      if (timestamp >= annotationStart && timestamp < annotationEnd) {
-        // This annotation should be visible
-        showAnnotationForPositioning(annotation, i);
-        break; // Only show one annotation at a time
+      // Show annotations that should be visible at this timestamp (only during playback/preview)
+      if (!isPaused || playbackPausedAt > 0) {
+        for (let i = 0; i < currentTutorial.annotations.length; i++) {
+          const annotation = currentTutorial.annotations[i];
+          const annotationStart = annotation.timestamp;
+          const annotationEnd = annotation.timestamp + annotation.duration;
+          
+          if (timestamp >= annotationStart && timestamp < annotationEnd) {
+            // This annotation should be visible
+            showAnnotationForPositioning(annotation, i);
+            break; // Only show one annotation at a time
+          }
+        }
       }
     }
     
@@ -3883,22 +3887,26 @@
     // Update playhead position
     timelinePlayhead.style.left = clampedLeft + 'px';
     
-    // Update annotations in real-time during drag
-    // Hide all annotations first
-    if (annotationBox) {
-      annotationBox.style.display = 'none';
-    }
-    
-    // Show annotation that should be visible at this timestamp
-    for (let i = 0; i < currentTutorial.annotations.length; i++) {
-      const annotation = currentTutorial.annotations[i];
-      const annotationStart = annotation.timestamp;
-      const annotationEnd = annotation.timestamp + annotation.duration;
+    // Only handle annotation visibility if we're not currently editing an annotation
+    if (editingAnnotationIndex === -1) {
+      // Hide all annotations first
+      if (annotationBox) {
+        annotationBox.style.display = 'none';
+      }
       
-      if (clampedTimestamp >= annotationStart && clampedTimestamp < annotationEnd) {
-        // This annotation should be visible
-        showAnnotationForPositioning(annotation, i);
-        break; // Only show one annotation at a time
+      // Show annotation that should be visible at this timestamp (only during playback/preview)
+      if (!isPaused || playbackPausedAt > 0) {
+        for (let i = 0; i < currentTutorial.annotations.length; i++) {
+          const annotation = currentTutorial.annotations[i];
+          const annotationStart = annotation.timestamp;
+          const annotationEnd = annotation.timestamp + annotation.duration;
+          
+          if (clampedTimestamp >= annotationStart && clampedTimestamp < annotationEnd) {
+            // This annotation should be visible
+            showAnnotationForPositioning(annotation, i);
+            break; // Only show one annotation at a time
+          }
+        }
       }
     }
     
@@ -4453,7 +4461,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.07 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.08 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
