@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.09</title>
+<title>Interactive Tutorial Creator - v13.10</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.09</div>
+    <div class="version-number">v13.10</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2755,15 +2755,16 @@
       }
     }
     
-    // Simple annotation visibility: show annotation if one should be visible at this time
+    // Show annotation if one should be visible at this time (for viewing, not editing)
     if (annotationBox && currentTutorial.annotations) {
       annotationBox.style.display = 'none'; // Hide first
       
-      // Show annotation that should be visible at this timestamp
+      // Find annotation that should be visible at this timestamp
       for (let i = 0; i < currentTutorial.annotations.length; i++) {
         const annotation = currentTutorial.annotations[i];
         if (timestamp >= annotation.timestamp && timestamp < annotation.timestamp + annotation.duration) {
-          showAnnotationForPositioning(annotation, i);
+          // Use the playback viewing function, not the editing function
+          showAnnotation(annotation);
           break; // Only show one annotation at a time
         }
       }
@@ -4419,7 +4420,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.09 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.10 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
