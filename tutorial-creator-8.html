@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.13</title>
+<title>Interactive Tutorial Creator - v13.14</title>
 <script>
   window.MathJax = {
     tex: {
@@ -405,7 +405,7 @@
     width:12px;
     height:12px;
     background:#f59e0b;
-    transform:translateY(-50%) rotate(45deg);
+    transform:translateY(-50%) translateX(-50%) rotate(45deg);
     cursor:move;
     z-index:3;
     box-shadow:0 2px 4px rgba(245,158,11,0.4);
@@ -415,7 +415,7 @@
   .timeline-pause:hover{
     background:#d97706;
     box-shadow:0 3px 6px rgba(245,158,11,0.5);
-    transform:translateY(-50%) rotate(45deg) scale(1.15);
+    transform:translateY(-50%) translateX(-50%) rotate(45deg) scale(1.15);
   }
   
   .timeline-playhead{
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.13</div>
+    <div class="version-number">v13.14</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1820,7 +1820,7 @@
       console.log('  pauseTime (relative to timeline) =', pauseTime.toFixed(3), 's');
       console.log('  timelineScale =', timelineScale.toFixed(2), 'px/s');
       console.log('  pauseLeft (calculated) =', pauseLeft.toFixed(2), 'px');
-      console.log('  pauseEl.style.left will be:', (pauseLeft - 6).toFixed(2), 'px (centered)');
+      console.log('  pauseEl.style.left will be:', pauseLeft.toFixed(2), 'px (CSS centers with translateX(-50%))');
     } else {
       // Normal paused recording - use end of tutorial
       timestamp = currentTutorial.duration || 0;
@@ -2555,11 +2555,11 @@
           playbackLoop.triggeredPauses.add(pauseKey);
           console.log('⏸ Pause reached at', (pause.timestamp / 1000).toFixed(2) + 's - pausing playback');
           
-          // Position playhead at pause marker center (with same -6px offset as pause marker)
+          // Position playhead at pause marker center
           const timelineStartOffset = getTimelineStartOffset();
           const pauseTimelinePosition = ((pause.timestamp - timelineStartOffset) / 1000) * timelineScale + 60;
-          timelinePlayhead.style.left = (pauseTimelinePosition - 6) + 'px'; // Match pause marker centering
-          console.log('📍 Positioned playhead at pause marker center:', (pauseTimelinePosition - 6) + 'px');
+          timelinePlayhead.style.left = pauseTimelinePosition + 'px'; // Match pause marker positioning
+          console.log('📍 Positioned playhead at pause marker center:', pauseTimelinePosition + 'px');
           
           // Check if this pause is the final element (no snapshots or annotations after it)
           let pauseIsFinalElement = true;
@@ -3145,7 +3145,8 @@
         
         const pauseEl = document.createElement('div');
         pauseEl.className = 'timeline-pause';
-        pauseEl.style.left = (pauseLeft - 6) + 'px'; // Center the diamond (12px wide / 2 = 6px offset)
+        // Position pause diamond: timeline position (no need for -6px since diamond is centered via CSS)
+        pauseEl.style.left = pauseLeft + 'px';
         pauseEl.title = `Pause at ${pauseTime.toFixed(2)}s - Double-click to delete`;
         pauseEl.dataset.pauseIdx = i;
         
@@ -4558,7 +4559,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.13 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.14 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
