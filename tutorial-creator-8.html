@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.07</title>
+<title>Interactive Tutorial Creator - v13.08</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.07</div>
+    <div class="version-number">v13.08</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1084,7 +1084,7 @@
   
   startRecording.addEventListener('click', () => {
     if (!isRecording) {
-      // Start recording
+      // Starting a new recording
       if (!apiReady) {
         alert('App not ready');
         return;
@@ -1094,6 +1094,34 @@
       if (!api) {
         alert('App not ready');
         return;
+      }
+      
+      // Check if playhead is positioned away from the end
+      // This happens when user dragged playhead or is paused during playback
+      const isPlayheadRepositioned = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
+      
+      if (isPlayheadRepositioned && currentTutorial) {
+        // First click: Move playhead to end, change button text
+        console.log('🎯 Record: Moving playhead to end of tutorial first');
+        
+        // Calculate end position
+        const timelineStartOffset = getTimelineStartOffset();
+        const timelineEndPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        timelinePlayhead.style.left = timelineEndPosition + 'px';
+        
+        // Reset position tracking
+        playheadRepositionedTo = -1;
+        playbackPausedAt = 0;
+        
+        // Change button to indicate next click will record
+        startRecording.textContent = '⏺ Record';
+        startRecording.title = 'Click again to start recording';
+        
+        // Replay to end state
+        replayToTimestamp(currentTutorial.duration);
+        
+        console.log('🎯 Playhead moved to end - click Record again to start recording');
+        return; // Exit early, don't start recording yet
       }
       
       // Initialize tutorial
@@ -4433,7 +4461,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.07 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.08 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
