@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.18-experimental</title>
+<title>Interactive Tutorial Creator - v13.19</title>
 <script>
   window.MathJax = {
     tex: {
@@ -407,15 +407,17 @@
     background:#f59e0b;
     transform:translateY(-50%) rotate(45deg);
     cursor:move;
-    z-index:3;
+    z-index:10;
     box-shadow:0 2px 4px rgba(245,158,11,0.4);
     border:1px solid rgba(255,255,255,0.3);
+    pointer-events:auto;
   }
   
   .timeline-pause:hover{
     background:#d97706;
     box-shadow:0 3px 6px rgba(245,158,11,0.5);
     transform:translateY(-50%) rotate(45deg) scale(1.15);
+    z-index:11;
   }
   
   .timeline-playhead{
@@ -630,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.18-experimental</div>
+    <div class="version-number">v13.19</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3188,7 +3190,9 @@
         
         // Double-click to delete
         pauseEl.addEventListener('dblclick', (e) => {
+          console.log('🖱️ PAUSE DOUBLE-CLICK DETECTED - pauseIdx:', pauseIdx);
           e.stopPropagation();
+          e.preventDefault();
           const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
           console.log('🖱️ Double-clicked pause for deletion:', { pauseIdx, pauseTime });
           
@@ -3199,6 +3203,9 @@
         
         // Make pause draggable
         pauseEl.addEventListener('mousedown', (e) => {
+          console.log('🖱️ PAUSE MOUSEDOWN DETECTED - pauseIdx:', pauseIdx);
+          e.stopPropagation();
+          e.preventDefault();
           const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
           startPauseDrag(e, pauseIdx);
         });
@@ -3987,6 +3994,10 @@
   let draggingPause = null;
   
   function startPauseDrag(e, index) {
+    console.log('🖱️ startPauseDrag called with index:', index);
+    console.log('  currentTutorial.pauses.length:', currentTutorial.pauses.length);
+    console.log('  pause data:', currentTutorial.pauses[index]);
+    
     draggingPause = {
       index: index,
       startX: e.clientX,
@@ -3996,6 +4007,10 @@
     
     document.addEventListener('mousemove', doPauseDrag);
     document.addEventListener('mouseup', stopPauseDrag);
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🖱️ Pause drag listeners added');
   }
   
   function doPauseDrag(e) {
@@ -4008,6 +4023,9 @@
       return;
     }
     
+    if (!draggingPause.hasMoved) {
+      console.log('🖱️ Starting pause drag movement');
+    }
     draggingPause.hasMoved = true;
     
     const dt = (dx / timelineScale) * 1000;
@@ -4015,11 +4033,14 @@
     let newTime = Math.max(0, draggingPause.startTime + dt);
     newTime = Math.min(newTime, currentTutorial.duration);
     
+    console.log(`🖱️ Dragging pause: dx=${dx}px, dt=${dt}ms, newTime=${(newTime/1000).toFixed(2)}s`);
+    
     currentTutorial.pauses[draggingPause.index].timestamp = newTime;
     renderTimeline();
   }
   
   function stopPauseDrag() {
+    console.log('🖱️ stopPauseDrag called, hasMoved:', draggingPause ? draggingPause.hasMoved : 'no draggingPause');
     draggingPause = null;
     document.removeEventListener('mousemove', doPauseDrag);
     document.removeEventListener('mouseup', stopPauseDrag);
@@ -4621,7 +4642,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.18-experimental initialized - Experimental pause positioning fix');
+  console.log('Tutorial Creator v13.19 initialized - Fixed pause positioning and interaction');
 })();
 </script>
 </body>
