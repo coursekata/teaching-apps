@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.14</title>
+<title>Interactive Tutorial Creator - v13.16</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.14</div>
+    <div class="version-number">v13.16</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1787,6 +1787,23 @@
   addPause.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
+    // ENHANCED DEBUG: Track all coordinate calculations
+    console.log('⏸ === ADD PAUSE DEBUG START ===');
+    
+    // Current playhead position
+    const currentPlayheadLeft = parseFloat(timelinePlayhead.style.left) || 60;
+    const playheadRect = timelinePlayhead.getBoundingClientRect();
+    const containerRect = timelineContainer.getBoundingClientRect();
+    const playheadScreenPos = playheadRect.left - containerRect.left;
+    
+    console.log('  Current playhead CSS left:', currentPlayheadLeft + 'px');
+    console.log('  Current playhead screen position (container-relative):', playheadScreenPos.toFixed(2) + 'px');
+    
+    // Timeline parameters
+    const timelineStartOffset = getTimelineStartOffset();
+    console.log('  timelineStartOffset:', (timelineStartOffset / 1000).toFixed(3) + 's');
+    console.log('  timelineScale:', timelineScale.toFixed(2) + 'px/s');
+    
     // Determine timestamp based on context (priority order):
     // 1. If playhead was dragged while paused, use that position
     // 2. If paused during playback preview, use playback position
@@ -1795,36 +1812,27 @@
     if (playheadRepositionedTo >= 0) {
       // Playhead was dragged to a specific position while paused
       timestamp = playheadRepositionedTo;
-      console.log('⏸ Creating pause at dragged playhead position:', (timestamp / 1000).toFixed(2) + 's');
+      console.log('  Using playheadRepositionedTo:', (timestamp / 1000).toFixed(3) + 's');
+      
+      // VERIFY: Calculate what position this timestamp should render at
+      const expectedPauseTime = (timestamp - timelineStartOffset) / 1000;
+      const expectedPauseLeft = expectedPauseTime * timelineScale;
+      console.log('  Expected pause timeline time:', expectedPauseTime.toFixed(3) + 's');
+      console.log('  Expected pause left position:', expectedPauseLeft.toFixed(2) + 'px');
+      console.log('  Expected pause screen position (with 60px offset):', (expectedPauseLeft + 60).toFixed(2) + 'px');
+      
+      // COMPARE: Does this match playhead position?
+      const positionDifference = (expectedPauseLeft + 60) - currentPlayheadLeft;
+      console.log('  Position difference (expected vs playhead):', positionDifference.toFixed(2) + 'px');
+      
     } else if (playbackPausedAt > 0) {
       // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
-      console.log('⏸ Creating pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
-      console.log('  playbackPausedAt =', playbackPausedAt.toFixed(3), 's');
-      console.log('  timestamp =', timestamp.toFixed(2), 'ms');
-      
-      // Debug: Where is the playhead right now?
-      const currentPlayheadLeft = timelinePlayhead.style.left;
-      console.log('  Current playhead position (CSS):', currentPlayheadLeft);
-      
-      // Get actual rendered position
-      const playheadRect = timelinePlayhead.getBoundingClientRect();
-      const containerRect = timelineContainer.getBoundingClientRect();
-      console.log('  Current playhead position (rendered, container-relative):', (playheadRect.left - containerRect.left).toFixed(2), 'px');
-      
-      // Debug: Where will the pause be rendered?
-      const timelineStartOffset = getTimelineStartOffset();
-      const pauseTime = (timestamp - timelineStartOffset) / 1000;
-      const pauseLeft = pauseTime * timelineScale;
-      console.log('  timelineStartOffset =', (timelineStartOffset / 1000).toFixed(3), 's');
-      console.log('  pauseTime (relative to timeline) =', pauseTime.toFixed(3), 's');
-      console.log('  timelineScale =', timelineScale.toFixed(2), 'px/s');
-      console.log('  pauseLeft (calculated) =', pauseLeft.toFixed(2), 'px');
-      console.log('  pauseEl.style.left will be:', pauseLeft.toFixed(2), 'px (CSS centers with translateX(-50%))');
+      console.log('  Using playbackPausedAt:', playbackPausedAt.toFixed(3) + 's = ' + (timestamp / 1000).toFixed(3) + 's');
     } else {
       // Normal paused recording - use end of tutorial
       timestamp = currentTutorial.duration || 0;
-      console.log('⏸ Creating pause at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
+      console.log('  Using end of tutorial:', (timestamp / 1000).toFixed(3) + 's');
     }
     
     // Create pause (just a timestamp)
@@ -1832,22 +1840,48 @@
       timestamp: timestamp
     };
     
+    console.log('  Created pause object:', pause);
+    console.log('  Adding pause to array (current length:', currentTutorial.pauses.length + ')');
+    
     currentTutorial.pauses.push(pause);
     
     // Recalculate duration and re-render timeline
+    console.log('  About to recalculate duration and re-render...');
     recalculateTutorialDuration();
     renderTimeline();
     
-    // Debug: Check if playhead moved after re-rendering
-    if (playbackPausedAt > 0) {
-      setTimeout(() => {
-        const playheadRect = timelinePlayhead.getBoundingClientRect();
+    // ENHANCED POST-RENDER DEBUG
+    setTimeout(() => {
+      console.log('  POST-RENDER DEBUG:');
+      
+      // Find the pause element that was just created
+      const pauseElements = document.querySelectorAll('.timeline-pause');
+      const lastPauseEl = pauseElements[pauseElements.length - 1];
+      
+      if (lastPauseEl) {
+        const pauseCSS = lastPauseEl.style.left;
+        const pauseRect = lastPauseEl.getBoundingClientRect();
         const containerRect = timelineContainer.getBoundingClientRect();
-        const playheadAfter = playheadRect.left - containerRect.left;
-        console.log('  📍 AFTER re-render: Playhead is now at:', playheadAfter.toFixed(2), 'px (container-relative)');
-        console.log('  📍 Playhead CSS left:', timelinePlayhead.style.left);
-      }, 0);
-    }
+        const pauseScreenPos = pauseRect.left - containerRect.left;
+        
+        console.log('    Rendered pause CSS left:', pauseCSS);
+        console.log('    Rendered pause screen position (container-relative):', pauseScreenPos.toFixed(2) + 'px');
+        
+        // Current playhead position after render
+        const playheadAfter = parseFloat(timelinePlayhead.style.left) || 60;
+        const playheadScreenAfter = timelinePlayhead.getBoundingClientRect().left - containerRect.left;
+        
+        console.log('    Playhead CSS left after render:', playheadAfter + 'px');
+        console.log('    Playhead screen position after render:', playheadScreenAfter.toFixed(2) + 'px');
+        
+        const finalDifference = pauseScreenPos - playheadScreenAfter;
+        console.log('    FINAL POSITION DIFFERENCE:', finalDifference.toFixed(2) + 'px (positive = pause is right of playhead)');
+      } else {
+        console.log('    ERROR: Could not find rendered pause element');
+      }
+      
+      console.log('⏸ === ADD PAUSE DEBUG END ===');
+    }, 0);
   });
   
   createAnnotation.addEventListener('click', () => {
@@ -4559,7 +4593,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.14 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.16 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
