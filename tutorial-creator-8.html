@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.21</title>
+<title>Interactive Tutorial Creator - v13.22-debug</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.21</div>
+    <div class="version-number">v13.22-debug</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1108,6 +1108,35 @@
       console.log('  playbackPausedAt:', playbackPausedAt);
       console.log('  currentTutorial exists:', !!currentTutorial);
       console.log('  isPreviewingFromPaused:', isPreviewingFromPaused);
+      
+      // ENHANCED DEBUG: Check what's at the current playhead position
+      if (playheadRepositionedTo >= 0) {
+        console.log('🎯 ENHANCED DEBUG: Playhead was repositioned to:', (playheadRepositionedTo / 1000).toFixed(3) + 's');
+        
+        // Check if positioned over drag event
+        let overDragEvent = false;
+        for (let snap of (currentTutorial?.snapshots || [])) {
+          const timeDiff = Math.abs(snap.timestamp - playheadRepositionedTo);
+          if (timeDiff < 500) { // Within 500ms
+            console.log('  Positioned near/over drag event at:', (snap.timestamp / 1000).toFixed(3) + 's', 'action:', snap.event.action);
+            overDragEvent = true;
+            break;
+          }
+        }
+        
+        // Check if positioned over annotation
+        let overAnnotation = false;
+        for (let ann of (currentTutorial?.annotations || [])) {
+          if (playheadRepositionedTo >= ann.timestamp && playheadRepositionedTo <= ann.timestamp + ann.duration) {
+            console.log('  Positioned INSIDE annotation:', ann.title, 'from', (ann.timestamp / 1000).toFixed(3) + 's', 'to', ((ann.timestamp + ann.duration) / 1000).toFixed(3) + 's');
+            overAnnotation = true;
+          }
+        }
+        
+        if (!overDragEvent && !overAnnotation) {
+          console.log('  Positioned in empty space');
+        }
+      }
       
       const hasExistingTutorial = !!currentTutorial;
       const isPlayheadRepositioned = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
@@ -2339,6 +2368,9 @@
   });
   
   function startPlayback() {
+    console.log('🐛 DEBUG: startPlayback() called - stack trace:');
+    console.trace();
+    
     if (!currentTutorial) return;
     
     const api = getAPI();
@@ -2384,8 +2416,9 @@
     if (playheadRepositionedTo >= 0) {
       // Playhead was repositioned - start from there
       startOffset = playheadRepositionedTo;
-      playheadRepositionedTo = -1; // Reset after using
       console.log('▶️ Starting playback from repositioned playhead at:', (startOffset / 1000).toFixed(2) + 's');
+      console.log('🐛 DEBUG: About to reset playheadRepositionedTo from', playheadRepositionedTo, 'to -1 in startPlayback');
+      playheadRepositionedTo = -1; // Reset after using
     } else {
       // Normal logic: Check if there are annotations before the first snapshot
       if (currentTutorial.annotations.length > 0) {
@@ -4653,7 +4686,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.21 initialized - Fixed pause alignment offset');
+  console.log('Tutorial Creator v13.22-debug initialized - Added enhanced debugging for Record button behavior');
 })();
 </script>
 </body>
