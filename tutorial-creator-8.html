@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.22-debug</title>
+<title>Interactive Tutorial Creator - v13.23</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.22-debug</div>
+    <div class="version-number">v13.23</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1099,48 +1099,11 @@
       }
       
       // Check if playhead is positioned away from the end
-      // This can happen in two scenarios:
-      // 1. Dragged playhead during preview (playheadRepositionedTo >= 0)  
-      // 2. Paused during playback preview (playbackPausedAt > 0)
-      // 3. We have an existing tutorial from preview mode
-      console.log('🎯 Record clicked - Debug values:');
-      console.log('  playheadRepositionedTo:', playheadRepositionedTo);
-      console.log('  playbackPausedAt:', playbackPausedAt);
-      console.log('  currentTutorial exists:', !!currentTutorial);
-      console.log('  isPreviewingFromPaused:', isPreviewingFromPaused);
-      
-      // ENHANCED DEBUG: Check what's at the current playhead position
-      if (playheadRepositionedTo >= 0) {
-        console.log('🎯 ENHANCED DEBUG: Playhead was repositioned to:', (playheadRepositionedTo / 1000).toFixed(3) + 's');
-        
-        // Check if positioned over drag event
-        let overDragEvent = false;
-        for (let snap of (currentTutorial?.snapshots || [])) {
-          const timeDiff = Math.abs(snap.timestamp - playheadRepositionedTo);
-          if (timeDiff < 500) { // Within 500ms
-            console.log('  Positioned near/over drag event at:', (snap.timestamp / 1000).toFixed(3) + 's', 'action:', snap.event.action);
-            overDragEvent = true;
-            break;
-          }
-        }
-        
-        // Check if positioned over annotation
-        let overAnnotation = false;
-        for (let ann of (currentTutorial?.annotations || [])) {
-          if (playheadRepositionedTo >= ann.timestamp && playheadRepositionedTo <= ann.timestamp + ann.duration) {
-            console.log('  Positioned INSIDE annotation:', ann.title, 'from', (ann.timestamp / 1000).toFixed(3) + 's', 'to', ((ann.timestamp + ann.duration) / 1000).toFixed(3) + 's');
-            overAnnotation = true;
-          }
-        }
-        
-        if (!overDragEvent && !overAnnotation) {
-          console.log('  Positioned in empty space');
-        }
-      }
+      // This can happen when: playhead dragged during pause, paused during playback, or continuing existing tutorial
+      console.log('🎯 Record clicked - playheadRepositioned:', playheadRepositionedTo >= 0, 'playbackPaused:', playbackPausedAt > 0);
       
       const hasExistingTutorial = !!currentTutorial;
       const isPlayheadRepositioned = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
-      console.log('  isPlayheadRepositioned:', isPlayheadRepositioned);
       
       if ((isPlayheadRepositioned || hasExistingTutorial) && currentTutorial) {
         // First click: Move playhead to end, change button text
@@ -1818,101 +1781,26 @@
   addPause.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // ENHANCED DEBUG: Track all coordinate calculations
-    console.log('⏸ === ADD PAUSE DEBUG START ===');
-    
-    // Current playhead position
-    const currentPlayheadLeft = parseFloat(timelinePlayhead.style.left) || 60;
-    const playheadRect = timelinePlayhead.getBoundingClientRect();
-    const containerRect = timelineContainer.getBoundingClientRect();
-    const playheadScreenPos = playheadRect.left - containerRect.left;
-    
-    console.log('  Current playhead CSS left:', currentPlayheadLeft + 'px');
-    console.log('  Current playhead screen position (container-relative):', playheadScreenPos.toFixed(2) + 'px');
-    
-    // Timeline parameters
-    const timelineStartOffset = getTimelineStartOffset();
-    console.log('  timelineStartOffset:', (timelineStartOffset / 1000).toFixed(3) + 's');
-    console.log('  timelineScale:', timelineScale.toFixed(2) + 'px/s');
-    
-    // Determine timestamp based on context (priority order):
-    // 1. If playhead was dragged while paused, use that position
-    // 2. If paused during playback preview, use playback position
-    // 3. Otherwise use end of tutorial (normal recording behavior)
+    // Determine timestamp: use dragged playhead position, playback position, or end of tutorial
     let timestamp;
     if (playheadRepositionedTo >= 0) {
-      // Playhead was dragged to a specific position while paused
       timestamp = playheadRepositionedTo;
-      console.log('  Using playheadRepositionedTo:', (timestamp / 1000).toFixed(3) + 's');
-      
-      // VERIFY: Calculate what position this timestamp should render at
-      const expectedPauseTime = (timestamp - timelineStartOffset) / 1000;
-      const expectedPauseLeft = expectedPauseTime * timelineScale;
-      console.log('  Expected pause timeline time:', expectedPauseTime.toFixed(3) + 's');
-      console.log('  Expected pause left position:', expectedPauseLeft.toFixed(2) + 'px');
-      console.log('  Expected pause screen position (with 60px offset):', (expectedPauseLeft + 60).toFixed(2) + 'px');
-      
-      // COMPARE: Does this match playhead position?
-      const positionDifference = (expectedPauseLeft + 60) - currentPlayheadLeft;
-      console.log('  Position difference (expected vs playhead):', positionDifference.toFixed(2) + 'px');
-      
+      console.log('⏸ Adding pause at dragged playhead position:', (timestamp / 1000).toFixed(2) + 's');
     } else if (playbackPausedAt > 0) {
-      // Paused during playback - use current playback position
       timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
-      console.log('  Using playbackPausedAt:', playbackPausedAt.toFixed(3) + 's = ' + (timestamp / 1000).toFixed(3) + 's');
+      console.log('⏸ Adding pause at playback position:', (timestamp / 1000).toFixed(2) + 's');
     } else {
-      // Normal paused recording - use end of tutorial
       timestamp = currentTutorial.duration || 0;
-      console.log('  Using end of tutorial:', (timestamp / 1000).toFixed(3) + 's');
+      console.log('⏸ Adding pause at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
     }
     
-    // Create pause (just a timestamp)
-    const pause = {
-      timestamp: timestamp
-    };
-    
-    console.log('  Created pause object:', pause);
-    console.log('  Adding pause to array (current length:', currentTutorial.pauses.length + ')');
-    
+    // Create and add pause
+    const pause = { timestamp: timestamp };
     currentTutorial.pauses.push(pause);
     
-    // Recalculate duration and re-render timeline
-    console.log('  About to recalculate duration and re-render...');
+    // Update timeline
     recalculateTutorialDuration();
     renderTimeline();
-    
-    // ENHANCED POST-RENDER DEBUG
-    setTimeout(() => {
-      console.log('  POST-RENDER DEBUG:');
-      
-      // Find the pause element that was just created
-      const pauseElements = document.querySelectorAll('.timeline-pause');
-      const lastPauseEl = pauseElements[pauseElements.length - 1];
-      
-      if (lastPauseEl) {
-        const pauseCSS = lastPauseEl.style.left;
-        const pauseRect = lastPauseEl.getBoundingClientRect();
-        const containerRect = timelineContainer.getBoundingClientRect();
-        const pauseScreenPos = pauseRect.left - containerRect.left;
-        
-        console.log('    Rendered pause CSS left:', pauseCSS);
-        console.log('    Rendered pause screen position (container-relative):', pauseScreenPos.toFixed(2) + 'px');
-        
-        // Current playhead position after render
-        const playheadAfter = parseFloat(timelinePlayhead.style.left) || 60;
-        const playheadScreenAfter = timelinePlayhead.getBoundingClientRect().left - containerRect.left;
-        
-        console.log('    Playhead CSS left after render:', playheadAfter + 'px');
-        console.log('    Playhead screen position after render:', playheadScreenAfter.toFixed(2) + 'px');
-        
-        const finalDifference = pauseScreenPos - playheadScreenAfter;
-        console.log('    FINAL POSITION DIFFERENCE:', finalDifference.toFixed(2) + 'px (positive = pause is right of playhead)');
-      } else {
-        console.log('    ERROR: Could not find rendered pause element');
-      }
-      
-      console.log('⏸ === ADD PAUSE DEBUG END ===');
-    }, 0);
   });
   
   createAnnotation.addEventListener('click', () => {
@@ -2368,9 +2256,6 @@
   });
   
   function startPlayback() {
-    console.log('🐛 DEBUG: startPlayback() called - stack trace:');
-    console.trace();
-    
     if (!currentTutorial) return;
     
     const api = getAPI();
@@ -2416,9 +2301,8 @@
     if (playheadRepositionedTo >= 0) {
       // Playhead was repositioned - start from there
       startOffset = playheadRepositionedTo;
-      console.log('▶️ Starting playback from repositioned playhead at:', (startOffset / 1000).toFixed(2) + 's');
-      console.log('🐛 DEBUG: About to reset playheadRepositionedTo from', playheadRepositionedTo, 'to -1 in startPlayback');
       playheadRepositionedTo = -1; // Reset after using
+      console.log('▶️ Starting playback from repositioned playhead at:', (startOffset / 1000).toFixed(2) + 's');
     } else {
       // Normal logic: Check if there are annotations before the first snapshot
       if (currentTutorial.annotations.length > 0) {
@@ -2982,14 +2866,14 @@
   
   function renderTimeline() {
     if (!currentTutorial) {
+      // Clear all timeline elements when no tutorial exists
       timelineRuler.innerHTML = '';
       eventsTrack.innerHTML = '';
       annotationsTrack.innerHTML = '';
       
-      // Clear any pause elements from timelineContainer
+      // Clear pause elements from timeline container (they're positioned differently)
       const pauseElements = timelineContainer.querySelectorAll('.timeline-pause');
       pauseElements.forEach(el => el.remove());
-      console.log('🧹 Cleared', pauseElements.length, 'pause elements from timeline');
       
       return;
     }
@@ -3212,8 +3096,8 @@
       }
     }
     
-    // Render pauses (diamond markers on events track) 
-    // First, clear any existing pause elements
+    // Render pause markers (diamond shapes positioned on timeline)
+    // Clear any existing pause elements first to prevent duplicates
     const existingPauses = timelineContainer.querySelectorAll('.timeline-pause');
     existingPauses.forEach(el => el.remove());
     
@@ -3224,21 +3108,18 @@
         const pauseEl = document.createElement('div');
         pauseEl.className = 'timeline-pause';
         
-        // EXPERIMENTAL: Use exact same coordinate system as playhead
-        // Based on debug: need to subtract ~6px to align with playhead perfectly
-        const playheadStylePosition = (pauseTime * timelineScale) + 60 - 6; // Subtract 6px to align with playhead
-        pauseEl.style.left = playheadStylePosition + 'px';
-        pauseEl.style.top = '40px'; // Position it in the events track area
+        // Position using same coordinate system as playhead for perfect alignment
+        const pausePosition = (pauseTime * timelineScale) + 60 - 6; // -6px centers the 12px diamond
+        pauseEl.style.left = pausePosition + 'px';
+        pauseEl.style.top = '40px'; // Position in events track area
         pauseEl.title = `Pause at ${pauseTime.toFixed(2)}s - Double-click to delete`;
         pauseEl.dataset.pauseIdx = i;
         
-        // Double-click to delete
+        // Double-click to delete pause
         pauseEl.addEventListener('dblclick', (e) => {
-          console.log('🖱️ PAUSE DOUBLE-CLICK DETECTED - pauseIdx:', i);
           e.stopPropagation();
           e.preventDefault();
           const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
-          console.log('🖱️ Double-clicked pause for deletion:', { pauseIdx, pauseTime });
           
           pauseDeletionText.textContent = `Are you sure you want to delete pause at ${pauseTime.toFixed(2)}s?`;
           pauseToDelete = pauseIdx;
@@ -3247,7 +3128,6 @@
         
         // Make pause draggable
         pauseEl.addEventListener('mousedown', (e) => {
-          console.log('🖱️ PAUSE MOUSEDOWN DETECTED - pauseIdx:', i);
           e.stopPropagation();
           e.preventDefault();
           const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
@@ -3255,41 +3135,8 @@
         });
         
         timelineContainer.appendChild(pauseEl);
-        console.log(`  ⏸ Pause EXPERIMENTAL: Using playhead coordinate system = ${playheadStylePosition}px`);
-        
-        // Debug: Log actual rendered position
-        setTimeout(() => {
-          const rect = pauseEl.getBoundingClientRect();
-          const trackRect = eventsTrack.getBoundingClientRect();
-          const containerRect = timelineContainer.getBoundingClientRect();
-          
-          // ENHANCED DEBUGGING - Let's trace every step
-          console.log(`  ⏸ ENHANCED PAUSE DEBUG:`);
-          console.log(`    pauseTime: ${pauseTime.toFixed(3)}s`);
-          console.log(`    timelineScale: ${timelineScale}px/s`);
-          console.log(`    Raw calculation: ${pauseTime} * ${timelineScale} = ${(pauseTime * timelineScale).toFixed(2)}px`);
-          console.log(`    My centering adjustment: -6px`);
-          console.log(`    Final playheadStylePosition: ${playheadStylePosition}px (offset: -6px for alignment)`);
-          console.log(`    CSS left applied: ${pauseEl.style.left}`);
-          
-          // Measure all the containers
-          console.log(`    eventsTrack computed style padding-left: ${getComputedStyle(eventsTrack.parentElement).paddingLeft}`);
-          console.log(`    eventsTrack computed style border-left: ${getComputedStyle(eventsTrack.parentElement).borderLeft}`);
-          console.log(`    eventsTrack.offsetLeft: ${eventsTrack.offsetLeft}px`);
-          console.log(`    eventsTrack parent.offsetLeft: ${eventsTrack.parentElement.offsetLeft}px`);
-          
-          // Measure the pause element
-          console.log(`    pauseEl.offsetLeft: ${pauseEl.offsetLeft}px`);
-          console.log(`    pauseEl computed transform: ${getComputedStyle(pauseEl).transform}`);
-          console.log(`    pauseEl computed border: ${getComputedStyle(pauseEl).border}`);
-          
-          // Screen positions
-          console.log(`    Pause getBoundingClientRect().left: ${rect.left}px`);
-          console.log(`    Timeline container getBoundingClientRect().left: ${containerRect.left}px`);
-          console.log(`    Pause container-relative position: ${(rect.left - containerRect.left).toFixed(2)}px`);
-          
-          console.log(`  ⏸ Pause rendered: track-relative=${pauseEl.style.left}, screen-absolute=${rect.left}px, container-relative=${rect.left - containerRect.left}px`);
-        }, 0);
+        console.log(`⏸ Pause positioned at ${pauseTime.toFixed(2)}s`);
+        // Enhanced logging removed for cleaner output
       });
     }
     
@@ -4038,10 +3885,6 @@
   let draggingPause = null;
   
   function startPauseDrag(e, index) {
-    console.log('🖱️ startPauseDrag called with index:', index);
-    console.log('  currentTutorial.pauses.length:', currentTutorial.pauses.length);
-    console.log('  pause data:', currentTutorial.pauses[index]);
-    
     draggingPause = {
       index: index,
       startX: e.clientX,
@@ -4053,8 +3896,6 @@
     document.addEventListener('mouseup', stopPauseDrag);
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('🖱️ Pause drag listeners added');
   }
   
   function doPauseDrag(e) {
@@ -4067,24 +3908,17 @@
       return;
     }
     
-    if (!draggingPause.hasMoved) {
-      console.log('🖱️ Starting pause drag movement');
-    }
     draggingPause.hasMoved = true;
     
     const dt = (dx / timelineScale) * 1000;
-    
     let newTime = Math.max(0, draggingPause.startTime + dt);
     newTime = Math.min(newTime, currentTutorial.duration);
-    
-    console.log(`🖱️ Dragging pause: dx=${dx}px, dt=${dt}ms, newTime=${(newTime/1000).toFixed(2)}s`);
     
     currentTutorial.pauses[draggingPause.index].timestamp = newTime;
     renderTimeline();
   }
   
   function stopPauseDrag() {
-    console.log('🖱️ stopPauseDrag called, hasMoved:', draggingPause ? draggingPause.hasMoved : 'no draggingPause');
     draggingPause = null;
     document.removeEventListener('mousemove', doPauseDrag);
     document.removeEventListener('mouseup', stopPauseDrag);
@@ -4686,7 +4520,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.22-debug initialized - Added enhanced debugging for Record button behavior');
+  console.log('Tutorial Creator v13.23 initialized - Production release with cleaned up code and improved documentation');
 })();
 </script>
 </body>
