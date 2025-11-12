@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.19</title>
+<title>Interactive Tutorial Creator - v13.20</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.19</div>
+    <div class="version-number">v13.20</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -2952,6 +2952,12 @@
       timelineRuler.innerHTML = '';
       eventsTrack.innerHTML = '';
       annotationsTrack.innerHTML = '';
+      
+      // Clear any pause elements from timelineContainer
+      const pauseElements = timelineContainer.querySelectorAll('.timeline-pause');
+      pauseElements.forEach(el => el.remove());
+      console.log('🧹 Cleared', pauseElements.length, 'pause elements from timeline');
+      
       return;
     }
     
@@ -3173,7 +3179,11 @@
       }
     }
     
-    // Render pauses (diamond markers on events track)
+    // Render pauses (diamond markers on events track) 
+    // First, clear any existing pause elements
+    const existingPauses = timelineContainer.querySelectorAll('.timeline-pause');
+    existingPauses.forEach(el => el.remove());
+    
     if (currentTutorial.pauses) {
       currentTutorial.pauses.forEach((pause, i) => {
         const pauseTime = (pause.timestamp - timelineStartOffset) / 1000;
@@ -3182,7 +3192,9 @@
         pauseEl.className = 'timeline-pause';
         
         // EXPERIMENTAL: Use exact same coordinate system as playhead
-        const playheadStylePosition = (pauseTime * timelineScale) + 60 - 6; // Subtract 6px to center 12px element
+        // Based on debug: playhead at 412.9px, pause at 404.0px = 8.9px difference
+        // Need to add about 9px to match playhead position
+        const playheadStylePosition = (pauseTime * timelineScale) + 60 + 9; // Add 9px to align with playhead
         pauseEl.style.left = playheadStylePosition + 'px';
         pauseEl.style.top = '40px'; // Position it in the events track area
         pauseEl.title = `Pause at ${pauseTime.toFixed(2)}s - Double-click to delete`;
@@ -3190,7 +3202,7 @@
         
         // Double-click to delete
         pauseEl.addEventListener('dblclick', (e) => {
-          console.log('🖱️ PAUSE DOUBLE-CLICK DETECTED - pauseIdx:', pauseIdx);
+          console.log('🖱️ PAUSE DOUBLE-CLICK DETECTED - pauseIdx:', i);
           e.stopPropagation();
           e.preventDefault();
           const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
@@ -3203,7 +3215,7 @@
         
         // Make pause draggable
         pauseEl.addEventListener('mousedown', (e) => {
-          console.log('🖱️ PAUSE MOUSEDOWN DETECTED - pauseIdx:', pauseIdx);
+          console.log('🖱️ PAUSE MOUSEDOWN DETECTED - pauseIdx:', i);
           e.stopPropagation();
           e.preventDefault();
           const pauseIdx = parseInt(pauseEl.dataset.pauseIdx);
@@ -4642,7 +4654,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.19 initialized - Fixed pause positioning and interaction');
+  console.log('Tutorial Creator v13.20 initialized - Fixed pause clearing and positioning');
 })();
 </script>
 </body>
