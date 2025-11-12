@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.16</title>
+<title>Interactive Tutorial Creator - v13.17</title>
 <script>
   window.MathJax = {
     tex: {
@@ -405,7 +405,7 @@
     width:12px;
     height:12px;
     background:#f59e0b;
-    transform:translateY(-50%) translateX(-50%) rotate(45deg);
+    transform:translateY(-50%) rotate(45deg);
     cursor:move;
     z-index:3;
     box-shadow:0 2px 4px rgba(245,158,11,0.4);
@@ -415,7 +415,7 @@
   .timeline-pause:hover{
     background:#d97706;
     box-shadow:0 3px 6px rgba(245,158,11,0.5);
-    transform:translateY(-50%) translateX(-50%) rotate(45deg) scale(1.15);
+    transform:translateY(-50%) rotate(45deg) scale(1.15);
   }
   
   .timeline-playhead{
@@ -3175,11 +3175,12 @@
     if (currentTutorial.pauses) {
       currentTutorial.pauses.forEach((pause, i) => {
         const pauseTime = (pause.timestamp - timelineStartOffset) / 1000;
-        const pauseLeft = pauseTime * timelineScale;
+        // Calculate timeline position and center the 12px diamond manually
+        const pauseLeft = (pauseTime * timelineScale) - 6; // Subtract 6px to center the 12px element
         
         const pauseEl = document.createElement('div');
         pauseEl.className = 'timeline-pause';
-        // Position pause diamond: timeline position (no need for -6px since diamond is centered via CSS)
+        // Position pause diamond centered at the exact timeline position
         pauseEl.style.left = pauseLeft + 'px';
         pauseEl.title = `Pause at ${pauseTime.toFixed(2)}s - Double-click to delete`;
         pauseEl.dataset.pauseIdx = i;
@@ -4593,7 +4594,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.16 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.17 initialized - Added draggable playhead functionality');
 })();
 </script>
 </body>
