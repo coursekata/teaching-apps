@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.17</title>
+<title>Interactive Tutorial Creator - v13.18-experimental</title>
 <script>
   window.MathJax = {
     tex: {
@@ -630,7 +630,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.17</div>
+    <div class="version-number">v13.18-experimental</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -3175,13 +3175,14 @@
     if (currentTutorial.pauses) {
       currentTutorial.pauses.forEach((pause, i) => {
         const pauseTime = (pause.timestamp - timelineStartOffset) / 1000;
-        // Calculate timeline position and center the 12px diamond manually
-        const pauseLeft = (pauseTime * timelineScale) - 6; // Subtract 6px to center the 12px element
         
         const pauseEl = document.createElement('div');
         pauseEl.className = 'timeline-pause';
-        // Position pause diamond centered at the exact timeline position
-        pauseEl.style.left = pauseLeft + 'px';
+        
+        // EXPERIMENTAL: Use exact same coordinate system as playhead
+        const playheadStylePosition = (pauseTime * timelineScale) + 60 - 6; // Subtract 6px to center 12px element
+        pauseEl.style.left = playheadStylePosition + 'px';
+        pauseEl.style.top = '40px'; // Position it in the events track area
         pauseEl.title = `Pause at ${pauseTime.toFixed(2)}s - Double-click to delete`;
         pauseEl.dataset.pauseIdx = i;
         
@@ -3202,14 +3203,40 @@
           startPauseDrag(e, pauseIdx);
         });
         
-        eventsTrack.appendChild(pauseEl);
-        console.log(`  ⏸ Pause: left=${pauseLeft}px (${pauseTime.toFixed(2)}s)`);
+        timelineContainer.appendChild(pauseEl);
+        console.log(`  ⏸ Pause EXPERIMENTAL: Using playhead coordinate system = ${playheadStylePosition}px`);
         
         // Debug: Log actual rendered position
         setTimeout(() => {
           const rect = pauseEl.getBoundingClientRect();
           const trackRect = eventsTrack.getBoundingClientRect();
           const containerRect = timelineContainer.getBoundingClientRect();
+          
+          // ENHANCED DEBUGGING - Let's trace every step
+          console.log(`  ⏸ ENHANCED PAUSE DEBUG:`);
+          console.log(`    pauseTime: ${pauseTime.toFixed(3)}s`);
+          console.log(`    timelineScale: ${timelineScale}px/s`);
+          console.log(`    Raw calculation: ${pauseTime} * ${timelineScale} = ${(pauseTime * timelineScale).toFixed(2)}px`);
+          console.log(`    My centering adjustment: -6px`);
+          console.log(`    Final playheadStylePosition: ${playheadStylePosition}px`);
+          console.log(`    CSS left applied: ${pauseEl.style.left}`);
+          
+          // Measure all the containers
+          console.log(`    eventsTrack computed style padding-left: ${getComputedStyle(eventsTrack.parentElement).paddingLeft}`);
+          console.log(`    eventsTrack computed style border-left: ${getComputedStyle(eventsTrack.parentElement).borderLeft}`);
+          console.log(`    eventsTrack.offsetLeft: ${eventsTrack.offsetLeft}px`);
+          console.log(`    eventsTrack parent.offsetLeft: ${eventsTrack.parentElement.offsetLeft}px`);
+          
+          // Measure the pause element
+          console.log(`    pauseEl.offsetLeft: ${pauseEl.offsetLeft}px`);
+          console.log(`    pauseEl computed transform: ${getComputedStyle(pauseEl).transform}`);
+          console.log(`    pauseEl computed border: ${getComputedStyle(pauseEl).border}`);
+          
+          // Screen positions
+          console.log(`    Pause getBoundingClientRect().left: ${rect.left}px`);
+          console.log(`    Timeline container getBoundingClientRect().left: ${containerRect.left}px`);
+          console.log(`    Pause container-relative position: ${(rect.left - containerRect.left).toFixed(2)}px`);
+          
           console.log(`  ⏸ Pause rendered: track-relative=${pauseEl.style.left}, screen-absolute=${rect.left}px, container-relative=${rect.left - containerRect.left}px`);
         }, 0);
       });
@@ -4594,7 +4621,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.17 initialized - Added draggable playhead functionality');
+  console.log('Tutorial Creator v13.18-experimental initialized - Experimental pause positioning fix');
 })();
 </script>
 </body>
