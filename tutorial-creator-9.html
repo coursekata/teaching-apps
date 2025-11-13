@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.31</title>
+<title>Interactive Tutorial Creator - v13.32</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.31</div>
+    <div class="version-number">v13.32</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1618,57 +1618,14 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
-    // Determine timestamp based on context (priority order):
-    // 1. If playhead was dragged while paused, use that position
-    // 2. If paused during playback preview, use playback position
-    // 3. Otherwise use end of tutorial (normal recording behavior)
-    let timestamp;
-    if (playheadRepositionedTo >= 0) {
-      // Playhead was dragged to a specific position while paused
-      timestamp = playheadRepositionedTo;
-      console.log('📝 Creating annotation at dragged playhead position:', (timestamp / 1000).toFixed(2) + 's');
-    } else if (playbackPausedAt > 0) {
-      // Paused during playback - use current playback position
-      timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
-      console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
-    } else {
-      // Normal paused recording - use end of tutorial
-      timestamp = currentTutorial.duration || 0;
-      console.log('📝 Creating annotation at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
+    // Simply open the annotation editor modal
+    // The modal will handle creating the annotation when user clicks "Create Annotation"
+    annotationEditorModal.classList.add('visible');
+    
+    // Focus the content field for immediate typing
+    if (annContent) {
+      annContent.focus();
     }
-    
-    // Check if there are existing annotations
-    // If so, place this one after the last one to avoid overlap
-    // BUT: respect intentional playhead positioning (don't auto-adjust when user dragged playhead)
-    const isIntentionalPositioning = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
-    if (currentTutorial.annotations.length > 0 && !isIntentionalPositioning) {
-      const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
-      const lastAnnEnd = lastAnn.timestamp + lastAnn.duration;
-      
-      // If the new annotation would overlap, place it after the last one
-      // (Only applies when adding at end of tutorial, not when user positioned playhead)
-      if (timestamp < lastAnnEnd) {
-        timestamp = lastAnnEnd;
-        console.log('📝 Adjusted annotation timestamp to avoid overlap:', (timestamp / 1000).toFixed(2) + 's');
-      }
-    }
-    
-    // Create annotation with default text
-    const annotation = {
-      timestamp: timestamp,
-      title: 'New Annotation',
-      text: 'Double-click to edit this text',
-      duration: 5000, // 5 seconds default
-      position: null // Will be set after positioning
-    };
-    
-    currentTutorial.annotations.push(annotation);
-    
-    // Store index for save handler
-    editingAnnotationIndex = currentTutorial.annotations.length - 1;
-    
-    // Directly show annotation for positioning/editing
-    showAnnotationForPositioning(annotation, editingAnnotationIndex);
   });
   
   addPause.addEventListener('click', () => {
@@ -1705,12 +1662,30 @@
       return;
     }
     
-    // Use current tutorial duration as the timestamp (end of existing content)
-    let timestamp = currentTutorial.duration || 0;
+    // Determine timestamp based on context (priority order):
+    // 1. If playhead was dragged while paused, use that position
+    // 2. If paused during playback preview, use playback position
+    // 3. Otherwise use end of tutorial (normal recording behavior)
+    let timestamp;
+    if (playheadRepositionedTo >= 0) {
+      // Playhead was dragged to a specific position while paused
+      timestamp = playheadRepositionedTo;
+      console.log('📝 Creating annotation at dragged playhead position:', (timestamp / 1000).toFixed(2) + 's');
+    } else if (playbackPausedAt > 0) {
+      // Paused during playback - use current playback position
+      timestamp = playbackPausedAt * 1000; // Convert seconds to milliseconds
+      console.log('📝 Creating annotation at playback position:', (timestamp / 1000).toFixed(2) + 's');
+    } else {
+      // Normal paused recording - use end of tutorial
+      timestamp = currentTutorial.duration || 0;
+      console.log('📝 Creating annotation at end of tutorial:', (timestamp / 1000).toFixed(2) + 's');
+    }
     
     // Check if there are existing annotations
     // If so, place this one after the last one to avoid overlap
-    if (currentTutorial.annotations.length > 0) {
+    // BUT: respect intentional playhead positioning (don't auto-adjust when user dragged playhead)
+    const isIntentionalPositioning = (playheadRepositionedTo >= 0) || (playbackPausedAt > 0);
+    if (currentTutorial.annotations.length > 0 && !isIntentionalPositioning) {
       const lastAnn = currentTutorial.annotations[currentTutorial.annotations.length - 1];
       const lastAnnEnd = lastAnn.timestamp + lastAnn.duration;
       
@@ -4460,7 +4435,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.31 initialized - Production release with enhanced flexible annotations and improved documentation');
+  console.log('Tutorial Creator v13.32 initialized - Production release with enhanced flexible annotations and improved documentation');
 })();
 </script>
 </body>
