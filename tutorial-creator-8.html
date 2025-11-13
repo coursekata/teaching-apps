@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.29</title>
+<title>Interactive Tutorial Creator - v13.30</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.29</div>
+    <div class="version-number">v13.30</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1113,18 +1113,6 @@
         const actualEndTime = getActualTutorialEndTime();
         const timelineStartOffset = getTimelineStartOffset();
         const timelineEndPosition = ((actualEndTime - timelineStartOffset) / 1000) * timelineScale + 60;
-        
-        console.log('🎯 Record button positioning:');
-        console.log('  actualEndTime:', actualEndTime.toFixed(2), 'ms');
-        console.log('  timelineStartOffset:', timelineStartOffset.toFixed(2), 'ms');
-        console.log('  timelineScale:', timelineScale, 'px/s');
-        console.log('  calculated timelineEndPosition:', timelineEndPosition.toFixed(2), 'px');
-        
-        // For comparison, show where original buffered positioning would put it
-        const originalBufferedPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
-        console.log('  original buffered position would be:', originalBufferedPosition.toFixed(2), 'px');
-        console.log('  difference:', (originalBufferedPosition - timelineEndPosition).toFixed(2), 'px');
-        
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
         
@@ -1269,17 +1257,6 @@
         const actualEndTime = getActualTutorialEndTime();
         const timelineStartOffset = getTimelineStartOffset();
         let timelineEndPosition = ((actualEndTime - timelineStartOffset) / 1000) * timelineScale + 60;
-        
-        console.log('🎯 Record (RESUME) button positioning:');
-        console.log('  actualEndTime:', actualEndTime.toFixed(2), 'ms');
-        console.log('  timelineStartOffset:', timelineStartOffset.toFixed(2), 'ms');
-        console.log('  timelineScale:', timelineScale, 'px/s');
-        console.log('  calculated timelineEndPosition:', timelineEndPosition.toFixed(2), 'px');
-        
-        // For comparison, show where original buffered positioning would put it
-        const originalBufferedPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
-        console.log('  original buffered position would be:', originalBufferedPosition.toFixed(2), 'px');
-        console.log('  difference:', (originalBufferedPosition - timelineEndPosition).toFixed(2), 'px');
         
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
@@ -4075,48 +4052,31 @@
       const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
       const action = lastSnapshot.event.action;
       lastSnapshotIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
-      
-      console.log('🎯 getActualTutorialEndTime DEBUG:');
-      console.log('  Last snapshot action:', action);
-      console.log('  Last snapshot timestamp:', lastSnapshotTime.toFixed(2), 'ms');
-      console.log('  Is single event:', lastSnapshotIsSingleEvent);
-      console.log('  Current timelineScale:', timelineScale);
     }
     
     // Get last annotation end time
     let lastAnnotationEnd = 0;
     if (currentTutorial.annotations && currentTutorial.annotations.length > 0) {
       lastAnnotationEnd = Math.max(...currentTutorial.annotations.map(a => a.timestamp + a.duration));
-      console.log('  Last annotation end:', lastAnnotationEnd.toFixed(2), 'ms');
     }
     
     // Get last pause time
     let lastPauseTime = 0;
     if (currentTutorial.pauses && currentTutorial.pauses.length > 0) {
       lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
-      console.log('  Last pause time:', lastPauseTime.toFixed(2), 'ms');
     }
     
     // Determine which element is actually last
     const maxTime = Math.max(lastSnapshotTime, lastAnnotationEnd, lastPauseTime);
     
-    console.log('  Max time (raw):', maxTime.toFixed(2), 'ms');
-    console.log('  Buffered duration was:', currentTutorial.duration.toFixed(2), 'ms');
-    console.log('  Buffer difference:', (currentTutorial.duration - maxTime).toFixed(2), 'ms');
-    
     // If a single event (click) is the final element, add compensation for visual positioning
     if (maxTime === lastSnapshotTime && lastSnapshotIsSingleEvent) {
-      // Add 28px worth of time to compensate for visual width + mystery offset
-      // 8px (marker width) + 20px (observed discrepancy) = 28px total
+      // Add 28px worth of time to compensate for visual width + positioning offset
       const visualCompensation = (28 / timelineScale) * 1000;
-      console.log('  Adding visual compensation:', visualCompensation.toFixed(2), 'ms (28px at scale', timelineScale, ')');
-      const result = lastSnapshotTime + visualCompensation;
-      console.log('  Final result:', result.toFixed(2), 'ms');
-      return result;
+      return lastSnapshotTime + visualCompensation;
     }
     
     // Return the latest time without adjustment for other types
-    console.log('  Final result (no adjustment):', maxTime.toFixed(2), 'ms');
     return maxTime;
   }
   
@@ -4429,7 +4389,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.29 initialized - Production release with cleaned up code and improved documentation');
+  console.log('Tutorial Creator v13.30 initialized - Production release with cleaned up code and improved documentation');
 })();
 </script>
 </body>
