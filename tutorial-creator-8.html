@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.27</title>
+<title>Interactive Tutorial Creator - v13.28</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.27</div>
+    <div class="version-number">v13.28</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1269,6 +1269,17 @@
         const actualEndTime = getActualTutorialEndTime();
         const timelineStartOffset = getTimelineStartOffset();
         let timelineEndPosition = ((actualEndTime - timelineStartOffset) / 1000) * timelineScale + 60;
+        
+        console.log('🎯 Record (RESUME) button positioning:');
+        console.log('  actualEndTime:', actualEndTime.toFixed(2), 'ms');
+        console.log('  timelineStartOffset:', timelineStartOffset.toFixed(2), 'ms');
+        console.log('  timelineScale:', timelineScale, 'px/s');
+        console.log('  calculated timelineEndPosition:', timelineEndPosition.toFixed(2), 'px');
+        
+        // For comparison, show where original buffered positioning would put it
+        const originalBufferedPosition = ((currentTutorial.duration - timelineStartOffset) / 1000) * timelineScale + 60;
+        console.log('  original buffered position would be:', originalBufferedPosition.toFixed(2), 'px');
+        console.log('  difference:', (originalBufferedPosition - timelineEndPosition).toFixed(2), 'px');
         
         timelinePlayhead.style.left = timelineEndPosition + 'px';
         timelinePlayhead.style.display = 'block';
@@ -4416,7 +4427,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.27 initialized - Production release with cleaned up code and improved documentation');
+  console.log('Tutorial Creator v13.28 initialized - Production release with cleaned up code and improved documentation');
 })();
 </script>
 </body>
