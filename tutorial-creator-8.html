@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.28</title>
+<title>Interactive Tutorial Creator - v13.29</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.28</div>
+    <div class="version-number">v13.29</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -4099,16 +4099,18 @@
     
     // Determine which element is actually last
     const maxTime = Math.max(lastSnapshotTime, lastAnnotationEnd, lastPauseTime);
+    
     console.log('  Max time (raw):', maxTime.toFixed(2), 'ms');
     console.log('  Buffered duration was:', currentTutorial.duration.toFixed(2), 'ms');
     console.log('  Buffer difference:', (currentTutorial.duration - maxTime).toFixed(2), 'ms');
     
-    // If a single event (click) is the final element, add its visual width
+    // If a single event (click) is the final element, add compensation for visual positioning
     if (maxTime === lastSnapshotTime && lastSnapshotIsSingleEvent) {
-      // Add visual width of click event marker (8px converted to time)
-      const visualWidth = (8 / timelineScale) * 1000;
-      console.log('  Adding visual width:', visualWidth.toFixed(2), 'ms (8px at scale', timelineScale, ')');
-      const result = lastSnapshotTime + visualWidth;
+      // Add 28px worth of time to compensate for visual width + mystery offset
+      // 8px (marker width) + 20px (observed discrepancy) = 28px total
+      const visualCompensation = (28 / timelineScale) * 1000;
+      console.log('  Adding visual compensation:', visualCompensation.toFixed(2), 'ms (28px at scale', timelineScale, ')');
+      const result = lastSnapshotTime + visualCompensation;
       console.log('  Final result:', result.toFixed(2), 'ms');
       return result;
     }
@@ -4427,7 +4429,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.28 initialized - Production release with cleaned up code and improved documentation');
+  console.log('Tutorial Creator v13.29 initialized - Production release with cleaned up code and improved documentation');
 })();
 </script>
 </body>
