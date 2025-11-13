@@ -3922,6 +3922,9 @@
     draggingPause = null;
     document.removeEventListener('mousemove', doPauseDrag);
     document.removeEventListener('mouseup', stopPauseDrag);
+    
+    // Recalculate tutorial duration after moving pause
+    recalculateTutorialDuration();
   }
   
   // ========== PLAYHEAD DRAGGING ==========
