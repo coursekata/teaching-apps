@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.25</title>
+<title>Interactive Tutorial Creator - v13.26</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.25</div>
+    <div class="version-number">v13.26</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -4046,8 +4046,12 @@
     
     // Get last snapshot time
     let lastSnapshotTime = 0;
+    let lastSnapshotIsSingleEvent = false;
     if (currentTutorial.snapshots && currentTutorial.snapshots.length > 0) {
       lastSnapshotTime = Math.max(...currentTutorial.snapshots.map(s => s.timestamp));
+      const lastSnapshot = currentTutorial.snapshots[currentTutorial.snapshots.length - 1];
+      const action = lastSnapshot.event.action;
+      lastSnapshotIsSingleEvent = !action.includes('End') && !action.includes('drag') && !action.includes('Drag');
     }
     
     // Get last annotation end time
@@ -4062,8 +4066,18 @@
       lastPauseTime = Math.max(...currentTutorial.pauses.map(p => p.timestamp));
     }
     
-    // Return the latest time without any visual buffers
-    return Math.max(lastSnapshotTime, lastAnnotationEnd, lastPauseTime);
+    // Determine which element is actually last
+    const maxTime = Math.max(lastSnapshotTime, lastAnnotationEnd, lastPauseTime);
+    
+    // If a single event (click) is the final element, add its visual width
+    if (maxTime === lastSnapshotTime && lastSnapshotIsSingleEvent) {
+      // Add visual width of click event marker (8px converted to time)
+      const visualWidth = (8 / timelineScale) * 1000;
+      return lastSnapshotTime + visualWidth;
+    }
+    
+    // Return the latest time without adjustment for other types
+    return maxTime;
   }
   
   // Recalculate tutorial duration based on snapshots and annotations
@@ -4375,7 +4389,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.25 initialized - Production release with cleaned up code and improved documentation');
+  console.log('Tutorial Creator v13.26 initialized - Production release with cleaned up code and improved documentation');
 })();
 </script>
 </body>
