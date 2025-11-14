@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.37</title>
+<title>Interactive Tutorial Creator - v13.38</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,17 +623,17 @@
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="addAnnotation" class="teal" style="display:none;" disabled title="Add text annotation">+Text</button>
         <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
-        <button id="tutorialStyles" class="teal" style="display:none;" disabled title="Define CSS styles for this tutorial">📝 Tutorial Styles</button>
         <button id="previewRecording" class="primary" style="display:none;" disabled title="Play tutorial">▶ Play</button>
         <button id="playPausePreview" style="display:none;"></button><!-- Hidden, kept for compatibility -->
         <button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">New Tutorial</button>
         <button id="exportRecording" class="success" style="display:none;" disabled title="Export tutorial JSON">Export</button>
+        <button id="tutorialStyles" class="teal" style="display:none;" disabled title="Define CSS styles for this tutorial">Styles</button>
       </div>
       
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.37</div>
+    <div class="version-number">v13.38</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1005,6 +1005,11 @@
         
         // Inject annotation box into iframe
         injectAnnotationBox();
+        
+        // Inject global styles if currentTutorial exists (from import)
+        if (currentTutorial && currentTutorial.globalStyles) {
+          injectGlobalStyles();
+        }
         
         // Show timeline
         timelineContainer.classList.add('visible');
@@ -1397,6 +1402,7 @@
       startRecording.className = 'record'; // Keep red
       addAnnotation.disabled = false;
       addPause.disabled = false;
+      tutorialStyles.disabled = false;
       previewRecording.disabled = false; // Enable when paused
       previewRecording.textContent = '▶ Play';
       previewRecording.title = 'Play';
@@ -1512,6 +1518,7 @@
       pausedIndicator.style.display = 'inline-block';
       addAnnotation.disabled = false;
       addPause.disabled = false;
+      tutorialStyles.disabled = false;
       previewRecording.disabled = false; // Enable when paused
       previewRecording.textContent = '▶ Play'; // Reset button text
       recordAgain.disabled = false; // Enable Start Over when paused
@@ -1768,13 +1775,11 @@
   function injectGlobalStyles() {
     if (!currentTutorial || !currentTutorial.globalStyles) return;
     
-    const api = getAPI();
-    if (!api || !api.getDocument) {
-      console.error('Cannot inject global styles: API not available');
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) {
+      console.error('Cannot inject global styles: iframe document not available');
       return;
     }
-    
-    const iframeDoc = api.getDocument();
     
     // Remove existing global styles
     const existingStyle = iframeDoc.querySelector('style[data-global-tutorial-styles]');
@@ -1788,7 +1793,7 @@
     styleElement.textContent = currentTutorial.globalStyles;
     iframeDoc.head.appendChild(styleElement);
     
-    console.log('🎨 Injected global tutorial styles into iframe');
+    console.log('🎨 Injected global tutorial styles into iframe:', currentTutorial.globalStyles.length, 'chars');
   }
   
   function applyCSSToAnnotation(ann, annotationBox) {
@@ -2422,6 +2427,7 @@
     playPausePreview.textContent = '▶ Resume Preview';
     addAnnotation.disabled = false;
     addPause.disabled = false;
+    tutorialStyles.disabled = false;
     addAnnotationAtPause.style.display = 'inline-block';
     // Keep all buttons visible
     
@@ -2766,6 +2772,7 @@
       addAnnotation.disabled = false;
       addPause.style.display = 'inline-block';
       addPause.disabled = false;
+      tutorialStyles.disabled = false;
       addAnnotationAtPause.style.display = 'none';
       exportRecording.style.display = 'inline-block';
       recordAgain.style.display = 'inline-block';
@@ -4655,7 +4662,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.37 initialized - Global tutorial styles system with simplified annotation workflow');
+  console.log('Tutorial Creator v13.38 initialized - Fixed Styles button access and CSS injection for working arrows');
 })();
 </script>
 </body>
