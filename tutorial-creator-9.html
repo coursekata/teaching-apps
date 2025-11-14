@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.32</title>
+<title>Interactive Tutorial Creator - v13.33</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.32</div>
+    <div class="version-number">v13.33</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -662,60 +662,22 @@
       <h2>Add Annotation</h2>
       
       <div class="info-box">
-        <strong>📝 Instructions:</strong> Create flexible annotations with HTML formatting and custom styling. Use HTML tags like &lt;h1&gt;, &lt;p&gt;, &lt;strong&gt; for structure, or use the style controls below.
+        <strong>📝 Instructions:</strong> Create flexible annotations with HTML content and custom CSS styling. Enter your content below, then paste CSS rules to style the annotation box.
       </div>
       
       <div class="form-group">
         <label>Content (supports HTML)</label>
-        <textarea id="annContent" placeholder="Enter your content... Use HTML like &lt;h1&gt;Title&lt;/h1&gt;&lt;p&gt;Description&lt;/p&gt; or plain text" style="height: 120px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <textarea id="annContent" placeholder="Enter your content... Use HTML like &lt;h1&gt;Title&lt;/h1&gt;&lt;p&gt;Description&lt;/p&gt; or plain text" style="height: 100px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
         <div style="font-size: 12px; color: #666; margin-top: 4px;">
           Examples: &lt;h1&gt;Warning!&lt;/h1&gt; • &lt;p style="color: red;"&gt;Important&lt;/p&gt; • Plain text works too
         </div>
       </div>
       
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;">
-        <div class="form-group">
-          <label>Text Color</label>
-          <input type="color" id="annTextColor" value="#333333" style="width: 100%; height: 36px;">
-        </div>
-        
-        <div class="form-group">
-          <label>Background Color</label>
-          <input type="color" id="annBgColor" value="#ffffff" style="width: 100%; height: 36px;">
-        </div>
-        
-        <div class="form-group">
-          <label>Font Size</label>
-          <select id="annFontSize" style="width: 100%; padding: 8px;">
-            <option value="12px">Small (12px)</option>
-            <option value="14px">Medium (14px)</option>
-            <option value="16px" selected>Normal (16px)</option>
-            <option value="18px">Large (18px)</option>
-            <option value="22px">X-Large (22px)</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Text Alignment</label>
-          <select id="annTextAlign" style="width: 100%; padding: 8px;">
-            <option value="left" selected>Left</option>
-            <option value="center">Center</option>
-            <option value="right">Right</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Border</label>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <input type="checkbox" id="annShowBorder" checked style="margin: 0;">
-            <input type="color" id="annBorderColor" value="#2563eb" style="flex: 1; height: 32px;">
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Transparency</label>
-          <input type="range" id="annOpacity" min="50" max="100" value="95" style="width: 100%;">
-          <div style="font-size: 12px; color: #666; text-align: center;" id="opacityDisplay">95%</div>
+      <div class="form-group">
+        <label>CSS Styling (paste CSS properties)</label>
+        <textarea id="annCSS" placeholder="border: 3px solid #a88bd4;&#10;font-size: 14px;&#10;color: #000000;&#10;background-color: #eee8f6;&#10;padding: 10px;&#10;border-radius: 5px;&#10;line-height: 1.5;" style="height: 120px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">
+          Paste CSS properties (without selectors). Example: border: 3px solid #a88bd4; color: #000; background-color: #eee8f6;
         </div>
       </div>
       
@@ -806,7 +768,7 @@
           <ul style="margin-left:20px;">
             <li>Click "➕ Add Annotation"</li>
             <li>Enter content (supports HTML tags like &lt;h1&gt;, &lt;p&gt;, &lt;strong&gt;)</li>
-            <li>Customize colors, font size, borders, and alignment</li>
+            <li>Paste CSS styling rules to customize appearance</li>
             <li>Click "✨ Create Annotation"</li>
             <li>Drag the annotation box to position it exactly where you want</li>
             <li>Double-click annotation content to edit it anytime</li>
@@ -859,22 +821,12 @@
   
   const annotationEditorModal = document.getElementById('annotationEditorModal');
   const annContent = document.getElementById('annContent');
-  const annTextColor = document.getElementById('annTextColor');
-  const annBgColor = document.getElementById('annBgColor');
-  const annFontSize = document.getElementById('annFontSize');
-  const annTextAlign = document.getElementById('annTextAlign');
-  const annShowBorder = document.getElementById('annShowBorder');
-  const annBorderColor = document.getElementById('annBorderColor');
-  const annOpacity = document.getElementById('annOpacity');
+  const annCSS = document.getElementById('annCSS');
   const annDuration = document.getElementById('annDuration');
   const createAnnotation = document.getElementById('createAnnotation');
   const cancelAnnotation = document.getElementById('cancelAnnotation');
   
-  // Update opacity display when slider changes
-  const opacityDisplay = document.getElementById('opacityDisplay');
-  annOpacity.addEventListener('input', function() {
-    opacityDisplay.textContent = this.value + '%';
-  });
+
   
   const positionEditorOverlay = document.getElementById('positionEditorOverlay');
   const savePosition = document.getElementById('savePosition');
@@ -1618,6 +1570,17 @@
   addAnnotation.addEventListener('click', () => {
     if (!isPaused && playbackPausedAt === 0) return;
     
+    // Clear and set up form with example CSS
+    annContent.value = '';
+    annCSS.value = `border: 3px solid #a88bd4;
+font-size: 14px;
+color: #000000;
+background-color: #eee8f6;
+padding: 10px;
+border-radius: 5px;
+line-height: 1.5;`;
+    annDuration.value = 5;
+    
     // Simply open the annotation editor modal
     // The modal will handle creating the annotation when user clicks "Create Annotation"
     annotationEditorModal.classList.add('visible');
@@ -1698,20 +1661,12 @@
     
     console.log('📝 Creating annotation at timestamp:', (timestamp / 1000).toFixed(2) + 's');
     
-    // Create annotation with new flexible structure
+    // Create annotation with CSS-based structure
     const annotation = {
       timestamp: timestamp,
       content: content,
       duration: duration,
-      styles: {
-        fontSize: annFontSize.value,
-        color: annTextColor.value,
-        backgroundColor: annBgColor.value,
-        borderColor: annBorderColor.value,
-        showBorder: annShowBorder.checked,
-        textAlign: annTextAlign.value,
-        opacity: parseInt(annOpacity.value)
-      },
+      customCSS: annCSS.value.trim(), // Store the raw CSS
       position: null // Will be set after positioning
     };
     
@@ -1724,6 +1679,11 @@
   });
   
   cancelAnnotation.addEventListener('click', () => {
+    // Clear the form
+    annContent.value = '';
+    annCSS.value = '';
+    annDuration.value = 5;
+    
     annotationEditorModal.classList.remove('visible');
   });
   
@@ -1746,8 +1706,13 @@
     annotationBox.style.transform = 'none';
     annotationBox.style.zIndex = '10000';
     
-    // Apply custom styles if they exist, otherwise use backward compatibility
-    if (ann.styles) {
+    // Apply custom CSS if it exists, otherwise use backward compatibility
+    if (ann.customCSS && ann.customCSS.trim()) {
+      // Apply the raw CSS to the annotation box
+      const cssRules = ann.customCSS.trim();
+      annotationBox.style.cssText += '; ' + cssRules;
+    } else if (ann.styles) {
+      // Backward compatibility: apply old individual style properties
       const bgColor = ann.styles.backgroundColor || '#ffffff';
       const opacity = ann.styles.opacity || 95;
       annotationBox.style.backgroundColor = `rgba(${parseInt(bgColor.slice(1, 3), 16)}, ${parseInt(bgColor.slice(3, 5), 16)}, ${parseInt(bgColor.slice(5, 7), 16)}, ${opacity / 100})`;
@@ -1760,6 +1725,14 @@
       } else {
         annotationBox.style.border = 'none';
       }
+    } else {
+      // Default styles for new annotations
+      annotationBox.style.backgroundColor = '#ffffff';
+      annotationBox.style.color = '#333333';
+      annotationBox.style.fontSize = '16px';
+      annotationBox.style.border = '3px solid #2563eb';
+      annotationBox.style.padding = '20px';
+      annotationBox.style.borderRadius = '12px';
     }
     
     // Handle content - support both new flexible format and old title/text format for backward compatibility
@@ -2442,8 +2415,22 @@
       annotationBox.innerHTML = `<h3>${ann.title}</h3><p>${ann.text}</p>`;
     }
     
-    // Apply custom styles if they exist
-    if (ann.styles) {
+    // Apply custom CSS if it exists, otherwise use backward compatibility
+    if (ann.customCSS && ann.customCSS.trim()) {
+      // Reset to base styles first, then apply custom CSS
+      annotationBox.style.backgroundColor = '';
+      annotationBox.style.color = '';
+      annotationBox.style.fontSize = '';
+      annotationBox.style.textAlign = '';
+      annotationBox.style.border = '';
+      annotationBox.style.padding = '';
+      annotationBox.style.borderRadius = '';
+      
+      // Apply the raw CSS to the annotation box
+      const cssRules = ann.customCSS.trim();
+      annotationBox.style.cssText += '; ' + cssRules;
+    } else if (ann.styles) {
+      // Backward compatibility: apply old individual style properties
       const bgColor = ann.styles.backgroundColor || '#ffffff';
       const opacity = ann.styles.opacity || 95;
       annotationBox.style.backgroundColor = `rgba(${parseInt(bgColor.slice(1, 3), 16)}, ${parseInt(bgColor.slice(3, 5), 16)}, ${parseInt(bgColor.slice(5, 7), 16)}, ${opacity / 100})`;
@@ -4435,7 +4422,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.32 initialized - Production release with enhanced flexible annotations and improved documentation');
+  console.log('Tutorial Creator v13.33 initialized - CSS-based annotation editor with simplified paste workflow');
 })();
 </script>
 </body>
