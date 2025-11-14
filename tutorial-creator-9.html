@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.34</title>
+<title>Interactive Tutorial Creator - v13.35</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.34</div>
+    <div class="version-number">v13.35</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -698,7 +698,7 @@
   <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:transparent;z-index:99;pointer-events:none;">
     <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
       <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
-      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag to move, resize from corner. Double-click title or text to edit.</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag to move, resize from corner. Double-click content to edit with full CSS editor.</div>
       <div style="display:flex;gap:8px;">
         <button id="savePosition" class="success">Save</button>
         <button id="deleteAnnotationFromOverlay" class="record">Delete</button>
@@ -1742,14 +1742,25 @@ line-height: 1.5;`;
     
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
-    
-    // Annotation box is INSIDE the iframe, so use iframe-document coordinates
-    annotationBox.style.left = '300px';
-    annotationBox.style.top = '200px';
-    annotationBox.style.width = '400px';
-    annotationBox.style.height = 'auto';
     annotationBox.style.transform = 'none';
     annotationBox.style.zIndex = '10000';
+    
+    // Use existing position if available, otherwise use defaults
+    if (ann.position) {
+      // Editing existing annotation - use its current position and size
+      console.log('🎯 Positioning annotation at existing location:', ann.position);
+      annotationBox.style.left = ann.position.left + 'px';
+      annotationBox.style.top = ann.position.top + 'px';
+      annotationBox.style.width = ann.position.width + 'px';
+      annotationBox.style.height = ann.position.height + 'px';
+    } else {
+      // Creating new annotation - use default position
+      console.log('🎯 Positioning new annotation at default location');
+      annotationBox.style.left = '300px';
+      annotationBox.style.top = '200px';
+      annotationBox.style.width = '400px';
+      annotationBox.style.height = 'auto';
+    }
     
     // Apply custom CSS if it exists, otherwise use backward compatibility
     if (ann.customCSS && ann.customCSS.trim()) {
@@ -1798,6 +1809,11 @@ line-height: 1.5;`;
     const annotationContent = annotationBox.querySelector('.annotation-content');
     
     console.log('Annotation box styles set, display:', window.getComputedStyle(annotationBox).display);
+    
+    // Render MathJax in the annotation content
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([annotationBox]).catch(err => console.error('MathJax error during positioning:', err));
+    }
     
     // Make content editable on double-click - open full modal editor
     annotationContent.ondblclick = (e) => {
@@ -4490,7 +4506,7 @@ line-height: 1.6;`;
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.34 initialized - Enhanced annotation editing with full CSS workflow');
+  console.log('Tutorial Creator v13.35 initialized - Enhanced annotation editing with preserved positioning and MathJax rendering');
 })();
 </script>
 </body>
