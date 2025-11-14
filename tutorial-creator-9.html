@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.35</title>
+<title>Interactive Tutorial Creator - v13.36</title>
 <script>
   window.MathJax = {
     tex: {
@@ -632,7 +632,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.35</div>
+    <div class="version-number">v13.36</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -675,9 +675,9 @@
       
       <div class="form-group">
         <label>CSS Styling (paste CSS properties)</label>
-        <textarea id="annCSS" placeholder="border: 3px solid #a88bd4;&#10;font-size: 14px;&#10;color: #000000;&#10;background-color: #eee8f6;&#10;padding: 10px;&#10;border-radius: 5px;&#10;line-height: 1.5;" style="height: 120px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <textarea id="annCSS" placeholder="Two modes supported:&#10;&#10;1. Direct properties:&#10;border: 3px solid #a88bd4;&#10;background-color: #eee8f6;&#10;padding: 10px;&#10;&#10;2. CSS classes (auto-detected):&#10;.my-class {&#10;  border: 2px solid #555;&#10;  position: relative;&#10;}&#10;.my-class::after {&#10;  content: '';&#10;  /* arrow styles */&#10;}" style="height: 150px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
         <div style="font-size: 12px; color: #666; margin-top: 4px;">
-          Paste CSS properties (without selectors). Example: border: 3px solid #a88bd4; color: #000; background-color: #eee8f6;
+          <strong>Two modes:</strong> Paste direct CSS properties, OR define CSS classes (with pseudo-elements support). Classes are auto-detected and injected into iframe.
         </div>
       </div>
       
@@ -768,8 +768,8 @@
         <li><strong>Add Annotations</strong> - While paused:
           <ul style="margin-left:20px;">
             <li>Click "➕ Add Annotation"</li>
-            <li>Enter content (supports HTML tags like &lt;h1&gt;, &lt;p&gt;, &lt;strong&gt;)</li>
-            <li>Paste CSS styling rules to customize appearance</li>
+            <li>Enter content (supports HTML tags like &lt;h1&gt;, &lt;p&gt;, &lt;div class="my-class"&gt;)</li>
+            <li>Paste CSS styling rules OR define CSS classes with pseudo-elements (::after, ::before)</li>
             <li>Click "✨ Create Annotation"</li>
             <li>Drag the annotation box to position it exactly where you want</li>
             <li>Double-click annotation content to edit it anytime</li>
@@ -1579,15 +1579,30 @@
     annotationBeingEdited = null;
     editingAnnotationIndex = -1;
     
-    // Clear and set up form with example CSS
-    annContent.value = '';
-    annCSS.value = `border: 3px solid #a88bd4;
-font-size: 14px;
-color: #000000;
-background-color: #eee8f6;
-padding: 10px;
-border-radius: 5px;
-line-height: 1.5;`;
+    // Clear and set up form with arrow box example CSS
+    annContent.value = '<div class="simple-box">This is a note pointing downward</div>';
+    annCSS.value = `.simple-box {
+  position: relative;
+  background: #f9f9f9;
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: sans-serif;
+  width: fit-content;
+  max-width: 260px;
+  margin-bottom: 20px;
+}
+
+.simple-box::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  border-width: 20px 15px 0 15px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}`;
     annDuration.value = 5;
     
     // Set up modal for create mode
@@ -1732,6 +1747,68 @@ line-height: 1.5;`;
     annotationEditorModal.classList.remove('visible');
   });
   
+  // ========== CSS CLASS HANDLING ==========
+  
+  function detectCSSType(cssText) {
+    // Check if the CSS contains class definitions (lines starting with . after trimming)
+    const lines = cssText.split('\n').map(line => line.trim());
+    const hasClassDefinitions = lines.some(line => line.startsWith('.'));
+    return hasClassDefinitions ? 'classes' : 'properties';
+  }
+  
+  function injectCSSIntoIframe(cssText, uniqueId) {
+    const api = getAPI();
+    if (!api || !api.getDocument) {
+      console.error('Cannot inject CSS: API not available');
+      return;
+    }
+    
+    const iframeDoc = api.getDocument();
+    
+    // Remove any existing annotation styles with this ID
+    const existingStyle = iframeDoc.querySelector(`style[data-annotation-id="${uniqueId}"]`);
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    // Add new style block
+    const styleElement = iframeDoc.createElement('style');
+    styleElement.setAttribute('data-annotation-id', uniqueId);
+    styleElement.textContent = cssText;
+    iframeDoc.head.appendChild(styleElement);
+    
+    console.log('🎨 Injected CSS classes into iframe for annotation', uniqueId);
+  }
+  
+  function applyCSSToAnnotation(ann, annotationBox, uniqueId) {
+    if (!ann.customCSS || !ann.customCSS.trim()) {
+      return; // No custom CSS
+    }
+    
+    const cssType = detectCSSType(ann.customCSS);
+    console.log('🎨 Detected CSS type:', cssType);
+    
+    if (cssType === 'classes') {
+      // Inject CSS classes into iframe head
+      injectCSSIntoIframe(ann.customCSS.trim(), uniqueId);
+      
+      // Remove direct styling to allow classes to work
+      annotationBox.style.backgroundColor = '';
+      annotationBox.style.color = '';
+      annotationBox.style.fontSize = '';
+      annotationBox.style.textAlign = '';
+      annotationBox.style.border = '';
+      annotationBox.style.padding = '';
+      annotationBox.style.borderRadius = '';
+    } else {
+      // Apply direct CSS properties to the annotation box
+      const cssRules = ann.customCSS.trim();
+      annotationBox.style.cssText += '; ' + cssRules;
+    }
+  }
+
+  // ========== ANNOTATION EDITING ==========
+  
   function showAnnotationForPositioning(ann, index) {
     if (!annotationBox) {
       console.error('showAnnotationForPositioning: annotationBox is null');
@@ -1762,11 +1839,10 @@ line-height: 1.5;`;
       annotationBox.style.height = 'auto';
     }
     
-    // Apply custom CSS if it exists, otherwise use backward compatibility
+    // Apply custom CSS using new smart detection
+    const uniqueId = `annotation-${index}`;
     if (ann.customCSS && ann.customCSS.trim()) {
-      // Apply the raw CSS to the annotation box
-      const cssRules = ann.customCSS.trim();
-      annotationBox.style.cssText += '; ' + cssRules;
+      applyCSSToAnnotation(ann, annotationBox, uniqueId);
     } else if (ann.styles) {
       // Backward compatibility: apply old individual style properties
       const bgColor = ann.styles.backgroundColor || '#ffffff';
@@ -1857,14 +1933,17 @@ line-height: 1.5;`;
         
         annCSS.value = cssRules.join(';\n') + ';';
       } else {
-        // No existing styles - provide default
-        annCSS.value = `border: 3px solid #2563eb;
-font-size: 16px;
-color: #333333;
-background-color: #ffffff;
-padding: 20px;
-border-radius: 12px;
-line-height: 1.6;`;
+        // No existing styles - provide class-based example
+        annContent.value = ann.content || '<div class="annotation-box">Your content here</div>';
+        annCSS.value = `.annotation-box {
+  border: 3px solid #2563eb;
+  font-size: 16px;
+  color: #333333;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  line-height: 1.6;
+}`;
       }
       
       annDuration.value = (ann.duration || 5000) / 1000; // Convert back to seconds
@@ -2499,20 +2578,10 @@ line-height: 1.6;`;
       annotationBox.innerHTML = `<h3>${ann.title}</h3><p>${ann.text}</p>`;
     }
     
-    // Apply custom CSS if it exists, otherwise use backward compatibility
+    // Apply custom CSS using new smart detection
+    const playbackUniqueId = `playback-annotation`;
     if (ann.customCSS && ann.customCSS.trim()) {
-      // Reset to base styles first, then apply custom CSS
-      annotationBox.style.backgroundColor = '';
-      annotationBox.style.color = '';
-      annotationBox.style.fontSize = '';
-      annotationBox.style.textAlign = '';
-      annotationBox.style.border = '';
-      annotationBox.style.padding = '';
-      annotationBox.style.borderRadius = '';
-      
-      // Apply the raw CSS to the annotation box
-      const cssRules = ann.customCSS.trim();
-      annotationBox.style.cssText += '; ' + cssRules;
+      applyCSSToAnnotation(ann, annotationBox, playbackUniqueId);
     } else if (ann.styles) {
       // Backward compatibility: apply old individual style properties
       const bgColor = ann.styles.backgroundColor || '#ffffff';
@@ -4506,7 +4575,7 @@ line-height: 1.6;`;
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.35 initialized - Enhanced annotation editing with preserved positioning and MathJax rendering');
+  console.log('Tutorial Creator v13.36 initialized - Advanced CSS support with classes, pseudo-elements, and smart detection');
 })();
 </script>
 </body>
