@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.39</title>
+<title>Interactive Tutorial Creator - v13.40</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.39</div>
+    <div class="version-number">v13.40</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1858,6 +1858,19 @@
     // Always ensure global styles are injected first
     injectGlobalStyles();
     
+    // If we're using global styles with HTML content, clear default annotation box styling
+    if (currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class=')) {
+      console.log('🎨 Detected class usage - clearing default annotation box styles to prevent conflicts');
+      
+      // Clear default annotation box styles that might conflict
+      annotationBox.style.backgroundColor = 'transparent';
+      annotationBox.style.border = 'none';
+      annotationBox.style.padding = '0';
+      annotationBox.style.borderRadius = '0';
+      annotationBox.style.boxShadow = 'none';
+      annotationBox.style.overflow = 'visible'; // Important for arrows that extend outside
+    }
+    
     // Apply any direct CSS properties (optional simple styling)
     if (ann.customCSS && ann.customCSS.trim()) {
       const cssRules = ann.customCSS.trim();
@@ -2024,13 +2037,17 @@
       }
     } else {
       // Default styles for new annotations + global styles
-      injectGlobalStyles();
-      annotationBox.style.backgroundColor = '#ffffff';
-      annotationBox.style.color = '#333333';
-      annotationBox.style.fontSize = '16px';
-      annotationBox.style.border = '3px solid #2563eb';
-      annotationBox.style.padding = '20px';
-      annotationBox.style.borderRadius = '12px';
+      applyCSSToAnnotation(ann, annotationBox);
+      
+      // If no custom annotation styles but we detected class usage, keep defaults minimal
+      if (!(currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class='))) {
+        annotationBox.style.backgroundColor = '#ffffff';
+        annotationBox.style.color = '#333333';
+        annotationBox.style.fontSize = '16px';
+        annotationBox.style.border = '3px solid #2563eb';
+        annotationBox.style.padding = '20px';
+        annotationBox.style.borderRadius = '12px';
+      }
     }
     
     // Handle content - support both new flexible format and old title/text format for backward compatibility
@@ -2761,12 +2778,16 @@
       }
     } else {
       // Default styles + global styles
-      injectGlobalStyles();
-      annotationBox.style.backgroundColor = 'rgba(255,255,255,0.98)';
-      annotationBox.style.color = '#333333';
-      annotationBox.style.fontSize = '15px';
-      annotationBox.style.textAlign = 'left';
-      annotationBox.style.border = '3px solid var(--accent)';
+      applyCSSToAnnotation(ann, annotationBox);
+      
+      // If no custom annotation styles but we detected class usage, keep defaults minimal
+      if (!(currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class='))) {
+        annotationBox.style.backgroundColor = 'rgba(255,255,255,0.98)';
+        annotationBox.style.color = '#333333';
+        annotationBox.style.fontSize = '15px';
+        annotationBox.style.textAlign = 'left';
+        annotationBox.style.border = '3px solid var(--accent)';
+      }
     }
     
     if (ann.position) {
@@ -4751,7 +4772,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.39 initialized - Enhanced debugging for CSS injection and arrow troubleshooting');
+  console.log('Tutorial Creator v13.40 initialized - Fixed style conflicts: arrows now display cleanly without default container interference');
 })();
 </script>
 </body>
