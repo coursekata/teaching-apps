@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.38</title>
+<title>Interactive Tutorial Creator - v13.39</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.38</div>
+    <div class="version-number">v13.39</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1179,9 +1179,52 @@
         annotations: [],
         pauses: [],
         duration: 0,
-        globalStyles: '', // Store global CSS for the tutorial
+        globalStyles: `/* Default tutorial styles */
+
+.simple-box {
+  position: relative;
+  background: #f9f9f9;
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: sans-serif;
+  width: fit-content;
+  max-width: 260px;
+  margin-bottom: 20px;
+}
+
+.simple-box::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  border-width: 20px 15px 0 15px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.warning-box {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-left: 4px solid #f39c12;
+  padding: 12px 16px;
+  color: #856404;
+  border-radius: 4px;
+}
+
+.highlight {
+  background: #ffeb3b;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+}`, // Store global CSS for the tutorial
         createdAt: new Date().toISOString()
       };
+      
+      // Inject the default styles immediately
+      console.log('🎨 Injecting default global styles for new tutorial...');
+      injectGlobalStyles();
       
       isRecording = true;
       isPaused = false;
@@ -1773,7 +1816,10 @@
   // ========== CSS GLOBAL STYLES HANDLING ==========
   
   function injectGlobalStyles() {
-    if (!currentTutorial || !currentTutorial.globalStyles) return;
+    if (!currentTutorial || !currentTutorial.globalStyles) {
+      console.log('🎨 No global styles to inject');
+      return;
+    }
     
     const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
     if (!iframeDoc) {
@@ -1781,10 +1827,13 @@
       return;
     }
     
+    console.log('🎨 About to inject global styles:', currentTutorial.globalStyles.substring(0, 100) + '...');
+    
     // Remove existing global styles
     const existingStyle = iframeDoc.querySelector('style[data-global-tutorial-styles]');
     if (existingStyle) {
       existingStyle.remove();
+      console.log('🎨 Removed existing global styles');
     }
     
     // Add new global styles
@@ -1794,6 +1843,15 @@
     iframeDoc.head.appendChild(styleElement);
     
     console.log('🎨 Injected global tutorial styles into iframe:', currentTutorial.globalStyles.length, 'chars');
+    console.log('🎨 Style element added to head, total style elements:', iframeDoc.querySelectorAll('style').length);
+    
+    // Debug: Check if our styles are actually in the DOM
+    const injectedStyle = iframeDoc.querySelector('style[data-global-tutorial-styles]');
+    if (injectedStyle) {
+      console.log('🎨 Verification: Style element exists in DOM with content length:', injectedStyle.textContent.length);
+    } else {
+      console.error('🎨 ERROR: Style element not found in DOM after injection!');
+    }
   }
   
   function applyCSSToAnnotation(ann, annotationBox) {
@@ -1813,8 +1871,11 @@
   tutorialStyles.addEventListener('click', () => {
     if (!currentTutorial) return;
     
-    // Populate with existing global styles
-    tutorialStylesCSS.value = currentTutorial.globalStyles || `/* Example styles for your tutorial */
+    // Populate with existing global styles (or defaults if empty)
+    if (currentTutorial.globalStyles) {
+      tutorialStylesCSS.value = currentTutorial.globalStyles;
+    } else {
+      tutorialStylesCSS.value = `/* Example styles for your tutorial */
 
 .simple-box {
   position: relative;
@@ -1854,9 +1915,12 @@
   border-radius: 3px;
   font-weight: bold;
 }`;
+    }
     
     tutorialStylesModal.classList.add('visible');
     tutorialStylesCSS.focus();
+    
+    console.log('🎨 Opened styles editor with', tutorialStylesCSS.value.length, 'characters');
   });
   
   saveTutorialStyles.addEventListener('click', () => {
@@ -1865,9 +1929,25 @@
     // Save the global styles
     currentTutorial.globalStyles = tutorialStylesCSS.value.trim();
     console.log('💾 Saved tutorial styles:', currentTutorial.globalStyles.length, 'characters');
+    console.log('💾 First 200 chars:', currentTutorial.globalStyles.substring(0, 200));
     
     // Inject the global styles into the iframe immediately
     injectGlobalStyles();
+    
+    // Test verification: check if styles are actually in the iframe
+    setTimeout(() => {
+      const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+      if (iframeDoc) {
+        const styleElements = iframeDoc.querySelectorAll('style');
+        const globalStyle = iframeDoc.querySelector('style[data-global-tutorial-styles]');
+        console.log('🔍 Verification - Total style elements in iframe:', styleElements.length);
+        console.log('🔍 Verification - Global style element found:', !!globalStyle);
+        if (globalStyle) {
+          console.log('🔍 Verification - Global style content length:', globalStyle.textContent.length);
+          console.log('🔍 Verification - Contains simple-box class:', globalStyle.textContent.includes('.simple-box'));
+        }
+      }
+    }, 100);
     
     tutorialStylesModal.classList.remove('visible');
     
@@ -1898,6 +1978,10 @@
     }
     
     console.log('showAnnotationForPositioning called for annotation with content:', ann.content.substring(0, 50) + '...');
+    
+    // ALWAYS inject global styles first (this ensures they're available)
+    console.log('🎨 Ensuring global styles are injected before showing annotation...');
+    injectGlobalStyles();
     
     annotationBox.className = 'annotation-box visible draggable custom-position';
     annotationBox.style.position = 'absolute';
@@ -2640,8 +2724,13 @@
   
   function showAnnotation(ann) {
     console.log('🔍 SHOW ANNOTATION (PLAYBACK) - Called with annotation:', JSON.stringify(ann, null, 2));
+    console.log('🔍 Current tutorial globalStyles length:', currentTutorial?.globalStyles?.length || 0);
     
     if (!annotationBox) return;
+    
+    // ALWAYS inject global styles first for playback too
+    console.log('🎨 Ensuring global styles are injected before playback annotation...');
+    injectGlobalStyles();
     
     // Handle content - support both new flexible format and old title/text format for backward compatibility
     if (ann.content !== undefined) {
@@ -4662,7 +4751,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.38 initialized - Fixed Styles button access and CSS injection for working arrows');
+  console.log('Tutorial Creator v13.39 initialized - Enhanced debugging for CSS injection and arrow troubleshooting');
 })();
 </script>
 </body>
