@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.36</title>
+<title>Interactive Tutorial Creator - v13.37</title>
 <script>
   window.MathJax = {
     tex: {
@@ -623,6 +623,7 @@
         <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
         <button id="addAnnotation" class="teal" style="display:none;" disabled title="Add text annotation">+Text</button>
         <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
+        <button id="tutorialStyles" class="teal" style="display:none;" disabled title="Define CSS styles for this tutorial">📝 Tutorial Styles</button>
         <button id="previewRecording" class="primary" style="display:none;" disabled title="Play tutorial">▶ Play</button>
         <button id="playPausePreview" style="display:none;"></button><!-- Hidden, kept for compatibility -->
         <button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">New Tutorial</button>
@@ -632,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.36</div>
+    <div class="version-number">v13.37</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -662,22 +663,23 @@
       <h2>Add Annotation</h2>
       
       <div class="info-box">
-        <strong>📝 Instructions:</strong> Create flexible annotations with HTML content and custom CSS styling. Enter your content below, then paste CSS rules to style the annotation box.
+        <strong>📝 Create Annotation</strong><br>
+        Enter content using HTML and reference CSS classes defined in Tutorial Styles. For simple styling, use the optional controls below.
       </div>
       
       <div class="form-group">
-        <label>Content (supports HTML)</label>
-        <textarea id="annContent" placeholder="Enter your content... Use HTML like &lt;h1&gt;Title&lt;/h1&gt;&lt;p&gt;Description&lt;/p&gt; or plain text" style="height: 100px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <label>Content (supports HTML and CSS classes)</label>
+        <textarea id="annContent" placeholder="Examples:&#10;&#10;• Plain text: This is important information&#10;&#10;• With classes: &lt;div class=&quot;simple-box&quot;&gt;Note with arrow&lt;/div&gt;&#10;&#10;• Mixed: &lt;h2&gt;Title&lt;/h2&gt;&lt;p&gt;Use &lt;span class=&quot;highlight&quot;&gt;highlighting&lt;/span&gt; here.&lt;/p&gt;" style="height: 120px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
         <div style="font-size: 12px; color: #666; margin-top: 4px;">
-          Examples: &lt;h1&gt;Warning!&lt;/h1&gt; • &lt;p style="color: red;"&gt;Important&lt;/p&gt; • Plain text works too
+          Reference classes defined in Tutorial Styles, or use HTML tags directly.
         </div>
       </div>
       
       <div class="form-group">
-        <label>CSS Styling (paste CSS properties)</label>
-        <textarea id="annCSS" placeholder="Two modes supported:&#10;&#10;1. Direct properties:&#10;border: 3px solid #a88bd4;&#10;background-color: #eee8f6;&#10;padding: 10px;&#10;&#10;2. CSS classes (auto-detected):&#10;.my-class {&#10;  border: 2px solid #555;&#10;  position: relative;&#10;}&#10;.my-class::after {&#10;  content: '';&#10;  /* arrow styles */&#10;}" style="height: 150px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <label>Simple Styling (optional - overrides tutorial styles)</label>
+        <textarea id="annCSS" placeholder="Optional direct CSS properties:&#10;background-color: #ffffcc;&#10;border: 2px dashed #999;&#10;padding: 15px;&#10;font-weight: bold;" style="height: 80px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
         <div style="font-size: 12px; color: #666; margin-top: 4px;">
-          <strong>Two modes:</strong> Paste direct CSS properties, OR define CSS classes (with pseudo-elements support). Classes are auto-detected and injected into iframe.
+          Optional: Add direct CSS properties to override or supplement tutorial styles.
         </div>
       </div>
       
@@ -690,6 +692,31 @@
         <button id="cancelAnnotation">Cancel</button>
         <button id="nextToPositioning" class="primary" style="display:none;">Next: Position →</button>
         <button id="createAnnotation" class="primary">✨ Create Annotation</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tutorial Styles Modal -->
+  <div id="tutorialStylesModal" class="modal-overlay">
+    <div class="modal" style="max-width: 800px;">
+      <h2>Tutorial Styles</h2>
+      
+      <div class="info-box">
+        <strong>🎨 Define CSS classes once, use throughout tutorial</strong><br>
+        Create reusable styles that any annotation can reference. Supports pseudo-elements (::after, ::before) for arrows, decorative elements, etc.
+      </div>
+      
+      <div class="form-group">
+        <label>Global CSS Classes</label>
+        <textarea id="tutorialStylesCSS" placeholder="Example:&#10;&#10;.simple-box {&#10;  position: relative;&#10;  background: #f9f9f9;&#10;  border: 2px solid #555;&#10;  border-radius: 8px;&#10;  padding: 12px 16px;&#10;  font-family: sans-serif;&#10;  width: fit-content;&#10;  max-width: 260px;&#10;  margin-bottom: 20px;&#10;}&#10;&#10;.simple-box::after {&#10;  content: '';&#10;  position: absolute;&#10;  left: 50%;&#10;  bottom: -20px;&#10;  transform: translateX(-50%);&#10;  border-width: 20px 15px 0 15px;&#10;  border-style: solid;&#10;  border-color: #555 transparent transparent transparent;&#10;}&#10;&#10;.warning-box {&#10;  background: #fee;&#10;  border-left: 4px solid #f00;&#10;  padding: 16px;&#10;  color: #600;&#10;}&#10;&#10;.highlight {&#10;  background: yellow;&#10;  padding: 2px 4px;&#10;  border-radius: 3px;&#10;}" style="height: 300px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">
+          Define CSS classes here. In annotations, use: &lt;div class="simple-box"&gt;Content&lt;/div&gt; or &lt;span class="highlight"&gt;highlighted text&lt;/span&gt;
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="cancelTutorialStyles">Cancel</button>
+        <button id="saveTutorialStyles" class="primary">💾 Save Styles</button>
       </div>
     </div>
   </div>
@@ -827,6 +854,12 @@
   const createAnnotation = document.getElementById('createAnnotation');
   const nextToPositioning = document.getElementById('nextToPositioning');
   const cancelAnnotation = document.getElementById('cancelAnnotation');
+  
+  const tutorialStyles = document.getElementById('tutorialStyles');
+  const tutorialStylesModal = document.getElementById('tutorialStylesModal');
+  const tutorialStylesCSS = document.getElementById('tutorialStylesCSS');
+  const saveTutorialStyles = document.getElementById('saveTutorialStyles');
+  const cancelTutorialStyles = document.getElementById('cancelTutorialStyles');
   
 
   
@@ -1141,6 +1174,7 @@
         annotations: [],
         pauses: [],
         duration: 0,
+        globalStyles: '', // Store global CSS for the tutorial
         createdAt: new Date().toISOString()
       };
       
@@ -1209,6 +1243,8 @@
       addAnnotationAtPause.style.display = 'none';
       addPause.style.display = 'inline-block';
       addPause.disabled = true; // Disabled during active recording
+      tutorialStyles.style.display = 'inline-block';
+      tutorialStyles.disabled = true; // Disabled during active recording
       previewRecording.style.display = 'inline-block';
       previewRecording.disabled = true; // Disabled until paused
       recordingIndicator.style.display = 'none'; // Indicator not shown - button blinks instead
@@ -1310,6 +1346,7 @@
         startRecording.className = 'record';
         addAnnotation.disabled = false;
         addPause.disabled = false;
+        tutorialStyles.disabled = false;
         previewRecording.disabled = false;
         recordAgain.disabled = false;
         exportRecording.disabled = false;
@@ -1579,30 +1616,9 @@
     annotationBeingEdited = null;
     editingAnnotationIndex = -1;
     
-    // Clear and set up form with arrow box example CSS
+    // Clear and set up form with examples
     annContent.value = '<div class="simple-box">This is a note pointing downward</div>';
-    annCSS.value = `.simple-box {
-  position: relative;
-  background: #f9f9f9;
-  border: 2px solid #555;
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-family: sans-serif;
-  width: fit-content;
-  max-width: 260px;
-  margin-bottom: 20px;
-}
-
-.simple-box::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -20px;
-  transform: translateX(-50%);
-  border-width: 20px 15px 0 15px;
-  border-style: solid;
-  border-color: #555 transparent transparent transparent;
-}`;
+    annCSS.value = ''; // Start empty - global styles handle most formatting
     annDuration.value = 5;
     
     // Set up modal for create mode
@@ -1747,65 +1763,126 @@
     annotationEditorModal.classList.remove('visible');
   });
   
-  // ========== CSS CLASS HANDLING ==========
+  // ========== CSS GLOBAL STYLES HANDLING ==========
   
-  function detectCSSType(cssText) {
-    // Check if the CSS contains class definitions (lines starting with . after trimming)
-    const lines = cssText.split('\n').map(line => line.trim());
-    const hasClassDefinitions = lines.some(line => line.startsWith('.'));
-    return hasClassDefinitions ? 'classes' : 'properties';
-  }
-  
-  function injectCSSIntoIframe(cssText, uniqueId) {
+  function injectGlobalStyles() {
+    if (!currentTutorial || !currentTutorial.globalStyles) return;
+    
     const api = getAPI();
     if (!api || !api.getDocument) {
-      console.error('Cannot inject CSS: API not available');
+      console.error('Cannot inject global styles: API not available');
       return;
     }
     
     const iframeDoc = api.getDocument();
     
-    // Remove any existing annotation styles with this ID
-    const existingStyle = iframeDoc.querySelector(`style[data-annotation-id="${uniqueId}"]`);
+    // Remove existing global styles
+    const existingStyle = iframeDoc.querySelector('style[data-global-tutorial-styles]');
     if (existingStyle) {
       existingStyle.remove();
     }
     
-    // Add new style block
+    // Add new global styles
     const styleElement = iframeDoc.createElement('style');
-    styleElement.setAttribute('data-annotation-id', uniqueId);
-    styleElement.textContent = cssText;
+    styleElement.setAttribute('data-global-tutorial-styles', 'true');
+    styleElement.textContent = currentTutorial.globalStyles;
     iframeDoc.head.appendChild(styleElement);
     
-    console.log('🎨 Injected CSS classes into iframe for annotation', uniqueId);
+    console.log('🎨 Injected global tutorial styles into iframe');
   }
   
-  function applyCSSToAnnotation(ann, annotationBox, uniqueId) {
-    if (!ann.customCSS || !ann.customCSS.trim()) {
-      return; // No custom CSS
-    }
+  function applyCSSToAnnotation(ann, annotationBox) {
+    // Always ensure global styles are injected first
+    injectGlobalStyles();
     
-    const cssType = detectCSSType(ann.customCSS);
-    console.log('🎨 Detected CSS type:', cssType);
-    
-    if (cssType === 'classes') {
-      // Inject CSS classes into iframe head
-      injectCSSIntoIframe(ann.customCSS.trim(), uniqueId);
-      
-      // Remove direct styling to allow classes to work
-      annotationBox.style.backgroundColor = '';
-      annotationBox.style.color = '';
-      annotationBox.style.fontSize = '';
-      annotationBox.style.textAlign = '';
-      annotationBox.style.border = '';
-      annotationBox.style.padding = '';
-      annotationBox.style.borderRadius = '';
-    } else {
-      // Apply direct CSS properties to the annotation box
+    // Apply any direct CSS properties (optional simple styling)
+    if (ann.customCSS && ann.customCSS.trim()) {
       const cssRules = ann.customCSS.trim();
       annotationBox.style.cssText += '; ' + cssRules;
+      console.log('🎨 Applied direct CSS to annotation:', cssRules);
     }
   }
+
+  // ========== TUTORIAL STYLES ==========
+  
+  tutorialStyles.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    // Populate with existing global styles
+    tutorialStylesCSS.value = currentTutorial.globalStyles || `/* Example styles for your tutorial */
+
+.simple-box {
+  position: relative;
+  background: #f9f9f9;
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: sans-serif;
+  width: fit-content;
+  max-width: 260px;
+  margin-bottom: 20px;
+}
+
+.simple-box::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  border-width: 20px 15px 0 15px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.warning-box {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-left: 4px solid #f39c12;
+  padding: 12px 16px;
+  color: #856404;
+  border-radius: 4px;
+}
+
+.highlight {
+  background: #ffeb3b;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+}`;
+    
+    tutorialStylesModal.classList.add('visible');
+    tutorialStylesCSS.focus();
+  });
+  
+  saveTutorialStyles.addEventListener('click', () => {
+    if (!currentTutorial) return;
+    
+    // Save the global styles
+    currentTutorial.globalStyles = tutorialStylesCSS.value.trim();
+    console.log('💾 Saved tutorial styles:', currentTutorial.globalStyles.length, 'characters');
+    
+    // Inject the global styles into the iframe immediately
+    injectGlobalStyles();
+    
+    tutorialStylesModal.classList.remove('visible');
+    
+    // Show feedback
+    saveTutorialStyles.textContent = '✓ Saved!';
+    setTimeout(() => {
+      saveTutorialStyles.textContent = '💾 Save Styles';
+    }, 2000);
+  });
+  
+  cancelTutorialStyles.addEventListener('click', () => {
+    tutorialStylesModal.classList.remove('visible');
+  });
+  
+  // Close modal when clicking outside
+  tutorialStylesModal.addEventListener('click', (e) => {
+    if (e.target === tutorialStylesModal) {
+      tutorialStylesModal.classList.remove('visible');
+    }
+  });
 
   // ========== ANNOTATION EDITING ==========
   
@@ -1839,10 +1916,9 @@
       annotationBox.style.height = 'auto';
     }
     
-    // Apply custom CSS using new smart detection
-    const uniqueId = `annotation-${index}`;
+    // Apply global styles and any custom CSS
     if (ann.customCSS && ann.customCSS.trim()) {
-      applyCSSToAnnotation(ann, annotationBox, uniqueId);
+      applyCSSToAnnotation(ann, annotationBox);
     } else if (ann.styles) {
       // Backward compatibility: apply old individual style properties
       const bgColor = ann.styles.backgroundColor || '#ffffff';
@@ -1858,7 +1934,8 @@
         annotationBox.style.border = 'none';
       }
     } else {
-      // Default styles for new annotations
+      // Default styles for new annotations + global styles
+      injectGlobalStyles();
       annotationBox.style.backgroundColor = '#ffffff';
       annotationBox.style.color = '#333333';
       annotationBox.style.fontSize = '16px';
@@ -1904,7 +1981,7 @@
       // Pre-populate form with existing data
       annContent.value = ann.content || '';
       
-      // Handle CSS - convert old-style individual properties to CSS if needed
+      // Handle CSS - just use existing customCSS if available
       if (ann.customCSS) {
         // New format - use existing CSS
         annCSS.value = ann.customCSS;
@@ -1933,17 +2010,8 @@
         
         annCSS.value = cssRules.join(';\n') + ';';
       } else {
-        // No existing styles - provide class-based example
-        annContent.value = ann.content || '<div class="annotation-box">Your content here</div>';
-        annCSS.value = `.annotation-box {
-  border: 3px solid #2563eb;
-  font-size: 16px;
-  color: #333333;
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 12px;
-  line-height: 1.6;
-}`;
+        // No existing styles - start empty (rely on global styles)
+        annCSS.value = '';
       }
       
       annDuration.value = (ann.duration || 5000) / 1000; // Convert back to seconds
@@ -2578,10 +2646,9 @@
       annotationBox.innerHTML = `<h3>${ann.title}</h3><p>${ann.text}</p>`;
     }
     
-    // Apply custom CSS using new smart detection
-    const playbackUniqueId = `playback-annotation`;
+    // Apply global styles and any custom CSS for playback
     if (ann.customCSS && ann.customCSS.trim()) {
-      applyCSSToAnnotation(ann, annotationBox, playbackUniqueId);
+      applyCSSToAnnotation(ann, annotationBox);
     } else if (ann.styles) {
       // Backward compatibility: apply old individual style properties
       const bgColor = ann.styles.backgroundColor || '#ffffff';
@@ -2598,7 +2665,8 @@
         annotationBox.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'; // Maintain shadow when no border
       }
     } else {
-      // Reset to default styles for backward compatibility
+      // Default styles + global styles
+      injectGlobalStyles();
       annotationBox.style.backgroundColor = 'rgba(255,255,255,0.98)';
       annotationBox.style.color = '#333333';
       annotationBox.style.fontSize = '15px';
@@ -4440,6 +4508,11 @@
           imported.pauses = [];
         }
         
+        // Backward compatibility: add globalStyles if it doesn't exist
+        if (!imported.globalStyles) {
+          imported.globalStyles = '';
+        }
+        
         currentTutorial = imported;
         
         console.log('📤 Tutorial imported successfully');
@@ -4490,6 +4563,11 @@
           };
           api.onAction(eventListener);
           
+          // Inject global styles if they exist
+          if (currentTutorial.globalStyles) {
+            injectGlobalStyles();
+          }
+          
           // Show paused recording UI
           startRecording.style.display = 'inline-block';
           startRecording.textContent = '⏺ Record';
@@ -4504,6 +4582,8 @@
           addAnnotationAtPause.style.display = 'none';
           addPause.style.display = 'inline-block';
           addPause.disabled = false;
+          tutorialStyles.style.display = 'inline-block';
+          tutorialStyles.disabled = false;
           previewRecording.style.display = 'inline-block';
           previewRecording.disabled = false;
           recordAgain.style.display = 'inline-block';
@@ -4575,7 +4655,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.36 initialized - Advanced CSS support with classes, pseudo-elements, and smart detection');
+  console.log('Tutorial Creator v13.37 initialized - Global tutorial styles system with simplified annotation workflow');
 })();
 </script>
 </body>
