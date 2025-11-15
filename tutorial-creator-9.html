@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.44</title>
+<title>Interactive Tutorial Creator - v13.45</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.44</div>
+    <div class="version-number">v13.45</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1861,27 +1861,29 @@
     // If we're using global styles with HTML content, clear default annotation box styling
     const isUsingClasses = currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class=');
     if (isUsingClasses) {
-      console.log('🎨 Detected class usage - modifying annotation box styles while keeping it functional');
+      console.log('🎨 Detected class usage - forcing visibility for debugging');
       
-      // Clear conflicting default styles but keep container functional
-      annotationBox.style.backgroundColor = 'transparent';
-      annotationBox.style.border = 'none';
+      // Force visibility with aggressive debugging styles
+      annotationBox.style.backgroundColor = 'rgba(255, 255, 0, 0.3)'; // Yellow background for debugging
+      annotationBox.style.border = '2px solid red'; // Red border for debugging
       annotationBox.style.borderRadius = '0';
-      annotationBox.style.boxShadow = 'none';
-      annotationBox.style.overflow = 'visible'; // Important for arrows that extend outside
-      annotationBox.style.padding = '4px'; // Minimal padding to keep container functional
+      annotationBox.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.5)'; // Red shadow for debugging
+      annotationBox.style.overflow = 'visible';
+      annotationBox.style.padding = '8px';
+      annotationBox.style.margin = '0';
       
-      // Ensure container sizes properly but remains visible/functional
-      annotationBox.style.display = 'block'; // Keep as block for stability
+      // Force container to be visible and functional
+      annotationBox.style.display = 'block';
+      annotationBox.style.position = 'absolute';
       annotationBox.style.width = 'auto';
       annotationBox.style.height = 'auto';
-      annotationBox.style.minWidth = '20px'; // Ensure minimum visibility
-      annotationBox.style.minHeight = '20px'; // Ensure minimum visibility
+      annotationBox.style.minWidth = '100px';
+      annotationBox.style.minHeight = '50px';
+      annotationBox.style.zIndex = '10000';
+      annotationBox.style.opacity = '1';
+      annotationBox.style.visibility = 'visible';
       
-      // Add subtle debugging border temporarily to see the container
-      annotationBox.style.outline = '1px dashed rgba(255,0,0,0.2)';
-      
-      console.log('🎨 Class-based annotation container configured with minimal styles');
+      console.log('🎨 Applied aggressive debugging styles - annotation should be highly visible with yellow background and red border');
     }
     
     // Apply any direct CSS properties (optional simple styling)
@@ -2083,6 +2085,19 @@
     const annotationContent = annotationBox.querySelector('.annotation-content');
     
     console.log('Annotation box styles set, display:', window.getComputedStyle(annotationBox).display);
+    console.log('🔍 Annotation box computed styles:', {
+      display: window.getComputedStyle(annotationBox).display,
+      position: window.getComputedStyle(annotationBox).position,
+      visibility: window.getComputedStyle(annotationBox).visibility,
+      opacity: window.getComputedStyle(annotationBox).opacity,
+      zIndex: window.getComputedStyle(annotationBox).zIndex,
+      backgroundColor: window.getComputedStyle(annotationBox).backgroundColor,
+      border: window.getComputedStyle(annotationBox).border,
+      left: window.getComputedStyle(annotationBox).left,
+      top: window.getComputedStyle(annotationBox).top,
+      width: window.getComputedStyle(annotationBox).width,
+      height: window.getComputedStyle(annotationBox).height
+    });
     
     // Render MathJax in the annotation content
     if (window.MathJax && window.MathJax.typesetPromise) {
@@ -4787,7 +4802,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.44 initialized - Debugging invisible class-based annotations with conservative styling and logging');
+  console.log('Tutorial Creator v13.45 initialized - AGGRESSIVE DEBUGGING: Bright yellow background + red border to force annotation visibility');
 })();
 </script>
 </body>
