@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.43</title>
+<title>Interactive Tutorial Creator - v13.44</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.43</div>
+    <div class="version-number">v13.44</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1861,29 +1861,27 @@
     // If we're using global styles with HTML content, clear default annotation box styling
     const isUsingClasses = currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class=');
     if (isUsingClasses) {
-      console.log('🎨 Detected class usage - clearing default annotation box styles to prevent conflicts');
+      console.log('🎨 Detected class usage - modifying annotation box styles while keeping it functional');
       
-      // Clear default annotation box styles that might conflict
+      // Clear conflicting default styles but keep container functional
       annotationBox.style.backgroundColor = 'transparent';
       annotationBox.style.border = 'none';
       annotationBox.style.borderRadius = '0';
       annotationBox.style.boxShadow = 'none';
       annotationBox.style.overflow = 'visible'; // Important for arrows that extend outside
-      annotationBox.style.padding = '0';
-      annotationBox.style.margin = '0';
+      annotationBox.style.padding = '4px'; // Minimal padding to keep container functional
       
-      // Force container to wrap content tightly
-      annotationBox.style.display = 'inline-block';
-      annotationBox.style.width = 'fit-content';
-      annotationBox.style.height = 'fit-content';
-      annotationBox.style.maxWidth = 'none';
-      annotationBox.style.minWidth = 'auto';
-      annotationBox.style.minHeight = 'auto';
+      // Ensure container sizes properly but remains visible/functional
+      annotationBox.style.display = 'block'; // Keep as block for stability
+      annotationBox.style.width = 'auto';
+      annotationBox.style.height = 'auto';
+      annotationBox.style.minWidth = '20px'; // Ensure minimum visibility
+      annotationBox.style.minHeight = '20px'; // Ensure minimum visibility
       
-      // Ensure resize handle stays within bounds but positions correctly
-      annotationBox.style.position = 'relative'; // Ensure proper positioning context
+      // Add subtle debugging border temporarily to see the container
+      annotationBox.style.outline = '1px dashed rgba(255,0,0,0.2)';
       
-      console.log('🎨 Container sized to content with fit-content');
+      console.log('🎨 Class-based annotation container configured with minimal styles');
     }
     
     // Apply any direct CSS properties (optional simple styling)
@@ -2068,10 +2066,12 @@
     // Handle content - support both new flexible format and old title/text format for backward compatibility
     if (ann.content !== undefined) {
       // New format: single content field with HTML support
+      console.log('🔍 Setting annotation content:', ann.content.substring(0, 100));
       annotationBox.innerHTML = `
         <div class="annotation-content">${ann.content}</div>
         <div class="resize-handle"></div>
       `;
+      console.log('🔍 Annotation content set, innerHTML length:', annotationBox.innerHTML.length);
     } else if (ann.title && ann.text) {
       // Backward compatibility: convert old format to new format
       annotationBox.innerHTML = `
@@ -4787,7 +4787,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.43 initialized - True fit-content container sizing: eliminates oversized annotation containers');
+  console.log('Tutorial Creator v13.44 initialized - Debugging invisible class-based annotations with conservative styling and logging');
 })();
 </script>
 </body>
