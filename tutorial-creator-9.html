@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.40</title>
+<title>Interactive Tutorial Creator - v13.41</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.40</div>
+    <div class="version-number">v13.41</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1859,16 +1859,19 @@
     injectGlobalStyles();
     
     // If we're using global styles with HTML content, clear default annotation box styling
-    if (currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class=')) {
+    const isUsingClasses = currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class=');
+    if (isUsingClasses) {
       console.log('🎨 Detected class usage - clearing default annotation box styles to prevent conflicts');
       
       // Clear default annotation box styles that might conflict
       annotationBox.style.backgroundColor = 'transparent';
       annotationBox.style.border = 'none';
-      annotationBox.style.padding = '0';
       annotationBox.style.borderRadius = '0';
       annotationBox.style.boxShadow = 'none';
       annotationBox.style.overflow = 'visible'; // Important for arrows that extend outside
+      
+      // Keep minimal padding for resize handle positioning
+      annotationBox.style.padding = '0 16px 16px 0';
     }
     
     // Apply any direct CSS properties (optional simple styling)
@@ -4772,7 +4775,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.40 initialized - Fixed style conflicts: arrows now display cleanly without default container interference');
+  console.log('Tutorial Creator v13.41 initialized - Fixed resize handle positioning for class-based annotations');
 })();
 </script>
 </body>
