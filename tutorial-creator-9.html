@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.47</title>
+<title>Interactive Tutorial Creator - v13.48</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.46</div>
+    <div class="version-number">v13.48</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1894,7 +1894,7 @@
       console.log('🎨 Applying GLOBAL STYLES (either/or) - making container transparent wrapper');
       injectGlobalStyles();
       
-      // Make container completely transparent and minimal - it's just a positioning wrapper
+      // Make container completely transparent - it's just a positioning/sizing wrapper
       annotationBox.style.backgroundColor = 'transparent';
       annotationBox.style.border = 'none';
       annotationBox.style.borderRadius = '0';
@@ -1902,11 +1902,8 @@
       annotationBox.style.padding = '0';
       annotationBox.style.margin = '0';
       
-      // Container wraps content exactly
-      annotationBox.style.display = 'inline-block';
-      annotationBox.style.width = 'fit-content';
-      annotationBox.style.height = 'fit-content';
-      annotationBox.style.maxWidth = 'none';
+      // Container has normal block dimensions (resizable)
+      // Don't use fit-content - user needs to control size
       annotationBox.style.overflow = 'visible';
       
       // Positioning properties
@@ -4836,7 +4833,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.47 initialized - EITHER/OR STYLING FIX: Clean separation - use global styles OR custom CSS, never both');
+  console.log('Tutorial Creator v13.48 initialized - EITHER/OR STYLING FIX: Clean separation - use global styles OR custom CSS, never both');
 })();
 </script>
 </body>
