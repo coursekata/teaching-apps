@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - v13.45</title>
+<title>Interactive Tutorial Creator - v13.46</title>
 <script>
   window.MathJax = {
     tex: {
@@ -633,7 +633,7 @@
       <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
       <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
-    <div class="version-number">v13.45</div>
+    <div class="version-number">v13.46</div>
   </div>
   
   <!-- Timeline Editor (moved outside header so it scrolls independently) -->
@@ -1861,29 +1861,30 @@
     // If we're using global styles with HTML content, clear default annotation box styling
     const isUsingClasses = currentTutorial && currentTutorial.globalStyles && ann.content && ann.content.includes('class=');
     if (isUsingClasses) {
-      console.log('🎨 Detected class usage - forcing visibility for debugging');
+      console.log('🎨 Detected class usage - configuring container to wrap content tightly');
       
-      // Force visibility with aggressive debugging styles
-      annotationBox.style.backgroundColor = 'rgba(255, 255, 0, 0.3)'; // Yellow background for debugging
-      annotationBox.style.border = '2px solid red'; // Red border for debugging
+      // Make container completely transparent and minimal
+      annotationBox.style.backgroundColor = 'transparent';
+      annotationBox.style.border = 'none';
       annotationBox.style.borderRadius = '0';
-      annotationBox.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.5)'; // Red shadow for debugging
-      annotationBox.style.overflow = 'visible';
-      annotationBox.style.padding = '8px';
+      annotationBox.style.boxShadow = 'none';
+      annotationBox.style.padding = '0';
       annotationBox.style.margin = '0';
       
-      // Force container to be visible and functional
-      annotationBox.style.display = 'block';
+      // Container should wrap content exactly
+      annotationBox.style.display = 'inline-block'; // This sizes to content
+      annotationBox.style.width = 'fit-content';
+      annotationBox.style.height = 'fit-content';
+      annotationBox.style.maxWidth = 'none';
+      annotationBox.style.overflow = 'visible'; // For arrows extending outside
+      
+      // Ensure visibility
       annotationBox.style.position = 'absolute';
-      annotationBox.style.width = 'auto';
-      annotationBox.style.height = 'auto';
-      annotationBox.style.minWidth = '100px';
-      annotationBox.style.minHeight = '50px';
       annotationBox.style.zIndex = '10000';
       annotationBox.style.opacity = '1';
       annotationBox.style.visibility = 'visible';
       
-      console.log('🎨 Applied aggressive debugging styles - annotation should be highly visible with yellow background and red border');
+      console.log('🎨 Container configured to wrap content tightly with fit-content sizing');
     }
     
     // Apply any direct CSS properties (optional simple styling)
@@ -4802,7 +4803,7 @@
   // Add playhead drag event listener
   timelinePlayhead.addEventListener('mousedown', startPlayheadDrag);
   
-  console.log('Tutorial Creator v13.45 initialized - AGGRESSIVE DEBUGGING: Bright yellow background + red border to force annotation visibility');
+  console.log('Tutorial Creator v13.46 initialized - FIT-CONTENT FIX: Container wraps content exactly, eliminating oversized containers');
 })();
 </script>
 </body>
