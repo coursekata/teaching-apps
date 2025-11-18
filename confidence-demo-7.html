@@ -2558,7 +2558,7 @@
   data2 = [];
   
   // Pre-generate sampling distribution if requested
-  if(shouldPregenerate) {
+  if(shouldPregenerate && betaValue !== null && !Number.isNaN(betaValue)) {
     const se = getSE();
     const beta = getBeta();
     data = gaussian(1000, beta, se);
