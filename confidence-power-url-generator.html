@@ -269,6 +269,13 @@
           <option value="on">On</option>
         </select>
       </div>
+      <div class="control">
+        <label>Pre-Generate Sampling Distribution</label>
+        <select id="pregenerate">
+          <option value="false">No</option>
+          <option value="true">Yes (1000 samples)</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -398,6 +405,7 @@ function generateURL() {
   const seconddist = document.getElementById('seconddist').value;
   const powermode = document.getElementById('powermode').value;
   const vertlines = document.getElementById('vertlines').value;
+  const pregenerate = document.getElementById('pregenerate').value;
   
   if(curve !== 'off') params.append('curve', curve);
   if(alpha !== 'off') params.append('alpha', alpha);
@@ -405,6 +413,7 @@ function generateURL() {
   if(seconddist !== 'off') params.append('seconddist', seconddist);
   if(powermode !== 'tails') params.append('powermode', powermode);
   if(vertlines !== 'off') params.append('vertlines', vertlines);
+  if(pregenerate !== 'false') params.append('pregenerate', pregenerate);
   
   // Add labels (only if provided)
   const labelParam = document.getElementById('label_param').value.trim();
