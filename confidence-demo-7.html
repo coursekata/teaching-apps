@@ -204,6 +204,7 @@
           <button data-n="10">10x</button>
           <button data-n="100">100x</button>
           <button data-n="1000">1000x</button>
+          <button data-action="clear">Clear</button>
         </div>
       </div>
 
@@ -2288,9 +2289,23 @@
   
   // Dropdown menu item selection
   regenDropdown.addEventListener('click', function(e){
-    const btn = e.target.closest('button[data-n]');
+    const btn = e.target.closest('button[data-n], button[data-action]');
     if(!btn) return;
     
+    // Handle Clear action
+    if(btn.getAttribute('data-action') === 'clear') {
+      data = [];
+      data2 = [];
+      currentN = 0;
+      blueMarks = [];
+      isLockedToBeta = false;
+      draw();
+      emitTutorialEvent('clearData', {});
+      regenDropdown.classList.remove('show');
+      return;
+    }
+    
+    // Handle n value selection
     nValue = parseInt(btn.getAttribute('data-n'));
     updateSimulateButtonText();
     
