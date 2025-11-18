@@ -66,6 +66,11 @@
     font:inherit;
     background:#fff;
   }
+  .control select:disabled{
+    background:#f5f5f5;
+    color:#999;
+    cursor:not-allowed;
+  }
   .checkbox-group{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
@@ -270,8 +275,8 @@
         </select>
       </div>
       <div class="control">
-        <label>Pre-Generate Sampling Distribution</label>
-        <select id="pregenerate">
+        <label>Pregenerate Distribution</label>
+        <select id="pregenerate" disabled title="Requires β to be specified">
           <option value="false">No</option>
           <option value="true">Yes (1000 samples)</option>
         </select>
@@ -493,11 +498,35 @@ function openPreview() {
   window.open(url, '_blank');
 }
 
+// Function to check if pregenerate should be enabled
+function updatePregenerateState() {
+  const beta = document.getElementById('beta').value.trim();
+  const pregenerateSelect = document.getElementById('pregenerate');
+  
+  if(beta === '') {
+    // No beta value - disable and reset to 'false'
+    pregenerateSelect.disabled = true;
+    pregenerateSelect.value = 'false';
+    pregenerateSelect.title = 'Requires β to be specified';
+  } else {
+    // Beta has a value - enable the dropdown
+    pregenerateSelect.disabled = false;
+    pregenerateSelect.title = '';
+  }
+}
+
 // Auto-generate on any input change
 document.querySelectorAll('input, select').forEach(element => {
   element.addEventListener('change', generateURL);
   element.addEventListener('input', generateURL);
 });
+
+// Special listener for beta input to update pregenerate state
+document.getElementById('beta').addEventListener('input', updatePregenerateState);
+document.getElementById('beta').addEventListener('change', updatePregenerateState);
+
+// Initialize pregenerate state
+updatePregenerateState();
 
 // Generate initial URL
 generateURL();
