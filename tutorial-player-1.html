@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v2.0</title>
+<title>Tutorial Player - v1.6</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -66,7 +66,7 @@
   }
   
   .player-container {
-    max-width: 1100px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
   }
@@ -154,19 +154,15 @@
   
   .app-frame-container {
     position: relative;
-    width: 1000px;
-    height: 800px;
-    margin: 0 auto;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border: 1px solid #ddd;
-    overflow: auto;
+    overflow: hidden;
   }
   
   iframe {
-    width: 1000px;
-    height: 800px;
+    width: 100%;
+    height: 700px;
     border: none;
     display: block;
   }
@@ -267,7 +263,7 @@
         <div class="scrubber-progress" id="scrubberProgress"></div>
       </div>
       <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
-      <div class="version-number">v2.0</div>
+      <div class="version-number">v1.6</div>
     </div>
     
     <div class="app-frame-container">
@@ -298,8 +294,6 @@
   let currentTime = 0;
   let animationFrame = null;
   let annotationBox = null;
-  let annotationTitle = null;
-  let annotationText = null;
   let currentAnnotationIndex = -1;
   let annotationTimeout = null;
   let triggeredPauses = new Set(); // Track which pauses we've already triggered
@@ -507,10 +501,6 @@
     
     annotationBox = iframeDoc.createElement('div');
     annotationBox.className = 'annotation-box';
-    annotationBox.innerHTML = '<h3 id="annotationTitle"></h3><p id="annotationText"></p>';
-    
-    annotationTitle = annotationBox.querySelector('#annotationTitle');
-    annotationText = annotationBox.querySelector('#annotationText');
     
     // Inject styles
     const style = iframeDoc.createElement('style');
@@ -709,6 +699,64 @@
     }
   }
   
+  function applyCSSToAnnotation(ann, annotationBox) {
+    // EITHER/OR approach: use global styles OR custom CSS, never both
+    const hasClassAttribute = ann.content && ann.content.includes('class=');
+    
+    if (hasClassAttribute && tutorial && tutorial.globalStyles) {
+      // OPTION 1: Using global styles - inject them and make container transparent
+      console.log('🎨 Applying GLOBAL STYLES - making container transparent wrapper');
+      injectGlobalStyles();
+      
+      // Make container completely transparent - it's just a positioning/sizing wrapper
+      annotationBox.style.backgroundColor = 'transparent';
+      annotationBox.style.border = 'none';
+      annotationBox.style.borderRadius = '0';
+      annotationBox.style.boxShadow = 'none';
+      annotationBox.style.padding = '0';
+      annotationBox.style.margin = '0';
+      annotationBox.style.overflow = 'visible';
+      
+      // Positioning properties
+      annotationBox.style.position = 'absolute';
+      annotationBox.style.zIndex = '10000';
+      annotationBox.style.opacity = '1';
+      annotationBox.style.visibility = 'visible';
+      
+      console.log('🎨 Container configured as transparent wrapper for global-styled content');
+    } else if (ann.customCSS && ann.customCSS.trim()) {
+      // OPTION 2: Using custom CSS - apply it directly to container
+      console.log('🎨 Applying CUSTOM CSS to container:', ann.customCSS);
+      annotationBox.style.cssText += '; ' + ann.customCSS.trim();
+    } else {
+      // Neither global styles nor custom CSS - use defaults
+      console.log('🎨 Using DEFAULT styling');
+    }
+  }
+  
+  function injectGlobalStyles() {
+    if (!tutorial || !tutorial.globalStyles) return;
+    
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    // Check if we already injected global styles
+    let styleEl = iframeDoc.getElementById('tutorial-global-styles');
+    
+    if (!styleEl) {
+      // Create and inject the global styles
+      styleEl = iframeDoc.createElement('style');
+      styleEl.id = 'tutorial-global-styles';
+      styleEl.textContent = tutorial.globalStyles;
+      iframeDoc.head.appendChild(styleEl);
+      console.log('✓ Injected global styles into iframe');
+    } else {
+      // Update existing styles (in case they changed)
+      styleEl.textContent = tutorial.globalStyles;
+      console.log('✓ Updated global styles in iframe');
+    }
+  }
+  
   function showAnnotation(ann) {
     console.log('🎯 showAnnotation called:', ann);
     
@@ -717,16 +765,41 @@
       return;
     }
     
-    console.log('  Annotation box exists');
-    console.log('  Title:', ann.title);
-    console.log('  Text:', ann.text);
-    console.log('  Position:', ann.position);
-    
-    annotationTitle.textContent = ann.title;
-    annotationText.innerHTML = ann.text;
+    // Handle content - support both new flexible format and old title/text format for backward compatibility
+    if (ann.content !== undefined) {
+      // New format: single content field with HTML support
+      console.log('  Using new content format');
+      annotationBox.innerHTML = ann.content;
+    } else if (ann.title && ann.text) {
+      // Backward compatibility: old format
+      console.log('  Using old title/text format');
+      annotationBox.innerHTML = `<h3>${ann.title}</h3><p>${ann.text}</p>`;
+    } else {
+      console.error('  Annotation has no content!');
+      return;
+    }
     
     // Reset transform and size constraints
     annotationBox.style.transform = '';
+    
+    // Apply EITHER/OR styling: global styles OR custom CSS OR defaults
+    const hasClassAttribute = ann.content && ann.content.includes('class=');
+    
+    if (hasClassAttribute && tutorial && tutorial.globalStyles) {
+      // Using global styles
+      console.log('🎨 Using GLOBAL STYLES');
+      injectGlobalStyles();
+      applyCSSToAnnotation(ann, annotationBox);
+    } else if (ann.customCSS && ann.customCSS.trim()) {
+      // Using custom CSS
+      console.log('🎨 Using CUSTOM CSS');
+      applyCSSToAnnotation(ann, annotationBox);
+    } else {
+      // Default styles
+      console.log('🎨 Using DEFAULT STYLES');
+      // Reset any previous custom styling
+      annotationBox.style.cssText = '';
+    }
     
     // Position annotation
     if (ann.position) {
@@ -763,18 +836,11 @@
     
     annotationBox.classList.add('visible');
     console.log('  ✓ Annotation box visible class added');
-    console.log('  Final styles:', {
-      display: annotationBox.style.display,
-      left: annotationBox.style.left,
-      top: annotationBox.style.top,
-      width: annotationBox.style.width,
-      height: annotationBox.style.height,
-      className: annotationBox.className
-    });
     
     // Typeset math if present
-    if (window.MathJax && ann.text.includes('$')) {
-      MathJax.typesetPromise([annotationText]).catch(err => console.log('MathJax error:', err));
+    const contentToCheck = ann.content || ann.text || '';
+    if (window.MathJax && contentToCheck.includes('$')) {
+      MathJax.typesetPromise([annotationBox]).catch(err => console.log('MathJax error:', err));
     }
   }
   
@@ -845,7 +911,7 @@
     handleAnnotations();
   });
   
-  console.log('Tutorial Player v2.0 initialized - Fixed 1000px width for consistent annotation positioning');
+  console.log('Tutorial Player v1.6 initialized - Fixed annotation format support (content + customCSS + globalStyles)');
 })();
 </script>
 </body>
