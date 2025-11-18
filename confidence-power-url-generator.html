@@ -377,7 +377,7 @@
 <script>
 function generateURL() {
   // Get base URL
-  const baseURL = document.getElementById('baseURL').value.trim() || 'confidence-demo-7.html';
+  const baseURL = document.getElementById('baseURL').value.trim() || 'https://coursekata.github.io/teaching-apps/confidence-demo-7.html';
   
   const params = new URLSearchParams();
   
@@ -406,6 +406,12 @@ function generateURL() {
   const powermode = document.getElementById('powermode').value;
   const vertlines = document.getElementById('vertlines').value;
   const pregenerate = document.getElementById('pregenerate').value;
+  
+  // Validate pregenerate requirements
+  if(pregenerate === 'true' && beta === '') {
+    document.getElementById('urlDisplay').innerHTML = '<span style="color:#dc2626;">⚠️ Warning: Pre-Generate Sampling Distribution requires a β (Population Parameter) value to be specified.</span>';
+    return '';
+  }
   
   if(curve !== 'off') params.append('curve', curve);
   if(alpha !== 'off') params.append('alpha', alpha);
@@ -454,6 +460,12 @@ function generateURL() {
 function copyURL() {
   const url = document.getElementById('urlDisplay').textContent;
   
+  // Check if there's a validation error
+  if(url.includes('⚠️ Warning:') || url === '') {
+    alert('Please fix the validation errors before copying the URL.');
+    return;
+  }
+  
   navigator.clipboard.writeText(url).then(() => {
     const btn = event.target;
     const originalText = btn.textContent;
@@ -471,6 +483,13 @@ function copyURL() {
 
 function openPreview() {
   const url = document.getElementById('urlDisplay').textContent;
+  
+  // Check if there's a validation error
+  if(url.includes('⚠️ Warning:') || url === '') {
+    alert('Please fix the validation errors before opening a preview.');
+    return;
+  }
+  
   window.open(url, '_blank');
 }
 
