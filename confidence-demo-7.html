@@ -2050,6 +2050,18 @@
     
     previousSE = newSE;
     emitTutorialEvent('changeSE', {value: newSE});
+    
+    // If we have existing samples, regenerate them with the new SE
+    // Otherwise just update the display
+    if(currentN > 0) {
+      const beta = getBeta();
+      const centerPos = beta + shiftUnits;
+      data = gaussian(currentN, centerPos, newSE);
+      if(secondDistMode === 'on'){
+        data2 = [...data];
+      }
+    }
+    
     draw();
   });
 
@@ -2088,6 +2100,17 @@
     
     previousSE = newSE;
     emitTutorialEvent('changeSE', {value: newSE});
+    
+    // If we have existing samples, regenerate them with the new SE
+    // Otherwise just update the display
+    if(currentN > 0) {
+      const centerPos = beta + shiftUnits;
+      data = gaussian(currentN, centerPos, newSE);
+      if(secondDistMode === 'on'){
+        data2 = [...data];
+      }
+    }
+    
     draw();
   });
 
