@@ -2049,41 +2049,25 @@
     }
     
     previousSE = newSE;
-    currentN = 0; // Reset sample count when SE changes
-    isLockedToBeta = false; // Reset lock state
     emitTutorialEvent('changeSE', {value: newSE});
-    regenerate({ reset: true, preserveShift: true });
-    updateSimulateButtonText();
+    draw();
   });
 
   seInput.addEventListener('change', function(){
-    const currentMean = getBeta();
-    const currentScale = getScale();
-    const domainSpan = 10 * currentScale;
-    const meanMagnitude = Math.abs(currentMean);
-    if (meanMagnitude > domainSpan) { updateSESliderRange(); return; }
-    
-    const oldSE = getSE();
+    // Revert to previous value if they didn't hit Enter
+    seInput.value = previousSE;
+    seRange.value = previousSE;
     updateSESliderRange();
-    const newSE = getSE();
-    
-    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldSE > 0){
-      const ratio = newSE / oldSE;
-      vertLineDistFromB.left *= ratio;
-      vertLineDistFromB.right *= ratio;
-    }
-    
-    currentN = 0; // Reset sample count when SE changes
-    isLockedToBeta = false; // Reset lock state
-    emitTutorialEvent('changeSE', {value: newSE});
-    regenerate({ reset: true, preserveShift: true });
-    updateSimulateButtonText();
   });
 
   seInput.addEventListener('keydown', function(e){
     if(e.key !== 'Enter') return;
+    
+    const oldSE = previousSE;
+    const newSE = getSE();
     const beta = getBeta();
-    const se = getSE();
+    const se = newSE;
+    
     domainOffset = 0;
     fixedDomain = [beta - 8*se, beta + 8*se];
 
@@ -2095,15 +2079,16 @@
     scaleRange.value = Math.min(equivalentScale, newScaleMax);
 
     updateSESliderRange();
-    if(vertLinesMode === 'on' && vertLinesAttachment === 'b'){
-      vertLinesAttachment = 'cutoffs';
-      linkedMarks.left = null;
-      linkedMarks.right = null;
+    
+    if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldSE > 0){
+      const ratio = newSE / oldSE;
+      vertLineDistFromB.left *= ratio;
+      vertLineDistFromB.right *= ratio;
     }
-    currentN = 0; // Reset sample count when SE changes
-    isLockedToBeta = false; // Reset lock state
-    regenerate({ reset: true, preserveShift: true });
-    updateSimulateButtonText();
+    
+    previousSE = newSE;
+    emitTutorialEvent('changeSE', {value: newSE});
+    draw();
   });
 
   scaleRange.addEventListener('input', function(){
