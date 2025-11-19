@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v2.0</title>
+<title>Tutorial Player - v2.1</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -69,80 +69,6 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
-  }
-  
-  .controls {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    width: 1000px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  
-  .segment-nav {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  
-  .segment-indicator {
-    font-size: 14px;
-    color: #666;
-    font-weight: 500;
-    min-width: 120px;
-    text-align: center;
-  }
-  
-  button.nav-btn {
-    padding: 10px 20px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
-  }
-  
-  button.nav-btn:hover:not(:disabled) {
-    background: #f9f9f9;
-    border-color: #2563eb;
-  }
-  
-  button {
-    padding: 10px 16px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-  }
-  
-  button:hover:not(:disabled) {
-    background: #f9f9f9;
-  }
-  
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  button.primary {
-    background: #2563eb;
-    color: #fff;
-    border-color: #2563eb;
-  }
-  
-  button.primary:hover:not(:disabled) {
-    background: #1d4ed8;
   }
   
   .version-number {
@@ -261,16 +187,6 @@
     <div class="app-frame-container">
       <iframe id="appFrame"></iframe>
     </div>
-    
-    <div class="controls">
-      <div class="segment-nav">
-        <button id="prevSegmentBtn" class="nav-btn" disabled>◄ Previous</button>
-        <button id="playPauseBtn" class="primary">▶ Play Segment</button>
-        <button id="nextSegmentBtn" class="nav-btn" disabled>Next ►</button>
-      </div>
-      <div class="segment-indicator" id="segmentIndicator">Segment 1 of 1</div>
-      <div class="version-number">v2.0</div>
-    </div>
   </div>
 </div>
 
@@ -283,11 +199,12 @@
   const playerSection = document.getElementById('playerSection');
   const tutorialFile = document.getElementById('tutorialFile');
   const errorMsg = document.getElementById('errorMsg');
-  const playPauseBtn = document.getElementById('playPauseBtn');
-  const prevSegmentBtn = document.getElementById('prevSegmentBtn');
-  const nextSegmentBtn = document.getElementById('nextSegmentBtn');
-  const segmentIndicator = document.getElementById('segmentIndicator');
   const appFrame = document.getElementById('appFrame');
+  
+  // Control elements (will be injected into iframe)
+  let prevBtn = null;
+  let nextBtn = null;
+  let segmentIndicator = null;
   
   // State
   let tutorial = null;
@@ -300,6 +217,7 @@
   let annotationBox = null;
   let currentAnnotationIndex = -1;
   let annotationTimeout = null;
+  let atSegmentEnd = false; // Track if we're paused at the end of a segment
   
   // Check for embedded tutorial
   const embeddedTutorial = window.TUTORIAL_DATA || null;
@@ -470,13 +388,11 @@
           // Inject annotation box
           injectAnnotationBox();
           
+          // Inject controls into iframe
+          injectControls();
+          
           // Build segments from pauses
           buildSegments();
-          
-          // Enable controls
-          playPauseBtn.disabled = false;
-          prevSegmentBtn.disabled = currentSegment === 0;
-          nextSegmentBtn.disabled = segments.length <= 1;
           
           console.log('Tutorial loaded:', tutorial.snapshots.length, 'snapshots,', tutorial.annotations.length, 'annotations', tutorial.pauses.length, 'pauses');
           console.log('Segments:', segments.length);
@@ -520,11 +436,77 @@
   }
   
   function updateSegmentIndicator() {
-    segmentIndicator.textContent = `Segment ${currentSegment + 1} of ${segments.length}`;
+    if (segmentIndicator) {
+      segmentIndicator.textContent = `${currentSegment + 1} / ${segments.length}`;
+    }
     
     // Update button states
-    prevSegmentBtn.disabled = currentSegment === 0;
-    nextSegmentBtn.disabled = currentSegment >= segments.length - 1;
+    if (prevBtn) {
+      prevBtn.disabled = currentSegment === 0 && !atSegmentEnd;
+    }
+    if (nextBtn) {
+      nextBtn.disabled = false; // Always enabled - resets to beginning at end
+    }
+  }
+  
+  function handlePrevious() {
+    if (isPlaying) {
+      pause();
+    }
+    
+    if (atSegmentEnd) {
+      // At end of segment - replay current segment
+      console.log('◄ Replaying segment', currentSegment + 1);
+      atSegmentEnd = false;
+      playSegment(currentSegment);
+    } else if (currentSegment > 0) {
+      // Go to previous segment
+      currentSegment--;
+      console.log('◄ Moving to previous segment', currentSegment + 1);
+      updateSegmentIndicator();
+      playSegment(currentSegment);
+    }
+  }
+  
+  function handleNext() {
+    if (isPlaying) {
+      pause();
+    }
+    
+    if (currentSegment >= segments.length - 1 && atSegmentEnd) {
+      // At last segment and finished - reset to beginning
+      console.log('► Resetting to beginning');
+      currentSegment = 0;
+      atSegmentEnd = false;
+      updateSegmentIndicator();
+      seekToTime(0);
+    } else {
+      // Go to next segment
+      if (atSegmentEnd && currentSegment < segments.length - 1) {
+        currentSegment++;
+      }
+      console.log('► Playing segment', currentSegment + 1);
+      atSegmentEnd = false;
+      updateSegmentIndicator();
+      playSegment(currentSegment);
+    }
+  }
+  
+  function playSegment(segmentIndex) {
+    const segment = segments[segmentIndex];
+    
+    // Set start time for this segment
+    currentTime = segment.start;
+    playbackStartTime = Date.now() - currentTime;
+    
+    // Seek to start of segment
+    seekToTime(currentTime);
+    
+    // Start playing
+    isPlaying = true;
+    console.log('▶ Playing segment', segmentIndex + 1, 'from', (segment.start / 1000).toFixed(2) + 's', 'to', (segment.end / 1000).toFixed(2) + 's');
+    
+    animationFrame = requestAnimationFrame(playbackLoop);
   }
   
   function getAPI() {
@@ -590,53 +572,99 @@
     iframeDoc.body.appendChild(annotationBox);
   }
   
+  function injectControls() {
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    // Create controls container
+    const controlsContainer = iframeDoc.createElement('div');
+    controlsContainer.id = 'tutorial-controls';
+    
+    // Create Previous button
+    prevBtn = iframeDoc.createElement('button');
+    prevBtn.innerHTML = '◄';
+    prevBtn.title = 'Previous segment';
+    prevBtn.className = 'tutorial-nav-btn';
+    
+    // Create segment indicator
+    segmentIndicator = iframeDoc.createElement('div');
+    segmentIndicator.className = 'tutorial-segment-indicator';
+    segmentIndicator.textContent = '1 / 1';
+    
+    // Create Next button
+    nextBtn = iframeDoc.createElement('button');
+    nextBtn.innerHTML = '►';
+    nextBtn.title = 'Next segment';
+    nextBtn.className = 'tutorial-nav-btn';
+    
+    // Add to container
+    controlsContainer.appendChild(prevBtn);
+    controlsContainer.appendChild(segmentIndicator);
+    controlsContainer.appendChild(nextBtn);
+    
+    // Add controls to iframe body
+    iframeDoc.body.appendChild(controlsContainer);
+    
+    // Add styles
+    const controlStyles = iframeDoc.createElement('style');
+    controlStyles.textContent = `
+      #tutorial-controls {
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      
+      .tutorial-nav-btn {
+        width: 36px;
+        height: 36px;
+        border: 1px solid #ddd;
+        background: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        padding: 0;
+      }
+      
+      .tutorial-nav-btn:hover:not(:disabled) {
+        background: #f0f0f0;
+        border-color: #2563eb;
+      }
+      
+      .tutorial-nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+      
+      .tutorial-segment-indicator {
+        font-size: 13px;
+        color: #666;
+        font-weight: 500;
+        min-width: 50px;
+        text-align: center;
+      }
+    `;
+    iframeDoc.head.appendChild(controlStyles);
+    
+    // Add event listeners
+    prevBtn.addEventListener('click', handlePrevious);
+    nextBtn.addEventListener('click', handleNext);
+  }
+  
   // Play/Pause
-  playPauseBtn.addEventListener('click', () => {
-    if (isPlaying) {
-      pause();
-    } else {
-      play();
-    }
-  });
-  
-  // Previous segment button
-  prevSegmentBtn.addEventListener('click', () => {
-    if (currentSegment > 0) {
-      // Stop current playback
-      if (isPlaying) {
-        pause();
-      }
-      
-      currentSegment--;
-      updateSegmentIndicator();
-      
-      // Go to start of this segment
-      currentTime = segments[currentSegment].start;
-      seekToTime(currentTime);
-      
-      console.log('◄ Moved to segment', currentSegment + 1);
-    }
-  });
-  
-  // Next segment button
-  nextSegmentBtn.addEventListener('click', () => {
-    if (currentSegment < segments.length - 1) {
-      // Stop current playback
-      if (isPlaying) {
-        pause();
-      }
-      
-      currentSegment++;
-      updateSegmentIndicator();
-      
-      // Go to start of this segment
-      currentTime = segments[currentSegment].start;
-      seekToTime(currentTime);
-      
-      console.log('► Moved to segment', currentSegment + 1);
-    }
-  });
-  
   function seekToTime(time) {
     const api = getAPI();
     if (!api) return;
@@ -684,26 +712,8 @@
     }
   }
   
-  function play() {
-    if (!tutorial || segments.length === 0) return;
-    
-    const segment = segments[currentSegment];
-    
-    // Set start time for this segment
-    currentTime = segment.start;
-    playbackStartTime = Date.now() - currentTime;
-    
-    isPlaying = true;
-    playPauseBtn.textContent = '⏸ Pause';
-    
-    console.log('▶ Playing segment', currentSegment + 1, 'from', (segment.start / 1000).toFixed(2) + 's', 'to', (segment.end / 1000).toFixed(2) + 's');
-    
-    animationFrame = requestAnimationFrame(playbackLoop);
-  }
-  
   function pause() {
     isPlaying = false;
-    playPauseBtn.textContent = '▶ Play Segment';
     
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
@@ -733,23 +743,9 @@
     // Check if we've reached the end of this segment
     if (currentTime >= segment.end) {
       pause();
-      
-      // Auto-advance to next segment if there is one
-      if (currentSegment < segments.length - 1) {
-        currentSegment++;
-        updateSegmentIndicator();
-        currentTime = segments[currentSegment].start;
-        seekToTime(currentTime);
-        console.log('✓ Segment complete, advanced to segment', currentSegment + 1);
-      } else {
-        console.log('✓ Tutorial complete');
-        // Reset to first segment
-        currentSegment = 0;
-        updateSegmentIndicator();
-        currentTime = 0;
-        seekToTime(0);
-      }
-      
+      atSegmentEnd = true;
+      updateSegmentIndicator();
+      console.log('✓ Segment', currentSegment + 1, 'complete');
       return;
     }
     
@@ -934,7 +930,7 @@
     }
   }
   
-  console.log('Tutorial Player v2.0 initialized - Segment-based playback controls');
+  console.log('Tutorial Player v2.1 initialized - Simplified 2-button in-iframe controls');
 })();
 </script>
 </body>
