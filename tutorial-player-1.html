@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v2.1</title>
+<title>Tutorial Player - v2.2</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -504,6 +504,11 @@
     
     // Start playing
     isPlaying = true;
+    
+    // Add pulsing effect to buttons
+    if (prevBtn) prevBtn.classList.add('playing');
+    if (nextBtn) nextBtn.classList.add('playing');
+    
     console.log('▶ Playing segment', segmentIndex + 1, 'from', (segment.start / 1000).toFixed(2) + 's', 'to', (segment.end / 1000).toFixed(2) + 's');
     
     animationFrame = requestAnimationFrame(playbackLoop);
@@ -616,45 +621,67 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 8px 16px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 10px 18px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         z-index: 10000;
         font-family: system-ui, -apple-system, sans-serif;
       }
       
       .tutorial-nav-btn {
-        width: 36px;
-        height: 36px;
-        border: 1px solid #ddd;
-        background: #fff;
-        border-radius: 6px;
+        width: 40px;
+        height: 40px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s;
         padding: 0;
+        color: #667eea;
+        font-weight: bold;
       }
       
       .tutorial-nav-btn:hover:not(:disabled) {
-        background: #f0f0f0;
-        border-color: #2563eb;
+        background: #fff;
+        border-color: rgba(255, 255, 255, 0.8);
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+      
+      .tutorial-nav-btn:active:not(:disabled) {
+        transform: scale(0.95);
       }
       
       .tutorial-nav-btn:disabled {
-        opacity: 0.3;
+        opacity: 0.4;
         cursor: not-allowed;
       }
       
+      .tutorial-nav-btn.playing {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+        }
+      }
+      
       .tutorial-segment-indicator {
-        font-size: 13px;
-        color: #666;
-        font-weight: 500;
+        font-size: 14px;
+        color: #fff;
+        font-weight: 600;
         min-width: 50px;
         text-align: center;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
       }
     `;
     iframeDoc.head.appendChild(controlStyles);
@@ -715,6 +742,10 @@
   function pause() {
     isPlaying = false;
     
+    // Remove pulsing effect from buttons
+    if (prevBtn) prevBtn.classList.remove('playing');
+    if (nextBtn) nextBtn.classList.remove('playing');
+    
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
       animationFrame = null;
@@ -745,7 +776,32 @@
       pause();
       atSegmentEnd = true;
       updateSegmentIndicator();
-      console.log('✓ Segment', currentSegment + 1, 'complete');
+      
+      // If this is the last segment, check if tutorial ends with an annotation
+      if (currentSegment === segments.length - 1) {
+        let tutorialEndsWithAnnotation = false;
+        
+        if (tutorial.annotations && tutorial.annotations.length > 0) {
+          const lastAnn = tutorial.annotations[tutorial.annotations.length - 1];
+          const annEnd = lastAnn.timestamp + lastAnn.duration;
+          const tolerance = 100; // 100ms tolerance
+          
+          if (Math.abs(annEnd - tutorial.duration) < tolerance) {
+            tutorialEndsWithAnnotation = true;
+            // Show the last annotation
+            showAnnotation(lastAnn);
+            currentAnnotationIndex = tutorial.annotations.length - 1;
+            console.log('✓ Tutorial ends with annotation - keeping it visible');
+          }
+        }
+        
+        if (!tutorialEndsWithAnnotation) {
+          console.log('✓ Final segment complete');
+        }
+      } else {
+        console.log('✓ Segment', currentSegment + 1, 'complete');
+      }
+      
       return;
     }
     
@@ -930,7 +986,7 @@
     }
   }
   
-  console.log('Tutorial Player v2.1 initialized - Simplified 2-button in-iframe controls');
+  console.log('Tutorial Player v2.2 initialized - Enhanced controls with playing indicator');
 })();
 </script>
 </body>
