@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v1.6</title>
+<title>Tutorial Player - v1.7</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -263,7 +263,7 @@
         <div class="scrubber-progress" id="scrubberProgress"></div>
       </div>
       <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
-      <div class="version-number">v1.6</div>
+      <div class="version-number">v1.7</div>
     </div>
     
     <div class="app-frame-container">
@@ -728,9 +728,6 @@
       // OPTION 2: Using custom CSS - apply it directly to container
       console.log('🎨 Applying CUSTOM CSS to container:', ann.customCSS);
       annotationBox.style.cssText += '; ' + ann.customCSS.trim();
-    } else {
-      // Neither global styles nor custom CSS - use defaults
-      console.log('🎨 Using DEFAULT styling');
     }
   }
   
@@ -779,9 +776,6 @@
       return;
     }
     
-    // Reset transform and size constraints
-    annotationBox.style.transform = '';
-    
     // Apply EITHER/OR styling: global styles OR custom CSS OR defaults
     const hasClassAttribute = ann.content && ann.content.includes('class=');
     
@@ -795,10 +789,13 @@
       console.log('🎨 Using CUSTOM CSS');
       applyCSSToAnnotation(ann, annotationBox);
     } else {
-      // Default styles
+      // Default styles - set explicit properties to match creator behavior
       console.log('🎨 Using DEFAULT STYLES');
-      // Reset any previous custom styling
-      annotationBox.style.cssText = '';
+      annotationBox.style.backgroundColor = 'rgba(255,255,255,0.98)';
+      annotationBox.style.color = '#333333';
+      annotationBox.style.fontSize = '15px';
+      annotationBox.style.textAlign = 'left';
+      annotationBox.style.border = '3px solid #2563eb';
     }
     
     // Position annotation
@@ -810,19 +807,19 @@
       console.log('    height:', ann.position.height);
       
       // Custom positioned annotation
-      annotationBox.classList.add('custom-position');
+      annotationBox.className = 'annotation-box visible custom-position';
       annotationBox.style.left = ann.position.left + 'px';
       annotationBox.style.top = ann.position.top + 'px';
-      if (ann.position.width) {
-        annotationBox.style.width = ann.position.width + 'px';
-      } else {
-        annotationBox.style.width = '250px'; // Reset to default
-      }
-      if (ann.position.height) {
-        annotationBox.style.height = ann.position.height + 'px';
-      } else {
-        annotationBox.style.height = 'auto'; // Reset to default
-      }
+      annotationBox.style.width = ann.position.width + 'px';
+      annotationBox.style.height = ann.position.height + 'px';
+      annotationBox.style.transform = 'none';
+      
+      console.log('  Applied position styles:', {
+        left: annotationBox.style.left,
+        top: annotationBox.style.top,
+        width: annotationBox.style.width,
+        height: annotationBox.style.height
+      });
     } else {
       console.log('  Using default center position');
       // Default center position
@@ -911,7 +908,7 @@
     handleAnnotations();
   });
   
-  console.log('Tutorial Player v1.6 initialized - Fixed annotation format support (content + customCSS + globalStyles)');
+  console.log('Tutorial Player v1.7 initialized - Fixed annotation positioning and styling');
 })();
 </script>
 </body>
