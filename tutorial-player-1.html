@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v2.2</title>
+<title>Tutorial Player - v2.3</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -468,27 +468,33 @@
     }
   }
   
-  function handleNext() {
+  function handlePlayPause() {
     if (isPlaying) {
+      // Currently playing - pause it
       pause();
-    }
-    
-    if (currentSegment >= segments.length - 1 && atSegmentEnd) {
-      // At last segment and finished - reset to beginning
-      console.log('► Resetting to beginning');
-      currentSegment = 0;
-      atSegmentEnd = false;
-      updateSegmentIndicator();
-      seekToTime(0);
+      console.log('⏸ Paused');
     } else {
-      // Go to next segment
-      if (atSegmentEnd && currentSegment < segments.length - 1) {
-        currentSegment++;
+      // Currently paused - determine what to play
+      if (atSegmentEnd) {
+        // At end of a segment - advance to next (or reset to beginning if at end)
+        if (currentSegment >= segments.length - 1) {
+          // At last segment - reset to beginning
+          console.log('► Resetting to beginning');
+          currentSegment = 0;
+          atSegmentEnd = false;
+          updateSegmentIndicator();
+          playSegment(currentSegment);
+        } else {
+          // Move to next segment
+          currentSegment++;
+          atSegmentEnd = false;
+          updateSegmentIndicator();
+          playSegment(currentSegment);
+        }
+      } else {
+        // Mid-segment or at beginning - play/resume current segment
+        playSegment(currentSegment);
       }
-      console.log('► Playing segment', currentSegment + 1);
-      atSegmentEnd = false;
-      updateSegmentIndicator();
-      playSegment(currentSegment);
     }
   }
   
@@ -505,9 +511,11 @@
     // Start playing
     isPlaying = true;
     
-    // Add pulsing effect to buttons
-    if (prevBtn) prevBtn.classList.add('playing');
-    if (nextBtn) nextBtn.classList.add('playing');
+    // Change icon to pause
+    if (nextBtn) {
+      nextBtn.innerHTML = '⏸';
+      nextBtn.title = 'Pause';
+    }
     
     console.log('▶ Playing segment', segmentIndex + 1, 'from', (segment.start / 1000).toFixed(2) + 's', 'to', (segment.end / 1000).toFixed(2) + 's');
     
@@ -599,7 +607,7 @@
     // Create Next button
     nextBtn = iframeDoc.createElement('button');
     nextBtn.innerHTML = '►';
-    nextBtn.title = 'Next segment';
+    nextBtn.title = 'Play';
     nextBtn.className = 'tutorial-nav-btn';
     
     // Add to container
@@ -662,19 +670,6 @@
         cursor: not-allowed;
       }
       
-      .tutorial-nav-btn.playing {
-        animation: pulse 1.5s ease-in-out infinite;
-      }
-      
-      @keyframes pulse {
-        0%, 100% {
-          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
-        }
-        50% {
-          box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
-        }
-      }
-      
       .tutorial-segment-indicator {
         font-size: 14px;
         color: #fff;
@@ -688,7 +683,7 @@
     
     // Add event listeners
     prevBtn.addEventListener('click', handlePrevious);
-    nextBtn.addEventListener('click', handleNext);
+    nextBtn.addEventListener('click', handlePlayPause);
   }
   
   // Play/Pause
@@ -742,9 +737,11 @@
   function pause() {
     isPlaying = false;
     
-    // Remove pulsing effect from buttons
-    if (prevBtn) prevBtn.classList.remove('playing');
-    if (nextBtn) nextBtn.classList.remove('playing');
+    // Change icon back to play
+    if (nextBtn) {
+      nextBtn.innerHTML = '►';
+      nextBtn.title = 'Play';
+    }
     
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
@@ -986,7 +983,7 @@
     }
   }
   
-  console.log('Tutorial Player v2.2 initialized - Enhanced controls with playing indicator');
+  console.log('Tutorial Player v2.3 initialized - Play/Pause toggle control');
 })();
 </script>
 </body>
