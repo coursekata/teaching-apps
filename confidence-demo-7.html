@@ -285,6 +285,15 @@
         <span>Type II Error (β)</span>
       </div>
     </div>
+    
+    <!-- Axis labels as HTML overlays -->
+    <div id="topAxisLabel" style="position:absolute;display:flex;align-items:center;gap:8px;pointer-events:none;"></div>
+    <div id="bottomAxisLabel" style="position:absolute;display:flex;align-items:center;gap:8px;pointer-events:none;"></div>
+    
+    <!-- Marker labels as HTML overlays -->
+    <div id="betaMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="bMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="betaPrimeMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
   </div>
 </div>
 
@@ -502,9 +511,7 @@
   // Drag veil
   const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent').attr('pointer-events','all');
 
-  // Axis labels - positioned on the left side
-  const xLabelTopFO = root.append('foreignObject').attr('width',200).attr('height',50);
-  const xLabelBottomFO = root.append('foreignObject').attr('width',200).attr('height',50);
+  // Axis labels will be handled as HTML overlays instead of foreignObjects
 
   // p-value text
   const pTextRight = root.append('text')
@@ -912,11 +919,24 @@
     const topLabelY = axisInsetTop + labelOffset - 6;
     const bottomLabelY = axisInsetTop + plotH - labelOffset - 28;
     
-    xLabelTopFO.attr('x', -5).attr('y', topLabelY);
-    xLabelTopFO.html('<div style="display:flex;align-items:center;gap:8px;"><span style="color:#333;font-weight:700;font-size:28px;" class="latex-label">' + renderLatex(labelParamLatex) + '</span><span style="color:#666;font-size:12px;line-height:1.3;font-weight:600;">population<br>parameter</span></div>');
+    // Position HTML overlay labels (outside SVG for better cross-browser compatibility)
+    const topLabel = document.getElementById('topAxisLabel');
+    const bottomLabel = document.getElementById('bottomAxisLabel');
     
-    xLabelBottomFO.attr('x', -5).attr('y', bottomLabelY);
-    xLabelBottomFO.html('<div style="display:flex;align-items:center;gap:8px;"><span style="color:#333;font-weight:700;font-size:28px;" class="latex-label">' + renderLatex(labelSampleStatLatex) + '</span><span style="color:#666;font-size:12px;line-height:1.3;font-weight:600;">sample<br>statistic</span></div>');
+    if(topLabel && bottomLabel) {
+      // Calculate absolute positions relative to the chart container
+      const leftPos = margin.left + 'px';
+      const topPos = (margin.top + topLabelY) + 'px';
+      const bottomPos = (margin.top + bottomLabelY) + 'px';
+      
+      topLabel.style.left = leftPos;
+      topLabel.style.top = topPos;
+      topLabel.innerHTML = '<span style="color:#333;font-weight:700;font-size:28px;" class="latex-label">' + renderLatex(labelParamLatex) + '</span><span style="color:#666;font-size:12px;line-height:1.3;font-weight:600;">population<br>parameter</span>';
+      
+      bottomLabel.style.left = leftPos;
+      bottomLabel.style.top = bottomPos;
+      bottomLabel.innerHTML = '<span style="color:#333;font-weight:700;font-size:28px;" class="latex-label">' + renderLatex(labelSampleStatLatex) + '</span><span style="color:#666;font-size:12px;line-height:1.3;font-weight:600;">sample<br>statistic</span>';
+    }
   }
 
   function drawAxes(){
@@ -1321,32 +1341,51 @@
   }
 
   function drawBMarker(){
-    if(bValue===null || Number.isNaN(bValue)){ bMarkerG.attr('display','none'); pTextRight.attr('display','none'); return; }
+    const bMarkerLabelDiv = document.getElementById('bMarkerLabel');
+    if(bValue===null || Number.isNaN(bValue)){ 
+      bMarkerG.attr('display','none'); 
+      pTextRight.attr('display','none'); 
+      if(bMarkerLabelDiv) bMarkerLabelDiv.style.display = 'none';
+      return; 
+    }
     bMarkerG.attr('display', null);
     const xPos = x(bValue);
     const axisY = axisInsetTop + plotH;
     const arrowBottom = axisY + 20;
     bLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowBottom).attr('y2', axisY);
     
-    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
       renderLatex(labelSampleStatLatex) + ' = ' + bValue.toFixed(2) + '</div>';
-    bLabelFO.html(labelHtml);
     
-    setTimeout(() => {
-      const labelDiv = bLabelFO.node().querySelector('div');
-      if(labelDiv){
-        const bb = labelDiv.getBoundingClientRect();
-        bLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowBottom + 24 - bb.height/2);
-        bBG.attr('x', xPos - bb.width/2 - 6).attr('y', arrowBottom + 24 - bb.height/2 - 3)
-          .attr('width', bb.width + 12).attr('height', bb.height + 6);
-      }
+    if(bMarkerLabelDiv) {
+      bMarkerLabelDiv.innerHTML = labelHtml;
+      bMarkerLabelDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        const bb = bMarkerLabelDiv.getBoundingClientRect();
+        const chartRect = chartWrap.getBoundingClientRect();
+        const svgRect = svg.node().getBoundingClientRect();
+        
+        // Calculate position relative to chart container
+        const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
+        const absoluteY = svgRect.top - chartRect.top + margin.top + arrowBottom + 24;
+        
+        bMarkerLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
+        bMarkerLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
+        
+        // Hide the old foreignObject label
+        bLabelFO.attr('x', -1000).attr('y', -1000);
+        bBG.attr('x', -1000).attr('y', -1000);
+      }, 0);
       updatePTextToRightOfB();
-    }, 0);
+    }
   }
 
   function drawBetaMarker(){
+    const betaMarkerLabelDiv = document.getElementById('betaMarkerLabel');
     if(betaValue === null || Number.isNaN(betaValue)){
       betaMarkerG.attr('display', 'none');
+      if(betaMarkerLabelDiv) betaMarkerLabelDiv.style.display = 'none';
       return;
     }
     
@@ -1359,25 +1398,38 @@
     
     betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
     
-    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
       renderLatex(labelParamLatex) + ' = ' + betaVal.toFixed(2) + '</div>';
-    betaLabelFO.html(labelHtml);
     
-    setTimeout(() => {
-      const labelDiv = betaLabelFO.node().querySelector('div');
-      if(labelDiv){
-        const bb = labelDiv.getBoundingClientRect();
-        betaLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
-        betaBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
-          .attr('width', bb.width + 8).attr('height', bb.height + 4);
-      }
-    }, 0);
+    if(betaMarkerLabelDiv) {
+      betaMarkerLabelDiv.innerHTML = labelHtml;
+      betaMarkerLabelDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        const bb = betaMarkerLabelDiv.getBoundingClientRect();
+        const chartRect = chartWrap.getBoundingClientRect();
+        const svgRect = svg.node().getBoundingClientRect();
+        
+        // Calculate position relative to chart container
+        const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
+        const absoluteY = svgRect.top - chartRect.top + margin.top + arrowTop - 20;
+        
+        betaMarkerLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
+        betaMarkerLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
+        
+        // Hide the old foreignObject label
+        betaLabelFO.attr('x', -1000).attr('y', -1000);
+        betaBG.attr('x', -1000).attr('y', -1000);
+      }, 0);
+    }
   }
 
   function drawBetaPrimeMarker(){
+    const betaPrimeMarkerLabelDiv = document.getElementById('betaPrimeMarkerLabel');
     const showSecond = (secondDistMode === 'on');
     if(!showSecond){
       betaPrimeMarkerG.attr('display', 'none');
+      if(betaPrimeMarkerLabelDiv) betaPrimeMarkerLabelDiv.style.display = 'none';
       return;
     }
     betaPrimeMarkerG.attr('display', null);
@@ -1388,19 +1440,30 @@
     
     betaPrimeLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
     
-    const labelHtml = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:18px;white-space:nowrap;" class="latex-label">' + 
+    const labelHtml = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
       renderLatex(labelParamLatex + '\'') + ' = ' + beta2.toFixed(2) + '</div>';
-    betaPrimeLabelFO.html(labelHtml);
     
-    setTimeout(() => {
-      const labelDiv = betaPrimeLabelFO.node().querySelector('div');
-      if(labelDiv){
-        const bb = labelDiv.getBoundingClientRect();
-        betaPrimeLabelFO.attr('x', xPos - bb.width/2).attr('y', arrowTop - 20 - bb.height/2);
-        betaPrimeBG.attr('x', xPos - bb.width/2 - 4).attr('y', arrowTop - 20 - bb.height/2 - 2)
-          .attr('width', bb.width + 8).attr('height', bb.height + 4);
-      }
-    }, 0);
+    if(betaPrimeMarkerLabelDiv) {
+      betaPrimeMarkerLabelDiv.innerHTML = labelHtml;
+      betaPrimeMarkerLabelDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        const bb = betaPrimeMarkerLabelDiv.getBoundingClientRect();
+        const chartRect = chartWrap.getBoundingClientRect();
+        const svgRect = svg.node().getBoundingClientRect();
+        
+        // Calculate position relative to chart container
+        const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
+        const absoluteY = svgRect.top - chartRect.top + margin.top + arrowTop - 20;
+        
+        betaPrimeMarkerLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
+        betaPrimeMarkerLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
+        
+        // Hide the old foreignObject label
+        betaPrimeLabelFO.attr('x', -1000).attr('y', -1000);
+        betaPrimeBG.attr('x', -1000).attr('y', -1000);
+      }, 0);
+    }
     
     betaPrimeMarkerG.raise();
   }
