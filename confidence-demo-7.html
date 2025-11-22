@@ -294,6 +294,9 @@
     <div id="betaMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="bMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="betaPrimeMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="meanLineLabel" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="meanLineLabel2" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="pValueLabel" style="position:absolute;pointer-events:none;display:none;"></div>
   </div>
 </div>
 
@@ -490,18 +493,22 @@
   // b marker (bottom)
   const bMarkerG = root.append('g').attr('class','b-marker').style('cursor','ew-resize');
   const bLine = bMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowUpRed)');
+  // Add invisible wider line for easier dragging
+  const bLineDragArea = bMarkerG.append('line').attr('stroke','transparent').attr('stroke-width',30).style('pointer-events','all');
   const bBG   = bMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
   const bLabelFO = bMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
   // β marker (top)
   const betaMarkerG = root.append('g').attr('class','beta-marker').style('cursor','grab');
   const betaLine = betaMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowDownRed)');
+  const betaLineDragArea = betaMarkerG.append('line').attr('stroke','transparent').attr('stroke-width',30).style('pointer-events','all');
   const betaBG   = betaMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
   const betaLabelFO = betaMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
   // β′ marker (top, orange)
   const betaPrimeMarkerG = root.append('g').attr('class','beta-prime-marker').style('cursor','grab');
   const betaPrimeLine = betaPrimeMarkerG.append('line').attr('stroke','#f97316').attr('stroke-width',3).attr('marker-end','url(#arrowDownOrange)');
+  const betaPrimeLineDragArea = betaPrimeMarkerG.append('line').attr('stroke','transparent').attr('stroke-width',30).style('pointer-events','all');
   const betaPrimeBG   = betaPrimeMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
   const betaPrimeLabelFO = betaPrimeMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
@@ -1353,8 +1360,10 @@
     const axisY = axisInsetTop + plotH;
     const arrowBottom = axisY + 20;
     bLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowBottom).attr('y2', axisY);
+    // Make drag area cover the entire arrow with extra height
+    bLineDragArea.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowBottom + 10).attr('y2', axisY);
     
-    const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
+    const labelHtml = '<div style="color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;line-height:1.1;" class="latex-label">' + 
       renderLatex(labelSampleStatLatex) + ' = ' + bValue.toFixed(2) + '</div>';
     
     if(bMarkerLabelDiv) {
@@ -1366,7 +1375,7 @@
         const chartRect = chartWrap.getBoundingClientRect();
         const svgRect = svg.node().getBoundingClientRect();
         
-        // Calculate position relative to chart container
+        // Calculate position relative to chart container - centered under arrow
         const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
         const absoluteY = svgRect.top - chartRect.top + margin.top + arrowBottom + 24;
         
@@ -1397,6 +1406,8 @@
     const arrowTop = axisY - 20;
     
     betaLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+    // Make drag area cover the entire arrow with extra height
+    betaLineDragArea.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop - 10).attr('y2', axisY);
     
     const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
       renderLatex(labelParamLatex) + ' = ' + betaVal.toFixed(2) + '</div>';
@@ -1439,6 +1450,8 @@
     const arrowTop = axisY - 20;
     
     betaPrimeLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+    // Make drag area cover the entire arrow with extra height
+    betaPrimeLineDragArea.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop - 10).attr('y2', axisY);
     
     const labelHtml = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
       renderLatex(labelParamLatex + '\'') + ' = ' + beta2.toFixed(2) + '</div>';
@@ -1469,7 +1482,13 @@
   }
 
   function updatePTextToRightOfB(){
-    if(bValue === null || Number.isNaN(bValue)){ pTextRight.attr('display','none'); return; }
+    const pValueLabelDiv = document.getElementById('pValueLabel');
+    
+    if(bValue === null || Number.isNaN(bValue)){ 
+      pTextRight.attr('display','none'); 
+      if(pValueLabelDiv) pValueLabelDiv.style.display = 'none';
+      return; 
+    }
     
     // Show p-value only if:
     // 1. Curve is on (can use curve as statistical model), OR
@@ -1479,6 +1498,7 @@
     
     if(!curveIsVisible && !histogramIsLockedAndVisible){ 
       pTextRight.attr('display','none'); 
+      if(pValueLabelDiv) pValueLabelDiv.style.display = 'none';
       return; 
     }
     
@@ -1496,14 +1516,34 @@
       pOne = 1 - cdfStandard(absZ);
     }
 
-    const text = (pOne < 0.001) ? 'p < 0.001' : ('p = ' + pOne.toFixed(3));
-    pTextRight.text(text);
-
-    const bb = bBG.node().getBBox();
-    const pad = 6;
-    const xRight = bb.x + bb.width + pad;
-    const yBaseline = bb.y + bb.height / 2 + 6;
-    pTextRight.attr('x', xRight).attr('y', yBaseline).attr('display', null);
+    const pValueText = (pOne < 0.001) ? '< 0.001' : '= ' + pOne.toFixed(3);
+    
+    // Determine inequality based on whether b > beta or b < beta
+    const inequality = bValue > betaVal ? '>' : '<';
+    const pLabel = 'P(' + renderLatex(labelSampleStatLatex) + ' ' + inequality + ' ' + renderLatex(labelSampleStatLatex) + ') ' + pValueText;
+    
+    if(pValueLabelDiv) {
+      pValueLabelDiv.innerHTML = '<div style="color:#1d4ed8;font-weight:700;font-size:18px;line-height:1.1;margin-top:-2px;" class="latex-label">' + pLabel + '</div>';
+      pValueLabelDiv.style.display = 'block';
+      
+      // Position underneath the b marker label, centered
+      const bMarkerLabelDiv = document.getElementById('bMarkerLabel');
+      if(bMarkerLabelDiv && bMarkerLabelDiv.style.display !== 'none') {
+        const bLabelRect = bMarkerLabelDiv.getBoundingClientRect();
+        const chartRect = chartWrap.getBoundingClientRect();
+        
+        setTimeout(() => {
+          const pLabelRect = pValueLabelDiv.getBoundingClientRect();
+          // Center the p-value label under the b label
+          const bLabelCenter = bLabelRect.left + bLabelRect.width / 2;
+          pValueLabelDiv.style.left = (bLabelCenter - chartRect.left - pLabelRect.width / 2) + 'px';
+          pValueLabelDiv.style.top = (bLabelRect.bottom - chartRect.top + 2) + 'px';
+        }, 0);
+      }
+      
+      // Hide old SVG text
+      pTextRight.attr('display', 'none');
+    }
   }
 
   function addMark(value){
@@ -1596,26 +1636,33 @@
       .style('display', showMeanLines ? null : 'none');
     
     meanLabel.attr('transform', 'translate(' + meanLineX + ',' + (meanLineEnd + 18) + ')')
-      .style('display', showMeanLines ? null : 'none');
+      .style('display', 'none'); // Hide SVG label, use HTML overlay instead
     
-    if(showMeanLines){
-      const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:20px;white-space:nowrap;" class="latex-label">' + 
+    const meanLineLabelDiv = document.getElementById('meanLineLabel');
+    if(showMeanLines && meanLineLabelDiv){
+      const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:20px;white-space:nowrap;background:#fff;opacity:0.75;border-radius:3px;padding:2px 4px;" class="latex-label">' + 
         renderLatex(labelSamplingMeanLatex) + '</div>';
-      meanLabelFO.html(labelHtml);
+      meanLineLabelDiv.innerHTML = labelHtml;
+      meanLineLabelDiv.style.display = 'block';
       
       setTimeout(() => {
-        const labelDiv = meanLabelFO.node().querySelector('div');
-        if(labelDiv){
-          const bb = labelDiv.getBoundingClientRect();
-          meanLabelFO.attr('x', -bb.width/2).attr('y', -bb.height/2).attr('width', bb.width).attr('height', bb.height);
-          const labelRect = meanLabel.select('rect');
-          labelRect.attr('x', -bb.width/2 - 3).attr('y', -bb.height/2 - 3)
-            .attr('width', bb.width + 6).attr('height', bb.height + 6);
-          labelRect.lower();
-        }
+        const bb = meanLineLabelDiv.getBoundingClientRect();
+        const chartRect = chartWrap.getBoundingClientRect();
+        const svgRect = svg.node().getBoundingClientRect();
+        
+        // Calculate position: need to account for SVG position + margin + plot translation + shift + mean line position
+        const pxShift = shiftUnits * (x(1) - x(0));
+        const absoluteX = svgRect.left - chartRect.left + margin.left + meanLineX + pxShift;
+        const absoluteY = svgRect.top - chartRect.top + margin.top + axisInsetTop + meanLineEnd + 18;
+        
+        meanLineLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
+        meanLineLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
+        
+        // Hide old foreignObject
+        meanLabelFO.attr('x', -1000).attr('y', -1000);
       }, 0);
-      
-      meanLabel.raise();
+    } else if(meanLineLabelDiv) {
+      meanLineLabelDiv.style.display = 'none';
     }
 
     const showSecond = (secondDistMode === 'on');
@@ -1647,30 +1694,39 @@
       meanLine2.attr('x1', meanLineX2).attr('x2', meanLineX2).attr('y1',0).attr('y2',meanLineEnd)
         .style('display', showMeanLines2 ? null : 'none');
       meanLabel2.attr('transform', 'translate(' + meanLineX2 + ',' + (meanLineEnd + 18) + ')')
-        .style('display', showMeanLines2 ? null : 'none');
+        .style('display', 'none'); // Hide SVG label, use HTML overlay instead
       
-      if(showMeanLines2){
-        const labelHtml2 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;" class="latex-label">' + 
+      const meanLineLabel2Div = document.getElementById('meanLineLabel2');
+      if(showMeanLines2 && meanLineLabel2Div){
+        const labelHtml2 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;background:#fff;opacity:0.75;border-radius:3px;padding:2px 4px;" class="latex-label">' + 
           renderLatex(labelSamplingMeanLatex + '\'') + '</div>';
-        meanLabelFO2.html(labelHtml2);
+        meanLineLabel2Div.innerHTML = labelHtml2;
+        meanLineLabel2Div.style.display = 'block';
         
         setTimeout(() => {
-          const labelDiv2 = meanLabelFO2.node().querySelector('div');
-          if(labelDiv2){
-            const bb2 = labelDiv2.getBoundingClientRect();
-            meanLabelFO2.attr('x', -bb2.width/2).attr('y', -bb2.height/2).attr('width', bb2.width).attr('height', bb2.height);
-            const labelRect2 = meanLabel2.select('rect');
-            labelRect2.attr('x', -bb2.width/2 - 3).attr('y', -bb2.height/2 - 3)
-              .attr('width', bb2.width + 6).attr('height', bb2.height + 6);
-            labelRect2.lower();
-          }
+          const bb2 = meanLineLabel2Div.getBoundingClientRect();
+          const chartRect = chartWrap.getBoundingClientRect();
+          const svgRect = svg.node().getBoundingClientRect();
+          
+          // Calculate position: need to account for SVG position + margin + plot translation + shift + mean line position
+          const pxShift2 = shiftUnits2 * (x(1) - x(0));
+          const absoluteX = svgRect.left - chartRect.left + margin.left + meanLineX2 + pxShift2;
+          const absoluteY = svgRect.top - chartRect.top + margin.top + axisInsetTop + meanLineEnd + 18;
+          
+          meanLineLabel2Div.style.left = (absoluteX - bb2.width/2) + 'px';
+          meanLineLabel2Div.style.top = (absoluteY - bb2.height/2) + 'px';
+          
+          // Hide old foreignObject
+          meanLabelFO2.attr('x', -1000).attr('y', -1000);
         }, 0);
-        
-        meanLabel2.raise();
+      } else if(meanLineLabel2Div) {
+        meanLineLabel2Div.style.display = 'none';
       }
     } else {
       meanLine2.style('display', 'none');
       meanLabel2.style('display', 'none');
+      const meanLineLabel2Div = document.getElementById('meanLineLabel2');
+      if(meanLineLabel2Div) meanLineLabel2Div.style.display = 'none';
     }
 
     drawBetaMarker();
