@@ -765,29 +765,21 @@ function createColorPreview() {
 
 function updateLegendLayout(svgWidth) {
   const margin = { top: 30, right: 20, bottom: 50, left: 20 };
-  const plotWidth = svgWidth - margin.left - margin.right;
   
   // Position titles
-  document.getElementById('leftTitle').setAttribute('x', margin.left + plotWidth * 0.25);
-  document.getElementById('rightTitle').setAttribute('x', margin.left + plotWidth * 0.75);
+  document.getElementById('leftTitle').setAttribute('x', margin.left + 50);
+  document.getElementById('rightTitle').setAttribute('x', Math.max(svgWidth - 200, margin.left + 250));
   
-  // Left distribution legend - distribute evenly across left half (3 items: Alpha, Main, P-value)
-  const leftStart = margin.left + 10;
-  const leftEnd = margin.left + plotWidth * 0.48;
-  const leftSpacing = (leftEnd - leftStart) / 2; // 2 gaps for 3 items
+  // Left distribution legend - compact spacing on left side only
+  document.getElementById('alphaLabel').setAttribute('x', margin.left + 5);
+  document.getElementById('mainLabel').setAttribute('x', margin.left + 60);
+  document.getElementById('pLabel').setAttribute('x', margin.left + 115);
   
-  document.getElementById('alphaLabel').setAttribute('x', leftStart);
-  document.getElementById('mainLabel').setAttribute('x', leftStart + leftSpacing);
-  document.getElementById('pLabel').setAttribute('x', leftStart + leftSpacing * 2);
-  
-  // Right distribution legend - distribute evenly across right half (3 items: Type II, Power, Secondary)
-  const rightStart = margin.left + plotWidth * 0.52;
-  const rightEnd = svgWidth - margin.right - 10;
-  const rightSpacing = (rightEnd - rightStart) / 2; // 2 gaps for 3 items
-  
-  document.getElementById('type2Label').setAttribute('x', rightStart);
-  document.getElementById('powerLabel').setAttribute('x', rightStart + rightSpacing);
-  document.getElementById('secondaryLabel').setAttribute('x', rightStart + rightSpacing * 2);
+  // Right distribution legend - compact spacing on right side with safe positioning
+  const rightBaseX = Math.max(svgWidth - 280, margin.left + 200); // Ensure minimum distance from left
+  document.getElementById('type2Label').setAttribute('x', rightBaseX);
+  document.getElementById('powerLabel').setAttribute('x', rightBaseX + 60);
+  document.getElementById('secondaryLabel').setAttribute('x', rightBaseX + 120);
 }
 
 function updateColorPreview() {
