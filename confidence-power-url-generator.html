@@ -586,6 +586,14 @@ function generateURL() {
   // Validation check
   let validationWarning = '';
   
+  // Check if histogram is on but beta is not specified
+  const betaValue = document.getElementById('beta').value.trim();
+  const histogramValue = document.getElementById('histogram').value;
+  
+  if(histogramValue === 'on' && betaValue === '') {
+    validationWarning = '⚠️ Warning: You must set a value for the population parameter in order to launch with a histogram visible.\n\n';
+  }
+  
   // Update display
   document.getElementById('urlDisplay').textContent = validationWarning + url;
 }
