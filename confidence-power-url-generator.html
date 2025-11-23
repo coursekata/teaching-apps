@@ -261,10 +261,17 @@
         </select>
       </div>
       <div class="control">
+        <label>Third Distribution</label>
+        <select id="thirddist">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+      <div class="control">
         <label>Power Mode</label>
         <select id="powermode">
-          <option value="tails">Tails</option>
-          <option value="power">Power</option>
+          <option value="off">Off</option>
+          <option value="on">On</option>
         </select>
       </div>
       <div class="control">
@@ -276,26 +283,26 @@
       </div>
       <div class="control">
         <label>P-Value Display</label>
-        <select id="pvalue">
+        <select id="p">
           <option value="off">Off</option>
           <option value="on">On</option>
         </select>
       </div>
       <div class="control">
-        <label>Pregenerate Distribution</label>
+        <label>Pregenerate Simulations</label>
         <select id="pregenerate" disabled title="Requires β to be specified">
           <option value="false">No</option>
-          <option value="true">Yes (1000 samples)</option>
+          <option value="true">Yes</option>
         </select>
       </div>
     </div>
   </div>
 
-  <!-- Labels Section -->
+  <!-- Custom Labels Section -->
   <div class="section">
-    <div class="section-title">Custom Labels (LaTeX)</div>
+    <div class="section-title">Custom Labels</div>
     <div class="info-box">
-      Use LaTeX notation (e.g., \mu, \bar{x}, \beta_1). $ delimiters will be added automatically. Separate with commas. Leave blank to use defaults.
+      Override default parameter labels. Leave blank to use LaTeX defaults: \beta, b, \bar{b}
     </div>
     <div class="control-group">
       <div class="control">
@@ -337,33 +344,33 @@
         <path id="powerShading" fill="#f97316" fill-opacity="0.4"></path>
         <path id="type2Shading" fill="#fbbf24" fill-opacity="0.3"></path>
         
-        <!-- Labels -->
+        <!-- Responsive Legend -->
         <g id="previewLabels" font-family="system-ui" font-size="11" fill="#555">
-          <text x="100" y="25" font-weight="600">Main Distribution (Left)</text>
-          <text x="320" y="25" font-weight="600">Secondary Distribution (Right)</text>
+          <text id="leftTitle" y="25" font-weight="600">Main Distribution (Left)</text>
+          <text id="rightTitle" y="25" font-weight="600">Secondary Distribution (Right)</text>
           
-          <!-- Main distribution legend (left) -->
-          <text x="30" y="180">
+          <!-- Main distribution legend (left) - will be positioned dynamically -->
+          <text id="alphaLabel1" y="180">
             <tspan fill="#1e3a8a">■</tspan> Alpha
           </text>
-          <text x="70" y="180">
+          <text id="mainLabel" y="180">
             <tspan fill="#60a5fa">■</tspan> Main
           </text>
-          <text x="110" y="180">
+          <text id="pLabel" y="180">
             <tspan fill="#3b82f6">■</tspan> P
           </text>
-          <text x="140" y="180">
+          <text id="alphaLabel2" y="180">
             <tspan fill="#1e3a8a">■</tspan> Alpha
           </text>
           
-          <!-- Secondary distribution legend (right) -->
-          <text x="240" y="180">
+          <!-- Secondary distribution legend (right) - will be positioned dynamically -->
+          <text id="type2Label" y="180">
             <tspan fill="#fbbf24">■</tspan> Type II
           </text>
-          <text x="285" y="180">
+          <text id="powerLabel" y="180">
             <tspan fill="#e67e22">■</tspan> Power
           </text>
-          <text x="325" y="180">
+          <text id="secondaryLabel" y="180">
             <tspan fill="#f97316">■</tspan> Secondary
           </text>
         </g>
@@ -499,88 +506,56 @@ function generateURL() {
   // Get base URL
   const baseURL = document.getElementById('baseURL').value.trim() || 'https://coursekata.github.io/teaching-apps/confidence-demo-7.html';
   
+  // Get values with proper handling for empty strings
   const params = new URLSearchParams();
   
-  // Add default values (only if different from defaults)
-  const beta = document.getElementById('beta').value;
-  const b = document.getElementById('b').value;
-  const se = document.getElementById('se').value;
-  const n = document.getElementById('n').value;
-  const bins = document.getElementById('bins').value;
-  const scale = document.getElementById('scale').value;
-  const df = document.getElementById('df').value;
+  // Default Values
+  if(document.getElementById('beta').value.trim()) params.append('beta', document.getElementById('beta').value.trim());
+  if(document.getElementById('b').value.trim()) params.append('b', document.getElementById('b').value.trim());
+  if(document.getElementById('se').value) params.append('se', document.getElementById('se').value);
+  if(document.getElementById('n').value) params.append('n', document.getElementById('n').value);
+  if(document.getElementById('bins').value) params.append('bins', document.getElementById('bins').value);
+  if(document.getElementById('scale').value) params.append('scale', document.getElementById('scale').value);
+  if(document.getElementById('df').value) params.append('df', document.getElementById('df').value);
+
+  // Initial State
+  if(document.getElementById('curve').value !== 'off') params.append('curve', document.getElementById('curve').value);
+  if(document.getElementById('alpha').value !== 'off') params.append('alpha', document.getElementById('alpha').value);
+  if(document.getElementById('histogram').value !== 'on') params.append('histogram', document.getElementById('histogram').value);
+  if(document.getElementById('seconddist').value !== 'off') params.append('seconddist', document.getElementById('seconddist').value);
+  if(document.getElementById('thirddist').value !== 'off') params.append('thirddist', document.getElementById('thirddist').value);
+  if(document.getElementById('powermode').value !== 'off') params.append('powermode', document.getElementById('powermode').value);
+  if(document.getElementById('vertlines').value !== 'off') params.append('vertlines', document.getElementById('vertlines').value);
+  if(document.getElementById('p').value !== 'off') params.append('p', document.getElementById('p').value);
+  if(document.getElementById('pregenerate').value !== 'false') params.append('pregenerate', document.getElementById('pregenerate').value);
   
-  if(beta !== '') params.append('beta', beta);
-  if(b !== '') params.append('b', b);
-  if(se !== '1') params.append('se', se);
-  if(n !== '1') params.append('n', n);
-  if(bins !== '30') params.append('bins', bins);
-  if(scale !== '1.75') params.append('scale', scale);
-  if(df !== '10') params.append('df', df);
+  // Custom Labels
+  if(document.getElementById('label_param').value.trim()) params.append('label_param', document.getElementById('label_param').value.trim());
+  if(document.getElementById('label_stat').value.trim()) params.append('label_stat', document.getElementById('label_stat').value.trim());
+  if(document.getElementById('label_mean').value.trim()) params.append('label_mean', document.getElementById('label_mean').value.trim());
   
-  // Add initial states
-  const curve = document.getElementById('curve').value;
-  const alpha = document.getElementById('alpha').value;
-  const histogram = document.getElementById('histogram').value;
-  const seconddist = document.getElementById('seconddist').value;
-  const powermode = document.getElementById('powermode').value;
-  const vertlines = document.getElementById('vertlines').value;
-  const pvalue = document.getElementById('pvalue').value;
-  const pregenerate = document.getElementById('pregenerate').value;
-  
-  // Validate pregenerate requirements
-  if(pregenerate === 'true' && beta === '') {
-    document.getElementById('urlDisplay').innerHTML = '<span style="color:#dc2626;">⚠️ Warning: Pre-Generate Sampling Distribution requires a β (Population Parameter) value to be specified.</span>';
-    return '';
-  }
-  
-  if(curve !== 'off') params.append('curve', curve);
-  if(alpha !== 'off') params.append('alpha', alpha);
-  if(histogram !== 'on') params.append('histogram', histogram);
-  if(seconddist !== 'off') params.append('seconddist', seconddist);
-  if(powermode !== 'tails') params.append('powermode', powermode);
-  if(vertlines !== 'off') params.append('vertlines', vertlines);
-  if(pvalue !== 'off') params.append('pvalue', pvalue);
-  if(pregenerate !== 'false') params.append('pregenerate', pregenerate);
-  
-  // Add labels (only if provided)
-  const labelParam = document.getElementById('label_param').value.trim();
-  const labelStat = document.getElementById('label_stat').value.trim();
-  const labelMean = document.getElementById('label_mean').value.trim();
-  
-  if(labelParam || labelStat || labelMean) {
-    // Wrap each label in $ delimiters for LaTeX notation
-    const labels = [
-      labelParam ? `$${labelParam}$` : '$\\beta$', 
-      labelStat ? `$${labelStat}$` : '$b$', 
-      labelMean ? `$${labelMean}$` : '$\\bar{b}$'
-    ];
-    params.append('labels', labels.join(','));
-  }
-  
-  // Add custom colors (only if different from defaults)
+  // Custom Colors (only if different from defaults)
   const defaultColors = {
-    'main_color': '#60a5fa',
-    'alpha_color': '#1e3a8a', 
-    'p_color': '#3b82f6',
-    'secondary_color': '#f97316',
-    'power_color': '#e67e22',
-    'type2_color': '#fbbf24'
+    main_color: '#60a5fa',
+    alpha_color: '#1e3a8a', 
+    p_color: '#3b82f6',
+    secondary_color: '#f97316',
+    power_color: '#e67e22',
+    type2_color: '#fbbf24'
   };
   
-  Object.keys(defaultColors).forEach(colorParam => {
-    const colorValue = document.getElementById(colorParam).value;
-    if(colorValue && colorValue.toLowerCase() !== defaultColors[colorParam].toLowerCase()) {
-      params.append(colorParam, colorValue);
+  Object.keys(defaultColors).forEach(colorKey => {
+    const currentValue = document.getElementById(colorKey).value;
+    if(currentValue !== defaultColors[colorKey]) {
+      params.append(colorKey, currentValue);
     }
   });
   
-  // Add hide controls
+  // Hide Controls - only append if checked
   const hideControls = [
-    'hide_beta', 'hide_se', 'hide_simulate',
-    'hide_seconddist', 'hide_thirddist', 'hide_powermode', 'hide_b',
-    'hide_scale', 'hide_bins', 'hide_curve', 'hide_df',
-    'hide_ci', 'hide_vertlines', 'hide_histogram', 'hide_p'
+    'hide_beta', 'hide_se', 'hide_simulate', 'hide_seconddist', 'hide_thirddist',
+    'hide_powermode', 'hide_b', 'hide_scale', 'hide_bins', 'hide_curve',
+    'hide_df', 'hide_ci', 'hide_vertlines', 'hide_histogram', 'hide_p'
   ];
   
   hideControls.forEach(control => {
@@ -589,32 +564,46 @@ function generateURL() {
     }
   });
   
-  // Generate final URL
-  const finalURL = params.toString() ? `${baseURL}?${params.toString()}` : baseURL;
-  document.getElementById('urlDisplay').textContent = finalURL;
+  // Build URL
+  let url = baseURL;
+  if(params.toString()) {
+    url += '?' + params.toString();
+  }
   
-  return finalURL;
+  // Validation check
+  let validationWarning = '';
+  
+  // Check if beta is empty but pregenerate is true
+  const betaValue = document.getElementById('beta').value.trim();
+  const pregenerateValue = document.getElementById('pregenerate').value;
+  
+  if(pregenerateValue === 'true' && betaValue === '') {
+    validationWarning = '⚠️ Warning: Pregenerate is enabled but β is not specified. This may cause issues.\n\n';
+  }
+  
+  // Update display
+  document.getElementById('urlDisplay').textContent = validationWarning + url;
 }
 
 function copyURL() {
-  const url = document.getElementById('urlDisplay').textContent;
+  const urlText = document.getElementById('urlDisplay').textContent;
   
-  // Check if there's a validation error
-  if(url.includes('⚠️ Warning:') || url === '') {
-    alert('Please fix the validation errors before copying the URL.');
-    return;
-  }
+  // Check if there's a validation warning and extract just the URL
+  const url = urlText.includes('⚠️ Warning:') ? 
+    urlText.split('\n\n')[1] : urlText;
   
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = 'Copied!';
-    btn.style.background = '#10b981';
+  navigator.clipboard.writeText(url).then(function() {
+    // Visual feedback
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '✓ Copied!';
+    button.style.background = '#10b981';
+    
     setTimeout(() => {
-      btn.textContent = originalText;
-      btn.style.background = '';
+      button.textContent = originalText;
+      button.style.background = '#64748b';
     }, 2000);
-  }).catch(err => {
+  }).catch(function(err) {
     console.error('Failed to copy:', err);
     alert('Failed to copy URL. Please copy manually.');
   });
@@ -747,22 +736,22 @@ function createColorPreview() {
   document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
   document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
   
-  // MAIN DISTRIBUTION (Left) - Clear regions with proper order
-  // Alpha shading (both outer tails)
-  const alphaLeft = generateArea(mainMean, mainStd, -1.3, -1.05);  // Far left tail
-  const alphaRight = generateArea(mainMean, mainStd, -0.55, -0.3); // Right tail
+  // MAIN DISTRIBUTION (Left) - IMPROVED: Extend to display boundaries and adjust proportions
+  // Alpha shading (smaller, both outer tails to boundaries)
+  const alphaLeft = generateArea(mainMean, mainStd, -1.5, -1.15);   // Left tail to boundary
+  const alphaRight = generateArea(mainMean, mainStd, -0.45, -0.3);  // Smaller right alpha
   document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft) + ' ' + pointsToPath(alphaRight));
   
   // Main histogram color (center)
-  const mainArea = generateArea(mainMean, mainStd, -1.05, -0.65);
+  const mainArea = generateArea(mainMean, mainStd, -1.15, -0.65);
   document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
   
-  // P-value shading (small region to the left of right alpha area)
-  const pArea = generateArea(mainMean, mainStd, -0.65, -0.55);
+  // P-value shading (larger region)
+  const pArea = generateArea(mainMean, mainStd, -0.65, -0.45);
   document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
   
-  // SECONDARY DISTRIBUTION (Right) - Three clear sections filling to tails
-  // Type II shading (left tail)
+  // SECONDARY DISTRIBUTION (Right) - IMPROVED: Extend to fill to boundaries
+  // Type II shading (extend to left boundary)
   const type2Area = generateArea(secondaryMean, secondaryStd, 0.3, 0.6);
   document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
   
@@ -770,9 +759,40 @@ function createColorPreview() {
   const powerArea = generateArea(secondaryMean, secondaryStd, 0.6, 0.9);
   document.getElementById('powerShading').setAttribute('d', pointsToPath(powerArea));
   
-  // Secondary histogram color (right section to tail)
-  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.9, 1.3);
+  // Secondary histogram color (extend to right boundary)
+  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.9, 1.5); // Extend to boundary
   document.getElementById('secondaryShading').setAttribute('d', pointsToPath(secondaryArea));
+  
+  // RESPONSIVE LEGEND POSITIONING
+  updateLegendLayout(width);
+}
+
+function updateLegendLayout(svgWidth) {
+  const margin = { top: 30, right: 20, bottom: 50, left: 20 };
+  const plotWidth = svgWidth - margin.left - margin.right;
+  
+  // Position titles
+  document.getElementById('leftTitle').setAttribute('x', margin.left + plotWidth * 0.25);
+  document.getElementById('rightTitle').setAttribute('x', margin.left + plotWidth * 0.75);
+  
+  // Left distribution legend - distribute evenly across left half
+  const leftStart = margin.left + 10;
+  const leftEnd = margin.left + plotWidth * 0.48;
+  const leftSpacing = (leftEnd - leftStart) / 3;
+  
+  document.getElementById('alphaLabel1').setAttribute('x', leftStart);
+  document.getElementById('mainLabel').setAttribute('x', leftStart + leftSpacing);
+  document.getElementById('pLabel').setAttribute('x', leftStart + leftSpacing * 2);
+  document.getElementById('alphaLabel2').setAttribute('x', leftStart + leftSpacing * 3);
+  
+  // Right distribution legend - distribute evenly across right half
+  const rightStart = margin.left + plotWidth * 0.52;
+  const rightEnd = svgWidth - margin.right - 10;
+  const rightSpacing = (rightEnd - rightStart) / 2;
+  
+  document.getElementById('type2Label').setAttribute('x', rightStart);
+  document.getElementById('powerLabel').setAttribute('x', rightStart + rightSpacing);
+  document.getElementById('secondaryLabel').setAttribute('x', rightStart + rightSpacing * 2);
 }
 
 function updateColorPreview() {
@@ -814,12 +834,13 @@ function updateColorPreview() {
   
   // Update legend colors
   const labels = document.getElementById('previewLabels').querySelectorAll('tspan');
-  if (labels[0]) labels[0].setAttribute('fill', mainColor);
-  if (labels[1]) labels[1].setAttribute('fill', alphaColor);
+  if (labels[0]) labels[0].setAttribute('fill', alphaColor);
+  if (labels[1]) labels[1].setAttribute('fill', mainColor);
   if (labels[2]) labels[2].setAttribute('fill', pColor);
-  if (labels[3]) labels[3].setAttribute('fill', secondaryColor);
-  if (labels[4]) labels[4].setAttribute('fill', powerColor);
-  if (labels[5]) labels[5].setAttribute('fill', type2Color);
+  if (labels[3]) labels[3].setAttribute('fill', alphaColor);
+  if (labels[4]) labels[4].setAttribute('fill', type2Color);
+  if (labels[5]) labels[5].setAttribute('fill', powerColor);
+  if (labels[6]) labels[6].setAttribute('fill', secondaryColor);
 }
 
 function restoreDefaultColors() {
