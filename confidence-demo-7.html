@@ -268,7 +268,7 @@
         </svg>
       </button>
 
-      <button id="histogramBtn" class="icon-toggle active" title="Toggle histogram/curve view">
+      <button id="histogramBtn" class="icon-toggle" title="Toggle histogram/curve view">
         <svg viewBox="0 0 20 20" fill="none">
           <rect x="2" y="10" width="3" height="8" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
           <rect x="6" y="6" width="3" height="12" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
@@ -352,12 +352,9 @@
   const urlPowerColor = urlParams.get('power_color');
   const urlType2Color = urlParams.get('type2_color');
   
-  // Parse pregenerate parameter
-  const urlPregenerate = urlParams.get('pregenerate');
-  const shouldPregenerate = urlPregenerate === 'true' || urlPregenerate === 'TRUE';
   
   // Parse hide parameters
-  const hideSimulate = urlParams.get('hide_simulate') === 'true';
+  const hideSimulate = urlParams.get('hide_simulate') === null ? true : urlParams.get('hide_simulate') === 'true';
   const hideBeta = urlParams.get('hide_beta') === 'true';
   const hideSE = urlParams.get('hide_se') === 'true';
   const hideN = urlParams.get('hide_n') === 'true';
@@ -700,7 +697,7 @@
   let thirdDistMode = 'off';
   let powerMode = 'tails';
   let vertLinesMode = 'off';
-  let histogramMode = 'on';
+  let histogramMode = 'off';
   let pValueMode = 'off';
   let vertLinesAttachment = 'cutoffs';
   let vertLineDistFromB = {left: 0, right: 0};
@@ -749,16 +746,14 @@
   
   // Apply display mode parameters
   if(urlHistogram !== null) {
-    histogramMode = urlHistogram === 'on' ? 'on' : 'off';
-    if(histogramMode === 'off') {
+    // Only allow histogram=on if beta is also specified
+    if(urlHistogram === 'on' && urlBeta !== null) {
+      histogramMode = 'on';
+      histogramBtn.classList.add('active');
+    } else if(urlHistogram === 'off') {
+      histogramMode = 'off';
       histogramBtn.classList.remove('active');
     }
-  }
-  
-  // Override histogram mode to 'on' if pregenerate is true
-  if(shouldPregenerate) {
-    histogramMode = 'on';
-    histogramBtn.classList.add('active');
   }
   
   if(urlCurve !== null) {
@@ -2714,11 +2709,10 @@
     emitTutorialEvent('changeSE', {value: newSE});
     
     // If we have existing samples, regenerate them with the new SE
-    // Otherwise just update the display
+    // Always regenerate at beta (not beta + shiftUnits) since the shift is applied visually
     if(currentN > 0) {
       const beta = getBeta();
-      const centerPos = beta + shiftUnits;
-      data = gaussian(currentN, centerPos, newSE);
+      data = gaussian(currentN, beta, newSE);
       if(secondDistMode === 'on'){
         data2 = [...data];
       }
@@ -2767,10 +2761,9 @@
     emitTutorialEvent('changeSE', {value: newSE});
     
     // If we have existing samples, regenerate them with the new SE
-    // Otherwise just update the display
+    // Always regenerate at beta (not beta + shiftUnits) since the shift is applied visually
     if(currentN > 0) {
-      const centerPos = beta + shiftUnits;
-      data = gaussian(currentN, centerPos, newSE);
+      data = gaussian(currentN, beta, newSE);
       if(secondDistMode === 'on'){
         data2 = [...data];
       }
@@ -3221,8 +3214,23 @@
       histogramMode = 'off';
       histogramBtn.classList.remove('active');
     } else {
+      // Check if beta is set before allowing histogram
+      if(betaValue === null || Number.isNaN(betaValue)){
+        alert('You must enter a value for the population parameter in order to generate a histogram.');
+        return;
+      }
+      
       histogramMode = 'on';
       histogramBtn.classList.add('active');
+      
+      // Auto-generate samples if we don't have samples yet
+      if(currentN === 0) {
+        const beta = getBeta();
+        const se = getSE();
+        data = gaussian(1000, beta, se);
+        currentN = 1000;
+        isLockedToBeta = true;
+      }
     }
     emitTutorialEvent('toggleHistogram', {value: histogramMode});
     draw();
@@ -3316,12 +3324,13 @@
   data = [];
   data2 = [];
   
-  // Pre-generate sampling distribution if requested
-  if(shouldPregenerate && betaValue !== null && !Number.isNaN(betaValue)) {
+  // Generate sampling distribution if histogram is on from URL
+  if(betaValue !== null && !Number.isNaN(betaValue) && histogramMode === 'on') {
     const se = getSE();
     const beta = getBeta();
     data = gaussian(1000, beta, se);
     currentN = 1000;
+    isLockedToBeta = true;
   }
   
   draw();
