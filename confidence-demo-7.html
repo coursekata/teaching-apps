@@ -1505,23 +1505,28 @@
       bMarkerLabelDiv.innerHTML = labelHtml;
       bMarkerLabelDiv.style.display = 'block';
       
-      setTimeout(() => {
-        const bb = bMarkerLabelDiv.getBoundingClientRect();
-        const chartRect = chartWrap.getBoundingClientRect();
-        const svgRect = svg.node().getBoundingClientRect();
-        
-        // Calculate position relative to chart container - centered under arrow
-        const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
-        const absoluteY = svgRect.top - chartRect.top + margin.top + arrowBottom + 24;
-        
-        bMarkerLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
-        bMarkerLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
-        
-        // Hide the old foreignObject label
-        bLabelFO.attr('x', -1000).attr('y', -1000);
-        bBG.attr('x', -1000).attr('y', -1000);
-      }, 0);
-      updatePTextToRightOfB();
+      // Use requestAnimationFrame to ensure layout is complete before measuring
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const bb = bMarkerLabelDiv.getBoundingClientRect();
+          const chartRect = chartWrap.getBoundingClientRect();
+          const svgRect = svg.node().getBoundingClientRect();
+          
+          // Calculate position relative to chart container - centered under arrow
+          const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
+          const absoluteY = svgRect.top - chartRect.top + margin.top + arrowBottom + 24;
+          
+          bMarkerLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
+          bMarkerLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
+          
+          // Hide the old foreignObject label
+          bLabelFO.attr('x', -1000).attr('y', -1000);
+          bBG.attr('x', -1000).attr('y', -1000);
+          
+          // Now position p-value after b marker is positioned
+          updatePTextToRightOfB();
+        }, 0);
+      });
     }
   }
 
@@ -1667,7 +1672,10 @@
     
     if(bValue === null || Number.isNaN(bValue)){ 
       pTextRight.attr('display','none'); 
-      if(pValueLabelDiv) pValueLabelDiv.style.display = 'none';
+      if(pValueLabelDiv) {
+        pValueLabelDiv.style.display = 'none';
+        pValueLabelDiv.style.opacity = '1';
+      }
       return; 
     }
     
@@ -1679,7 +1687,10 @@
     
     if(!curveIsVisible && !histogramIsLockedAndVisible){ 
       pTextRight.attr('display','none'); 
-      if(pValueLabelDiv) pValueLabelDiv.style.display = 'none';
+      if(pValueLabelDiv) {
+        pValueLabelDiv.style.display = 'none';
+        pValueLabelDiv.style.opacity = '1';
+      }
       return; 
     }
     
@@ -1705,21 +1716,36 @@
     
     if(pValueLabelDiv) {
       pValueLabelDiv.innerHTML = '<div style="color:#1d4ed8;font-weight:700;font-size:18px;line-height:1.1;margin-top:-2px;" class="latex-label">' + pLabel + '</div>';
+      
+      // Only use opacity trick if element is currently hidden (initial display)
+      const isCurrentlyHidden = pValueLabelDiv.style.display === 'none';
+      
       pValueLabelDiv.style.display = 'block';
+      if(isCurrentlyHidden) {
+        pValueLabelDiv.style.opacity = '0'; // Hide during initial positioning only
+      }
       
       // Position underneath the b marker label, centered
       const bMarkerLabelDiv = document.getElementById('bMarkerLabel');
       if(bMarkerLabelDiv && bMarkerLabelDiv.style.display !== 'none') {
-        const bLabelRect = bMarkerLabelDiv.getBoundingClientRect();
-        const chartRect = chartWrap.getBoundingClientRect();
-        
-        setTimeout(() => {
-          const pLabelRect = pValueLabelDiv.getBoundingClientRect();
-          // Center the p-value label under the b label
-          const bLabelCenter = bLabelRect.left + bLabelRect.width / 2;
-          pValueLabelDiv.style.left = (bLabelCenter - chartRect.left - pLabelRect.width / 2) + 'px';
-          pValueLabelDiv.style.top = (bLabelRect.bottom - chartRect.top + 2) + 'px';
-        }, 0);
+        // Use requestAnimationFrame to ensure layout is complete before measuring
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const bLabelRect = bMarkerLabelDiv.getBoundingClientRect();
+            const chartRect = chartWrap.getBoundingClientRect();
+            const pLabelRect = pValueLabelDiv.getBoundingClientRect();
+            
+            // Center the p-value label under the b label
+            const bLabelCenter = bLabelRect.left + bLabelRect.width / 2;
+            pValueLabelDiv.style.left = (bLabelCenter - chartRect.left - pLabelRect.width / 2) + 'px';
+            pValueLabelDiv.style.top = (bLabelRect.bottom - chartRect.top + 2) + 'px';
+            
+            // Show after positioning (only matters if we hid it initially)
+            if(isCurrentlyHidden) {
+              pValueLabelDiv.style.opacity = '1';
+            }
+          }, 0);
+        });
       }
       
       // Hide old SVG text
