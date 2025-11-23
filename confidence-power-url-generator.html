@@ -222,15 +222,6 @@
         <input type="number" id="se" value="1" step="0.1" min="0.01">
       </div>
       <div class="control">
-        <label>Simulate Button Default</label>
-        <select id="n">
-          <option value="1" selected>1x</option>
-          <option value="10">10x</option>
-          <option value="100">100x</option>
-          <option value="1000">1000x</option>
-        </select>
-      </div>
-      <div class="control">
         <label>Bins</label>
         <input type="number" id="bins" value="30" min="1" max="200">
       </div>
@@ -269,8 +260,8 @@
       <div class="control">
         <label>Histogram Display</label>
         <select id="histogram">
-          <option value="on">On</option>
           <option value="off">Off</option>
+          <option value="on">On</option>
         </select>
       </div>
       <div class="control">
@@ -306,13 +297,6 @@
         <select id="p">
           <option value="off">Off</option>
           <option value="on">On</option>
-        </select>
-      </div>
-      <div class="control">
-        <label>Pregenerate Simulations</label>
-        <select id="pregenerate" disabled title="Requires β to be specified">
-          <option value="false">No</option>
-          <option value="true">Yes</option>
         </select>
       </div>
     </div>
@@ -471,10 +455,6 @@
         <label for="hide_se">Hide SE</label>
       </div>
       <div class="checkbox-item">
-        <input type="checkbox" id="hide_simulate">
-        <label for="hide_simulate">Hide Simulate</label>
-      </div>
-      <div class="checkbox-item">
         <input type="checkbox" id="hide_seconddist">
         <label for="hide_seconddist">Hide β′</label>
       </div>
@@ -548,7 +528,6 @@ function generateURL() {
   if(document.getElementById('beta').value.trim()) params.append('beta', document.getElementById('beta').value.trim());
   if(document.getElementById('b').value.trim()) params.append('b', document.getElementById('b').value.trim());
   if(document.getElementById('se').value !== '1') params.append('se', document.getElementById('se').value);
-  if(document.getElementById('n').value !== '1') params.append('n', document.getElementById('n').value);
   if(document.getElementById('bins').value !== '30') params.append('bins', document.getElementById('bins').value);
   if(document.getElementById('scale').value !== '1.75') params.append('scale', document.getElementById('scale').value);
   if(document.getElementById('df').value !== '10') params.append('df', document.getElementById('df').value);
@@ -562,7 +541,6 @@ function generateURL() {
   if(document.getElementById('powermode').value !== 'off') params.append('powermode', document.getElementById('powermode').value);
   if(document.getElementById('vertlines').value !== 'off') params.append('vertlines', document.getElementById('vertlines').value);
   if(document.getElementById('p').value !== 'off') params.append('p', document.getElementById('p').value);
-  if(document.getElementById('pregenerate').value !== 'false') params.append('pregenerate', document.getElementById('pregenerate').value);
   
   // Custom Labels
   if(document.getElementById('label_param').value.trim()) params.append('label_param', document.getElementById('label_param').value.trim());
@@ -588,7 +566,7 @@ function generateURL() {
   
   // Hide Controls - only append if checked
   const hideControls = [
-    'hide_beta', 'hide_se', 'hide_simulate', 'hide_seconddist', 'hide_thirddist',
+    'hide_beta', 'hide_se', 'hide_seconddist', 'hide_thirddist',
     'hide_powermode', 'hide_b', 'hide_scale', 'hide_bins', 'hide_curve',
     'hide_df', 'hide_ci', 'hide_vertlines', 'hide_histogram', 'hide_p'
   ];
@@ -607,14 +585,6 @@ function generateURL() {
   
   // Validation check
   let validationWarning = '';
-  
-  // Check if beta is empty but pregenerate is true
-  const betaValue = document.getElementById('beta').value.trim();
-  const pregenerateValue = document.getElementById('pregenerate').value;
-  
-  if(pregenerateValue === 'true' && betaValue === '') {
-    validationWarning = '⚠️ Warning: Pregenerate is enabled but β is not specified. This may cause issues.\n\n';
-  }
   
   // Update display
   document.getElementById('urlDisplay').textContent = validationWarning + url;
@@ -656,22 +626,6 @@ function openPreview() {
   window.open(url, '_blank');
 }
 
-// Function to check if pregenerate should be enabled
-function updatePregenerateState() {
-  const beta = document.getElementById('beta').value.trim();
-  const pregenerateSelect = document.getElementById('pregenerate');
-  
-  if(beta === '') {
-    // No beta value - disable and reset to 'false'
-    pregenerateSelect.disabled = true;
-    pregenerateSelect.value = 'false';
-    pregenerateSelect.title = 'Requires β to be specified';
-  } else {
-    // Beta has a value - enable the dropdown
-    pregenerateSelect.disabled = false;
-    pregenerateSelect.title = '';
-  }
-}
 
 // Color Preview Functions
 function darkenColor(hex, amount = 0.3) {
@@ -974,9 +928,6 @@ function restoreDefaultColors() {
   generateURL();
 }
 
-// Initialize pregenerate state
-updatePregenerateState();
-
 // Setup color picker and hex input syncing first
 setupColorSync();
 
@@ -1000,10 +951,6 @@ document.querySelectorAll('input[type="color"]').forEach(element => {
     generateURL();
   });
 });
-
-// Special listener for beta input to update pregenerate state
-document.getElementById('beta').addEventListener('input', updatePregenerateState);
-document.getElementById('beta').addEventListener('change', updatePregenerateState);
 
 // Initialize color preview with a slight delay to ensure DOM is ready
 setTimeout(() => {
