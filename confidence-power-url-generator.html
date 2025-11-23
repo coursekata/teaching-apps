@@ -349,21 +349,18 @@
           <text id="leftTitle" y="25" font-weight="600">Main Distribution (Left)</text>
           <text id="rightTitle" y="25" font-weight="600">Secondary Distribution (Right)</text>
           
-          <!-- Main distribution legend (left) - will be positioned dynamically -->
-          <text id="alphaLabel1" y="180">
+          <!-- Main distribution legend (left) - Alpha, Main, P -->
+          <text id="alphaLabel" y="180">
             <tspan fill="#1e3a8a">■</tspan> Alpha
           </text>
           <text id="mainLabel" y="180">
             <tspan fill="#60a5fa">■</tspan> Main
           </text>
           <text id="pLabel" y="180">
-            <tspan fill="#3b82f6">■</tspan> P
-          </text>
-          <text id="alphaLabel2" y="180">
-            <tspan fill="#1e3a8a">■</tspan> Alpha
+            <tspan fill="#3b82f6">■</tspan> P-value
           </text>
           
-          <!-- Secondary distribution legend (right) - will be positioned dynamically -->
+          <!-- Secondary distribution legend (right) - Type II, Power, Secondary -->
           <text id="type2Label" y="180">
             <tspan fill="#fbbf24">■</tspan> Type II
           </text>
@@ -509,14 +506,14 @@ function generateURL() {
   // Get values with proper handling for empty strings
   const params = new URLSearchParams();
   
-  // Default Values
+  // Default Values - only include if different from defaults
   if(document.getElementById('beta').value.trim()) params.append('beta', document.getElementById('beta').value.trim());
   if(document.getElementById('b').value.trim()) params.append('b', document.getElementById('b').value.trim());
-  if(document.getElementById('se').value) params.append('se', document.getElementById('se').value);
-  if(document.getElementById('n').value) params.append('n', document.getElementById('n').value);
-  if(document.getElementById('bins').value) params.append('bins', document.getElementById('bins').value);
-  if(document.getElementById('scale').value) params.append('scale', document.getElementById('scale').value);
-  if(document.getElementById('df').value) params.append('df', document.getElementById('df').value);
+  if(document.getElementById('se').value !== '1') params.append('se', document.getElementById('se').value);
+  if(document.getElementById('n').value !== '1') params.append('n', document.getElementById('n').value);
+  if(document.getElementById('bins').value !== '30') params.append('bins', document.getElementById('bins').value);
+  if(document.getElementById('scale').value !== '1.75') params.append('scale', document.getElementById('scale').value);
+  if(document.getElementById('df').value !== '10') params.append('df', document.getElementById('df').value);
 
   // Initial State
   if(document.getElementById('curve').value !== 'off') params.append('curve', document.getElementById('curve').value);
@@ -736,23 +733,22 @@ function createColorPreview() {
   document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
   document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
   
-  // MAIN DISTRIBUTION (Left) - IMPROVED: Extend to display boundaries and adjust proportions
-  // Alpha shading (smaller, both outer tails to boundaries)
+  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE: Fill all areas with no gaps
+  // Alpha shading (left tail)
   const alphaLeft = generateArea(mainMean, mainStd, -1.5, -1.15);   // Left tail to boundary
-  const alphaRight = generateArea(mainMean, mainStd, -0.45, -0.3);  // Smaller right alpha
-  document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft) + ' ' + pointsToPath(alphaRight));
+  document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft));
   
-  // Main histogram color (center)
-  const mainArea = generateArea(mainMean, mainStd, -1.15, -0.65);
+  // Main histogram color (large center area)
+  const mainArea = generateArea(mainMean, mainStd, -1.15, -0.6);
   document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
   
-  // P-value shading (larger region)
-  const pArea = generateArea(mainMean, mainStd, -0.65, -0.45);
+  // P-value shading (larger region that extends to right edge of main dist)
+  const pArea = generateArea(mainMean, mainStd, -0.6, -0.2);  // Extended to cover right tail of main
   document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
   
-  // SECONDARY DISTRIBUTION (Right) - IMPROVED: Extend to fill to boundaries
-  // Type II shading (extend to left boundary)
-  const type2Area = generateArea(secondaryMean, secondaryStd, 0.3, 0.6);
+  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE: Fill all areas with no gaps
+  // Type II shading (extend to cover left tail of secondary)
+  const type2Area = generateArea(secondaryMean, secondaryStd, 0.2, 0.6);  // Extended to cover left tail
   document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
   
   // Power shading (middle section) 
@@ -775,20 +771,19 @@ function updateLegendLayout(svgWidth) {
   document.getElementById('leftTitle').setAttribute('x', margin.left + plotWidth * 0.25);
   document.getElementById('rightTitle').setAttribute('x', margin.left + plotWidth * 0.75);
   
-  // Left distribution legend - distribute evenly across left half
+  // Left distribution legend - distribute evenly across left half (3 items: Alpha, Main, P-value)
   const leftStart = margin.left + 10;
   const leftEnd = margin.left + plotWidth * 0.48;
-  const leftSpacing = (leftEnd - leftStart) / 3;
+  const leftSpacing = (leftEnd - leftStart) / 2; // 2 gaps for 3 items
   
-  document.getElementById('alphaLabel1').setAttribute('x', leftStart);
+  document.getElementById('alphaLabel').setAttribute('x', leftStart);
   document.getElementById('mainLabel').setAttribute('x', leftStart + leftSpacing);
   document.getElementById('pLabel').setAttribute('x', leftStart + leftSpacing * 2);
-  document.getElementById('alphaLabel2').setAttribute('x', leftStart + leftSpacing * 3);
   
-  // Right distribution legend - distribute evenly across right half
+  // Right distribution legend - distribute evenly across right half (3 items: Type II, Power, Secondary)
   const rightStart = margin.left + plotWidth * 0.52;
   const rightEnd = svgWidth - margin.right - 10;
-  const rightSpacing = (rightEnd - rightStart) / 2;
+  const rightSpacing = (rightEnd - rightStart) / 2; // 2 gaps for 3 items
   
   document.getElementById('type2Label').setAttribute('x', rightStart);
   document.getElementById('powerLabel').setAttribute('x', rightStart + rightSpacing);
@@ -834,13 +829,12 @@ function updateColorPreview() {
   
   // Update legend colors
   const labels = document.getElementById('previewLabels').querySelectorAll('tspan');
-  if (labels[0]) labels[0].setAttribute('fill', alphaColor);
-  if (labels[1]) labels[1].setAttribute('fill', mainColor);
-  if (labels[2]) labels[2].setAttribute('fill', pColor);
-  if (labels[3]) labels[3].setAttribute('fill', alphaColor);
-  if (labels[4]) labels[4].setAttribute('fill', type2Color);
-  if (labels[5]) labels[5].setAttribute('fill', powerColor);
-  if (labels[6]) labels[6].setAttribute('fill', secondaryColor);
+  if (labels[0]) labels[0].setAttribute('fill', alphaColor);    // Alpha
+  if (labels[1]) labels[1].setAttribute('fill', mainColor);     // Main
+  if (labels[2]) labels[2].setAttribute('fill', pColor);       // P-value
+  if (labels[3]) labels[3].setAttribute('fill', type2Color);   // Type II
+  if (labels[4]) labels[4].setAttribute('fill', powerColor);   // Power
+  if (labels[5]) labels[5].setAttribute('fill', secondaryColor); // Secondary
 }
 
 function restoreDefaultColors() {
