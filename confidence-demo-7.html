@@ -1917,6 +1917,69 @@
       if(meanLineLabel2Div) meanLineLabel2Div.style.display = 'none';
     }
 
+    // Third distribution mean line
+    if(thirdDistMode === 'on'){
+      let sampleMean3 = beta;
+      let showSampleMean3 = false;
+      
+      if(currentN > 0 && data3.length > 0) {
+        const sum3 = data3.reduce((acc, val) => acc + val, 0);
+        sampleMean3 = sum3 / data3.length;
+        showSampleMean3 = true;
+        
+        // If main distribution is locked, lock third one too at beta
+        if(isLockedToBeta) {
+          sampleMean3 = beta;
+        }
+      } else if(curveMode !== 'off') {
+        // No histogram data, but curve is showing - show mean at beta
+        showSampleMean3 = true;
+        sampleMean3 = beta;
+      }
+      
+      const showMeanLines3 = showSampleMean3 && ((histogramMode === 'on') || (curveMode !== 'off'));
+      
+      // Position mean line within thirdWrap (which is translated by pxShift3)
+      const meanLineX3 = isLockedToBeta ? x(beta) : x(sampleMean3);
+      
+      meanLine3.attr('x1', meanLineX3).attr('x2', meanLineX3).attr('y1',0).attr('y2',meanLineEnd)
+        .style('display', showMeanLines3 ? null : 'none');
+      meanLabel3.attr('transform', 'translate(' + meanLineX3 + ',' + (meanLineEnd + 18) + ')')
+        .style('display', 'none'); // Hide SVG label, use HTML overlay instead
+      
+      const meanLineLabel3Div = document.getElementById('meanLineLabel3');
+      if(showMeanLines3 && meanLineLabel3Div){
+        const labelHtml3 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;background:#fff;opacity:0.75;border-radius:3px;padding:2px 4px;" class="latex-label">' + 
+          renderLatex(labelSamplingMeanLatex + '\'\'') + '</div>';
+        meanLineLabel3Div.innerHTML = labelHtml3;
+        meanLineLabel3Div.style.display = 'block';
+        
+        setTimeout(() => {
+          const bb3 = meanLineLabel3Div.getBoundingClientRect();
+          const chartRect = chartWrap.getBoundingClientRect();
+          const svgRect = svg.node().getBoundingClientRect();
+          
+          // Calculate position: need to account for SVG position + margin + plot translation + shift + mean line position
+          const pxShift3 = shiftUnits3 * (x(1) - x(0));
+          const absoluteX = svgRect.left - chartRect.left + margin.left + meanLineX3 + pxShift3;
+          const absoluteY = svgRect.top - chartRect.top + margin.top + axisInsetTop + meanLineEnd + 18;
+          
+          meanLineLabel3Div.style.left = (absoluteX - bb3.width/2) + 'px';
+          meanLineLabel3Div.style.top = (absoluteY - bb3.height/2) + 'px';
+          
+          // Hide old foreignObject
+          meanLabelFO3.attr('x', -1000).attr('y', -1000);
+        }, 0);
+      } else if(meanLineLabel3Div) {
+        meanLineLabel3Div.style.display = 'none';
+      }
+    } else {
+      meanLine3.style('display', 'none');
+      meanLabel3.style('display', 'none');
+      const meanLineLabel3Div = document.getElementById('meanLineLabel3');
+      if(meanLineLabel3Div) meanLineLabel3Div.style.display = 'none';
+    }
+
     drawBetaMarker();
     drawBetaPrimeMarker();
     drawBetaPrimePrimeMarker();
