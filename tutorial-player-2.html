@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tutorial Player - v1.8</title>
+
+<!--
+  LOADING TUTORIALS - THREE METHODS:
+  
+  METHOD 1 (RECOMMENDED): Load from URL parameter
+  =====================================================
+  Upload your tutorial JSON to GitHub (or any static host), then link to the player with:
+  
+  player.html?tutorial=https://username.github.io/tutorials/lesson1.json
+  
+  This is the cleanest approach:
+  - One player file for all tutorials
+  - Update tutorials without touching the player
+  - Easy to share and maintain
+  
+  
+  METHOD 2: Embed tutorial in HTML
+  =====================================================
+  For a completely self-contained single file, add a script tag before the other
+  scripts that sets window.TUTORIAL_DATA:
+  
+  <script>
+  window.TUTORIAL_DATA = {
+    "version": "9.32",
+    "appUrl": "https://your-app-url.com",
+    "initialState": { ... },
+    "snapshots": [ ... ],
+    "annotations": [ ... ],
+    "pauses": [ ... ],
+    "duration": 12345
+  };
+  </script>
+  
+  Just copy your exported JSON and paste it as the value of TUTORIAL_DATA.
+  
+  
+  METHOD 3: File upload
+  =====================================================
+  The player shows a file picker by default if no tutorial is provided.
+  Good for local testing.
+-->
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$']],
+      displayMath: [['$$', '$$']]
+    }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font: 14px/1.4 system-ui, -apple-system, sans-serif;
+    background: #f5f5f5;
+  }
+  
+  .player-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .controls {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  button {
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  button:hover:not(:disabled) {
+    background: #f9f9f9;
+  }
+  
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  button.primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+  }
+  
+  button.primary:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+  
+  button.flash {
+    animation: flashButton 1s ease-in-out infinite;
+  }
+  
+  @keyframes flashButton {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  
+  .scrubber {
+    flex: 1;
+    min-width: 200px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .scrubber-progress {
+    height: 100%;
+    background: #2563eb;
+    border-radius: 4px;
+    transition: width 0.1s linear;
+  }
+  
+  .time-display {
+    font-variant-numeric: tabular-nums;
+    color: #666;
+    font-size: 13px;
+    min-width: 80px;
+    text-align: right;
+  }
+  
+  .version-number {
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .app-frame-container {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  
+  iframe {
+    width: 1000px;
+    height: 700px;
+    border: none;
+    display: block;
+  }
+  
+  .overlay-nav-controls {
+    position: absolute;
+    bottom: 40px;
+    left: 80px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #2563eb;
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    cursor: move;
+    user-select: none;
+    z-index: 1000;
+  }
+  
+  .overlay-nav-controls button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+    transition: all 0.15s;
+  }
+  
+  .overlay-nav-controls button:hover:not(:disabled) {
+    background: #f0f7ff;
+    border-color: #2563eb;
+    transform: scale(1.05);
+  }
+  
+  .overlay-nav-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  .overlay-nav-controls .drag-handle {
+    cursor: move;
+    color: #666;
+    font-size: 18px;
+    padding: 0 4px;
+  }
+  
+  .annotation-box {
+    position: absolute;
+    width: 250px;
+    max-width: 500px;
+    background: rgba(255,255,255,0.98);
+    border: 3px solid #2563eb;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    z-index: 100;
+    display: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .annotation-box.visible {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .annotation-box h3 {
+    margin: 0 0 12px;
+    color: #2563eb;
+    font-size: 18px;
+  }
+  
+  .annotation-box p {
+    margin: 0;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  
+  .load-tutorial {
+    background: #fff;
+    padding: 32px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  
+  .load-tutorial h2 {
+    margin: 0 0 20px;
+    color: #111;
+  }
+  
+  .load-tutorial input[type="file"] {
+    display: none;
+  }
+  
+  .load-tutorial label {
+    display: inline-block;
+    padding: 12px 24px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .load-tutorial label:hover {
+    background: #1d4ed8;
+  }
+  
+  .error {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c00;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="player-container">
+  <div id="loadSection" class="load-tutorial">
+    <h2>Load Tutorial</h2>
+    <p style="color: #666; margin-bottom: 20px;">Select a tutorial JSON file to begin</p>
+    <input type="file" id="tutorialFile" accept=".json" />
+    <label for="tutorialFile">Choose Tutorial File</label>
+    <div id="errorMsg" class="error" style="display:none;"></div>
+  </div>
+  
+  <div id="playerSection" style="display:none;">
+    <div class="controls">
+      <button id="playPauseBtn" class="primary">▶ Play</button>
+      <div class="scrubber" id="scrubber">
+        <div class="scrubber-progress" id="scrubberProgress"></div>
+      </div>
+      <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+      <div class="version-number">v1.8</div>
+    </div>
+    
+    <div class="app-frame-container">
+      <iframe id="appFrame"></iframe>
+      <div id="overlayNavControls" class="overlay-nav-controls" style="display:none;">
+        <span class="drag-handle">⋮⋮</span>
+        <button id="prevBtn" title="Previous segment / Replay">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 5L8 10L13 15"/>
+          </svg>
+        </button>
+        <button id="nextBtn" title="Next segment">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 5L12 10L7 15"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  
+  // Elements
+  const loadSection = document.getElementById('loadSection');
+  const playerSection = document.getElementById('playerSection');
+  const tutorialFile = document.getElementById('tutorialFile');
+  const errorMsg = document.getElementById('errorMsg');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const scrubber = document.getElementById('scrubber');
+  const scrubberProgress = document.getElementById('scrubberProgress');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const appFrame = document.getElementById('appFrame');
+  const overlayNavControls = document.getElementById('overlayNavControls');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  // State
+  let tutorial = null;
+  let isPlaying = false;
+  let playbackStartTime = 0;
+  let currentTime = 0;
+  let animationFrame = null;
+  let annotationBox = null;
+  let currentAnnotationIndex = -1;
+  let annotationTimeout = null;
+  let triggeredPauses = new Set(); // Track which pauses we've already triggered
+  let lastLeftButtonPressTime = 0; // Track timing for double-press detection
+  let currentSegmentIndex = 0; // Track which segment we're in
+  
+  // Check for embedded tutorial
+  const embeddedTutorial = window.TUTORIAL_DATA || null;
+  
+  // Check for tutorial URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const tutorialUrl = urlParams.get('tutorial') || urlParams.get('json');
+  
+  // Auto-load tutorial from URL parameter if present
+  if (tutorialUrl) {
+    loadSection.style.display = 'none';
+    const loadingMsg = document.createElement('div');
+    loadingMsg.style.cssText = 'text-align:center;padding:40px;color:#666;';
+    loadingMsg.textContent = 'Loading tutorial...';
+    document.querySelector('.player-container').insertBefore(loadingMsg, playerSection);
+    
+    fetch(tutorialUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load tutorial: ' + response.statusText);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('📥 Raw data received from fetch:', data);
+        console.log('📥 Annotations key exists?', 'annotations' in data);
+        console.log('📥 Annotations value:', data.annotations);
+        console.log('📥 Annotations is array?', Array.isArray(data.annotations));
+        
+        tutorial = data;
+        
+        // Validate tutorial - only initialState and snapshots are required
+        if (!tutorial.initialState || !tutorial.snapshots) {
+          throw new Error('Invalid tutorial format');
+        }
+        
+        // Backward compatibility: add empty arrays if missing
+        if (!tutorial.annotations) {
+          console.log('⚠️ No annotations property found, creating empty array');
+          tutorial.annotations = [];
+        }
+        if (!tutorial.pauses) {
+          tutorial.pauses = [];
+        }
+        
+        console.log('📤 Tutorial parsed from URL');
+        console.log('  Snapshots:', tutorial.snapshots.length);
+        console.log('  Annotations in data:', tutorial.annotations.length);
+        console.log('  Pauses:', tutorial.pauses ? tutorial.pauses.length : 0);
+        if (tutorial.annotations && tutorial.annotations.length > 0) {
+          console.log('  First annotation:', tutorial.annotations[0]);
+        }
+        
+        // Check for app URL
+        if (!tutorial.appUrl) {
+          throw new Error('This tutorial does not contain an app URL. Please use a tutorial created with v12.31 or later.');
+        }
+        
+        loadingMsg.remove();
+        loadApp();
+      })
+      .catch(err => {
+        loadingMsg.remove();
+        loadSection.style.display = 'block';
+        showError('Error loading tutorial from URL: ' + err.message);
+      });
+  }
+  // Auto-load embedded tutorial if present
+  else if (embeddedTutorial) {
+    try {
+      tutorial = embeddedTutorial;
+      
+      // Validate tutorial - only initialState and snapshots are required
+      if (!tutorial.initialState || !tutorial.snapshots) {
+        throw new Error('Invalid tutorial format');
+      }
+      
+      // Backward compatibility: add empty arrays if missing
+      if (!tutorial.annotations) {
+        tutorial.annotations = [];
+      }
+      if (!tutorial.pauses) {
+        tutorial.pauses = [];
+      }
+      
+      // Check for app URL
+      if (!tutorial.appUrl) {
+        showError('This tutorial does not contain an app URL. Please use a tutorial created with v12.31 or later.');
+      } else {
+        // Load the app
+        loadApp();
+      }
+    } catch (err) {
+      showError('Error loading embedded tutorial: ' + err.message);
+    }
+  }
+  
+  // Load tutorial from file
+  tutorialFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        tutorial = JSON.parse(event.target.result);
+        
+        // Validate tutorial - only initialState and snapshots are required
+        if (!tutorial.initialState || !tutorial.snapshots) {
+          throw new Error('Invalid tutorial format');
+        }
+        
+        // Backward compatibility: add empty arrays if missing
+        if (!tutorial.annotations) {
+          tutorial.annotations = [];
+        }
+        if (!tutorial.pauses) {
+          tutorial.pauses = [];
+        }
+        
+        console.log('📤 Tutorial parsed from file');
+        console.log('  Snapshots:', tutorial.snapshots.length);
+        console.log('  Annotations in data:', tutorial.annotations.length);
+        console.log('  Pauses:', tutorial.pauses ? tutorial.pauses.length : 0);
+        if (tutorial.annotations && tutorial.annotations.length > 0) {
+          console.log('  First annotation:', tutorial.annotations[0]);
+        }
+        
+        // Check for app URL
+        if (!tutorial.appUrl) {
+          showError('This tutorial does not contain an app URL. Please use a tutorial created with v12.31 or later.');
+          return;
+        }
+        
+        // Load the app
+        loadApp();
+        
+      } catch (err) {
+        showError('Error loading tutorial: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+  
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+  }
+  
+  function loadApp() {
+    loadSection.style.display = 'none';
+    playerSection.style.display = 'block';
+    
+    appFrame.src = tutorial.appUrl;
+    
+    // Wait for iframe to load
+    appFrame.addEventListener('load', () => {
+      // Poll for API
+      const checkAPI = setInterval(() => {
+        const api = getAPI();
+        if (api) {
+          clearInterval(checkAPI);
+          console.log('✓ API ready');
+          
+          // Set initial state
+          api.setState(tutorial.initialState);
+          
+          // Inject annotation box
+          injectAnnotationBox();
+          
+          // Enable controls
+          playPauseBtn.disabled = false;
+          
+          // Show overlay navigation controls
+          overlayNavControls.style.display = 'flex';
+          
+          console.log('Tutorial loaded:', tutorial.snapshots.length, 'snapshots,', tutorial.annotations.length, 'annotations');
+          if (tutorial.annotations && tutorial.annotations.length > 0) {
+            console.log('Annotation details:');
+            tutorial.annotations.forEach((ann, i) => {
+              console.log(`  [${i}] "${ann.title}" at ${(ann.timestamp / 1000).toFixed(2)}s for ${(ann.duration / 1000).toFixed(2)}s`);
+              console.log(`      Position:`, ann.position);
+            });
+          }
+        }
+      }, 100);
+      
+      setTimeout(() => {
+        clearInterval(checkAPI);
+      }, 5000);
+    });
+  }
+  
+  function getAPI() {
+    try {
+      return appFrame.contentWindow.tutorialAPI;
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  function injectAnnotationBox() {
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    annotationBox = iframeDoc.createElement('div');
+    annotationBox.className = 'annotation-box';
+    
+    // Inject styles
+    const style = iframeDoc.createElement('style');
+    style.textContent = `
+      .annotation-box {
+        position: absolute;
+        width: 250px;
+        max-width: 500px;
+        background: rgba(255,255,255,0.98);
+        border: 3px solid #2563eb;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        z-index: 100;
+        display: none;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .annotation-box.custom-position {
+        max-width: none;
+      }
+      .annotation-box.visible {
+        display: block;
+        animation: fadeIn 0.3s ease-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .annotation-box h3 {
+        margin: 0 0 12px;
+        color: #2563eb;
+        font-size: 18px;
+        line-height: 1.3;
+      }
+      .annotation-box p {
+        margin: 0;
+        line-height: inherit;
+        font-size: inherit;
+      }
+    `;
+    iframeDoc.head.appendChild(style);
+    iframeDoc.body.appendChild(annotationBox);
+  }
+  
+  // Play/Pause
+  playPauseBtn.addEventListener('click', () => {
+    if (isPlaying) {
+      pause();
+    } else {
+      play();
+    }
+  });
+  
+  function play() {
+    if (!tutorial) return;
+    
+    // If we're at the end, reset to beginning (replay)
+    if (currentTime >= tutorial.duration) {
+      currentTime = 0;
+      currentAnnotationIndex = -1;
+      triggeredPauses.clear();
+      hideAnnotation();
+      
+      const api = getAPI();
+      if (api) {
+        api.setState(tutorial.initialState);
+      }
+      
+      scrubberProgress.style.width = '0%';
+      updateTimeDisplay();
+    }
+    
+    isPlaying = true;
+    playbackStartTime = Date.now() - currentTime;
+    playPauseBtn.textContent = '⏸ Pause';
+    playPauseBtn.classList.remove('flash'); // Stop flashing when user clicks play
+    
+    animationFrame = requestAnimationFrame(playbackLoop);
+  }
+  
+  function pause() {
+    isPlaying = false;
+    playPauseBtn.textContent = '▶ Play';
+    
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+  }
+  
+  function playbackLoop() {
+    if (!isPlaying) return;
+    
+    currentTime = Date.now() - playbackStartTime;
+    
+    // Update scrubber
+    const progress = Math.min(100, (currentTime / tutorial.duration) * 100);
+    scrubberProgress.style.width = progress + '%';
+    
+    // Update time display
+    updateTimeDisplay();
+    
+    // Apply snapshots
+    const api = getAPI();
+    if (api) {
+      for (const snapshot of tutorial.snapshots) {
+        if (snapshot.timestamp <= currentTime && snapshot.timestamp > currentTime - 100) {
+          api.setState(snapshot.state);
+        }
+      }
+    }
+    
+    // Handle annotations
+    handleAnnotations();
+    
+    // Handle pauses
+    if (tutorial.pauses) {
+      for (let i = 0; i < tutorial.pauses.length; i++) {
+        const pauseEvent = tutorial.pauses[i];
+        
+        // Only trigger if we haven't triggered this pause yet
+        if (!triggeredPauses.has(i) && pauseEvent.timestamp <= currentTime) {
+          triggeredPauses.add(i);
+          pause();
+          playPauseBtn.classList.add('flash'); // Flash the button to signal user needs to click
+          console.log('⏸ Paused at', (pauseEvent.timestamp / 1000).toFixed(2) + 's');
+          return;
+        }
+      }
+    }
+    
+    // Check if finished
+    if (currentTime >= tutorial.duration) {
+      pause();
+      playPauseBtn.textContent = '⟲ Replay';
+      
+      // Check if tutorial ends with an annotation (within 100ms tolerance)
+      let tutorialEndsWithAnnotation = false;
+      if (tutorial.annotations && tutorial.annotations.length > 0) {
+        const lastAnn = tutorial.annotations[tutorial.annotations.length - 1];
+        const annEnd = lastAnn.timestamp + lastAnn.duration;
+        const tolerance = 100; // 100ms tolerance
+        
+        if (Math.abs(annEnd - tutorial.duration) < tolerance) {
+          tutorialEndsWithAnnotation = true;
+          // Show the last annotation
+          showAnnotation(lastAnn);
+          currentAnnotationIndex = tutorial.annotations.length - 1;
+          console.log('✓ Tutorial ends with annotation - keeping it visible');
+        }
+      }
+      
+      // Hide annotation only if tutorial doesn't end with one
+      if (!tutorialEndsWithAnnotation) {
+        hideAnnotation();
+        currentAnnotationIndex = -1;
+      }
+      
+      return;
+    }
+    
+    animationFrame = requestAnimationFrame(playbackLoop);
+  }
+  
+  function handleAnnotations() {
+    if (!tutorial.annotations || tutorial.annotations.length === 0) {
+      return;
+    }
+    
+    for (let i = 0; i < tutorial.annotations.length; i++) {
+      const ann = tutorial.annotations[i];
+      const annStart = ann.timestamp;
+      const annEnd = ann.timestamp + ann.duration;
+      
+      // Show annotation if we're in its time range
+      if (currentTime >= annStart && currentTime < annEnd) {
+        if (currentAnnotationIndex !== i) {
+          console.log(`📍 Time ${(currentTime / 1000).toFixed(2)}s: Showing annotation ${i} "${ann.title}" (range: ${(annStart / 1000).toFixed(2)}s-${(annEnd / 1000).toFixed(2)}s)`);
+          showAnnotation(ann);
+          currentAnnotationIndex = i;
+        }
+        return;
+      }
+    }
+    
+    // Hide annotation if we're not in any range
+    if (currentAnnotationIndex !== -1) {
+      console.log(`📍 Time ${(currentTime / 1000).toFixed(2)}s: Hiding annotation`);
+      hideAnnotation();
+      currentAnnotationIndex = -1;
+    }
+  }
+  
+  function applyCSSToAnnotation(ann, annotationBox) {
+    // EITHER/OR approach: use global styles OR custom CSS, never both
+    const hasClassAttribute = ann.content && ann.content.includes('class=');
+    
+    if (hasClassAttribute && tutorial && tutorial.globalStyles) {
+      // OPTION 1: Using global styles - inject them and make container transparent
+      console.log('🎨 Applying GLOBAL STYLES - making container transparent wrapper');
+      injectGlobalStyles();
+      
+      // Make container completely transparent - it's just a positioning/sizing wrapper
+      annotationBox.style.backgroundColor = 'transparent';
+      annotationBox.style.border = 'none';
+      annotationBox.style.borderRadius = '0';
+      annotationBox.style.boxShadow = 'none';
+      annotationBox.style.padding = '0';
+      annotationBox.style.margin = '0';
+      annotationBox.style.overflow = 'visible';
+      
+      // Positioning properties
+      annotationBox.style.position = 'absolute';
+      annotationBox.style.zIndex = '10000';
+      annotationBox.style.opacity = '1';
+      annotationBox.style.visibility = 'visible';
+      
+      console.log('🎨 Container configured as transparent wrapper for global-styled content');
+    } else if (ann.customCSS && ann.customCSS.trim()) {
+      // OPTION 2: Using custom CSS - apply it directly to container
+      console.log('🎨 Applying CUSTOM CSS to container:', ann.customCSS);
+      annotationBox.style.cssText += '; ' + ann.customCSS.trim();
+    }
+  }
+  
+  function injectGlobalStyles() {
+    if (!tutorial || !tutorial.globalStyles) return;
+    
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
+    
+    // Check if we already injected global styles
+    let styleEl = iframeDoc.getElementById('tutorial-global-styles');
+    
+    if (!styleEl) {
+      // Create and inject the global styles
+      styleEl = iframeDoc.createElement('style');
+      styleEl.id = 'tutorial-global-styles';
+      styleEl.textContent = tutorial.globalStyles;
+      iframeDoc.head.appendChild(styleEl);
+      console.log('✓ Injected global styles into iframe');
+    } else {
+      // Update existing styles (in case they changed)
+      styleEl.textContent = tutorial.globalStyles;
+      console.log('✓ Updated global styles in iframe');
+    }
+  }
+  
+  function showAnnotation(ann) {
+    console.log('🎯 showAnnotation called:', ann);
+    
+    if (!annotationBox) {
+      console.error('❌ annotationBox is null!');
+      return;
+    }
+    
+    // Handle content - support both new flexible format and old title/text format for backward compatibility
+    if (ann.content !== undefined) {
+      // New format: single content field with HTML support
+      console.log('  Using new content format');
+      annotationBox.innerHTML = ann.content;
+    } else if (ann.title && ann.text) {
+      // Backward compatibility: old format
+      console.log('  Using old title/text format');
+      annotationBox.innerHTML = `<h3>${ann.title}</h3><p>${ann.text}</p>`;
+    } else {
+      console.error('  Annotation has no content!');
+      return;
+    }
+    
+    // Apply EITHER/OR styling: global styles OR custom CSS OR defaults
+    const hasClassAttribute = ann.content && ann.content.includes('class=');
+    
+    if (hasClassAttribute && tutorial && tutorial.globalStyles) {
+      // Using global styles
+      console.log('🎨 Using GLOBAL STYLES');
+      injectGlobalStyles();
+      applyCSSToAnnotation(ann, annotationBox);
+    } else if (ann.customCSS && ann.customCSS.trim()) {
+      // Using custom CSS
+      console.log('🎨 Using CUSTOM CSS');
+      applyCSSToAnnotation(ann, annotationBox);
+    } else {
+      // Default styles - set explicit properties to match creator behavior
+      console.log('🎨 Using DEFAULT STYLES');
+      annotationBox.style.backgroundColor = 'rgba(255,255,255,0.98)';
+      annotationBox.style.color = '#333333';
+      annotationBox.style.fontSize = '15px';
+      annotationBox.style.textAlign = 'left';
+      annotationBox.style.border = '3px solid #2563eb';
+    }
+    
+    // Position annotation
+    if (ann.position) {
+      console.log('  Using custom position');
+      console.log('    left:', ann.position.left);
+      console.log('    top:', ann.position.top);
+      console.log('    width:', ann.position.width);
+      console.log('    height:', ann.position.height);
+      
+      // Custom positioned annotation
+      annotationBox.className = 'annotation-box visible custom-position';
+      annotationBox.style.left = ann.position.left + 'px';
+      annotationBox.style.top = ann.position.top + 'px';
+      annotationBox.style.width = ann.position.width + 'px';
+      annotationBox.style.height = ann.position.height + 'px';
+      annotationBox.style.transform = 'none';
+      
+      console.log('  Applied position styles:', {
+        left: annotationBox.style.left,
+        top: annotationBox.style.top,
+        width: annotationBox.style.width,
+        height: annotationBox.style.height
+      });
+    } else {
+      console.log('  Using default center position');
+      // Default center position
+      annotationBox.classList.remove('custom-position');
+      annotationBox.style.left = '50%';
+      annotationBox.style.top = '50%';
+      annotationBox.style.transform = 'translate(-50%, -50%)';
+      annotationBox.style.width = '250px';
+      annotationBox.style.height = 'auto';
+    }
+    
+    annotationBox.classList.add('visible');
+    console.log('  ✓ Annotation box visible class added');
+    
+    // Typeset math if present
+    const contentToCheck = ann.content || ann.text || '';
+    if (window.MathJax && contentToCheck.includes('$')) {
+      MathJax.typesetPromise([annotationBox]).catch(err => console.log('MathJax error:', err));
+    }
+  }
+  
+  function hideAnnotation() {
+    if (annotationBox) {
+      annotationBox.classList.remove('visible');
+      annotationBox.classList.remove('custom-position');
+    }
+  }
+  
+  function updateTimeDisplay() {
+    const current = Math.floor(currentTime / 1000);
+    const total = Math.floor(tutorial.duration / 1000);
+    
+    const currentMin = Math.floor(current / 60);
+    const currentSec = current % 60;
+    const totalMin = Math.floor(total / 60);
+    const totalSec = total % 60;
+    
+    timeDisplay.textContent = 
+      `${currentMin}:${currentSec.toString().padStart(2, '0')} / ` +
+      `${totalMin}:${totalSec.toString().padStart(2, '0')}`;
+  }
+  
+  // Segment navigation helpers
+  function getSegments() {
+    if (!tutorial || !tutorial.pauses || tutorial.pauses.length === 0) {
+      // No pauses means one segment (the whole tutorial)
+      return [{start: 0, end: tutorial.duration}];
+    }
+    
+    const segments = [];
+    let start = 0;
+    
+    for (const pause of tutorial.pauses) {
+      segments.push({start: start, end: pause.timestamp});
+      start = pause.timestamp;
+    }
+    
+    // Add final segment from last pause to end
+    segments.push({start: start, end: tutorial.duration});
+    
+    return segments;
+  }
+  
+  function getCurrentSegmentIndex() {
+    const segments = getSegments();
+    for (let i = 0; i < segments.length; i++) {
+      if (currentTime >= segments[i].start && currentTime < segments[i].end) {
+        return i;
+      }
+    }
+    // If at the very end, return last segment
+    return segments.length - 1;
+  }
+  
+  function goToSegment(index, autoPlay = false) {
+    const segments = getSegments();
+    if (index < 0 || index >= segments.length) return;
+    
+    currentSegmentIndex = index;
+    currentTime = segments[index].start;
+    
+    // Clear triggered pauses up to this point
+    triggeredPauses.clear();
+    if (tutorial.pauses) {
+      for (let i = 0; i < tutorial.pauses.length; i++) {
+        if (tutorial.pauses[i].timestamp < currentTime) {
+          triggeredPauses.add(i);
+        }
+      }
+    }
+    
+    if (isPlaying) {
+      playbackStartTime = Date.now() - currentTime;
+    }
+    
+    // Apply state at segment start
+    const api = getAPI();
+    if (api) {
+      let targetState = tutorial.initialState;
+      for (const snapshot of tutorial.snapshots) {
+        if (snapshot.timestamp <= currentTime) {
+          targetState = snapshot.state;
+        } else {
+          break;
+        }
+      }
+      api.setState(targetState);
+    }
+    
+    // Update display
+    const progress = Math.min(100, (currentTime / tutorial.duration) * 100);
+    scrubberProgress.style.width = progress + '%';
+    updateTimeDisplay();
+    handleAnnotations();
+    
+    if (autoPlay && !isPlaying) {
+      play();
+    }
+  }
+  
+  // Scrubber
+  scrubber.addEventListener('click', (e) => {
+    if (!tutorial) return;
+    
+    const rect = scrubber.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = clickX / rect.width;
+    
+    currentTime = percent * tutorial.duration;
+    
+    // Mark any pauses before current time as triggered
+    if (tutorial.pauses) {
+      for (let i = 0; i < tutorial.pauses.length; i++) {
+        if (tutorial.pauses[i].timestamp <= currentTime) {
+          triggeredPauses.add(i);
+        } else {
+          triggeredPauses.delete(i); // Remove if we scrubbed backward past it
+        }
+      }
+    }
+    
+    if (isPlaying) {
+      playbackStartTime = Date.now() - currentTime;
+    }
+    
+    // Apply state at new time
+    const api = getAPI();
+    if (api) {
+      // Find the most recent snapshot before this time
+      let targetState = tutorial.initialState;
+      for (const snapshot of tutorial.snapshots) {
+        if (snapshot.timestamp <= currentTime) {
+          targetState = snapshot.state;
+        } else {
+          break;
+        }
+      }
+      api.setState(targetState);
+    }
+    
+    // Update display
+    scrubberProgress.style.width = (percent * 100) + '%';
+    updateTimeDisplay();
+    handleAnnotations();
+  });
+  
+  
+  // Navigation button handlers
+  prevBtn.addEventListener('click', () => {
+    const now = Date.now();
+    const timeSinceLastPress = now - lastLeftButtonPressTime;
+    lastLeftButtonPressTime = now;
+    
+    // Double-press detection (within 500ms)
+    if (timeSinceLastPress < 500) {
+      // Double press: go to previous segment and pause
+      const currentIdx = getCurrentSegmentIndex();
+      if (currentIdx > 0) {
+        pause();
+        goToSegment(currentIdx - 1, false);
+      }
+    } else {
+      // Single press: replay current segment
+      const currentIdx = getCurrentSegmentIndex();
+      goToSegment(currentIdx, true);
+    }
+  });
+  
+  nextBtn.addEventListener('click', () => {
+    const segments = getSegments();
+    const currentIdx = getCurrentSegmentIndex();
+    
+    if (currentIdx < segments.length - 1) {
+      // Go to next segment and play
+      goToSegment(currentIdx + 1, true);
+    } else {
+      // Already at last segment - do nothing or could replay last
+    }
+  });
+  
+  // Make overlay controls draggable
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let controlStartX = 0;
+  let controlStartY = 0;
+  
+  overlayNavControls.addEventListener('mousedown', (e) => {
+    // Don't start drag if clicking on a button
+    if (e.target.closest('button')) return;
+    
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    
+    const rect = overlayNavControls.getBoundingClientRect();
+    const containerRect = overlayNavControls.parentElement.getBoundingClientRect();
+    controlStartX = rect.left - containerRect.left;
+    controlStartY = rect.top - containerRect.top;
+    
+    overlayNavControls.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
+    
+    const newLeft = controlStartX + deltaX;
+    const newTop = controlStartY + deltaY;
+    
+    // Keep within bounds
+    const containerRect = overlayNavControls.parentElement.getBoundingClientRect();
+    const controlRect = overlayNavControls.getBoundingClientRect();
+    
+    const maxLeft = containerRect.width - controlRect.width;
+    const maxTop = containerRect.height - controlRect.height;
+    
+    overlayNavControls.style.left = Math.max(0, Math.min(maxLeft, newLeft)) + 'px';
+    overlayNavControls.style.top = Math.max(0, Math.min(maxTop, newTop)) + 'px';
+    overlayNavControls.style.bottom = 'auto'; // Override bottom positioning
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      overlayNavControls.style.cursor = 'move';
+    }
+  });
+  
+  console.log('Tutorial Player v1.8 initialized - Fixed iframe dimensions to match creator (1000px)');
+})();
+</script>
+</body>
+</html>
