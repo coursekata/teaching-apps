@@ -172,6 +172,26 @@
     border-radius:6px;
     font:inherit;
   }
+  .hex-input{
+    font-family:monospace !important;
+    text-transform:uppercase;
+    font-size:13px;
+  }
+  .color-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .color-row input[type="color"]{
+    flex:0 0 40px;
+    height:40px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .color-row input[type="text"]{
+    flex:1;
+  }
 </style>
 </head>
 <body>
@@ -346,8 +366,8 @@
         
         <!-- Responsive Legend -->
         <g id="previewLabels" font-family="system-ui" font-size="11" fill="#555">
-          <text id="leftTitle" y="25" font-weight="600">Main Distribution (Left)</text>
-          <text id="rightTitle" y="25" font-weight="600">Secondary Distribution (Right)</text>
+          <text id="leftTitle" y="25" font-weight="600">Main Distribution</text>
+          <text id="rightTitle" y="25" font-weight="600">Secondary Distribution</text>
           
           <!-- Main distribution legend (left) - Alpha, Main, P -->
           <text id="alphaLabel" y="180">
@@ -376,21 +396,27 @@
     
     <div style="margin: 15px 0;">
       <div style="font-weight: 600; margin-bottom: 8px; color: #333;">Main Distribution Colors</div>
-      <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
-        💡 Tip: Color picker display (HEX vs RGB) is controlled by your browser. Values are stored as HEX regardless of display.
-      </div>
       <div class="control-group">
         <div class="control">
           <label>Main Distribution Color</label>
-          <input type="color" id="main_color" value="#60a5fa">
+          <div class="color-row">
+            <input type="color" id="main_color" value="#60a5fa">
+            <input type="text" id="main_color_hex" value="#60a5fa" placeholder="#60a5fa" class="hex-input">
+          </div>
         </div>
         <div class="control">
           <label>Alpha/CI Shading Color</label>
-          <input type="color" id="alpha_color" value="#1e3a8a">
+          <div class="color-row">
+            <input type="color" id="alpha_color" value="#1e3a8a">
+            <input type="text" id="alpha_color_hex" value="#1e3a8a" placeholder="#1e3a8a" class="hex-input">
+          </div>
         </div>
         <div class="control">
           <label>P-Value Shading Color</label>
-          <input type="color" id="p_color" value="#3b82f6">
+          <div class="color-row">
+            <input type="color" id="p_color" value="#3b82f6">
+            <input type="text" id="p_color_hex" value="#3b82f6" placeholder="#3b82f6" class="hex-input">
+          </div>
         </div>
       </div>
     </div>
@@ -400,15 +426,24 @@
       <div class="control-group">
         <div class="control">
           <label>Secondary Distribution Color</label>
-          <input type="color" id="secondary_color" value="#f97316">
+          <div class="color-row">
+            <input type="color" id="secondary_color" value="#f97316">
+            <input type="text" id="secondary_color_hex" value="#f97316" placeholder="#f97316" class="hex-input">
+          </div>
         </div>
         <div class="control">
           <label>Power Shading Color</label>
-          <input type="color" id="power_color" value="#e67e22">
+          <div class="color-row">
+            <input type="color" id="power_color" value="#e67e22">
+            <input type="text" id="power_color_hex" value="#e67e22" placeholder="#e67e22" class="hex-input">
+          </div>
         </div>
         <div class="control">
           <label>Type II Error Color</label>
-          <input type="color" id="type2_color" value="#fbbf24">
+          <div class="color-row">
+            <input type="color" id="type2_color" value="#fbbf24">
+            <input type="text" id="type2_color_hex" value="#fbbf24" placeholder="#fbbf24" class="hex-input">
+          </div>
         </div>
       </div>
     </div>
@@ -791,6 +826,55 @@ function updateLegendLayout(svgWidth) {
   document.getElementById('secondaryLabel').setAttribute('x', rightCenter + rightSpacing);
 }
 
+// Color sync functions for hex inputs
+function syncColorToHex(colorId, hexId) {
+  const colorValue = document.getElementById(colorId).value;
+  document.getElementById(hexId).value = colorValue.toUpperCase();
+}
+
+function syncHexToColor(hexId, colorId) {
+  const hexValue = document.getElementById(hexId).value.trim();
+  // Validate hex color (support both #abc and #aabbcc formats)
+  if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hexValue)) {
+    document.getElementById(colorId).value = hexValue;
+    // Update the hex input to ensure proper formatting
+    document.getElementById(hexId).value = hexValue.toUpperCase();
+    // Trigger updates
+    updateColorPreview();
+    generateURL();
+  }
+}
+
+function setupColorSync() {
+  const colorPairs = [
+    ['main_color', 'main_color_hex'],
+    ['alpha_color', 'alpha_color_hex'],
+    ['p_color', 'p_color_hex'],
+    ['secondary_color', 'secondary_color_hex'],
+    ['power_color', 'power_color_hex'],
+    ['type2_color', 'type2_color_hex']
+  ];
+
+  colorPairs.forEach(([colorId, hexId]) => {
+    // Initialize hex input with uppercase value
+    document.getElementById(hexId).value = document.getElementById(colorId).value.toUpperCase();
+    
+    // Sync color picker to hex input
+    document.getElementById(colorId).addEventListener('change', () => syncColorToHex(colorId, hexId));
+    document.getElementById(colorId).addEventListener('input', () => syncColorToHex(colorId, hexId));
+    
+    // Sync hex input to color picker
+    document.getElementById(hexId).addEventListener('change', () => syncHexToColor(hexId, colorId));
+    document.getElementById(hexId).addEventListener('input', () => {
+      // Only trigger on valid hex during input for better UX
+      const hexValue = document.getElementById(hexId).value.trim();
+      if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hexValue)) {
+        syncHexToColor(hexId, colorId);
+      }
+    });
+  });
+}
+
 function updateColorPreview() {
   // Get current color values from the input controls
   const mainColor = document.getElementById('main_color').value;
@@ -805,28 +889,49 @@ function updateColorPreview() {
   const secondaryStroke = darkenColor(secondaryColor, 0.4);
   
   // Update shading areas with current colors
-  document.getElementById('mainShading').setAttribute('fill', mainColor);
-  document.getElementById('mainShading').setAttribute('fill-opacity', '0.3');
+  const mainShading = document.getElementById('mainShading');
+  const alphaShading = document.getElementById('alphaShading');
+  const pShading = document.getElementById('pShading');
+  const secondaryShading = document.getElementById('secondaryShading');
+  const powerShading = document.getElementById('powerShading');
+  const type2Shading = document.getElementById('type2Shading');
   
-  document.getElementById('alphaShading').setAttribute('fill', alphaColor);
-  document.getElementById('alphaShading').setAttribute('fill-opacity', '0.25');
+  if (mainShading) {
+    mainShading.setAttribute('fill', mainColor);
+    mainShading.setAttribute('fill-opacity', '0.3');
+  }
   
-  document.getElementById('pShading').setAttribute('fill', pColor);
-  document.getElementById('pShading').setAttribute('fill-opacity', '0.25');
+  if (alphaShading) {
+    alphaShading.setAttribute('fill', alphaColor);
+    alphaShading.setAttribute('fill-opacity', '0.25');
+  }
   
-  // Secondary should be much lighter (like #f9731655 = ~33% opacity)
-  document.getElementById('secondaryShading').setAttribute('fill', secondaryColor);
-  document.getElementById('secondaryShading').setAttribute('fill-opacity', '0.33');
+  if (pShading) {
+    pShading.setAttribute('fill', pColor);
+    pShading.setAttribute('fill-opacity', '0.25');
+  }
   
-  document.getElementById('powerShading').setAttribute('fill', powerColor);
-  document.getElementById('powerShading').setAttribute('fill-opacity', '0.4');
+  if (secondaryShading) {
+    secondaryShading.setAttribute('fill', secondaryColor);
+    secondaryShading.setAttribute('fill-opacity', '0.33');
+  }
   
-  document.getElementById('type2Shading').setAttribute('fill', type2Color);
-  document.getElementById('type2Shading').setAttribute('fill-opacity', '0.3');
+  if (powerShading) {
+    powerShading.setAttribute('fill', powerColor);
+    powerShading.setAttribute('fill-opacity', '0.4');
+  }
+  
+  if (type2Shading) {
+    type2Shading.setAttribute('fill', type2Color);
+    type2Shading.setAttribute('fill-opacity', '0.3');
+  }
   
   // Update curves with proper stroke colors
-  document.getElementById('mainCurve').setAttribute('stroke', mainStroke);
-  document.getElementById('secondaryCurve').setAttribute('stroke', secondaryStroke);
+  const mainCurve = document.getElementById('mainCurve');
+  const secondaryCurve = document.getElementById('secondaryCurve');
+  
+  if (mainCurve) mainCurve.setAttribute('stroke', mainStroke);
+  if (secondaryCurve) secondaryCurve.setAttribute('stroke', secondaryStroke);
   
   // Update legend colors to match exactly - get the tspan elements correctly
   const alphaSpan = document.querySelector('#alphaLabel tspan');
@@ -853,29 +958,49 @@ function restoreDefaultColors() {
   document.getElementById('power_color').value = '#e67e22';
   document.getElementById('type2_color').value = '#fbbf24';
   
+  // Reset all hex inputs to defaults
+  document.getElementById('main_color_hex').value = '#60A5FA';
+  document.getElementById('alpha_color_hex').value = '#1E3A8A';
+  document.getElementById('p_color_hex').value = '#3B82F6';
+  document.getElementById('secondary_color_hex').value = '#F97316';
+  document.getElementById('power_color_hex').value = '#E67E22';
+  document.getElementById('type2_color_hex').value = '#FBBF24';
+  
   // Update preview and URL
   updateColorPreview();
   generateURL();
 }
 
+// Initialize pregenerate state
+updatePregenerateState();
+
+// Setup color picker and hex input syncing first
+setupColorSync();
+
 // Auto-generate on any input change
 document.querySelectorAll('input, select').forEach(element => {
-  element.addEventListener('change', generateURL);
-  element.addEventListener('input', generateURL);
+  // Skip color and hex inputs as they have special handlers
+  if (!element.type.includes('color') && !element.id.includes('_hex')) {
+    element.addEventListener('change', generateURL);
+    element.addEventListener('input', generateURL);
+  }
 });
 
-// Add color preview update listeners
+// Add color preview update listeners for color pickers only
 document.querySelectorAll('input[type="color"]').forEach(element => {
-  element.addEventListener('change', updateColorPreview);
-  element.addEventListener('input', updateColorPreview);
+  element.addEventListener('change', () => {
+    updateColorPreview();
+    generateURL();
+  });
+  element.addEventListener('input', () => {
+    updateColorPreview();
+    generateURL();
+  });
 });
 
 // Special listener for beta input to update pregenerate state
 document.getElementById('beta').addEventListener('input', updatePregenerateState);
 document.getElementById('beta').addEventListener('change', updatePregenerateState);
-
-// Initialize pregenerate state
-updatePregenerateState();
 
 // Initialize color preview with a slight delay to ensure DOM is ready
 setTimeout(() => {
