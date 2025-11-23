@@ -36,6 +36,7 @@
   .hist-shade{fill:var(--tailFill);stroke:none}
   .hist-shade-2{fill:#f9731644;stroke:none}
   .hist-shade-3{fill:#f9731644;stroke:none}
+  .hist-shade-p{fill:#3b82f6;fill-opacity:0.25;stroke:none}
   .draggable-veil{cursor:grab}
   .draggable-veil.disabled{cursor:not-allowed}
   .draggable-veil:active{cursor:grabbing}
@@ -53,6 +54,7 @@
   .tail-area-orange-alt{fill:#f97316;fill-opacity:0.25;stroke:none}
   .power-area{fill:#f97316;fill-opacity:0.4;stroke:none}
   .type2-area{fill:#fbbf24;fill-opacity:0.3;stroke:none}
+  .p-area{fill:#3b82f6;fill-opacity:0.25;stroke:none}
   .seg{display:inline-flex;border:1px solid #ddd;border-radius:10px;overflow:hidden}
   .seg button{border:none;background:#f8f8f8;padding:6px 10px}
   .seg button+button{border-left:1px solid #ddd}
@@ -68,6 +70,7 @@
   .icon-toggle.active svg line{stroke:#fff}
   .icon-toggle.active svg rect{fill:#fff;stroke:#fff}
   .icon-toggle span{color:#333;font-weight:700;font-size:16px}
+  .icon-toggle span.p-icon{color:#3b82f6}
   .icon-toggle.active span{color:#fff}
   .overlay-btn{
     position:absolute; z-index:2; transform:translate(-50%,0);
@@ -273,6 +276,10 @@
           <rect x="14" y="12" width="3" height="6" fill="#60a5fa" stroke="#1e4ed8" stroke-width="0.5"/>
         </svg>
       </button>
+
+      <button id="pValueBtn" class="icon-toggle" title="Toggle p-value display">
+        <span class="p-icon">p</span>
+      </button>
     </div>
   </div>
 
@@ -421,6 +428,7 @@
   const powerSeg = document.getElementById('powerSeg');
   const vertLinesBtn = document.getElementById('vertLinesBtn');
   const histogramBtn = document.getElementById('histogramBtn');
+  const pValueBtn = document.getElementById('pValueBtn');
   const legendEl = document.getElementById('legend');
 
   let width = chartWrap.clientWidth, height = chartWrap.clientHeight;
@@ -459,6 +467,7 @@
   const histWrap = plotWrap.append('g').attr('class','hist-wrap');
   const histG    = histWrap.append('g').attr('class','hist');
   const histShadeG = histWrap.append('g').attr('class','hist-shade-wrap');
+  const histShadePG = histWrap.append('g').attr('class','hist-shade-p-wrap');
   const meanLine = histWrap.append('line').attr('class','mean-line');
   const meanLabel = histWrap.append('g').attr('class','mean-label');
   meanLabel.append('rect')
@@ -587,6 +596,7 @@
   let powerMode = 'tails';
   let vertLinesMode = 'off';
   let histogramMode = 'on';
+  let pValueMode = 'off';
   let vertLinesAttachment = 'cutoffs';
   let vertLineDistFromB = {left: 0, right: 0};
   let linkedMarks = {left: null, right: null};
@@ -1071,6 +1081,53 @@
       .data(doShadeBars && thirdDistMode === 'on' ? bins3 : [], d => d.x0 + '-' + d.x1);
     sel3.exit().remove();
     
+    // P-value histogram shading (light blue from b to tail)
+    // This is independent of alpha/CI shading, so do it before the early return
+    histShadePG.selectAll('rect').remove();
+    
+    const showHistPValue = pValueMode === 'on' && bValue !== null && !Number.isNaN(bValue) && histogramMode === 'on' && curveMode === 'off' && bins && bins.length > 0;
+    
+    if(showHistPValue) {
+      const beta = getBeta();
+      const betaVal = beta + shiftUnits;
+      const bLocal = bValue - shiftUnits;
+      
+      function pValueFrac(d) {
+        const w = d.x1 - d.x0; if (w <= 0) return 0;
+        
+        // Determine which tail based on b position relative to beta (in local coords)
+        if(bLocal > beta) {
+          // Shade right tail from b onwards
+          if (d.x0 >= bLocal) return 1;
+          if (d.x1 <= bLocal) return 0;
+          return (d.x1 - bLocal) / w;
+        } else {
+          // Shade left tail up to b
+          if (d.x1 <= bLocal) return 1;
+          if (d.x0 >= bLocal) return 0;
+          return (bLocal - d.x0) / w;
+        }
+      }
+      
+      histShadePG.selectAll('rect')
+        .data(bins, d => d.x0 + '-' + d.x1)
+        .enter().append('rect')
+        .attr('class','hist-shade-p')
+        .attr('x', d => x(d.x0))
+        .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+        .attr('y', d => {
+          const frac = pValueFrac(d);
+          const fullH = y(0) - y(d.length);
+          const h = frac * fullH;
+          return y(0) - h;
+        })
+        .attr('height', d => {
+          const frac = pValueFrac(d);
+          const fullH = y(0) - y(d.length);
+          return frac * fullH;
+        });
+    }
+    
     if (!doShadeBars) return;
 
     const beta = getBeta(), se = getSE();
@@ -1231,6 +1288,16 @@
   }
 
   function drawOverlay(){
+    // FIRST THING: Nuclear cleanup of any p-value areas that might be lingering
+    overlayG.selectAll('path').each(function() {
+      const elem = d3.select(this);
+      if(elem.attr('class') && elem.attr('class').includes('p-area')) {
+        elem.remove();
+      }
+    });
+    overlayG.selectAll('.p-area').remove();
+    overlayG.selectAll('path.p-area').remove();
+    
     const showCurve = (curveMode !== 'off');
     const showCIOverCurve = (ciMode !== 'off') && (curveMode !== 'off');
     const showSecond = (secondDistMode === 'on') && (curveMode !== 'off');
@@ -1441,6 +1508,52 @@
       powerAreaL.attr('d', null);
       powerAreaR.attr('d', null);
       type2Area.attr('d', null);
+    }
+    
+    // P-value areas (show tail from b to end) - only for curve display
+    // NUCLEAR CLEANUP: Remove ALL possible p-value area elements
+    overlayG.selectAll('path').each(function() {
+      const elem = d3.select(this);
+      if(elem.attr('class') && elem.attr('class').includes('p-area')) {
+        elem.remove();
+      }
+    });
+    overlayG.selectAll('.p-area').remove();
+    overlayG.selectAll('path.p-area').remove();
+    
+    const showPArea = (pValueMode === 'on') && (bValue !== null && !Number.isNaN(bValue)) && (curveMode !== 'off');
+    
+    if(showPArea) {
+      const betaVal = beta + shiftUnits;
+      const bLocal = bValue - shiftUnits;
+      
+      if(bLocal > beta) {
+        // Shade right tail from b to infinity (in local coordinates)
+        const xsR_p = [bLocal].concat(xs.filter(v => v > bLocal)).sort((a,b) => a-b);
+        const areaP = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
+        const pPath = overlayG.append('path')
+          .attr('class','p-area')
+          .attr('d', xsR_p.length ? areaP(xsR_p) : null);
+      } else {
+        // Shade left tail from -infinity to b (in local coordinates)
+        const xsL_p = xs.filter(v => v < bLocal).concat([bLocal]).sort((a,b) => a-b);
+        const areaP = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
+        const pPath = overlayG.append('path')
+          .attr('class','p-area')
+          .attr('d', xsL_p.length ? areaP(xsL_p) : null);
+      }
+    }
+    
+    // FORCE REMOVAL when curve is off - this should be redundant but extra safety
+    if(curveMode === 'off') {
+      overlayG.selectAll('path').each(function() {
+        const elem = d3.select(this);
+        if(elem.attr('class') && elem.attr('class').includes('p-area')) {
+          elem.remove();
+        }
+      });
+      overlayG.selectAll('.p-area').remove();
+      overlayG.selectAll('path.p-area').remove();
     }
   }
 
@@ -1669,6 +1782,16 @@
 
   function updatePTextToRightOfB(){
     const pValueLabelDiv = document.getElementById('pValueLabel');
+    
+    // Only show p-value if p-value mode is on
+    if(pValueMode === 'off') {
+      pTextRight.attr('display','none'); 
+      if(pValueLabelDiv) {
+        pValueLabelDiv.style.display = 'none';
+        pValueLabelDiv.style.opacity = '1';
+      }
+      return;
+    }
     
     if(bValue === null || Number.isNaN(bValue)){ 
       pTextRight.attr('display','none'); 
@@ -2883,6 +3006,19 @@
     curveSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     curveMode = newCurveMode;
+    
+    // EXPLICIT cleanup of p-value areas when curve mode changes
+    if(overlayG) {
+      overlayG.selectAll('path').each(function() {
+        const elem = d3.select(this);
+        if(elem.attr('class') && elem.attr('class').includes('p-area')) {
+          elem.remove();
+        }
+      });
+      overlayG.selectAll('.p-area').remove();
+      overlayG.selectAll('path.p-area').remove();
+    }
+    
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCurveMode !== curveMode){
       vertLinesAttachment = 'cutoffs';
       linkedMarks.left = null;
@@ -2998,6 +3134,31 @@
       histogramBtn.classList.add('active');
     }
     emitTutorialEvent('toggleHistogram', {value: histogramMode});
+    draw();
+  });
+
+  pValueBtn.addEventListener('click', function(){
+    if(pValueMode === 'on'){
+      pValueMode = 'off';
+      pValueBtn.classList.remove('active');
+    } else {
+      pValueMode = 'on';
+      pValueBtn.classList.add('active');
+    }
+    
+    // EXPLICIT cleanup of p-value areas when p-value mode changes
+    if(overlayG) {
+      overlayG.selectAll('path').each(function() {
+        const elem = d3.select(this);
+        if(elem.attr('class') && elem.attr('class').includes('p-area')) {
+          elem.remove();
+        }
+      });
+      overlayG.selectAll('.p-area').remove();
+      overlayG.selectAll('path.p-area').remove();
+    }
+    
+    emitTutorialEvent('togglePValue', {value: pValueMode});
     draw();
   });
 
@@ -3123,6 +3284,7 @@
         ci: ciMode,
         vertLines: vertLinesMode === 'on',
         histogram: histogramMode === 'on',
+        pValue: pValueMode === 'on',
         shiftUnits: shiftUnits,
         shiftUnits2: shiftUnits2,
         shiftUnits3: shiftUnits3,
@@ -3232,6 +3394,14 @@
           histogramBtn.classList.add('active');
         } else {
           histogramBtn.classList.remove('active');
+        }
+      }
+      if(state.pValue !== undefined) {
+        pValueMode = state.pValue ? 'on' : 'off';
+        if(state.pValue) {
+          pValueBtn.classList.add('active');
+        } else {
+          pValueBtn.classList.remove('active');
         }
       }
       
