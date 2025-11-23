@@ -439,7 +439,7 @@
           </div>
         </div>
         <div class="control">
-          <label>Type II Error Color</label>
+          <label>Type II Error & Alpha Color</label>
           <div class="color-row">
             <input type="color" id="type2_color" value="#fbbf24">
             <input type="text" id="type2_color_hex" value="#fbbf24" placeholder="#fbbf24" class="hex-input">
@@ -757,13 +757,13 @@ function createColorPreview() {
     return 'M' + points.map(p => p[0] + ',' + p[1]).join('L');
   }
   
-  // Main distribution (left side, larger and closer)
-  const mainMean = -0.6; // Moved closer to center (was -0.8)
+  // Main distribution (left side, positioned to align with title)
+  const mainMean = -0.5; // Adjusted to align with 30% title position
   const mainStd = 0.25; // Slightly wider (was 0.2)
   const mainPoints = generateCurve(mainMean, mainStd);
   
-  // Secondary distribution (right side, larger and closer)
-  const secondaryMean = 0.6; // Moved closer to center (was 0.8)
+  // Secondary distribution (right side, positioned to align with title)
+  const secondaryMean = 0.5; // Adjusted to align with 70% title position
   const secondaryStd = 0.25; // Slightly wider (was 0.2)
   const secondaryPoints = generateCurve(secondaryMean, secondaryStd);
   
@@ -771,30 +771,30 @@ function createColorPreview() {
   document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
   document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
   
-  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE with adjusted bounds
+  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE with adjusted bounds for new position
   // Alpha shading (left tail)
-  const alphaLeft = generateArea(mainMean, mainStd, -1.25, -0.95);   // Adjusted for new position
+  const alphaLeft = generateArea(mainMean, mainStd, -1.25, -0.85);   // Adjusted for new position
   document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft));
   
   // Main histogram color (large center area)
-  const mainArea = generateArea(mainMean, mainStd, -0.95, -0.4);
+  const mainArea = generateArea(mainMean, mainStd, -0.85, -0.3);
   document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
   
   // P-value shading (larger region that extends to right edge of main dist)
-  const pArea = generateArea(mainMean, mainStd, -0.4, 0.05);  // Extended to cover right tail of main
+  const pArea = generateArea(mainMean, mainStd, -0.3, 0.05);  // Extended to cover right tail of main
   document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
   
-  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE with adjusted bounds
+  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE with adjusted bounds for new position
   // Type II shading (extend to cover left tail of secondary)
-  const type2Area = generateArea(secondaryMean, secondaryStd, -0.05, 0.35);  // Adjusted for new position
+  const type2Area = generateArea(secondaryMean, secondaryStd, -0.05, 0.25);  // Adjusted for new position
   document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
   
   // Power shading (middle section) 
-  const powerArea = generateArea(secondaryMean, secondaryStd, 0.35, 0.75);
+  const powerArea = generateArea(secondaryMean, secondaryStd, 0.25, 0.65);
   document.getElementById('powerShading').setAttribute('d', pointsToPath(powerArea));
   
   // Secondary histogram color (extend to right boundary)
-  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.75, 1.25); // Extend to boundary
+  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.65, 1.25); // Extend to boundary
   document.getElementById('secondaryShading').setAttribute('d', pointsToPath(secondaryArea));
   
   // RESPONSIVE LEGEND POSITIONING
@@ -805,25 +805,26 @@ function updateLegendLayout(svgWidth) {
   const margin = { top: 30, right: 20, bottom: 50, left: 20 };
   const plotWidth = svgWidth - margin.left - margin.right;
   
-  // Position titles centered over each distribution
-  document.getElementById('leftTitle').setAttribute('x', margin.left + plotWidth * 0.25);
-  document.getElementById('rightTitle').setAttribute('x', margin.left + plotWidth * 0.75);
+  // Position titles centered over each distribution with better calculations
+  const leftDistCenter = margin.left + plotWidth * 0.3;   // Center of left distribution  
+  const rightDistCenter = margin.left + plotWidth * 0.7;  // Center of right distribution
+  
+  document.getElementById('leftTitle').setAttribute('x', leftDistCenter);
+  document.getElementById('rightTitle').setAttribute('x', rightDistCenter);
   
   // Left distribution legend - centered under left distribution
-  const leftCenter = margin.left + plotWidth * 0.25;
   const leftSpacing = 55; // Fixed spacing between legend items
   
-  document.getElementById('alphaLabel').setAttribute('x', leftCenter - leftSpacing);
-  document.getElementById('mainLabel').setAttribute('x', leftCenter);
-  document.getElementById('pLabel').setAttribute('x', leftCenter + leftSpacing);
+  document.getElementById('alphaLabel').setAttribute('x', leftDistCenter - leftSpacing);
+  document.getElementById('mainLabel').setAttribute('x', leftDistCenter);
+  document.getElementById('pLabel').setAttribute('x', leftDistCenter + leftSpacing);
   
   // Right distribution legend - centered under right distribution  
-  const rightCenter = margin.left + plotWidth * 0.75;
   const rightSpacing = 55; // Fixed spacing between legend items
   
-  document.getElementById('type2Label').setAttribute('x', rightCenter - rightSpacing);
-  document.getElementById('powerLabel').setAttribute('x', rightCenter);
-  document.getElementById('secondaryLabel').setAttribute('x', rightCenter + rightSpacing);
+  document.getElementById('type2Label').setAttribute('x', rightDistCenter - rightSpacing);
+  document.getElementById('powerLabel').setAttribute('x', rightDistCenter);
+  document.getElementById('secondaryLabel').setAttribute('x', rightDistCenter + rightSpacing);
 }
 
 // Color sync functions for hex inputs
