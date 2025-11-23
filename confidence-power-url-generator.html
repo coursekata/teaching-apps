@@ -330,6 +330,10 @@
         <label for="hide_seconddist">Hide β′</label>
       </div>
       <div class="checkbox-item">
+        <input type="checkbox" id="hide_thirddist">
+        <label for="hide_thirddist">Hide β″</label>
+      </div>
+      <div class="checkbox-item">
         <input type="checkbox" id="hide_powermode">
         <label for="hide_powermode">Hide Power Mode</label>
       </div>
@@ -444,7 +448,7 @@ function generateURL() {
   // Add hide controls
   const hideControls = [
     'hide_beta', 'hide_se', 'hide_simulate',
-    'hide_seconddist', 'hide_powermode', 'hide_b',
+    'hide_seconddist', 'hide_thirddist', 'hide_powermode', 'hide_b',
     'hide_scale', 'hide_bins', 'hide_curve', 'hide_df',
     'hide_ci', 'hide_vertlines', 'hide_histogram'
   ];
