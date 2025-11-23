@@ -275,6 +275,13 @@
         </select>
       </div>
       <div class="control">
+        <label>P-Value Display</label>
+        <select id="pvalue">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+      <div class="control">
         <label>Pregenerate Distribution</label>
         <select id="pregenerate" disabled title="Requires β to be specified">
           <option value="false">No</option>
@@ -303,6 +310,106 @@
         <label>Sampling Mean Label</label>
         <input type="text" id="label_mean" value="" placeholder="\bar{b} (default)">
       </div>
+    </div>
+  </div>
+
+  <!-- Custom Colors Section -->
+  <div class="section">
+    <div class="section-title">Custom Colors</div>
+    <div class="info-box">
+      Override default colors for different shading types. Use hex color codes (e.g., #ff5733). Leave blank to use defaults.
+    </div>
+    
+    <!-- Color Preview -->
+    <div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+      <div style="font-weight: 600; margin-bottom: 10px; color: #333;">Live Preview</div>
+      <svg id="colorPreview" width="100%" height="200" style="border: 1px solid #ddd; border-radius: 4px; background: white;">
+        <!-- Main distribution curve -->
+        <path id="mainCurve" fill="none" stroke="#1e4ed8" stroke-width="2"></path>
+        <!-- Secondary distribution curve -->
+        <path id="secondaryCurve" fill="none" stroke="#f97316" stroke-width="2"></path>
+        
+        <!-- Shading areas (in order from back to front) -->
+        <path id="mainShading" fill="#60a5fa" fill-opacity="0.3"></path>
+        <path id="alphaShading" fill="#1e3a8a" fill-opacity="0.25"></path>
+        <path id="pShading" fill="#3b82f6" fill-opacity="0.25"></path>
+        <path id="secondaryShading" fill="#f97316" fill-opacity="0.3"></path>
+        <path id="powerShading" fill="#f97316" fill-opacity="0.4"></path>
+        <path id="type2Shading" fill="#fbbf24" fill-opacity="0.3"></path>
+        
+        <!-- Labels -->
+        <g id="previewLabels" font-family="system-ui" font-size="11" fill="#555">
+          <text x="100" y="25" font-weight="600">Main Distribution (Left)</text>
+          <text x="320" y="25" font-weight="600">Secondary Distribution (Right)</text>
+          
+          <!-- Main distribution legend (left) -->
+          <text x="30" y="180">
+            <tspan fill="#1e3a8a">■</tspan> Alpha
+          </text>
+          <text x="70" y="180">
+            <tspan fill="#60a5fa">■</tspan> Main
+          </text>
+          <text x="110" y="180">
+            <tspan fill="#3b82f6">■</tspan> P
+          </text>
+          <text x="140" y="180">
+            <tspan fill="#1e3a8a">■</tspan> Alpha
+          </text>
+          
+          <!-- Secondary distribution legend (right) -->
+          <text x="240" y="180">
+            <tspan fill="#fbbf24">■</tspan> Type II
+          </text>
+          <text x="285" y="180">
+            <tspan fill="#e67e22">■</tspan> Power
+          </text>
+          <text x="325" y="180">
+            <tspan fill="#f97316">■</tspan> Secondary
+          </text>
+        </g>
+      </svg>
+    </div>
+    
+    <div style="margin: 15px 0;">
+      <div style="font-weight: 600; margin-bottom: 8px; color: #333;">Main Distribution Colors</div>
+      <div class="control-group">
+        <div class="control">
+          <label>Main Distribution Color</label>
+          <input type="color" id="main_color" value="#60a5fa">
+        </div>
+        <div class="control">
+          <label>Alpha/CI Shading Color</label>
+          <input type="color" id="alpha_color" value="#1e3a8a">
+        </div>
+        <div class="control">
+          <label>P-Value Shading Color</label>
+          <input type="color" id="p_color" value="#3b82f6">
+        </div>
+      </div>
+    </div>
+    
+    <div style="margin: 15px 0;">
+      <div style="font-weight: 600; margin-bottom: 8px; color: #333;">Secondary Distribution Colors</div>
+      <div class="control-group">
+        <div class="control">
+          <label>Secondary Distribution Color</label>
+          <input type="color" id="secondary_color" value="#f97316">
+        </div>
+        <div class="control">
+          <label>Power Shading Color</label>
+          <input type="color" id="power_color" value="#e67e22">
+        </div>
+        <div class="control">
+          <label>Type II Error Color</label>
+          <input type="color" id="type2_color" value="#fbbf24">
+        </div>
+      </div>
+    </div>
+    
+    <div style="text-align: center; margin: 20px 0;">
+      <button onclick="restoreDefaultColors()" style="padding: 8px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px;">
+        🔄 Restore Default Colors
+      </button>
     </div>
   </div>
 
@@ -369,6 +476,10 @@
         <input type="checkbox" id="hide_histogram">
         <label for="hide_histogram">Hide Histogram</label>
       </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="hide_p">
+        <label for="hide_p">Hide P-Value</label>
+      </div>
     </div>
   </div>
 
@@ -414,6 +525,7 @@ function generateURL() {
   const seconddist = document.getElementById('seconddist').value;
   const powermode = document.getElementById('powermode').value;
   const vertlines = document.getElementById('vertlines').value;
+  const pvalue = document.getElementById('pvalue').value;
   const pregenerate = document.getElementById('pregenerate').value;
   
   // Validate pregenerate requirements
@@ -428,6 +540,7 @@ function generateURL() {
   if(seconddist !== 'off') params.append('seconddist', seconddist);
   if(powermode !== 'tails') params.append('powermode', powermode);
   if(vertlines !== 'off') params.append('vertlines', vertlines);
+  if(pvalue !== 'off') params.append('pvalue', pvalue);
   if(pregenerate !== 'false') params.append('pregenerate', pregenerate);
   
   // Add labels (only if provided)
@@ -445,12 +558,29 @@ function generateURL() {
     params.append('labels', labels.join(','));
   }
   
+  // Add custom colors (only if different from defaults)
+  const defaultColors = {
+    'main_color': '#60a5fa',
+    'alpha_color': '#1e3a8a', 
+    'p_color': '#3b82f6',
+    'secondary_color': '#f97316',
+    'power_color': '#e67e22',
+    'type2_color': '#fbbf24'
+  };
+  
+  Object.keys(defaultColors).forEach(colorParam => {
+    const colorValue = document.getElementById(colorParam).value;
+    if(colorValue && colorValue.toLowerCase() !== defaultColors[colorParam].toLowerCase()) {
+      params.append(colorParam, colorValue);
+    }
+  });
+  
   // Add hide controls
   const hideControls = [
     'hide_beta', 'hide_se', 'hide_simulate',
     'hide_seconddist', 'hide_thirddist', 'hide_powermode', 'hide_b',
     'hide_scale', 'hide_bins', 'hide_curve', 'hide_df',
-    'hide_ci', 'hide_vertlines', 'hide_histogram'
+    'hide_ci', 'hide_vertlines', 'hide_histogram', 'hide_p'
   ];
   
   hideControls.forEach(control => {
@@ -519,10 +649,203 @@ function updatePregenerateState() {
   }
 }
 
+// Color Preview Functions
+function darkenColor(hex, amount = 0.3) {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Parse hex color
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);  
+  let b = parseInt(hex.substring(4, 6), 16);
+  
+  // Darken by reducing RGB values
+  r = Math.max(0, Math.floor(r * (1 - amount)));
+  g = Math.max(0, Math.floor(g * (1 - amount)));
+  b = Math.max(0, Math.floor(b * (1 - amount)));
+  
+  // Convert back to hex
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+function createColorPreview() {
+  const svg = document.getElementById('colorPreview');
+  const width = svg.getBoundingClientRect().width || 400; // Use actual rendered width
+  const height = 200;
+  
+  // Don't set width attribute - let it stay 100% responsive
+  svg.setAttribute('height', height);
+  
+  const margin = { top: 30, right: 20, bottom: 50, left: 20 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const baseline = height - margin.bottom;
+  
+  // Scale functions - use much narrower domain to make distributions larger
+  const xScale = plotWidth / 3; // Show only 3 units instead of 8
+  const yScale = plotHeight * 0.8;
+  
+  function x(val) { return margin.left + (val + 1.5) * xScale; } // Center around 0, show -1.5 to +1.5
+  function y(val) { return baseline - val * yScale; }
+  
+  // Normal distribution function
+  function normalY(xVal, mean, std) {
+    const z = (xVal - mean) / std;
+    return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
+  }
+  
+  // Generate curve points
+  function generateCurve(mean, std) {
+    const points = [];
+    for (let i = 0; i <= 200; i++) {
+      const xVal = -4 + (i / 200) * 8; // -4 to +4
+      const yVal = normalY(xVal, mean, std);
+      points.push([x(xVal), y(yVal)]);
+    }
+    return points;
+  }
+  
+  // Generate shaded areas
+  function generateArea(mean, std, leftBound, rightBound) {
+    const points = [];
+    const resolution = 100;
+    
+    for (let i = 0; i <= resolution; i++) {
+      const xVal = leftBound + (i / resolution) * (rightBound - leftBound);
+      const yVal = normalY(xVal, mean, std);
+      points.push([x(xVal), y(yVal)]);
+    }
+    
+    // Close the area at the bottom
+    points.push([x(rightBound), baseline]);
+    points.push([x(leftBound), baseline]);
+    
+    return points;
+  }
+  
+  function pointsToPath(points) {
+    if (points.length === 0) return '';
+    return 'M' + points.map(p => p[0] + ',' + p[1]).join('L') + 'Z';
+  }
+  
+  function lineToPath(points) {
+    if (points.length === 0) return '';
+    return 'M' + points.map(p => p[0] + ',' + p[1]).join('L');
+  }
+  
+  // Main distribution (left side, completely separate)
+  const mainMean = -0.8;
+  const mainStd = 0.2; // Tighter for clearer color regions
+  const mainPoints = generateCurve(mainMean, mainStd);
+  
+  // Secondary distribution (right side, completely separate)
+  const secondaryMean = 0.8;
+  const secondaryStd = 0.2; // Tighter for clearer color regions
+  const secondaryPoints = generateCurve(secondaryMean, secondaryStd);
+  
+  // Update curves
+  document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
+  document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
+  
+  // MAIN DISTRIBUTION (Left) - Clear regions with proper order
+  // Alpha shading (both outer tails)
+  const alphaLeft = generateArea(mainMean, mainStd, -1.3, -1.05);  // Far left tail
+  const alphaRight = generateArea(mainMean, mainStd, -0.55, -0.3); // Right tail
+  document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft) + ' ' + pointsToPath(alphaRight));
+  
+  // Main histogram color (center)
+  const mainArea = generateArea(mainMean, mainStd, -1.05, -0.65);
+  document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
+  
+  // P-value shading (small region to the left of right alpha area)
+  const pArea = generateArea(mainMean, mainStd, -0.65, -0.55);
+  document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
+  
+  // SECONDARY DISTRIBUTION (Right) - Three clear sections filling to tails
+  // Type II shading (left tail)
+  const type2Area = generateArea(secondaryMean, secondaryStd, 0.3, 0.6);
+  document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
+  
+  // Power shading (middle section) 
+  const powerArea = generateArea(secondaryMean, secondaryStd, 0.6, 0.9);
+  document.getElementById('powerShading').setAttribute('d', pointsToPath(powerArea));
+  
+  // Secondary histogram color (right section to tail)
+  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.9, 1.3);
+  document.getElementById('secondaryShading').setAttribute('d', pointsToPath(secondaryArea));
+}
+
+function updateColorPreview() {
+  // Get current color values
+  const mainColor = document.getElementById('main_color').value;
+  const alphaColor = document.getElementById('alpha_color').value; 
+  const pColor = document.getElementById('p_color').value;
+  const secondaryColor = document.getElementById('secondary_color').value;
+  const powerColor = document.getElementById('power_color').value;
+  const type2Color = document.getElementById('type2_color').value;
+  
+  // Generate stroke colors
+  const mainStroke = darkenColor(mainColor, 0.4);
+  const secondaryStroke = darkenColor(secondaryColor, 0.4);
+  
+  // Update shading areas
+  document.getElementById('mainShading').setAttribute('fill', mainColor);
+  document.getElementById('mainShading').setAttribute('fill-opacity', '0.3');
+  
+  document.getElementById('alphaShading').setAttribute('fill', alphaColor);
+  document.getElementById('alphaShading').setAttribute('fill-opacity', '0.25');
+  
+  document.getElementById('pShading').setAttribute('fill', pColor);
+  document.getElementById('pShading').setAttribute('fill-opacity', '0.25');
+  
+  // Secondary should be much lighter (like #f9731655 = ~33% opacity)
+  document.getElementById('secondaryShading').setAttribute('fill', secondaryColor);
+  document.getElementById('secondaryShading').setAttribute('fill-opacity', '0.33');
+  
+  document.getElementById('powerShading').setAttribute('fill', powerColor);
+  document.getElementById('powerShading').setAttribute('fill-opacity', '0.4');
+  
+  document.getElementById('type2Shading').setAttribute('fill', type2Color);
+  document.getElementById('type2Shading').setAttribute('fill-opacity', '0.3');
+  
+  // Update curves with proper stroke colors
+  document.getElementById('mainCurve').setAttribute('stroke', mainStroke);
+  document.getElementById('secondaryCurve').setAttribute('stroke', secondaryStroke);
+  
+  // Update legend colors
+  const labels = document.getElementById('previewLabels').querySelectorAll('tspan');
+  if (labels[0]) labels[0].setAttribute('fill', mainColor);
+  if (labels[1]) labels[1].setAttribute('fill', alphaColor);
+  if (labels[2]) labels[2].setAttribute('fill', pColor);
+  if (labels[3]) labels[3].setAttribute('fill', secondaryColor);
+  if (labels[4]) labels[4].setAttribute('fill', powerColor);
+  if (labels[5]) labels[5].setAttribute('fill', type2Color);
+}
+
+function restoreDefaultColors() {
+  // Reset all color inputs to defaults
+  document.getElementById('main_color').value = '#60a5fa';
+  document.getElementById('alpha_color').value = '#1e3a8a';
+  document.getElementById('p_color').value = '#3b82f6';
+  document.getElementById('secondary_color').value = '#f97316';
+  document.getElementById('power_color').value = '#e67e22';
+  document.getElementById('type2_color').value = '#fbbf24';
+  
+  // Update preview and URL
+  updateColorPreview();
+  generateURL();
+}
+
 // Auto-generate on any input change
 document.querySelectorAll('input, select').forEach(element => {
   element.addEventListener('change', generateURL);
   element.addEventListener('input', generateURL);
+});
+
+// Add color preview update listeners
+document.querySelectorAll('input[type="color"]').forEach(element => {
+  element.addEventListener('change', updateColorPreview);
+  element.addEventListener('input', updateColorPreview);
 });
 
 // Special listener for beta input to update pregenerate state
@@ -531,6 +854,20 @@ document.getElementById('beta').addEventListener('change', updatePregenerateStat
 
 // Initialize pregenerate state
 updatePregenerateState();
+
+// Initialize color preview
+setTimeout(() => {
+  createColorPreview();
+  updateColorPreview();
+}, 100);
+
+// Handle window resize for responsive preview
+window.addEventListener('resize', () => {
+  setTimeout(() => {
+    createColorPreview();
+    updateColorPreview();
+  }, 100);
+});
 
 // Generate initial URL
 generateURL();
