@@ -757,44 +757,44 @@ function createColorPreview() {
     return 'M' + points.map(p => p[0] + ',' + p[1]).join('L');
   }
   
-  // Main distribution (left side, positioned to align with title)
-  const mainMean = -0.5; // Adjusted to align with 30% title position
-  const mainStd = 0.25; // Slightly wider (was 0.2)
+  // Main distribution (left side, no overlap)
+  const mainMean = -0.7; // Moved further left to eliminate overlap
+  const mainStd = 0.25;
   const mainPoints = generateCurve(mainMean, mainStd);
   
-  // Secondary distribution (right side, positioned to align with title)
-  const secondaryMean = 0.5; // Adjusted to align with 70% title position
-  const secondaryStd = 0.25; // Slightly wider (was 0.2)
+  // Secondary distribution (right side, no overlap)
+  const secondaryMean = 0.7; // Moved further right to eliminate overlap
+  const secondaryStd = 0.25;
   const secondaryPoints = generateCurve(secondaryMean, secondaryStd);
   
   // Update curves
   document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
   document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
   
-  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE with adjusted bounds for new position
+  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE, no overlap
   // Alpha shading (left tail)
-  const alphaLeft = generateArea(mainMean, mainStd, -1.25, -0.85);   // Adjusted for new position
+  const alphaLeft = generateArea(mainMean, mainStd, -1.25, -1.05);   // Left tail
   document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft));
   
   // Main histogram color (large center area)
-  const mainArea = generateArea(mainMean, mainStd, -0.85, -0.3);
+  const mainArea = generateArea(mainMean, mainStd, -1.05, -0.5);
   document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
   
-  // P-value shading (larger region that extends to right edge of main dist)
-  const pArea = generateArea(mainMean, mainStd, -0.3, 0.05);  // Extended to cover right tail of main
+  // P-value shading (right portion, stops before gap)
+  const pArea = generateArea(mainMean, mainStd, -0.5, -0.2);  // Stops before overlap
   document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
   
-  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE with adjusted bounds for new position
-  // Type II shading (extend to cover left tail of secondary)
-  const type2Area = generateArea(secondaryMean, secondaryStd, -0.05, 0.25);  // Adjusted for new position
+  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE, no overlap
+  // Type II shading (left portion, starts after gap)
+  const type2Area = generateArea(secondaryMean, secondaryStd, 0.2, 0.45);  // Starts after gap
   document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
   
   // Power shading (middle section) 
-  const powerArea = generateArea(secondaryMean, secondaryStd, 0.25, 0.65);
+  const powerArea = generateArea(secondaryMean, secondaryStd, 0.45, 0.85);
   document.getElementById('powerShading').setAttribute('d', pointsToPath(powerArea));
   
-  // Secondary histogram color (extend to right boundary)
-  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.65, 1.25); // Extend to boundary
+  // Secondary histogram color (right tail)
+  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.85, 1.25); // Right tail
   document.getElementById('secondaryShading').setAttribute('d', pointsToPath(secondaryArea));
   
   // RESPONSIVE LEGEND POSITIONING
@@ -804,11 +804,15 @@ function createColorPreview() {
 function updateLegendLayout(svgWidth) {
   const margin = { top: 30, right: 20, bottom: 50, left: 20 };
   const plotWidth = svgWidth - margin.left - margin.right;
+  const xScale = plotWidth / 2.5; // Same scale as distributions
   
-  // Position titles centered over each distribution with better calculations
-  const leftDistCenter = margin.left + plotWidth * 0.3;   // Center of left distribution  
-  const rightDistCenter = margin.left + plotWidth * 0.7;  // Center of right distribution
+  // Calculate actual SVG positions of distribution centers
+  function x(val) { return margin.left + (val + 1.25) * xScale; }
   
+  const leftDistCenter = x(-0.7);   // Position of main distribution center
+  const rightDistCenter = x(0.7);   // Position of secondary distribution center
+  
+  // Position titles centered over actual distribution peaks
   document.getElementById('leftTitle').setAttribute('x', leftDistCenter);
   document.getElementById('rightTitle').setAttribute('x', rightDistCenter);
   
