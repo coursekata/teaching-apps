@@ -477,8 +477,16 @@
   }
   
   function handlePlayPause() {
-    // If at end of a segment, advance to next
+    if (isPlaying) {
+      // Currently playing - pause at current position
+      pause();
+      console.log('⏸ Paused at', (currentTime / 1000).toFixed(2) + 's');
+      return;
+    }
+    
+    // Currently paused - determine what to do
     if (atSegmentEnd) {
+      // At end of a segment - advance to next
       if (currentSegment >= segments.length - 1) {
         // At last segment - reset to beginning
         console.log('► Resetting to beginning');
@@ -495,9 +503,8 @@
         playSegment(currentSegment);
       }
     } else {
-      // Play current segment (or continue if already playing)
-      console.log('► Playing segment', currentSegment + 1);
-      playSegment(currentSegment);
+      // Mid-segment - resume from current position
+      resume();
     }
   }
   
@@ -516,7 +523,7 @@
     
     // Change icon to pause
     if (nextBtn) {
-      nextBtn.innerHTML = '⏸';
+      nextBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="3" height="10" fill="currentColor"/><rect x="11" y="5" width="3" height="10" fill="currentColor"/></svg>';
       nextBtn.title = 'Pause';
     }
     
@@ -790,14 +797,30 @@
     
     // Change icon back to play
     if (nextBtn) {
-      nextBtn.innerHTML = '►';
-      nextBtn.title = 'Play';
+      nextBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5L12 10L7 15"/></svg>';
+      nextBtn.title = 'Next segment';
     }
     
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
       animationFrame = null;
     }
+  }
+  
+  function resume() {
+    // Continue playing from current position
+    isPlaying = true;
+    playbackStartTime = Date.now() - currentTime;
+    
+    // Change icon to pause
+    if (nextBtn) {
+      nextBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="3" height="10" fill="currentColor"/><rect x="11" y="5" width="3" height="10" fill="currentColor"/></svg>';
+      nextBtn.title = 'Pause';
+    }
+    
+    console.log('▶ Resuming from', (currentTime / 1000).toFixed(2) + 's');
+    
+    animationFrame = requestAnimationFrame(playbackLoop);
   }
   
   function playbackLoop() {
