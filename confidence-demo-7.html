@@ -35,6 +35,7 @@
   .hist-bar{fill:var(--bar);stroke:var(--bar-stroke)}
   .hist-shade{fill:var(--tailFill);stroke:none}
   .hist-shade-2{fill:#f9731644;stroke:none}
+  .hist-shade-3{fill:#f9731644;stroke:none}
   .draggable-veil{cursor:grab}
   .draggable-veil.disabled{cursor:not-allowed}
   .draggable-veil:active{cursor:grabbing}
@@ -43,10 +44,13 @@
   .axis-label{fill:#333;font-weight:700;font-size:20px}
   .curve{fill:none;stroke:#1e4ed8;stroke-width:2}
   .curve-second{fill:none;stroke:#f97316;stroke-width:2}
+  .curve-third{fill:none;stroke:#f97316;stroke-width:2}
   .tail-line{stroke:var(--tail);stroke-width:2}
   .tail-area{fill:var(--tailFill);stroke:none}
   .tail-line-orange{stroke:var(--orange);stroke-width:2}
   .tail-area-orange{fill:var(--orange);fill-opacity:0.25;stroke:none}
+  .tail-line-orange-alt{stroke:#f97316;stroke-width:2}
+  .tail-area-orange-alt{fill:#f97316;fill-opacity:0.25;stroke:none}
   .power-area{fill:#f97316;fill-opacity:0.4;stroke:none}
   .type2-area{fill:#fbbf24;fill-opacity:0.3;stroke:none}
   .seg{display:inline-flex;border:1px solid #ddd;border-radius:10px;overflow:hidden}
@@ -212,6 +216,10 @@
         <span>β′</span>
       </button>
 
+      <button id="thirdDistBtn" class="icon-toggle" title="Toggle third distribution">
+        <span>β″</span>
+      </button>
+
       <div class="seg" id="powerSeg" title="Second distribution shading mode">
         <button data-power="tails" class="active">Tails</button>
         <button data-power="power">Power</button>
@@ -294,8 +302,10 @@
     <div id="betaMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="bMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="betaPrimeMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="betaPrimePrimeMarkerLabel" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="meanLineLabel" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="meanLineLabel2" style="position:absolute;pointer-events:none;display:none;"></div>
+    <div id="meanLineLabel3" style="position:absolute;pointer-events:none;display:none;"></div>
     <div id="pValueLabel" style="position:absolute;pointer-events:none;display:none;"></div>
   </div>
 </div>
@@ -342,7 +352,8 @@
   const hideCI = urlParams.get('hide_ci') === 'true';
   const hideVertLines = urlParams.get('hide_vertlines') === 'true';
   const hideHistogram = urlParams.get('hide_histogram') === 'true';
-  const hideSecondDist = urlParams.get('hide_seconddist') === 'true';
+  const hideSecondDist = urlParams.get('hide_seconddist') === 'true' || urlParams.get('hide_seconddist') === 'TRUE';
+  const hideThirdDist = urlParams.get('hide_thirddist') === 'true' || urlParams.get('hide_thirddist') === 'TRUE';
   const hidePowerSeg = urlParams.get('hide_powermode') === 'true';
   const hideBInput = urlParams.get('hide_b') === 'true';
   
@@ -406,6 +417,7 @@
   const btnMarkBound = document.getElementById('btnMarkBound');
   const btnMarkBound2 = document.getElementById('btnMarkBound2');
   const secondDistBtn = document.getElementById('secondDistBtn');
+  const thirdDistBtn = document.getElementById('thirdDistBtn');
   const powerSeg = document.getElementById('powerSeg');
   const vertLinesBtn = document.getElementById('vertLinesBtn');
   const histogramBtn = document.getElementById('histogramBtn');
@@ -490,6 +502,28 @@
   const powerAreaR = overlayG2.append('path').attr('class','power-area').style('display','none');
   const type2Area = overlayG2.append('path').attr('class','type2-area').style('display','none');
 
+  // Third distribution (orange)
+  const thirdWrap = plotWrap.append('g').attr('class','third-wrap');
+  const histG3 = thirdWrap.append('g').attr('class','hist-3');
+  const histShadeG3 = thirdWrap.append('g').attr('class','hist-shade-wrap-3');
+  const meanLine3 = thirdWrap.append('line').attr('class','mean-line').style('stroke','#f97316').style('display','none');
+  const meanLabel3 = thirdWrap.append('g').attr('class','mean-label-orange');
+  meanLabel3.append('rect')
+    .attr('fill','#fff').attr('opacity',0.75).attr('rx',3).attr('ry',3);
+  const meanLabelFO3 = meanLabel3.append('foreignObject');
+  meanLabel3.style('display','none');
+  
+  // Third distribution overlays
+  const overlayG3 = thirdWrap.append('g').attr('class','overlay3');
+  const curvePath3 = overlayG3.append('path').attr('class','curve-third').style('display','none');
+  const tailLineL3 = overlayG3.append('line').attr('class','tail-line-orange-alt').style('display','none');
+  const tailLineR3 = overlayG3.append('line').attr('class','tail-line-orange-alt').style('display','none');
+  const tailAreaL3 = overlayG3.append('path').attr('class','tail-area-orange-alt').style('display','none');
+  const tailAreaR3 = overlayG3.append('path').attr('class','tail-area-orange-alt').style('display','none');
+
+  // Drag veil (place BEFORE markers so markers can intercept clicks)
+  const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent').attr('pointer-events','all');
+
   // b marker (bottom)
   const bMarkerG = root.append('g').attr('class','b-marker').style('cursor','ew-resize');
   const bLine = bMarkerG.append('line').attr('stroke','#ef4444').attr('stroke-width',3).attr('marker-end','url(#arrowUpRed)');
@@ -512,11 +546,15 @@
   const betaPrimeBG   = betaPrimeMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
   const betaPrimeLabelFO = betaPrimeMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
 
+  // β″ marker (top, orange)
+  const betaPrimePrimeMarkerG = root.append('g').attr('class','beta-prime-prime-marker').style('cursor','grab');
+  const betaPrimePrimeLine = betaPrimePrimeMarkerG.append('line').attr('stroke','#f97316').attr('stroke-width',3).attr('marker-end','url(#arrowDownOrange)');
+  const betaPrimePrimeLineDragArea = betaPrimePrimeMarkerG.append('line').attr('stroke','transparent').attr('stroke-width',30).style('pointer-events','all');
+  const betaPrimePrimeBG   = betaPrimePrimeMarkerG.append('rect').attr('fill','#fff').attr('opacity',0.98).attr('rx',4).attr('ry',4);
+  const betaPrimePrimeLabelFO = betaPrimePrimeMarkerG.append('foreignObject').attr('width',200).attr('height',40).attr('x',-1000).attr('y',-1000);
+
   // Blue bound markers
   const blueMarksG = root.append('g').attr('class','blue-marks');
-
-  // Drag veil
-  const veil = root.append('rect').attr('class','draggable-veil').attr('fill','transparent').attr('pointer-events','all');
 
   // Axis labels will be handled as HTML overlays instead of foreignObjects
 
@@ -529,11 +567,12 @@
     .attr('display', 'none');
 
   // Data & state
-  let data=[], bins=[], data2=[], bins2=[];
+  let data=[], bins=[], data2=[], bins2=[], data3=[], bins3=[];
   const x = d3.scaleLinear().range([0, innerW]);
   const y = d3.scaleLinear().range([plotH, 0]);
   let shiftUnits = 0;
   let shiftUnits2 = 0;
+  let shiftUnits3 = 0;
   let bValue = null;
   let betaValue = null;
   let ciMode = 'off';
@@ -544,6 +583,7 @@
 
   let curveMode = 'off';
   let secondDistMode = 'off';
+  let thirdDistMode = 'off';
   let powerMode = 'tails';
   let vertLinesMode = 'off';
   let histogramMode = 'on';
@@ -658,7 +698,7 @@
   
   // Apply hide parameters
   if(hideSimulate) {
-    regenBtn.style.display = 'none';
+    regenBtn.parentElement.style.display = 'none';
   }
   if(hideBeta) {
     betaInput.style.display = 'none';
@@ -691,6 +731,9 @@
   if(hideSecondDist) {
     secondDistBtn.style.display = 'none';
     powerSeg.style.display = 'none';
+  }
+  if(hideThirdDist) {
+    if(thirdDistBtn) thirdDistBtn.style.display = 'none';
   }
   if(hidePowerSeg) {
     powerSeg.style.display = 'none';
@@ -878,7 +921,8 @@
     // Get actual bar heights
     const barMax = bins.length ? d3.max(bins, d => d.length) : 1;
     const barMax2 = (secondDistMode === 'on' && bins2.length) ? d3.max(bins2, d => d.length) : 0;
-    const actualMax = Math.max(barMax, barMax2, 1);
+    const barMax3 = (thirdDistMode === 'on' && bins3.length) ? d3.max(bins3, d => d.length) : 0;
+    const actualMax = Math.max(barMax, barMax2, barMax3, 1);
     
     // When curve is shown, consider its height
     let curveMax = 0;
@@ -985,9 +1029,29 @@
       } else {
         histG2.selectAll('rect').remove();
       }
+      
+      if(thirdDistMode === 'on'){
+        const bar3=histG3.selectAll('rect').data(bins3,d => d.x0+'-'+d.x1);
+        bar3.enter().append('rect').attr('class','hist-bar-3')
+          .style('fill','#f9731655')
+          .style('stroke','#f97316aa')
+          .attr('x',d => x(d.x0))
+          .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+          .attr('y',d => y(d.length))
+          .attr('height',d => y(0)-y(d.length));
+        bar3
+          .attr('x',d => x(d.x0))
+          .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
+          .attr('y',d => y(d.length))
+          .attr('height',d => y(0)-y(d.length));
+        bar3.exit().remove();
+      } else {
+        histG3.selectAll('rect').remove();
+      }
     } else {
       histG.selectAll('rect').remove();
       histG2.selectAll('rect').remove();
+      histG3.selectAll('rect').remove();
     }
     drawHistogramTailShading();
   }
@@ -1002,6 +1066,10 @@
     const sel2 = histShadeG2.selectAll('rect')
       .data(doShadeBars && secondDistMode === 'on' ? bins2 : [], d => d.x0 + '-' + d.x1);
     sel2.exit().remove();
+    
+    const sel3 = histShadeG3.selectAll('rect')
+      .data(doShadeBars && thirdDistMode === 'on' ? bins3 : [], d => d.x0 + '-' + d.x1);
+    sel3.exit().remove();
     
     if (!doShadeBars) return;
 
@@ -1139,6 +1207,27 @@
           });
       }
     }
+    
+    // Third distribution tail shading (always in tails mode, never in power mode)
+    if(thirdDistMode === 'on'){
+      const merged3 = sel3.enter().append('rect').attr('class','hist-shade-3')
+        .style('fill','#f9731644')
+        .merge(sel3);
+      merged3
+        .attr('x', d => x(d.x0))
+        .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+        .attr('y', d => {
+          const frac = tailFrac(d);
+          const fullH = y(0) - y(d.length);
+          const h = frac * fullH;
+          return y(0) - h;
+        })
+        .attr('height', d => {
+          const frac = tailFrac(d);
+          const fullH = y(0) - y(d.length);
+          return frac * fullH;
+        });
+    }
   }
 
   function drawOverlay(){
@@ -1147,9 +1236,12 @@
     const showSecond = (secondDistMode === 'on') && (curveMode !== 'off');
     const showCIOverSecond = (ciMode !== 'off') && showSecond && (powerMode === 'tails');
     const showPowerOverSecond = (ciMode !== 'off') && showSecond && (powerMode === 'power');
+    const showThird = (thirdDistMode === 'on') && (curveMode !== 'off');
+    const showCIOverThird = (ciMode !== 'off') && showThird;
 
     curvePath.style('display', showCurve ? null : 'none');
     curvePath2.style('display', showSecond ? null : 'none');
+    curvePath3.style('display', showThird ? null : 'none');
     tailLineL.style('display', showCIOverCurve ? null : 'none');
     tailLineR.style('display', showCIOverCurve ? null : 'none');
     tailAreaL.style('display', showCIOverCurve ? null : 'none');
@@ -1158,6 +1250,11 @@
     tailLineR2.style('display', showCIOverSecond ? null : 'none');
     tailAreaL2.style('display', showCIOverSecond ? null : 'none');
     tailAreaR2.style('display', showCIOverSecond ? null : 'none');
+    
+    tailLineL3.style('display', showCIOverThird ? null : 'none');
+    tailLineR3.style('display', showCIOverThird ? null : 'none');
+    tailAreaL3.style('display', showCIOverThird ? null : 'none');
+    tailAreaR3.style('display', showCIOverThird ? null : 'none');
     
     powerAreaL.style('display', showPowerOverSecond ? null : 'none');
     powerAreaR.style('display', showPowerOverSecond ? null : 'none');
@@ -1194,9 +1291,10 @@
       legendEl.classList.remove('visible');
     }
 
-    if(!(showCurve || showCIOverCurve || showSecond)){
+    if(!(showCurve || showCIOverCurve || showSecond || showThird)){
       tailAreaL.attr('d', null); tailAreaR.attr('d', null);
       tailAreaL2.attr('d', null); tailAreaR2.attr('d', null);
+      tailAreaL3.attr('d', null); tailAreaR3.attr('d', null);
       powerAreaL.attr('d', null); powerAreaR.attr('d', null);
       type2Area.attr('d', null);
       return;
@@ -1218,6 +1316,11 @@
     }
 
     function expected2(t){
+      if (curveMode === 't') return n * binW * pdfT(t, beta, se, getDf());
+      return n * binW * pdfNormal(t, beta, se);
+    }
+
+    function expected3(t){
       if (curveMode === 't') return n * binW * pdfT(t, beta, se, getDf());
       return n * binW * pdfNormal(t, beta, se);
     }
@@ -1249,6 +1352,21 @@
         const lineGen2 = d3.line().x(d => x(d)).y(d => y(expected2(d)));
         curvePath2.attr('d', lineGen2(xs));
         curvePath2.style('fill', 'none').style('stroke', '#f97316').style('stroke-width', '2');
+      }
+    }
+
+    if(showThird){
+      // Draw as filled area if histogram is off OR if there's no histogram data yet
+      const showCurveAsFill = (histogramMode === 'off') || (bins3.length === 0);
+      
+      if(showCurveAsFill){
+        const areaGen3 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected3(d)));
+        curvePath3.attr('d', areaGen3(xs));
+        curvePath3.style('fill', '#f9731655').style('stroke', '#f97316').style('stroke-width', '2');
+      } else {
+        const lineGen3 = d3.line().x(d => x(d)).y(d => y(expected3(d)));
+        curvePath3.attr('d', lineGen3(xs));
+        curvePath3.style('fill', 'none').style('stroke', '#f97316').style('stroke-width', '2');
       }
     }
 
@@ -1285,6 +1403,23 @@
       tailAreaR2.attr('d', xsR2.length ? area2(xsR2) : null);
     } else {
       tailAreaL2.attr('d', null); tailAreaR2.attr('d', null);
+    }
+    
+    if(showCIOverThird){
+      const crit = ciCrit(ciMode, curveMode, getDf());
+      const cutL3 = beta - crit*se, cutR3 = beta + crit*se;
+      const yCurveL3 = y(expected3(cutL3));
+      const yCurveR3 = y(expected3(cutR3));
+      tailLineL3.attr('x1', x(cutL3)).attr('x2', x(cutL3)).attr('y1', plotH).attr('y2', yCurveL3);
+      tailLineR3.attr('x1', x(cutR3)).attr('x2', x(cutR3)).attr('y1', plotH).attr('y2', yCurveR3);
+
+      const xsL3 = xs.filter(v => v < cutL3).concat([cutL3]).sort((a,b) => a-b);
+      const xsR3 = [cutR3].concat(xs.filter(v => v > cutR3)).sort((a,b) => a-b);
+      const area3 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected3(d)));
+      tailAreaL3.attr('d', xsL3.length ? area3(xsL3) : null);
+      tailAreaR3.attr('d', xsR3.length ? area3(xsR3) : null);
+    } else {
+      tailAreaL3.attr('d', null); tailAreaR3.attr('d', null);
     }
     
     if(showPowerOverSecond){
@@ -1481,6 +1616,52 @@
     betaPrimeMarkerG.raise();
   }
 
+  function drawBetaPrimePrimeMarker(){
+    const betaPrimePrimeMarkerLabelDiv = document.getElementById('betaPrimePrimeMarkerLabel');
+    const showThird = (thirdDistMode === 'on');
+    if(!showThird){
+      betaPrimePrimeMarkerG.attr('display', 'none');
+      if(betaPrimePrimeMarkerLabelDiv) betaPrimePrimeMarkerLabelDiv.style.display = 'none';
+      return;
+    }
+    betaPrimePrimeMarkerG.attr('display', null);
+    const beta3 = getBeta() + shiftUnits3;
+    const xPos = x(beta3);
+    const axisY = axisInsetTop;
+    const arrowTop = axisY - 20;
+    
+    betaPrimePrimeLine.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop).attr('y2', axisY);
+    // Make drag area cover the entire arrow with extra height
+    betaPrimePrimeLineDragArea.attr('x1', xPos).attr('x2', xPos).attr('y1', arrowTop - 10).attr('y2', axisY);
+    
+    const labelHtml = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:18px;white-space:nowrap;background:#fff;opacity:0.98;border-radius:4px;padding:2px 6px 3px 6px;" class="latex-label">' + 
+      renderLatex(labelParamLatex + '\'\'') + ' = ' + beta3.toFixed(2) + '</div>';
+    
+    if(betaPrimePrimeMarkerLabelDiv) {
+      betaPrimePrimeMarkerLabelDiv.innerHTML = labelHtml;
+      betaPrimePrimeMarkerLabelDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        const bb = betaPrimePrimeMarkerLabelDiv.getBoundingClientRect();
+        const chartRect = chartWrap.getBoundingClientRect();
+        const svgRect = svg.node().getBoundingClientRect();
+        
+        // Calculate position relative to chart container
+        const absoluteX = svgRect.left - chartRect.left + margin.left + xPos;
+        const absoluteY = svgRect.top - chartRect.top + margin.top + arrowTop - 20;
+        
+        betaPrimePrimeMarkerLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
+        betaPrimePrimeMarkerLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
+        
+        // Hide the old foreignObject label
+        betaPrimePrimeLabelFO.attr('x', -1000).attr('y', -1000);
+        betaPrimePrimeBG.attr('x', -1000).attr('y', -1000);
+      }, 0);
+    }
+    
+    betaPrimePrimeMarkerG.raise();
+  }
+
   function updatePTextToRightOfB(){
     const pValueLabelDiv = document.getElementById('pValueLabel');
     
@@ -1580,6 +1761,11 @@
     } else {
       bins2 = [];
     }
+    if(thirdDistMode === 'on'){
+      bins3 = computeBins(data3, nbins);
+    } else {
+      bins3 = [];
+    }
     recomputeYDomain(nbins);
   }
 
@@ -1592,9 +1778,11 @@
     const beta=getBeta();
     const pxShift = x(beta + shiftUnits) - x(beta);
     const pxShift2 = x(beta + shiftUnits2) - x(beta);
+    const pxShift3 = x(beta + shiftUnits3) - x(beta);
     plotWrap.attr('transform','translate(0,'+axisInsetTop+')');
     histWrap.attr('transform','translate('+pxShift+',0)');
     secondWrap.attr('transform','translate('+pxShift2+',0)');
+    thirdWrap.attr('transform','translate('+pxShift3+',0)');
     
     // Calculate actual sample mean and check lock status
     let sampleMean = beta; // default to theoretical mean
@@ -1731,6 +1919,7 @@
 
     drawBetaMarker();
     drawBetaPrimeMarker();
+    drawBetaPrimePrimeMarker();
     drawBMarker();
     drawOverlay();
     drawVerticalLines();
@@ -1843,6 +2032,10 @@
       data2 = [...data];
     }
     
+    if(thirdDistMode === 'on'){
+      data3 = [...data];
+    }
+    
     draw();
   }
 
@@ -1868,22 +2061,39 @@
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
       blueMarkJustPlaced = false;
       
+      // Determine which distribution to drag based on proximity
+      // Priority when overlapping: third > second > main (top to bottom)
+      const mouseX = event.x;
+      const beta1 = getBeta() + shiftUnits;
+      const dist1 = Math.abs(mouseX - x(beta1));
+      
+      let candidates = [{name: 'main', dist: dist1, priority: 0}];
+      
       if(secondDistMode === 'on'){
-        const mouseX = event.x;
-        const beta1 = getBeta() + shiftUnits;
         const beta2 = getBeta() + shiftUnits2;
-        const dist1 = Math.abs(mouseX - x(beta1));
         const dist2 = Math.abs(mouseX - x(beta2));
-        if(Math.abs(dist1 - dist2) < 30){
-          dragTarget = 'second';
-        } else {
-          dragTarget = (dist2 < dist1) ? 'second' : 'main';
-        }
-      } else {
-        dragTarget = 'main';
+        candidates.push({name: 'second', dist: dist2, priority: 1});
       }
       
-      emitTutorialEvent('dragStart', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2});
+      if(thirdDistMode === 'on'){
+        const beta3 = getBeta() + shiftUnits3;
+        const dist3 = Math.abs(mouseX - x(beta3));
+        candidates.push({name: 'third', dist: dist3, priority: 2});
+      }
+      
+      // Sort by distance first, then by priority (higher priority wins when distances are close)
+      candidates.sort((a, b) => {
+        const distDiff = a.dist - b.dist;
+        // If distances are within 60 pixels, use priority (z-order) to grab the top distribution
+        if(Math.abs(distDiff) < 60) {
+          return b.priority - a.priority; // Higher priority first
+        }
+        return distDiff; // Otherwise use distance
+      });
+      
+      dragTarget = candidates[0].name;
+      
+      emitTutorialEvent('dragStart', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2, shiftUnits3: shiftUnits3});
     })
     .on('drag', function(event){
       if(!isSampleMeanLocked()) return;
@@ -1892,6 +2102,8 @@
       
       if(dragTarget === 'second'){
         shiftUnits2 += dx;
+      } else if(dragTarget === 'third'){
+        shiftUnits3 += dx;
       } else {
         // When dragging main distribution while locked, just shift the histogram view
         shiftUnits += dx;
@@ -1904,12 +2116,12 @@
       }
       draw();
       
-      emitTutorialEvent('drag', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2});
+      emitTutorialEvent('drag', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2, shiftUnits3: shiftUnits3});
     })
     .on('end', function(event){
       if(!isSampleMeanLocked()) return;
       
-      emitTutorialEvent('dragEnd', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2});
+      emitTutorialEvent('dragEnd', {target: dragTarget, shiftUnits: shiftUnits, shiftUnits2: shiftUnits2, shiftUnits3: shiftUnits3});
     });
 
   const dragB = d3.drag()
@@ -2030,6 +2242,31 @@
     });
   
   betaPrimeMarkerG.call(dragBetaPrime);
+
+  const dragBetaPrimePrime = d3.drag()
+    .on('start', function(){
+      hideMarkButton();
+      hideMarkButton2();
+      d3.selectAll('.clear-mark-btn').classed('hidden', true);
+      blueMarkJustPlaced = false;
+      dragTarget = 'third';
+      betaPrimePrimeMarkerG.style('cursor', 'grabbing');
+      
+      emitTutorialEvent('dragBetaPrimePrimeStart', {shiftUnits3: shiftUnits3});
+    })
+    .on('drag', function(event){
+      shiftUnits3 += event.dx * dataUnitsPerPx();
+      draw();
+      
+      emitTutorialEvent('dragBetaPrimePrime', {shiftUnits3: shiftUnits3});
+    })
+    .on('end', function(){
+      betaPrimePrimeMarkerG.style('cursor', 'grab');
+      
+      emitTutorialEvent('dragBetaPrimePrimeEnd', {shiftUnits3: shiftUnits3});
+    });
+  
+  betaPrimePrimeMarkerG.call(dragBetaPrimePrime);
 
   // Drag behavior for axes to pan the view
   const dragAxis = d3.drag()
@@ -2179,6 +2416,9 @@
       if(secondDistMode === 'on'){
         data2 = [...data];
       }
+      if(thirdDistMode === 'on'){
+        data3 = [...data];
+      }
     }
     
     draw();
@@ -2227,6 +2467,9 @@
       data = gaussian(currentN, centerPos, newSE);
       if(secondDistMode === 'on'){
         data2 = [...data];
+      }
+      if(thirdDistMode === 'on'){
+        data3 = [...data];
       }
     }
     
@@ -2423,6 +2666,7 @@
     if(btn.getAttribute('data-action') === 'clear') {
       data = [];
       data2 = [];
+      data3 = [];
       currentN = 0;
       blueMarks = [];
       isLockedToBeta = false;
@@ -2585,11 +2829,56 @@
     draw();
   });
   
+  if(thirdDistBtn) {
+    thirdDistBtn.addEventListener('click', function(){
+      // Don't allow toggling on in power mode
+      if(powerMode === 'power' && thirdDistMode === 'off'){
+        return;
+      }
+      
+      if(thirdDistMode === 'off'){
+        thirdDistMode = 'on';
+        thirdDistBtn.classList.add('active');
+        shiftUnits3 = shiftUnits; // Start on top of current beta position
+        data3 = [...data];
+      } else {
+        thirdDistMode = 'off';
+        thirdDistBtn.classList.remove('active');
+        data3 = [];
+        bins3 = [];
+      }
+      emitTutorialEvent('toggleThirdDist', {value: thirdDistMode});
+      draw();
+    });
+  }
+  
   powerSeg.addEventListener('click', function(e){
     const btn = e.target.closest('button[data-power]'); if(!btn) return;
     powerSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     powerMode = btn.getAttribute('data-power');
+    
+    // When switching to power mode, turn off third distribution
+    if(powerMode === 'power' && thirdDistMode === 'on'){
+      thirdDistMode = 'off';
+      if(thirdDistBtn) thirdDistBtn.classList.remove('active');
+      data3 = [];
+      bins3 = [];
+    }
+    
+    // Update button appearance based on mode
+    if(thirdDistBtn) {
+      if(powerMode === 'power'){
+        thirdDistBtn.style.opacity = '0.5';
+        thirdDistBtn.style.cursor = 'not-allowed';
+        thirdDistBtn.title = 'Third distribution not available in power mode';
+      } else {
+        thirdDistBtn.style.opacity = '1';
+        thirdDistBtn.style.cursor = 'pointer';
+        thirdDistBtn.title = 'Toggle third distribution';
+      }
+    }
+    
     emitTutorialEvent('changePowerMode', {value: powerMode});
     draw();
   });
