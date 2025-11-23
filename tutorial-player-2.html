@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tutorial Player - v1.8</title>
+<title>Tutorial Player - v2.3</title>
 
 <!--
   LOADING TUTORIALS - THREE METHODS:
@@ -71,81 +71,6 @@
     padding: 20px;
   }
   
-  .controls {
-    background: #fff;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  
-  button {
-    padding: 10px 16px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-  }
-  
-  button:hover:not(:disabled) {
-    background: #f9f9f9;
-  }
-  
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  button.primary {
-    background: #2563eb;
-    color: #fff;
-    border-color: #2563eb;
-  }
-  
-  button.primary:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-  
-  button.flash {
-    animation: flashButton 1s ease-in-out infinite;
-  }
-  
-  @keyframes flashButton {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-  
-  .scrubber {
-    flex: 1;
-    min-width: 200px;
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-    position: relative;
-    cursor: pointer;
-  }
-  
-  .scrubber-progress {
-    height: 100%;
-    background: #2563eb;
-    border-radius: 4px;
-    transition: width 0.1s linear;
-  }
-  
-  .time-display {
-    font-variant-numeric: tabular-nums;
-    color: #666;
-    font-size: 13px;
-    min-width: 80px;
-    text-align: right;
-  }
-  
   .version-number {
     color: #666;
     font-size: 12px;
@@ -158,6 +83,8 @@
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     overflow: hidden;
+    width: 1000px;
+    margin: 0 auto;
   }
   
   iframe {
@@ -165,57 +92,6 @@
     height: 700px;
     border: none;
     display: block;
-  }
-  
-  .overlay-nav-controls {
-    position: absolute;
-    bottom: 40px;
-    left: 80px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 2px solid #2563eb;
-    border-radius: 12px;
-    padding: 8px 12px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    cursor: move;
-    user-select: none;
-    z-index: 1000;
-  }
-  
-  .overlay-nav-controls button {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    line-height: 1;
-    transition: all 0.15s;
-  }
-  
-  .overlay-nav-controls button:hover:not(:disabled) {
-    background: #f0f7ff;
-    border-color: #2563eb;
-    transform: scale(1.05);
-  }
-  
-  .overlay-nav-controls button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  
-  .overlay-nav-controls .drag-handle {
-    cursor: move;
-    color: #666;
-    font-size: 18px;
-    padding: 0 4px;
   }
   
   .annotation-box {
@@ -308,30 +184,8 @@
   </div>
   
   <div id="playerSection" style="display:none;">
-    <div class="controls">
-      <button id="playPauseBtn" class="primary">▶ Play</button>
-      <div class="scrubber" id="scrubber">
-        <div class="scrubber-progress" id="scrubberProgress"></div>
-      </div>
-      <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
-      <div class="version-number">v1.8</div>
-    </div>
-    
     <div class="app-frame-container">
       <iframe id="appFrame"></iframe>
-      <div id="overlayNavControls" class="overlay-nav-controls" style="display:none;">
-        <span class="drag-handle">⋮⋮</span>
-        <button id="prevBtn" title="Previous segment / Replay">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M13 5L8 10L13 15"/>
-          </svg>
-        </button>
-        <button id="nextBtn" title="Next segment">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M7 5L12 10L7 15"/>
-          </svg>
-        </button>
-      </div>
     </div>
   </div>
 </div>
@@ -345,17 +199,17 @@
   const playerSection = document.getElementById('playerSection');
   const tutorialFile = document.getElementById('tutorialFile');
   const errorMsg = document.getElementById('errorMsg');
-  const playPauseBtn = document.getElementById('playPauseBtn');
-  const scrubber = document.getElementById('scrubber');
-  const scrubberProgress = document.getElementById('scrubberProgress');
-  const timeDisplay = document.getElementById('timeDisplay');
   const appFrame = document.getElementById('appFrame');
-  const overlayNavControls = document.getElementById('overlayNavControls');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
+  
+  // Control elements (will be injected into iframe)
+  let prevBtn = null;
+  let nextBtn = null;
+  let segmentIndicator = null;
   
   // State
   let tutorial = null;
+  let segments = []; // Array of {start, end} for each segment
+  let currentSegment = 0;
   let isPlaying = false;
   let playbackStartTime = 0;
   let currentTime = 0;
@@ -363,9 +217,8 @@
   let annotationBox = null;
   let currentAnnotationIndex = -1;
   let annotationTimeout = null;
-  let triggeredPauses = new Set(); // Track which pauses we've already triggered
-  let lastLeftButtonPressTime = 0; // Track timing for double-press detection
-  let currentSegmentIndex = 0; // Track which segment we're in
+  let atSegmentEnd = false; // Track if we're paused at the end of a segment
+  let lastLeftButtonPressTime = 0; // Track for double-press detection
   
   // Check for embedded tutorial
   const embeddedTutorial = window.TUTORIAL_DATA || null;
@@ -536,20 +389,14 @@
           // Inject annotation box
           injectAnnotationBox();
           
-          // Enable controls
-          playPauseBtn.disabled = false;
+          // Inject controls into iframe
+          injectControls();
           
-          // Show overlay navigation controls
-          overlayNavControls.style.display = 'flex';
+          // Build segments from pauses
+          buildSegments();
           
-          console.log('Tutorial loaded:', tutorial.snapshots.length, 'snapshots,', tutorial.annotations.length, 'annotations');
-          if (tutorial.annotations && tutorial.annotations.length > 0) {
-            console.log('Annotation details:');
-            tutorial.annotations.forEach((ann, i) => {
-              console.log(`  [${i}] "${ann.title}" at ${(ann.timestamp / 1000).toFixed(2)}s for ${(ann.duration / 1000).toFixed(2)}s`);
-              console.log(`      Position:`, ann.position);
-            });
-          }
+          console.log('Tutorial loaded:', tutorial.snapshots.length, 'snapshots,', tutorial.annotations.length, 'annotations', tutorial.pauses.length, 'pauses');
+          console.log('Segments:', segments.length);
         }
       }, 100);
       
@@ -557,6 +404,125 @@
         clearInterval(checkAPI);
       }, 5000);
     });
+  }
+  
+  function buildSegments() {
+    if (!tutorial) return;
+    
+    segments = [];
+    
+    if (!tutorial.pauses || tutorial.pauses.length === 0) {
+      // No pauses - entire tutorial is one segment
+      segments.push({ start: 0, end: tutorial.duration });
+    } else {
+      // Sort pauses by timestamp
+      const pauses = [...tutorial.pauses].sort((a, b) => a.timestamp - b.timestamp);
+      
+      // First segment: 0 to first pause
+      segments.push({ start: 0, end: pauses[0].timestamp });
+      
+      // Middle segments: pause to pause
+      for (let i = 0; i < pauses.length - 1; i++) {
+        segments.push({ start: pauses[i].timestamp, end: pauses[i + 1].timestamp });
+      }
+      
+      // Last segment: last pause to end
+      segments.push({ start: pauses[pauses.length - 1].timestamp, end: tutorial.duration });
+    }
+    
+    console.log('Built', segments.length, 'segments:', segments.map((s, i) => 
+      `Segment ${i + 1}: ${(s.start / 1000).toFixed(2)}s - ${(s.end / 1000).toFixed(2)}s`
+    ));
+    updateSegmentIndicator();
+  }
+  
+  function updateSegmentIndicator() {
+    if (segmentIndicator) {
+      segmentIndicator.textContent = `${currentSegment + 1} / ${segments.length}`;
+    }
+    
+    // Update button states
+    if (prevBtn) {
+      prevBtn.disabled = currentSegment === 0 && !atSegmentEnd;
+    }
+    if (nextBtn) {
+      nextBtn.disabled = false; // Always enabled - resets to beginning at end
+    }
+  }
+  
+  function handlePrevious() {
+    const now = Date.now();
+    const timeSinceLastPress = now - lastLeftButtonPressTime;
+    lastLeftButtonPressTime = now;
+    
+    if (isPlaying) {
+      pause();
+    }
+    
+    // Double-press detection (within 500ms)
+    if (timeSinceLastPress < 500 && currentSegment > 0) {
+      // Double press: go to previous segment and pause
+      currentSegment--;
+      console.log('◄◄ Going to previous segment', currentSegment + 1, '(paused)');
+      atSegmentEnd = false;
+      updateSegmentIndicator();
+      seekToTime(segments[currentSegment].start);
+      currentTime = segments[currentSegment].start;
+    } else {
+      // Single press: replay current segment
+      console.log('◄ Replaying segment', currentSegment + 1);
+      atSegmentEnd = false;
+      playSegment(currentSegment);
+    }
+  }
+  
+  function handlePlayPause() {
+    // If at end of a segment, advance to next
+    if (atSegmentEnd) {
+      if (currentSegment >= segments.length - 1) {
+        // At last segment - reset to beginning
+        console.log('► Resetting to beginning');
+        currentSegment = 0;
+        atSegmentEnd = false;
+        updateSegmentIndicator();
+        playSegment(currentSegment);
+      } else {
+        // Move to next segment
+        currentSegment++;
+        atSegmentEnd = false;
+        updateSegmentIndicator();
+        console.log('► Playing next segment', currentSegment + 1);
+        playSegment(currentSegment);
+      }
+    } else {
+      // Play current segment (or continue if already playing)
+      console.log('► Playing segment', currentSegment + 1);
+      playSegment(currentSegment);
+    }
+  }
+  
+  function playSegment(segmentIndex) {
+    const segment = segments[segmentIndex];
+    
+    // Set start time for this segment
+    currentTime = segment.start;
+    playbackStartTime = Date.now() - currentTime;
+    
+    // Seek to start of segment
+    seekToTime(currentTime);
+    
+    // Start playing
+    isPlaying = true;
+    
+    // Change icon to pause
+    if (nextBtn) {
+      nextBtn.innerHTML = '⏸';
+      nextBtn.title = 'Pause';
+    }
+    
+    console.log('▶ Playing segment', segmentIndex + 1, 'from', (segment.start / 1000).toFixed(2) + 's', 'to', (segment.end / 1000).toFixed(2) + 's');
+    
+    animationFrame = requestAnimationFrame(playbackLoop);
   }
   
   function getAPI() {
@@ -622,45 +588,211 @@
     iframeDoc.body.appendChild(annotationBox);
   }
   
-  // Play/Pause
-  playPauseBtn.addEventListener('click', () => {
-    if (isPlaying) {
-      pause();
-    } else {
-      play();
-    }
-  });
-  
-  function play() {
-    if (!tutorial) return;
+  function injectControls() {
+    const iframeDoc = appFrame.contentDocument || appFrame.contentWindow.document;
+    if (!iframeDoc) return;
     
-    // If we're at the end, reset to beginning (replay)
-    if (currentTime >= tutorial.duration) {
-      currentTime = 0;
-      currentAnnotationIndex = -1;
-      triggeredPauses.clear();
-      hideAnnotation();
-      
-      const api = getAPI();
-      if (api) {
-        api.setState(tutorial.initialState);
+    // Create controls container
+    const controlsContainer = iframeDoc.createElement('div');
+    controlsContainer.id = 'tutorial-controls';
+    
+    // Create Previous button
+    prevBtn = iframeDoc.createElement('button');
+    prevBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5L8 10L13 15"/></svg>';
+    prevBtn.title = 'Previous segment / Replay';
+    prevBtn.className = 'tutorial-nav-btn';
+    
+    // Create segment indicator
+    segmentIndicator = iframeDoc.createElement('div');
+    segmentIndicator.className = 'tutorial-segment-indicator';
+    segmentIndicator.textContent = '1 / 1';
+    
+    // Create Next button
+    nextBtn = iframeDoc.createElement('button');
+    nextBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5L12 10L7 15"/></svg>';
+    nextBtn.title = 'Next segment';
+    nextBtn.className = 'tutorial-nav-btn';
+    
+    // Add to container
+    controlsContainer.appendChild(prevBtn);
+    controlsContainer.appendChild(segmentIndicator);
+    controlsContainer.appendChild(nextBtn);
+    
+    // Add controls to iframe body
+    iframeDoc.body.appendChild(controlsContainer);
+    
+    // Add styles
+    const controlStyles = iframeDoc.createElement('style');
+    controlStyles.textContent = `
+      #tutorial-controls {
+        position: fixed;
+        bottom: 40px;
+        left: 80px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 10px 18px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        z-index: 10000;
+        font-family: system-ui, -apple-system, sans-serif;
+        cursor: move;
+        user-select: none;
       }
       
-      scrubberProgress.style.width = '0%';
-      updateTimeDisplay();
+      .tutorial-nav-btn {
+        width: 40px;
+        height: 40px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        padding: 0;
+        color: #667eea;
+        font-weight: bold;
+      }
+      
+      .tutorial-nav-btn:hover:not(:disabled) {
+        background: #fff;
+        border-color: rgba(255, 255, 255, 0.8);
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+      
+      .tutorial-nav-btn:active:not(:disabled) {
+        transform: scale(0.95);
+      }
+      
+      .tutorial-nav-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      
+      .tutorial-segment-indicator {
+        font-size: 14px;
+        color: #fff;
+        font-weight: 600;
+        min-width: 50px;
+        text-align: center;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+    `;
+    iframeDoc.head.appendChild(controlStyles);
+    
+    // Add event listeners
+    prevBtn.addEventListener('click', handlePrevious);
+    nextBtn.addEventListener('click', handlePlayPause);
+    
+    // Make controller draggable
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let controlStartLeft = 0;
+    let controlStartBottom = 0;
+    
+    controlsContainer.addEventListener('mousedown', (e) => {
+      // Don't drag if clicking on buttons
+      if (e.target.closest('button')) return;
+      
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      
+      const style = iframeDoc.defaultView.getComputedStyle(controlsContainer);
+      controlStartLeft = parseInt(style.left) || 0;
+      controlStartBottom = parseInt(style.bottom) || 0;
+      
+      controlsContainer.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+    
+    iframeDoc.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const deltaX = e.clientX - dragStartX;
+      const deltaY = -(e.clientY - dragStartY); // Negative because bottom positioning
+      
+      const newLeft = controlStartLeft + deltaX;
+      const newBottom = controlStartBottom + deltaY;
+      
+      // Keep within bounds
+      const maxLeft = iframeDoc.documentElement.clientWidth - controlsContainer.offsetWidth;
+      const maxBottom = iframeDoc.documentElement.clientHeight - controlsContainer.offsetHeight;
+      
+      controlsContainer.style.left = Math.max(0, Math.min(maxLeft, newLeft)) + 'px';
+      controlsContainer.style.bottom = Math.max(0, Math.min(maxBottom, newBottom)) + 'px';
+    });
+    
+    iframeDoc.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        controlsContainer.style.cursor = 'move';
+      }
+    });
+  }
+  
+  // Play/Pause
+  function seekToTime(time) {
+    const api = getAPI();
+    if (!api) return;
+    
+    // Find the most recent snapshot before this time
+    let targetState = tutorial.initialState;
+    for (const snapshot of tutorial.snapshots) {
+      if (snapshot.timestamp <= time) {
+        targetState = snapshot.state;
+      } else {
+        break;
+      }
+    }
+    api.setState(targetState);
+    
+    // Handle annotations at this time
+    handleAnnotationsAtTime(time);
+  }
+  
+  function handleAnnotationsAtTime(time) {
+    if (!tutorial.annotations || tutorial.annotations.length === 0) {
+      hideAnnotation();
+      currentAnnotationIndex = -1;
+      return;
     }
     
-    isPlaying = true;
-    playbackStartTime = Date.now() - currentTime;
-    playPauseBtn.textContent = '⏸ Pause';
-    playPauseBtn.classList.remove('flash'); // Stop flashing when user clicks play
+    // Find annotation that should be visible at this time
+    let found = false;
+    for (let i = 0; i < tutorial.annotations.length; i++) {
+      const ann = tutorial.annotations[i];
+      const annStart = ann.timestamp;
+      const annEnd = ann.timestamp + ann.duration;
+      
+      if (time >= annStart && time < annEnd) {
+        showAnnotation(ann);
+        currentAnnotationIndex = i;
+        found = true;
+        break;
+      }
+    }
     
-    animationFrame = requestAnimationFrame(playbackLoop);
+    if (!found) {
+      hideAnnotation();
+      currentAnnotationIndex = -1;
+    }
   }
   
   function pause() {
     isPlaying = false;
-    playPauseBtn.textContent = '▶ Play';
+    
+    // Change icon back to play
+    if (nextBtn) {
+      nextBtn.innerHTML = '►';
+      nextBtn.title = 'Play';
+    }
     
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
@@ -672,13 +804,7 @@
     if (!isPlaying) return;
     
     currentTime = Date.now() - playbackStartTime;
-    
-    // Update scrubber
-    const progress = Math.min(100, (currentTime / tutorial.duration) * 100);
-    scrubberProgress.style.width = progress + '%';
-    
-    // Update time display
-    updateTimeDisplay();
+    const segment = segments[currentSegment];
     
     // Apply snapshots
     const api = getAPI();
@@ -693,47 +819,35 @@
     // Handle annotations
     handleAnnotations();
     
-    // Handle pauses
-    if (tutorial.pauses) {
-      for (let i = 0; i < tutorial.pauses.length; i++) {
-        const pauseEvent = tutorial.pauses[i];
-        
-        // Only trigger if we haven't triggered this pause yet
-        if (!triggeredPauses.has(i) && pauseEvent.timestamp <= currentTime) {
-          triggeredPauses.add(i);
-          pause();
-          playPauseBtn.classList.add('flash'); // Flash the button to signal user needs to click
-          console.log('⏸ Paused at', (pauseEvent.timestamp / 1000).toFixed(2) + 's');
-          return;
-        }
-      }
-    }
-    
-    // Check if finished
-    if (currentTime >= tutorial.duration) {
+    // Check if we've reached the end of this segment
+    if (currentTime >= segment.end) {
       pause();
-      playPauseBtn.textContent = '⟲ Replay';
+      atSegmentEnd = true;
+      updateSegmentIndicator();
       
-      // Check if tutorial ends with an annotation (within 100ms tolerance)
-      let tutorialEndsWithAnnotation = false;
-      if (tutorial.annotations && tutorial.annotations.length > 0) {
-        const lastAnn = tutorial.annotations[tutorial.annotations.length - 1];
-        const annEnd = lastAnn.timestamp + lastAnn.duration;
-        const tolerance = 100; // 100ms tolerance
+      // If this is the last segment, check if tutorial ends with an annotation
+      if (currentSegment === segments.length - 1) {
+        let tutorialEndsWithAnnotation = false;
         
-        if (Math.abs(annEnd - tutorial.duration) < tolerance) {
-          tutorialEndsWithAnnotation = true;
-          // Show the last annotation
-          showAnnotation(lastAnn);
-          currentAnnotationIndex = tutorial.annotations.length - 1;
-          console.log('✓ Tutorial ends with annotation - keeping it visible');
+        if (tutorial.annotations && tutorial.annotations.length > 0) {
+          const lastAnn = tutorial.annotations[tutorial.annotations.length - 1];
+          const annEnd = lastAnn.timestamp + lastAnn.duration;
+          const tolerance = 100; // 100ms tolerance
+          
+          if (Math.abs(annEnd - tutorial.duration) < tolerance) {
+            tutorialEndsWithAnnotation = true;
+            // Show the last annotation
+            showAnnotation(lastAnn);
+            currentAnnotationIndex = tutorial.annotations.length - 1;
+            console.log('✓ Tutorial ends with annotation - keeping it visible');
+          }
         }
-      }
-      
-      // Hide annotation only if tutorial doesn't end with one
-      if (!tutorialEndsWithAnnotation) {
-        hideAnnotation();
-        currentAnnotationIndex = -1;
+        
+        if (!tutorialEndsWithAnnotation) {
+          console.log('✓ Final segment complete');
+        }
+      } else {
+        console.log('✓ Segment', currentSegment + 1, 'complete');
       }
       
       return;
@@ -920,231 +1034,7 @@
     }
   }
   
-  function updateTimeDisplay() {
-    const current = Math.floor(currentTime / 1000);
-    const total = Math.floor(tutorial.duration / 1000);
-    
-    const currentMin = Math.floor(current / 60);
-    const currentSec = current % 60;
-    const totalMin = Math.floor(total / 60);
-    const totalSec = total % 60;
-    
-    timeDisplay.textContent = 
-      `${currentMin}:${currentSec.toString().padStart(2, '0')} / ` +
-      `${totalMin}:${totalSec.toString().padStart(2, '0')}`;
-  }
-  
-  // Segment navigation helpers
-  function getSegments() {
-    if (!tutorial || !tutorial.pauses || tutorial.pauses.length === 0) {
-      // No pauses means one segment (the whole tutorial)
-      return [{start: 0, end: tutorial.duration}];
-    }
-    
-    const segments = [];
-    let start = 0;
-    
-    for (const pause of tutorial.pauses) {
-      segments.push({start: start, end: pause.timestamp});
-      start = pause.timestamp;
-    }
-    
-    // Add final segment from last pause to end
-    segments.push({start: start, end: tutorial.duration});
-    
-    return segments;
-  }
-  
-  function getCurrentSegmentIndex() {
-    const segments = getSegments();
-    for (let i = 0; i < segments.length; i++) {
-      if (currentTime >= segments[i].start && currentTime < segments[i].end) {
-        return i;
-      }
-    }
-    // If at the very end, return last segment
-    return segments.length - 1;
-  }
-  
-  function goToSegment(index, autoPlay = false) {
-    const segments = getSegments();
-    if (index < 0 || index >= segments.length) return;
-    
-    currentSegmentIndex = index;
-    currentTime = segments[index].start;
-    
-    // Clear triggered pauses up to this point
-    triggeredPauses.clear();
-    if (tutorial.pauses) {
-      for (let i = 0; i < tutorial.pauses.length; i++) {
-        if (tutorial.pauses[i].timestamp < currentTime) {
-          triggeredPauses.add(i);
-        }
-      }
-    }
-    
-    if (isPlaying) {
-      playbackStartTime = Date.now() - currentTime;
-    }
-    
-    // Apply state at segment start
-    const api = getAPI();
-    if (api) {
-      let targetState = tutorial.initialState;
-      for (const snapshot of tutorial.snapshots) {
-        if (snapshot.timestamp <= currentTime) {
-          targetState = snapshot.state;
-        } else {
-          break;
-        }
-      }
-      api.setState(targetState);
-    }
-    
-    // Update display
-    const progress = Math.min(100, (currentTime / tutorial.duration) * 100);
-    scrubberProgress.style.width = progress + '%';
-    updateTimeDisplay();
-    handleAnnotations();
-    
-    if (autoPlay && !isPlaying) {
-      play();
-    }
-  }
-  
-  // Scrubber
-  scrubber.addEventListener('click', (e) => {
-    if (!tutorial) return;
-    
-    const rect = scrubber.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percent = clickX / rect.width;
-    
-    currentTime = percent * tutorial.duration;
-    
-    // Mark any pauses before current time as triggered
-    if (tutorial.pauses) {
-      for (let i = 0; i < tutorial.pauses.length; i++) {
-        if (tutorial.pauses[i].timestamp <= currentTime) {
-          triggeredPauses.add(i);
-        } else {
-          triggeredPauses.delete(i); // Remove if we scrubbed backward past it
-        }
-      }
-    }
-    
-    if (isPlaying) {
-      playbackStartTime = Date.now() - currentTime;
-    }
-    
-    // Apply state at new time
-    const api = getAPI();
-    if (api) {
-      // Find the most recent snapshot before this time
-      let targetState = tutorial.initialState;
-      for (const snapshot of tutorial.snapshots) {
-        if (snapshot.timestamp <= currentTime) {
-          targetState = snapshot.state;
-        } else {
-          break;
-        }
-      }
-      api.setState(targetState);
-    }
-    
-    // Update display
-    scrubberProgress.style.width = (percent * 100) + '%';
-    updateTimeDisplay();
-    handleAnnotations();
-  });
-  
-  
-  // Navigation button handlers
-  prevBtn.addEventListener('click', () => {
-    const now = Date.now();
-    const timeSinceLastPress = now - lastLeftButtonPressTime;
-    lastLeftButtonPressTime = now;
-    
-    // Double-press detection (within 500ms)
-    if (timeSinceLastPress < 500) {
-      // Double press: go to previous segment and pause
-      const currentIdx = getCurrentSegmentIndex();
-      if (currentIdx > 0) {
-        pause();
-        goToSegment(currentIdx - 1, false);
-      }
-    } else {
-      // Single press: replay current segment
-      const currentIdx = getCurrentSegmentIndex();
-      goToSegment(currentIdx, true);
-    }
-  });
-  
-  nextBtn.addEventListener('click', () => {
-    const segments = getSegments();
-    const currentIdx = getCurrentSegmentIndex();
-    
-    if (currentIdx < segments.length - 1) {
-      // Go to next segment and play
-      goToSegment(currentIdx + 1, true);
-    } else {
-      // Already at last segment - do nothing or could replay last
-    }
-  });
-  
-  // Make overlay controls draggable
-  let isDragging = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let controlStartX = 0;
-  let controlStartY = 0;
-  
-  overlayNavControls.addEventListener('mousedown', (e) => {
-    // Don't start drag if clicking on a button
-    if (e.target.closest('button')) return;
-    
-    isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    
-    const rect = overlayNavControls.getBoundingClientRect();
-    const containerRect = overlayNavControls.parentElement.getBoundingClientRect();
-    controlStartX = rect.left - containerRect.left;
-    controlStartY = rect.top - containerRect.top;
-    
-    overlayNavControls.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
-  
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    
-    const deltaX = e.clientX - dragStartX;
-    const deltaY = e.clientY - dragStartY;
-    
-    const newLeft = controlStartX + deltaX;
-    const newTop = controlStartY + deltaY;
-    
-    // Keep within bounds
-    const containerRect = overlayNavControls.parentElement.getBoundingClientRect();
-    const controlRect = overlayNavControls.getBoundingClientRect();
-    
-    const maxLeft = containerRect.width - controlRect.width;
-    const maxTop = containerRect.height - controlRect.height;
-    
-    overlayNavControls.style.left = Math.max(0, Math.min(maxLeft, newLeft)) + 'px';
-    overlayNavControls.style.top = Math.max(0, Math.min(maxTop, newTop)) + 'px';
-    overlayNavControls.style.bottom = 'auto'; // Override bottom positioning
-  });
-  
-  document.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false;
-      overlayNavControls.style.cursor = 'move';
-    }
-  });
-  
-  console.log('Tutorial Player v1.8 initialized - Fixed iframe dimensions to match creator (1000px)');
+  console.log('Tutorial Player v2.3 initialized - Play/Pause toggle control');
 })();
 </script>
 </body>
