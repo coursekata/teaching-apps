@@ -3114,6 +3114,7 @@
         b: bValue,
         simulateN: nValue,
         secondDist: secondDistMode === 'on',
+        thirdDist: thirdDistMode === 'on',
         powerMode: powerMode,
         scale: +scaleRange.value,
         bins: +binsRange.value,
@@ -3124,12 +3125,14 @@
         histogram: histogramMode === 'on',
         shiftUnits: shiftUnits,
         shiftUnits2: shiftUnits2,
+        shiftUnits3: shiftUnits3,
         currentN: currentN,
         isLockedToBeta: isLockedToBeta,
         domainOffset: domainOffset,
         fixedDomain: fixedDomain,
         data: [...data],
         data2: [...data2],
+        data3: [...data3],
         blueMarks: blueMarks.map(m => ({...m})),
         vertLinesAttachment: vertLinesAttachment,
         vertLineDistFromB: {...vertLineDistFromB},
@@ -3169,6 +3172,14 @@
           secondDistBtn.classList.add('active');
         } else {
           secondDistBtn.classList.remove('active');
+        }
+      }
+      if(state.thirdDist !== undefined) {
+        thirdDistMode = state.thirdDist ? 'on' : 'off';
+        if(state.thirdDist) {
+          thirdDistBtn.classList.add('active');
+        } else {
+          thirdDistBtn.classList.remove('active');
         }
       }
       if(state.powerMode !== undefined) {
@@ -3227,12 +3238,14 @@
       // Internal state
       if(state.shiftUnits !== undefined) shiftUnits = state.shiftUnits;
       if(state.shiftUnits2 !== undefined) shiftUnits2 = state.shiftUnits2;
+      if(state.shiftUnits3 !== undefined) shiftUnits3 = state.shiftUnits3;
       if(state.currentN !== undefined) currentN = state.currentN;
       if(state.isLockedToBeta !== undefined) isLockedToBeta = state.isLockedToBeta;
       if(state.domainOffset !== undefined) domainOffset = state.domainOffset;
       if(state.fixedDomain !== undefined) fixedDomain = state.fixedDomain;
       if(state.data !== undefined) data = [...state.data];
       if(state.data2 !== undefined) data2 = [...state.data2];
+      if(state.data3 !== undefined) data3 = [...state.data3];
       if(state.blueMarks !== undefined) {
         blueMarks = state.blueMarks.map(m => ({...m}));
         if(blueMarks.length > 0) {
