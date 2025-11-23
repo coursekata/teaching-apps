@@ -52,7 +52,7 @@
   .tail-area-orange{fill:var(--orange);fill-opacity:0.25;stroke:none}
   .tail-line-orange-alt{stroke:#f97316;stroke-width:2}
   .tail-area-orange-alt{fill:#f97316;fill-opacity:0.25;stroke:none}
-  .power-area{fill:#f97316;fill-opacity:0.4;stroke:none}
+  .power-area{fill:#e67e22;fill-opacity:0.4;stroke:none}
   .type2-area{fill:#fbbf24;fill-opacity:0.3;stroke:none}
   .p-area{fill:#3b82f6;fill-opacity:0.25;stroke:none}
   .seg{display:inline-flex;border:1px solid #ddd;border-radius:10px;overflow:hidden}
@@ -338,10 +338,19 @@
   const urlSecondDist = urlParams.get('seconddist');
   const urlPowerMode = urlParams.get('powermode');
   const urlVertLines = urlParams.get('vertlines');
+  const urlPValue = urlParams.get('pvalue');
   const urlDf = urlParams.get('df');
   const urlN = urlParams.get('n');
   const urlScale = urlParams.get('scale');
   const urlBins = urlParams.get('bins');
+  
+  // Parse color parameters
+  const urlMainColor = urlParams.get('main_color');
+  const urlAlphaColor = urlParams.get('alpha_color');
+  const urlPColor = urlParams.get('p_color');
+  const urlSecondaryColor = urlParams.get('secondary_color');
+  const urlPowerColor = urlParams.get('power_color');
+  const urlType2Color = urlParams.get('type2_color');
   
   // Parse pregenerate parameter
   const urlPregenerate = urlParams.get('pregenerate');
@@ -363,6 +372,102 @@
   const hideThirdDist = urlParams.get('hide_thirddist') === 'true' || urlParams.get('hide_thirddist') === 'TRUE';
   const hidePowerSeg = urlParams.get('hide_powermode') === 'true';
   const hideBInput = urlParams.get('hide_b') === 'true';
+  const hideP = urlParams.get('hide_p') === 'true' || urlParams.get('hide_p') === 'TRUE';
+  
+  // Apply color overrides if specified
+  function applyColorOverrides() {
+    const customStyles = [];
+    
+    if(urlMainColor) {
+      customStyles.push(`.hist-bar { fill: ${getMainFill()} !important; stroke: ${getMainStroke()} !important; }`);
+      customStyles.push(`.curve { stroke: ${getMainStroke()} !important; }`);
+    }
+    
+    if(urlAlphaColor) {
+      customStyles.push(`.tail-area { fill: ${urlAlphaColor} !important; }`);
+      customStyles.push(`.hist-shade { fill: ${urlAlphaColor} !important; }`);
+    }
+    
+    if(urlPColor) {
+      customStyles.push(`.p-area { fill: ${urlPColor} !important; }`);
+      customStyles.push(`.hist-shade-p { fill: ${urlPColor} !important; }`);
+    }
+    
+    if(urlSecondaryColor) {
+      customStyles.push(`.curve-second { stroke: ${getSecondaryStroke()} !important; }`);
+      customStyles.push(`.curve-third { stroke: ${getSecondaryStroke()} !important; }`);
+    }
+    
+    if(urlPowerColor) {
+      customStyles.push(`.power-area { fill: ${urlPowerColor} !important; }`);
+    }
+    
+    if(urlType2Color) {
+      customStyles.push(`.type2-area { fill: ${urlType2Color} !important; }`);
+      // Alpha regions in secondary distribution should use Type II error color
+      customStyles.push(`.tail-area-orange { fill: ${getSecondaryAlpha()} !important; }`);
+      customStyles.push(`.tail-area-orange-alt { fill: ${getSecondaryAlpha()} !important; }`);
+      customStyles.push(`.hist-shade-2 { fill: ${getSecondaryAlpha()} !important; }`);
+      customStyles.push(`.hist-shade-3 { fill: ${getSecondaryAlpha()} !important; }`);
+    }
+    
+    if(customStyles.length > 0) {
+      const styleElement = document.createElement('style');
+      styleElement.textContent = customStyles.join('\n');
+      document.head.appendChild(styleElement);
+    }
+  }
+  
+  applyColorOverrides();
+  
+  // Color helper functions for dynamic styling
+  function darkenColor(hex, amount = 0.3) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse hex color
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);  
+    let b = parseInt(hex.substring(4, 6), 16);
+    
+    // Darken by reducing RGB values
+    r = Math.max(0, Math.floor(r * (1 - amount)));
+    g = Math.max(0, Math.floor(g * (1 - amount)));
+    b = Math.max(0, Math.floor(b * (1 - amount)));
+    
+    // Convert back to hex
+    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  }
+  
+  function getMainColor() { return urlMainColor || '#60a5fa'; }
+  function getMainFill() { 
+    const baseColor = getMainColor();
+    return baseColor.length === 9 ? baseColor : baseColor + '55';
+  }
+  function getMainStroke() { 
+    const baseColor = getMainColor();
+    // Remove opacity suffix if present, then darken
+    const cleanColor = baseColor.length === 9 ? baseColor.slice(0, 7) : baseColor;
+    return darkenColor(cleanColor, 0.4);
+  }
+  function getAlphaColor() { return urlAlphaColor || '#1e3a8a44'; }
+  function getPColor() { return urlPColor || '#3b82f6'; }
+  function getSecondaryColor() { return urlSecondaryColor || '#f97316'; }
+  function getSecondaryFill() { 
+    const baseColor = getSecondaryColor();
+    return baseColor.length === 9 ? baseColor.slice(0, -2) + '55' : baseColor + '55';
+  }
+  function getSecondaryAlpha() { 
+    const baseColor = getType2Color();  // Use Type II error color for alpha regions in secondary distribution
+    return baseColor.length === 9 ? baseColor.slice(0, -2) + '44' : baseColor + '44';
+  }
+  function getSecondaryStroke() { 
+    const baseColor = getSecondaryColor();
+    const cleanColor = baseColor.length === 9 ? baseColor.slice(0, 7) : baseColor;
+    return darkenColor(cleanColor, 0.4);
+  }
+  function getPowerColor() { return urlPowerColor || '#e67e22'; }
+  function getType2Color() { return urlType2Color || '#fbbf24'; }
   
   // Default labels (LaTeX strings)
   let labelParamLatex = '\\beta';           // Population parameter (top marker)
@@ -706,6 +811,13 @@
     }
   }
   
+  if(urlPValue !== null) {
+    if(urlPValue === 'on') {
+      pValueMode = 'on';
+      pValueBtn.classList.add('active');
+    }
+  }
+  
   // Apply hide parameters
   if(hideSimulate) {
     regenBtn.parentElement.style.display = 'none';
@@ -751,6 +863,9 @@
   if(hideBInput) {
     bInput.style.display = 'none';
     bBtn.style.display = 'none';
+  }
+  if(hideP) {
+    pValueBtn.style.display = 'none';
   }
   
   previousSE = getSE();
@@ -1010,11 +1125,15 @@
     if(histogramMode === 'on'){
       const bar=histG.selectAll('rect').data(bins,d => d.x0+'-'+d.x1);
       bar.enter().append('rect').attr('class','hist-bar')
+        .style('fill', getMainFill())
+        .style('stroke', getMainStroke())
         .attr('x',d => x(d.x0))
         .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
         .attr('y',d => y(d.length))
         .attr('height',d => y(0)-y(d.length));
       bar
+        .style('fill', getMainFill())
+        .style('stroke', getMainStroke())
         .attr('x',d => x(d.x0))
         .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
         .attr('y',d => y(d.length))
@@ -1024,8 +1143,8 @@
       if(secondDistMode === 'on'){
         const bar2=histG2.selectAll('rect').data(bins2,d => d.x0+'-'+d.x1);
         bar2.enter().append('rect').attr('class','hist-bar-2')
-          .style('fill','#f9731655')
-          .style('stroke','#f97316aa')
+          .style('fill', getSecondaryFill())
+          .style('stroke', getSecondaryStroke())
           .attr('x',d => x(d.x0))
           .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
           .attr('y',d => y(d.length))
@@ -1043,8 +1162,8 @@
       if(thirdDistMode === 'on'){
         const bar3=histG3.selectAll('rect').data(bins3,d => d.x0+'-'+d.x1);
         bar3.enter().append('rect').attr('class','hist-bar-3')
-          .style('fill','#f9731655')
-          .style('stroke','#f97316aa')
+          .style('fill', getSecondaryFill())
+          .style('stroke', getSecondaryStroke())
           .attr('x',d => x(d.x0))
           .attr('width',d => Math.max(0,x(d.x1)-x(d.x0)-1))
           .attr('y',d => y(d.length))
@@ -1200,7 +1319,7 @@
           .data(bins2, d => d.x0 + '-' + d.x1);
         selPower.exit().remove();
         const mergedPower = selPower.enter().append('rect').attr('class','power-shade')
-          .style('fill','#f97316')
+          .style('fill', getPowerColor())
           .style('fill-opacity', 0.4)
           .merge(selPower);
         mergedPower
@@ -1223,7 +1342,7 @@
           .data(bins2, d => d.x0 + '-' + d.x1);
         selType2.exit().remove();
         const mergedType2 = selType2.enter().append('rect').attr('class','type2-shade')
-          .style('fill','#fbbf24')
+          .style('fill', getType2Color())
           .style('fill-opacity', 0.3)
           .merge(selType2);
         mergedType2
@@ -1246,7 +1365,7 @@
         histShadeG2.selectAll('rect.type2-shade').remove();
         
         const merged2 = sel2.enter().append('rect').attr('class','hist-shade-2')
-          .style('fill','#f9731644')
+          .style('fill', getSecondaryAlpha())
           .merge(sel2);
         merged2
           .attr('x', d => x(d.x0))
@@ -1268,7 +1387,7 @@
     // Third distribution tail shading (always in tails mode, never in power mode)
     if(thirdDistMode === 'on'){
       const merged3 = sel3.enter().append('rect').attr('class','hist-shade-3')
-        .style('fill','#f9731644')
+        .style('fill', getSecondaryAlpha())
         .merge(sel3);
       merged3
         .attr('x', d => x(d.x0))
@@ -1288,16 +1407,6 @@
   }
 
   function drawOverlay(){
-    // FIRST THING: Nuclear cleanup of any p-value areas that might be lingering
-    overlayG.selectAll('path').each(function() {
-      const elem = d3.select(this);
-      if(elem.attr('class') && elem.attr('class').includes('p-area')) {
-        elem.remove();
-      }
-    });
-    overlayG.selectAll('.p-area').remove();
-    overlayG.selectAll('path.p-area').remove();
-    
     const showCurve = (curveMode !== 'off');
     const showCIOverCurve = (ciMode !== 'off') && (curveMode !== 'off');
     const showSecond = (secondDistMode === 'on') && (curveMode !== 'off');
@@ -1364,6 +1473,10 @@
       tailAreaL3.attr('d', null); tailAreaR3.attr('d', null);
       powerAreaL.attr('d', null); powerAreaR.attr('d', null);
       type2Area.attr('d', null);
+      
+      // Clear P-AREA before returning
+      overlayG.selectAll('.p-area').remove();
+      
       return;
     }
 
@@ -1399,11 +1512,11 @@
       if(showCurveAsFill){
         const areaGen = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
         curvePath.attr('d', areaGen(xs));
-        curvePath.style('fill', '#60a5fa55').style('stroke', '#1e4ed8').style('stroke-width', '2');
+        curvePath.style('fill', getMainFill()).style('stroke', getMainStroke()).style('stroke-width', '2');
       } else {
         const lineGen = d3.line().x(d => x(d)).y(d => y(expected(d)));
         curvePath.attr('d', lineGen(xs));
-        curvePath.style('fill', 'none').style('stroke', '#1e4ed8').style('stroke-width', '2');
+        curvePath.style('fill', 'none').style('stroke', getMainStroke()).style('stroke-width', '2');
       }
     }
 
@@ -1414,11 +1527,11 @@
       if(showCurveAsFill){
         const areaGen2 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected2(d)));
         curvePath2.attr('d', areaGen2(xs));
-        curvePath2.style('fill', '#f9731655').style('stroke', '#f97316').style('stroke-width', '2');
+        curvePath2.style('fill', getSecondaryFill()).style('stroke', getSecondaryStroke()).style('stroke-width', '2');
       } else {
         const lineGen2 = d3.line().x(d => x(d)).y(d => y(expected2(d)));
         curvePath2.attr('d', lineGen2(xs));
-        curvePath2.style('fill', 'none').style('stroke', '#f97316').style('stroke-width', '2');
+        curvePath2.style('fill', 'none').style('stroke', getSecondaryStroke()).style('stroke-width', '2');
       }
     }
 
@@ -1429,11 +1542,11 @@
       if(showCurveAsFill){
         const areaGen3 = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected3(d)));
         curvePath3.attr('d', areaGen3(xs));
-        curvePath3.style('fill', '#f9731655').style('stroke', '#f97316').style('stroke-width', '2');
+        curvePath3.style('fill', getSecondaryFill()).style('stroke', getSecondaryStroke()).style('stroke-width', '2');
       } else {
         const lineGen3 = d3.line().x(d => x(d)).y(d => y(expected3(d)));
         curvePath3.attr('d', lineGen3(xs));
-        curvePath3.style('fill', 'none').style('stroke', '#f97316').style('stroke-width', '2');
+        curvePath3.style('fill', 'none').style('stroke', getSecondaryStroke()).style('stroke-width', '2');
       }
     }
 
@@ -1511,15 +1624,8 @@
     }
     
     // P-value areas (show tail from b to end) - only for curve display
-    // NUCLEAR CLEANUP: Remove ALL possible p-value area elements
-    overlayG.selectAll('path').each(function() {
-      const elem = d3.select(this);
-      if(elem.attr('class') && elem.attr('class').includes('p-area')) {
-        elem.remove();
-      }
-    });
+    // Use remove/recreate pattern for reliability  
     overlayG.selectAll('.p-area').remove();
-    overlayG.selectAll('path.p-area').remove();
     
     const showPArea = (pValueMode === 'on') && (bValue !== null && !Number.isNaN(bValue)) && (curveMode !== 'off');
     
@@ -1531,29 +1637,17 @@
         // Shade right tail from b to infinity (in local coordinates)
         const xsR_p = [bLocal].concat(xs.filter(v => v > bLocal)).sort((a,b) => a-b);
         const areaP = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
-        const pPath = overlayG.append('path')
+        overlayG.append('path')
           .attr('class','p-area')
           .attr('d', xsR_p.length ? areaP(xsR_p) : null);
       } else {
         // Shade left tail from -infinity to b (in local coordinates)
         const xsL_p = xs.filter(v => v < bLocal).concat([bLocal]).sort((a,b) => a-b);
         const areaP = d3.area().x(d => x(d)).y0(plotH).y1(d => y(expected(d)));
-        const pPath = overlayG.append('path')
+        overlayG.append('path')
           .attr('class','p-area')
           .attr('d', xsL_p.length ? areaP(xsL_p) : null);
       }
-    }
-    
-    // FORCE REMOVAL when curve is off - this should be redundant but extra safety
-    if(curveMode === 'off') {
-      overlayG.selectAll('path').each(function() {
-        const elem = d3.select(this);
-        if(elem.attr('class') && elem.attr('class').includes('p-area')) {
-          elem.remove();
-        }
-      });
-      overlayG.selectAll('.p-area').remove();
-      overlayG.selectAll('path.p-area').remove();
     }
   }
 
@@ -2997,6 +3091,10 @@
     const oldCurveMode = curveMode;
     const newCurveMode = btn.getAttribute('data-curve');
     
+    console.log('=== CURVE BUTTON CLICKED ===');
+    console.log('oldCurveMode:', oldCurveMode);
+    console.log('newCurveMode:', newCurveMode);
+    
     // Check if beta is set before allowing curve to be shown
     if(newCurveMode !== 'off' && (betaValue === null || Number.isNaN(betaValue))){
       alert('You must set a value for the population parameter in order to show a curve.');
@@ -3007,17 +3105,8 @@
     btn.classList.add('active');
     curveMode = newCurveMode;
     
-    // EXPLICIT cleanup of p-value areas when curve mode changes
-    if(overlayG) {
-      overlayG.selectAll('path').each(function() {
-        const elem = d3.select(this);
-        if(elem.attr('class') && elem.attr('class').includes('p-area')) {
-          elem.remove();
-        }
-      });
-      overlayG.selectAll('.p-area').remove();
-      overlayG.selectAll('path.p-area').remove();
-    }
+    console.log('curveMode after update:', curveMode);
+    console.log('About to call draw()...');
     
     if(vertLinesMode === 'on' && vertLinesAttachment === 'b' && oldCurveMode !== curveMode){
       vertLinesAttachment = 'cutoffs';
@@ -3026,6 +3115,8 @@
     }
     emitTutorialEvent('changeCurve', {value: curveMode});
     draw();
+    
+    console.log('=== END CURVE BUTTON ===');
   });
 
   dfInput.addEventListener('change', function(){
@@ -3145,19 +3236,6 @@
       pValueMode = 'on';
       pValueBtn.classList.add('active');
     }
-    
-    // EXPLICIT cleanup of p-value areas when p-value mode changes
-    if(overlayG) {
-      overlayG.selectAll('path').each(function() {
-        const elem = d3.select(this);
-        if(elem.attr('class') && elem.attr('class').includes('p-area')) {
-          elem.remove();
-        }
-      });
-      overlayG.selectAll('.p-area').remove();
-      overlayG.selectAll('path.p-area').remove();
-    }
-    
     emitTutorialEvent('togglePValue', {value: pValueMode});
     draw();
   });
