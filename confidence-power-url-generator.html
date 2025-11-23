@@ -376,6 +376,9 @@
     
     <div style="margin: 15px 0;">
       <div style="font-weight: 600; margin-bottom: 8px; color: #333;">Main Distribution Colors</div>
+      <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+        💡 Tip: Color picker display (HEX vs RGB) is controlled by your browser. Values are stored as HEX regardless of display.
+      </div>
       <div class="control-group">
         <div class="control">
           <label>Main Distribution Color</label>
@@ -667,11 +670,11 @@ function createColorPreview() {
   const plotHeight = height - margin.top - margin.bottom;
   const baseline = height - margin.bottom;
   
-  // Scale functions - use much narrower domain to make distributions larger
-  const xScale = plotWidth / 3; // Show only 3 units instead of 8
-  const yScale = plotHeight * 0.8;
+  // Scale functions - make distributions larger and closer together
+  const xScale = plotWidth / 2.5; // Wider distributions (was 3)
+  const yScale = plotHeight * 0.9; // Taller distributions (was 0.8)
   
-  function x(val) { return margin.left + (val + 1.5) * xScale; } // Center around 0, show -1.5 to +1.5
+  function x(val) { return margin.left + (val + 1.25) * xScale; } // Closer together (was 1.5)
   function y(val) { return baseline - val * yScale; }
   
   // Normal distribution function
@@ -680,11 +683,11 @@ function createColorPreview() {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
   }
   
-  // Generate curve points
+  // Generate curve points with appropriate range for closer distributions
   function generateCurve(mean, std) {
     const points = [];
     for (let i = 0; i <= 200; i++) {
-      const xVal = -4 + (i / 200) * 8; // -4 to +4
+      const xVal = -3 + (i / 200) * 6; // -3 to +3 (tighter range for closer distributions)
       const yVal = normalY(xVal, mean, std);
       points.push([x(xVal), y(yVal)]);
     }
@@ -719,44 +722,44 @@ function createColorPreview() {
     return 'M' + points.map(p => p[0] + ',' + p[1]).join('L');
   }
   
-  // Main distribution (left side, completely separate)
-  const mainMean = -0.8;
-  const mainStd = 0.2; // Tighter for clearer color regions
+  // Main distribution (left side, larger and closer)
+  const mainMean = -0.6; // Moved closer to center (was -0.8)
+  const mainStd = 0.25; // Slightly wider (was 0.2)
   const mainPoints = generateCurve(mainMean, mainStd);
   
-  // Secondary distribution (right side, completely separate)
-  const secondaryMean = 0.8;
-  const secondaryStd = 0.2; // Tighter for clearer color regions
+  // Secondary distribution (right side, larger and closer)
+  const secondaryMean = 0.6; // Moved closer to center (was 0.8)
+  const secondaryStd = 0.25; // Slightly wider (was 0.2)
   const secondaryPoints = generateCurve(secondaryMean, secondaryStd);
   
   // Update curves
   document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
   document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
   
-  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE: Fill all areas with no gaps
+  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE with adjusted bounds
   // Alpha shading (left tail)
-  const alphaLeft = generateArea(mainMean, mainStd, -1.5, -1.15);   // Left tail to boundary
+  const alphaLeft = generateArea(mainMean, mainStd, -1.25, -0.95);   // Adjusted for new position
   document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft));
   
   // Main histogram color (large center area)
-  const mainArea = generateArea(mainMean, mainStd, -1.15, -0.6);
+  const mainArea = generateArea(mainMean, mainStd, -0.95, -0.4);
   document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
   
   // P-value shading (larger region that extends to right edge of main dist)
-  const pArea = generateArea(mainMean, mainStd, -0.6, -0.2);  // Extended to cover right tail of main
+  const pArea = generateArea(mainMean, mainStd, -0.4, 0.05);  // Extended to cover right tail of main
   document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
   
-  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE: Fill all areas with no gaps
+  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE with adjusted bounds
   // Type II shading (extend to cover left tail of secondary)
-  const type2Area = generateArea(secondaryMean, secondaryStd, 0.2, 0.6);  // Extended to cover left tail
+  const type2Area = generateArea(secondaryMean, secondaryStd, -0.05, 0.35);  // Adjusted for new position
   document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
   
   // Power shading (middle section) 
-  const powerArea = generateArea(secondaryMean, secondaryStd, 0.6, 0.9);
+  const powerArea = generateArea(secondaryMean, secondaryStd, 0.35, 0.75);
   document.getElementById('powerShading').setAttribute('d', pointsToPath(powerArea));
   
   // Secondary histogram color (extend to right boundary)
-  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.9, 1.5); // Extend to boundary
+  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.75, 1.25); // Extend to boundary
   document.getElementById('secondaryShading').setAttribute('d', pointsToPath(secondaryArea));
   
   // RESPONSIVE LEGEND POSITIONING
@@ -765,25 +768,31 @@ function createColorPreview() {
 
 function updateLegendLayout(svgWidth) {
   const margin = { top: 30, right: 20, bottom: 50, left: 20 };
+  const plotWidth = svgWidth - margin.left - margin.right;
   
-  // Position titles
-  document.getElementById('leftTitle').setAttribute('x', margin.left + 50);
-  document.getElementById('rightTitle').setAttribute('x', Math.max(svgWidth - 200, margin.left + 250));
+  // Position titles centered over each distribution
+  document.getElementById('leftTitle').setAttribute('x', margin.left + plotWidth * 0.25);
+  document.getElementById('rightTitle').setAttribute('x', margin.left + plotWidth * 0.75);
   
-  // Left distribution legend - compact spacing on left side only
-  document.getElementById('alphaLabel').setAttribute('x', margin.left + 5);
-  document.getElementById('mainLabel').setAttribute('x', margin.left + 60);
-  document.getElementById('pLabel').setAttribute('x', margin.left + 115);
+  // Left distribution legend - centered under left distribution
+  const leftCenter = margin.left + plotWidth * 0.25;
+  const leftSpacing = 55; // Fixed spacing between legend items
   
-  // Right distribution legend - compact spacing on right side with safe positioning
-  const rightBaseX = Math.max(svgWidth - 280, margin.left + 200); // Ensure minimum distance from left
-  document.getElementById('type2Label').setAttribute('x', rightBaseX);
-  document.getElementById('powerLabel').setAttribute('x', rightBaseX + 60);
-  document.getElementById('secondaryLabel').setAttribute('x', rightBaseX + 120);
+  document.getElementById('alphaLabel').setAttribute('x', leftCenter - leftSpacing);
+  document.getElementById('mainLabel').setAttribute('x', leftCenter);
+  document.getElementById('pLabel').setAttribute('x', leftCenter + leftSpacing);
+  
+  // Right distribution legend - centered under right distribution  
+  const rightCenter = margin.left + plotWidth * 0.75;
+  const rightSpacing = 55; // Fixed spacing between legend items
+  
+  document.getElementById('type2Label').setAttribute('x', rightCenter - rightSpacing);
+  document.getElementById('powerLabel').setAttribute('x', rightCenter);
+  document.getElementById('secondaryLabel').setAttribute('x', rightCenter + rightSpacing);
 }
 
 function updateColorPreview() {
-  // Get current color values
+  // Get current color values from the input controls
   const mainColor = document.getElementById('main_color').value;
   const alphaColor = document.getElementById('alpha_color').value; 
   const pColor = document.getElementById('p_color').value;
@@ -795,7 +804,7 @@ function updateColorPreview() {
   const mainStroke = darkenColor(mainColor, 0.4);
   const secondaryStroke = darkenColor(secondaryColor, 0.4);
   
-  // Update shading areas
+  // Update shading areas with current colors
   document.getElementById('mainShading').setAttribute('fill', mainColor);
   document.getElementById('mainShading').setAttribute('fill-opacity', '0.3');
   
@@ -819,14 +828,20 @@ function updateColorPreview() {
   document.getElementById('mainCurve').setAttribute('stroke', mainStroke);
   document.getElementById('secondaryCurve').setAttribute('stroke', secondaryStroke);
   
-  // Update legend colors
-  const labels = document.getElementById('previewLabels').querySelectorAll('tspan');
-  if (labels[0]) labels[0].setAttribute('fill', alphaColor);    // Alpha
-  if (labels[1]) labels[1].setAttribute('fill', mainColor);     // Main
-  if (labels[2]) labels[2].setAttribute('fill', pColor);       // P-value
-  if (labels[3]) labels[3].setAttribute('fill', type2Color);   // Type II
-  if (labels[4]) labels[4].setAttribute('fill', powerColor);   // Power
-  if (labels[5]) labels[5].setAttribute('fill', secondaryColor); // Secondary
+  // Update legend colors to match exactly - get the tspan elements correctly
+  const alphaSpan = document.querySelector('#alphaLabel tspan');
+  const mainSpan = document.querySelector('#mainLabel tspan');
+  const pSpan = document.querySelector('#pLabel tspan');
+  const type2Span = document.querySelector('#type2Label tspan');
+  const powerSpan = document.querySelector('#powerLabel tspan');
+  const secondarySpan = document.querySelector('#secondaryLabel tspan');
+  
+  if (alphaSpan) alphaSpan.setAttribute('fill', alphaColor);
+  if (mainSpan) mainSpan.setAttribute('fill', mainColor);
+  if (pSpan) pSpan.setAttribute('fill', pColor);
+  if (type2Span) type2Span.setAttribute('fill', type2Color);
+  if (powerSpan) powerSpan.setAttribute('fill', powerColor);
+  if (secondarySpan) secondarySpan.setAttribute('fill', secondaryColor);
 }
 
 function restoreDefaultColors() {
@@ -862,19 +877,25 @@ document.getElementById('beta').addEventListener('change', updatePregenerateStat
 // Initialize pregenerate state
 updatePregenerateState();
 
-// Initialize color preview
+// Initialize color preview with a slight delay to ensure DOM is ready
 setTimeout(() => {
   createColorPreview();
-  updateColorPreview();
+  updateColorPreview(); // Make sure colors are synced immediately
+  generateURL(); // Generate initial URL
 }, 100);
 
 // Handle window resize for responsive preview
 window.addEventListener('resize', () => {
   setTimeout(() => {
     createColorPreview();
-    updateColorPreview();
+    updateColorPreview(); // Re-sync colors after resize
   }, 100);
 });
+
+// Trigger a final color update to ensure everything is in sync
+setTimeout(() => {
+  updateColorPreview();
+}, 200);
 
 // Generate initial URL
 generateURL();
