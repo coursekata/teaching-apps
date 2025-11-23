@@ -366,28 +366,28 @@
         
         <!-- Responsive Legend -->
         <g id="previewLabels" font-family="system-ui" font-size="11" fill="#555">
-          <text id="leftTitle" y="25" font-weight="600">Main Distribution</text>
-          <text id="rightTitle" y="25" font-weight="600">Secondary Distribution</text>
+          <text id="leftTitle" y="25" font-weight="600" text-anchor="middle">Main Distribution</text>
+          <text id="rightTitle" y="25" font-weight="600" text-anchor="middle">Secondary Distribution</text>
           
           <!-- Main distribution legend (left) - Alpha, Main, P -->
-          <text id="alphaLabel" y="180">
+          <text id="alphaLabel" y="180" text-anchor="middle">
             <tspan fill="#1e3a8a">■</tspan> Alpha
           </text>
-          <text id="mainLabel" y="180">
+          <text id="mainLabel" y="180" text-anchor="middle">
             <tspan fill="#60a5fa">■</tspan> Main
           </text>
-          <text id="pLabel" y="180">
+          <text id="pLabel" y="180" text-anchor="middle">
             <tspan fill="#3b82f6">■</tspan> P-value
           </text>
           
           <!-- Secondary distribution legend (right) - Type II, Power, Secondary -->
-          <text id="type2Label" y="180">
+          <text id="type2Label" y="180" text-anchor="middle">
             <tspan fill="#fbbf24">■</tspan> Type II
           </text>
-          <text id="powerLabel" y="180">
+          <text id="powerLabel" y="180" text-anchor="middle">
             <tspan fill="#e67e22">■</tspan> Power
           </text>
-          <text id="secondaryLabel" y="180">
+          <text id="secondaryLabel" y="180" text-anchor="middle">
             <tspan fill="#f97316">■</tspan> Secondary
           </text>
         </g>
@@ -718,11 +718,11 @@ function createColorPreview() {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
   }
   
-  // Generate curve points with appropriate range for closer distributions
+  // Generate curve points with extended range to support tail shading
   function generateCurve(mean, std) {
     const points = [];
     for (let i = 0; i <= 200; i++) {
-      const xVal = -3 + (i / 200) * 6; // -3 to +3 (tighter range for closer distributions)
+      const xVal = -4 + (i / 200) * 8; // -4 to +4 (extended range)
       const yVal = normalY(xVal, mean, std);
       points.push([x(xVal), y(yVal)]);
     }
@@ -771,30 +771,30 @@ function createColorPreview() {
   document.getElementById('mainCurve').setAttribute('d', lineToPath(mainPoints));
   document.getElementById('secondaryCurve').setAttribute('d', lineToPath(secondaryPoints));
   
-  // MAIN DISTRIBUTION (Left) - COMPLETE COVERAGE, no overlap
-  // Alpha shading (left tail)
-  const alphaLeft = generateArea(mainMean, mainStd, -1.25, -1.05);   // Left tail
+  // MAIN DISTRIBUTION (Left) - COMPLETE TAIL COVERAGE ON BOTH SIDES
+  // Alpha shading (left tail - extends way beyond boundary to ensure coverage)
+  const alphaLeft = generateArea(mainMean, mainStd, -2.0, -0.95);   // Extended well beyond left boundary
   document.getElementById('alphaShading').setAttribute('d', pointsToPath(alphaLeft));
   
-  // Main histogram color (large center area)
-  const mainArea = generateArea(mainMean, mainStd, -1.05, -0.5);
+  // Main histogram color (center area)
+  const mainArea = generateArea(mainMean, mainStd, -0.95, -0.55);
   document.getElementById('mainShading').setAttribute('d', pointsToPath(mainArea));
   
-  // P-value shading (right portion, stops before gap)
-  const pArea = generateArea(mainMean, mainStd, -0.5, -0.2);  // Stops before overlap
+  // P-value shading (right portion - NOW EXTENDS TO FILL RIGHT TAIL COMPLETELY)
+  const pArea = generateArea(mainMean, mainStd, -0.55, 0.2);  // Extended to fill right tail completely
   document.getElementById('pShading').setAttribute('d', pointsToPath(pArea));
   
-  // SECONDARY DISTRIBUTION (Right) - COMPLETE COVERAGE, no overlap
-  // Type II shading (left portion, starts after gap)
-  const type2Area = generateArea(secondaryMean, secondaryStd, 0.2, 0.45);  // Starts after gap
+  // SECONDARY DISTRIBUTION (Right) - COMPLETE TAIL COVERAGE ON BOTH SIDES  
+  // Type II shading (left portion - NOW EXTENDS TO FILL LEFT TAIL COMPLETELY)
+  const type2Area = generateArea(secondaryMean, secondaryStd, -0.2, 0.55);  // Extended to fill left tail completely
   document.getElementById('type2Shading').setAttribute('d', pointsToPath(type2Area));
   
-  // Power shading (middle section) 
-  const powerArea = generateArea(secondaryMean, secondaryStd, 0.45, 0.85);
+  // Power shading (center section) 
+  const powerArea = generateArea(secondaryMean, secondaryStd, 0.55, 0.95);
   document.getElementById('powerShading').setAttribute('d', pointsToPath(powerArea));
   
-  // Secondary histogram color (right tail)
-  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.85, 1.25); // Right tail
+  // Secondary histogram color (right tail - extends way beyond boundary to ensure coverage)
+  const secondaryArea = generateArea(secondaryMean, secondaryStd, 0.95, 2.0); // Extended well beyond right boundary
   document.getElementById('secondaryShading').setAttribute('d', pointsToPath(secondaryArea));
   
   // RESPONSIVE LEGEND POSITIONING
@@ -806,29 +806,27 @@ function updateLegendLayout(svgWidth) {
   const plotWidth = svgWidth - margin.left - margin.right;
   const xScale = plotWidth / 2.5; // Same scale as distributions
   
-  // Calculate actual SVG positions of distribution centers
+  // Calculate actual SVG positions of distribution centers using same transform as distributions
   function x(val) { return margin.left + (val + 1.25) * xScale; }
   
-  const leftDistCenter = x(-0.7);   // Position of main distribution center
-  const rightDistCenter = x(0.7);   // Position of secondary distribution center
+  const leftDistCenter = x(-0.7);   // Actual position of main distribution center
+  const rightDistCenter = x(0.7);   // Actual position of secondary distribution center
   
-  // Position titles centered over actual distribution peaks
+  // Position titles at distribution centers (text-anchor="middle" handles centering)
   document.getElementById('leftTitle').setAttribute('x', leftDistCenter);
   document.getElementById('rightTitle').setAttribute('x', rightDistCenter);
   
-  // Left distribution legend - centered under left distribution
-  const leftSpacing = 55; // Fixed spacing between legend items
+  // Left distribution legend - evenly spaced around center
+  const spacing = 70; // Spacing for legend items
   
-  document.getElementById('alphaLabel').setAttribute('x', leftDistCenter - leftSpacing);
+  document.getElementById('alphaLabel').setAttribute('x', leftDistCenter - spacing);
   document.getElementById('mainLabel').setAttribute('x', leftDistCenter);
-  document.getElementById('pLabel').setAttribute('x', leftDistCenter + leftSpacing);
+  document.getElementById('pLabel').setAttribute('x', leftDistCenter + spacing);
   
-  // Right distribution legend - centered under right distribution  
-  const rightSpacing = 55; // Fixed spacing between legend items
-  
-  document.getElementById('type2Label').setAttribute('x', rightDistCenter - rightSpacing);
+  // Right distribution legend - evenly spaced around center
+  document.getElementById('type2Label').setAttribute('x', rightDistCenter - spacing);
   document.getElementById('powerLabel').setAttribute('x', rightDistCenter);
-  document.getElementById('secondaryLabel').setAttribute('x', rightDistCenter + rightSpacing);
+  document.getElementById('secondaryLabel').setAttribute('x', rightDistCenter + spacing);
 }
 
 // Color sync functions for hex inputs
