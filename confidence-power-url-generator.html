@@ -542,24 +542,26 @@ function generateURL() {
   if(document.getElementById('vertlines').value !== 'off') params.append('vertlines', document.getElementById('vertlines').value);
   if(document.getElementById('p').value !== 'off') params.append('p', document.getElementById('p').value);
   
-  // Custom Labels - automatically wrap in dollar signs for LaTeX if not already present
-  if(document.getElementById('label_param').value.trim()) {
-    let labelParam = document.getElementById('label_param').value.trim();
-    if(!labelParam.startsWith('$')) labelParam = '$' + labelParam;
-    if(!labelParam.endsWith('$')) labelParam = labelParam + '$';
-    params.append('label_param', labelParam);
-  }
-  if(document.getElementById('label_stat').value.trim()) {
-    let labelStat = document.getElementById('label_stat').value.trim();
-    if(!labelStat.startsWith('$')) labelStat = '$' + labelStat;
-    if(!labelStat.endsWith('$')) labelStat = labelStat + '$';
-    params.append('label_stat', labelStat);
-  }
-  if(document.getElementById('label_mean').value.trim()) {
-    let labelMean = document.getElementById('label_mean').value.trim();
-    if(!labelMean.startsWith('$')) labelMean = '$' + labelMean;
-    if(!labelMean.endsWith('$')) labelMean = labelMean + '$';
-    params.append('label_mean', labelMean);
+  // Custom Labels - combine into single comma-separated parameter
+  const labelParam = document.getElementById('label_param').value.trim();
+  const labelStat = document.getElementById('label_stat').value.trim();
+  const labelMean = document.getElementById('label_mean').value.trim();
+  
+  if(labelParam || labelStat || labelMean) {
+    const processLabel = (label, defaultVal) => {
+      if(!label) return '$' + defaultVal + '$';
+      if(!label.startsWith('$')) label = '$' + label;
+      if(!label.endsWith('$')) label = label + '$';
+      return label;
+    };
+    
+    const labels = [
+      processLabel(labelParam, '\\beta'),
+      processLabel(labelStat, 'b'),
+      processLabel(labelMean, '\\bar{b}')
+    ];
+    
+    params.append('labels', labels.join(','));
   }
   
   // Custom Colors (only if different from defaults)
