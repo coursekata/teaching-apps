@@ -542,10 +542,25 @@ function generateURL() {
   if(document.getElementById('vertlines').value !== 'off') params.append('vertlines', document.getElementById('vertlines').value);
   if(document.getElementById('p').value !== 'off') params.append('p', document.getElementById('p').value);
   
-  // Custom Labels
-  if(document.getElementById('label_param').value.trim()) params.append('label_param', document.getElementById('label_param').value.trim());
-  if(document.getElementById('label_stat').value.trim()) params.append('label_stat', document.getElementById('label_stat').value.trim());
-  if(document.getElementById('label_mean').value.trim()) params.append('label_mean', document.getElementById('label_mean').value.trim());
+  // Custom Labels - automatically wrap in dollar signs for LaTeX if not already present
+  if(document.getElementById('label_param').value.trim()) {
+    let labelParam = document.getElementById('label_param').value.trim();
+    if(!labelParam.startsWith('$')) labelParam = '$' + labelParam;
+    if(!labelParam.endsWith('$')) labelParam = labelParam + '$';
+    params.append('label_param', labelParam);
+  }
+  if(document.getElementById('label_stat').value.trim()) {
+    let labelStat = document.getElementById('label_stat').value.trim();
+    if(!labelStat.startsWith('$')) labelStat = '$' + labelStat;
+    if(!labelStat.endsWith('$')) labelStat = labelStat + '$';
+    params.append('label_stat', labelStat);
+  }
+  if(document.getElementById('label_mean').value.trim()) {
+    let labelMean = document.getElementById('label_mean').value.trim();
+    if(!labelMean.startsWith('$')) labelMean = '$' + labelMean;
+    if(!labelMean.endsWith('$')) labelMean = labelMean + '$';
+    params.append('label_mean', labelMean);
+  }
   
   // Custom Colors (only if different from defaults)
   const defaultColors = {
