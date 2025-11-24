@@ -3232,6 +3232,16 @@
         data = gaussian(1000, beta, se);
         currentN = 1000;
         isLockedToBeta = true;
+        
+        // Also generate for second distribution if it's on
+        if(secondDistMode === 'on') {
+          data2 = [...data];
+        }
+        
+        // Also generate for third distribution if it's on
+        if(thirdDistMode === 'on') {
+          data3 = [...data];
+        }
       }
     }
     emitTutorialEvent('toggleHistogram', {value: histogramMode});
