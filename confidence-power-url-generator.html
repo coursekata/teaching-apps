@@ -605,21 +605,56 @@ function copyURL() {
   const url = urlText.includes('⚠️ Warning:') ? 
     urlText.split('\n\n')[1] : urlText;
   
-  navigator.clipboard.writeText(url).then(function() {
-    // Visual feedback
-    const button = event.target;
-    const originalText = button.textContent;
-    button.textContent = '✓ Copied!';
-    button.style.background = '#10b981';
-    
-    setTimeout(() => {
-      button.textContent = originalText;
-      button.style.background = '#64748b';
-    }, 2000);
-  }).catch(function(err) {
-    console.error('Failed to copy:', err);
+  // Try modern clipboard API first
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(function() {
+      showCopySuccess();
+    }).catch(function(err) {
+      console.error('Clipboard API failed:', err);
+      fallbackCopy(url);
+    });
+  } else {
+    // Fallback for file:// URLs and older browsers
+    fallbackCopy(url);
+  }
+}
+
+function fallbackCopy(text) {
+  // Create temporary textarea
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      showCopySuccess();
+    } else {
+      alert('Failed to copy URL. Please copy manually.');
+    }
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
     alert('Failed to copy URL. Please copy manually.');
-  });
+  }
+  
+  document.body.removeChild(textarea);
+}
+
+function showCopySuccess() {
+  const button = document.querySelector('button[onclick="copyURL()"]');
+  if (!button) return;
+  
+  const originalText = button.textContent;
+  button.textContent = '✓ Copied!';
+  button.style.background = '#10b981';
+  
+  setTimeout(() => {
+    button.textContent = originalText;
+    button.style.background = '#64748b';
+  }, 2000);
 }
 
 function openPreview() {
