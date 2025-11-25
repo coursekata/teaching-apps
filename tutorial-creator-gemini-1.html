@@ -3,357 +3,843 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Interactive Tutorial Creator - Refactored</title>
+<title>Interactive Tutorial Creator - v13.48 (Refactored)</title>
 <script>
   window.MathJax = {
-    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
-    startup: { ready: () => MathJax.startup.defaultReady() }
+    tex: {
+      inlineMath: [['$', '$']],
+      displayMath: [['$$', '$$']]
+    },
+    startup: {
+      ready: () => {
+        MathJax.startup.defaultReady();
+      }
+    }
   };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
-
 <style>
-  /* --- CORE STYLES (Preserved from original) --- */
-  :root{ --accent:#2563eb; --record:#ef4444; --success:#10b981; --warning:#f59e0b; --teal:#06b6d4; }
-  body{ margin:0; font:14px/1.4 system-ui,-apple-system,sans-serif; color:#111; background:#f5f5f5; }
+  :root{
+    --accent:#2563eb;
+    --record:#ef4444;
+    --success:#10b981;
+    --warning:#f59e0b;
+    --teal:#06b6d4;
+  }
+  body{
+    margin:0;
+    font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:#111;
+    background:#f5f5f5;
+  }
   
-  /* Header & Controls */
-  .tutorial-header{ position: sticky; top: 0; background:#fff; border-bottom:2px solid #ddd; padding:12px 20px; box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index: 100; display: flex; justify-content: space-between; align-items: center; }
-  .version-number{ color: #666; font-size: 12px; font-weight: 500; }
-  .tutorial-controls{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .tutorial-header{
+    position: sticky;
+    top: 0;
+    background:#fff;
+    border-bottom:2px solid #ddd;
+    padding:12px 20px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.05);
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
   
-  /* Buttons */
-  button{ padding:8px 14px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:13px; }
-  button:hover:not(:disabled):not(.colored){ background:#f9f9f9; }
-  button:disabled{ opacity:0.5; cursor:not-allowed; }
-  button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
-  button.record{ background:var(--record); color:#fff; border-color:var(--record); }
-  button.success{ background:var(--success); color:#fff; border-color:var(--success); }
-  button.warning{ background:var(--warning); color:#fff; border-color:var(--warning); }
-  button.teal{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .version-number{
+    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+  }
   
-  /* Animations */
-  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:0.6} }
-  .recording-active, .button-pulse { animation:pulse 1.5s infinite; }
+  .tutorial-controls{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
   
-  /* Indicators */
-  .recording-indicator{ background:var(--record); color:#fff; padding:6px 12px; border-radius:20px; font-weight:600; font-size:13px; animation:pulse 1.5s infinite; }
-  .paused-indicator{ background:var(--warning); color:#fff; padding:6px 12px; border-radius:20px; font-weight:600; font-size:13px; }
+  button{
+    padding:8px 14px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    background:#fff;
+    cursor:pointer;
+    font-size:13px;
+  }
   
-  /* Layout */
-  .app-container{ position:relative; width:1000px; height:800px; overflow:hidden; margin:0 auto 40px auto; border:1px solid #ddd; border-radius:8px; background: white; }
-  iframe{ width:1000px; height:100%; border:none; }
-  iframe.playback-mode{ pointer-events:none; }
+  button:hover:not(:disabled):not(.primary):not(.record):not(.success):not(.warning):not(.teal){
+    background:#f9f9f9;
+  }
   
-  /* Timeline */
-  .timeline-container{ background:#fff; border-top:2px solid #ddd; border-bottom:2px solid #ddd; padding:4px 20px 6px 20px; display:none; position:relative; margin-bottom:8px; user-select: none; }
-  .timeline-container.visible{ display:block; }
-  .timeline-ruler{ height:14px; position:relative; margin-left:60px; overflow:hidden; }
-  .timeline-tick{ position:absolute; top:0; font-size:8px; color:#999; border-left: 1px solid #eee; height: 100%; padding-left: 2px; }
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
   
-  .timeline-track{ height:26px; background:#fafafa; border:1px solid #ddd; border-radius:4px; position:relative; margin-bottom:2px; overflow:hidden; padding-left:60px; }
-  .timeline-track-label{ position:absolute; left:4px; top:50%; transform:translateY(-50%); font-size:9px; font-weight:600; color:#666; width:55px; text-align:right; padding-right:5px; pointer-events: none; }
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
   
-  .timeline-event{ position:absolute; top:2px; bottom:2px; width:8px; background:#6366f1; border-radius:2px; cursor:move; z-index:1; box-shadow:0 1px 3px rgba(99,102,241,0.3); }
-  .timeline-event.drag-event{ width:auto; background:#8b5cf6; }
-  .timeline-event:hover{ background:#4f46e5; z-index: 2; }
+  button.record{
+    background:var(--record);
+    color:#fff;
+    border-color:var(--record);
+  }
   
-  .timeline-annotation{ position:absolute; top:2px; bottom:2px; background:linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius:3px; color:#fff; font-size:9px; padding:0 6px; display:flex; align-items:center; cursor:move; white-space:nowrap; overflow:hidden; z-index:2; border:1px solid rgba(255,255,255,0.2); }
-  .timeline-annotation .resize-edge{ position:absolute; top:0; bottom:0; width:5px; cursor:ew-resize; background:rgba(255,255,255,0.2); }
-  .timeline-annotation .resize-edge.left{ left:0; } .timeline-annotation .resize-edge.right{ right:0; }
+  button.success{
+    background:var(--success);
+    color:#fff;
+    border-color:var(--success);
+  }
   
-  .timeline-pause{ position:absolute; top:50%; width:12px; height:12px; background:#f59e0b; transform:translateY(-50%) rotate(45deg); cursor:move; z-index:10; border:1px solid rgba(255,255,255,0.3); }
+  button.warning{
+    background:var(--warning);
+    color:#fff;
+    border-color:var(--warning);
+  }
   
-  .timeline-playhead{ position:absolute; top:14px; height:56px; width:2px; background:#ef4444; pointer-events:none; z-index:9999; }
-  .timeline-playhead::before{ content:''; position:absolute; top:-8px; left:50%; transform:translateX(-50%); width:12px; height:12px; background:#ef4444; border-radius:50%; border:2px solid #fff; cursor:grab; pointer-events:auto; }
+  button.teal{
+    background:var(--teal);
+    color:#fff;
+    border-color:var(--teal);
+  }
   
-  /* Modals */
-  .modal-overlay{ position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:2000; }
-  .modal-overlay.visible{ display:flex; }
-  .modal{ background:#fff; border-radius:12px; padding:24px; max-width:700px; width:90%; max-height:80vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.2); }
-  .modal h2{ margin:0 0 16px; }
-  .info-box{ background:#e0f2fe; border:1px solid #0284c7; border-radius:8px; padding:12px; margin:12px 0; font-size:13px; color:#0c4a6e; }
-  .form-group{ margin-bottom:16px; }
-  .form-group label{ display:block; margin-bottom:6px; font-weight:600; color:#374151; }
-  textarea, input[type=text], input[type=number]{ width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-family:inherit; box-sizing: border-box; }
-  .modal-buttons{ display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
-
-  /* Utility */
-  .control-group{ display:flex; gap:8px; align-items:center; }
-  input.url-input { width: 300px; }
+  button.record.recording{
+    animation:pulse 1.5s infinite;
+  }
+  
+  button.primary.playing{
+    animation:pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse{
+    0%,100%{opacity:1}
+    50%{opacity:0.6}
+  }
+  
+  .recording-active{
+    animation:pulse 1.5s infinite;
+  }
+  
+  .recording-indicator{
+    background:var(--record);
+    color:#fff;
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+    font-size:13px;
+    animation:pulse 1.5s infinite;
+  }
+  
+  .paused-indicator{
+    background:var(--warning);
+    color:#fff;
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+    font-size:13px;
+  }
+  
+  .app-container{
+    position:relative;
+    width:1000px;
+    height:800px;
+    overflow:auto;
+    margin:0 auto;
+    border:1px solid #ddd;
+    border-radius:8px;
+    margin-bottom:40px;
+  }
+  
+  iframe{
+    width:1000px;
+    height:100%;
+    border:none;
+  }
+  
+  iframe.playback-mode{
+    pointer-events:none;
+  }
+  
+  .annotation-box{
+    position:absolute;
+    width:250px;
+    max-width:500px;
+    background:rgba(255,255,255,0.98);
+    border:3px solid var(--accent);
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.15);
+    z-index:100;
+    display:none;
+    overflow-y:auto;
+    overflow-x:hidden;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    font-size:15px;
+    line-height:1.6;
+  }
+  
+  .annotation-box.custom-position{
+    max-width:none;
+  }
+  
+  .annotation-box.draggable{
+    cursor:move;
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);
+    z-index:10001;
+  }
+  
+  .annotation-box.visible{
+    display:block;
+    animation:slideIn 0.3s ease-out;
+  }
+  
+  .annotation-box.draggable .resize-handle{
+    position:absolute;
+    bottom:0;
+    right:0;
+    width:16px;
+    height:16px;
+    background:rgba(37, 99, 235, 0.3);
+    cursor:nwse-resize;
+    border-top-left-radius:4px;
+    border-bottom-right-radius:12px;
+  }
+  
+  .annotation-box.draggable .resize-handle::after{
+    content:'⋰';
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    color:rgba(37, 99, 235, 0.7);
+    font-size:12px;
+    line-height:1;
+  }
+  
+  @keyframes slideIn{
+    from{opacity:0;}
+    to{opacity:1;}
+  }
+  
+  .annotation-box h3{
+    margin:0 0 12px;
+    color:var(--accent);
+    font-size:18px;
+    line-height:1.3;
+  }
+  
+  .annotation-box p{
+    margin:0;
+    line-height:inherit;
+    font-size:inherit;
+  }
+  
+  /* Timeline Editor */
+  .timeline-container{
+    background:#fff;
+    border-top:2px solid #ddd;
+    border-bottom:2px solid #ddd;
+    padding:4px 20px 6px 20px;
+    display:none;
+    position:relative;
+    margin-bottom:8px;
+  }
+  
+  .timeline-container.visible{
+    display:block;
+  }
+  
+  .timeline-ruler{
+    height:14px;
+    position:relative;
+    margin-bottom:0px;
+    margin-left:60px;
+    overflow:hidden;
+  }
+  
+  .timeline-tick{
+    position:absolute;
+    top:0;
+    font-size:8px;
+    color:#999;
+  }
+  
+  .timeline-track{
+    height:26px;
+    background:#fafafa;
+    border:1px solid #ddd;
+    border-radius:4px;
+    position:relative;
+    margin-bottom:2px;
+    overflow:hidden;
+    padding-left:60px;
+  }
+  
+  .timeline-track-label{
+    position:absolute;
+    left:4px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:9px;
+    font-weight:600;
+    color:#666;
+    pointer-events:none;
+    z-index:0;
+    width:55px;
+    text-align:right;
+    padding-right:5px;
+  }
+  
+  .timeline-event{
+    position:absolute;
+    top:2px;
+    bottom:2px;
+    width:8px;
+    background:#6366f1;
+    border-radius:2px;
+    cursor:move;
+    z-index:1;
+    box-shadow:0 1px 3px rgba(99,102,241,0.3);
+  }
+  
+  .timeline-event.drag-event{
+    width:auto;
+    background:#8b5cf6;
+    box-shadow:0 1px 3px rgba(139,92,246,0.3);
+  }
+  
+  .timeline-event:not(.drag-event):hover{
+    background:#4f46e5;
+    transform:scaleX(1.3);
+  }
+  
+  .timeline-event.drag-event:hover{
+    background:#7c3aed;
+  }
+  
+  .event-trim-handle{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:6px;
+    background:rgba(255,255,255,0.3);
+    cursor:ew-resize;
+    opacity:0;
+    transition:opacity 0.2s;
+    z-index:10;
+  }
+  
+  .timeline-event.drag-event:hover .event-trim-handle{
+    opacity:1;
+  }
+  
+  .event-trim-handle.left{
+    left:0;
+    border-right:2px solid rgba(255,255,255,0.6);
+  }
+  
+  .event-trim-handle.right{
+    right:0;
+    border-left:2px solid rgba(255,255,255,0.6);
+  }
+  
+  .event-trim-handle:hover{
+    background:rgba(255,255,255,0.5);
+  }
+  
+  .timeline-annotation{
+    position:absolute;
+    top:2px;
+    bottom:2px;
+    background:linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    border-radius:3px;
+    color:#fff;
+    font-size:9px;
+    padding:0 6px;
+    display:flex;
+    align-items:center;
+    cursor:move;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    z-index:2;
+    box-shadow:0 2px 4px rgba(6,182,212,0.3);
+    border:1px solid rgba(255,255,255,0.2);
+  }
+  
+  .timeline-annotation:hover{
+    background:linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    box-shadow:0 2px 6px rgba(6,182,212,0.4);
+  }
+  
+  .timeline-annotation .resize-edge{
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:5px;
+    cursor:ew-resize;
+    background:rgba(255,255,255,0.2);
+  }
+  
+  .timeline-annotation .resize-edge.left{
+    left:0;
+    border-radius:3px 0 0 3px;
+  }
+  
+  .timeline-annotation .resize-edge.right{
+    right:0;
+    border-radius:0 3px 3px 0;
+  }
+  
+  .timeline-annotation .resize-edge:hover{
+    background:rgba(255,255,255,0.4);
+  }
+  
+  .timeline-pause{
+    position:absolute;
+    top:50%;
+    width:12px;
+    height:12px;
+    background:#f59e0b;
+    transform:translateY(-50%) rotate(45deg);
+    cursor:move;
+    z-index:10;
+    box-shadow:0 2px 4px rgba(245,158,11,0.4);
+    border:1px solid rgba(255,255,255,0.3);
+    pointer-events:auto;
+  }
+  
+  .timeline-pause:hover{
+    background:#d97706;
+    box-shadow:0 3px 6px rgba(245,158,11,0.5);
+    transform:translateY(-50%) rotate(45deg) scale(1.15);
+    z-index:11;
+  }
+  
+  .timeline-playhead{
+    position:absolute;
+    top:14px;
+    height:56px;
+    width:3px;
+    background:#ef4444;
+    pointer-events:none;
+    z-index:9999;
+    box-shadow:0 0 8px rgba(239,68,68,0.5);
+  }
+  
+  .timeline-playhead::before{
+    content:'';
+    position:absolute;
+    top:-8px;
+    left:50%;
+    transform:translateX(-50%);
+    width:12px;
+    height:12px;
+    background:#ef4444;
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    z-index:10000;
+    cursor:grab;
+    pointer-events:auto;
+  }
+  
+  .timeline-playhead::before:active{
+    cursor:grabbing;
+  }
+  
+  .timeline-playhead.dragging::before{
+    transform:translateX(-50%) scale(1.1);
+    box-shadow:0 4px 12px rgba(239,68,68,0.4);
+  }
+  
+  .modal-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+  }
+  
+  .modal-overlay.visible{
+    display:flex;
+  }
+  
+  .modal{
+    background:#fff;
+    border-radius:12px;
+    padding:24px;
+    max-width:700px;
+    width:90%;
+    max-height:80vh;
+    overflow-y:auto;
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  }
+  
+  .modal h2{
+    margin:0 0 16px;
+    color:#111;
+  }
+  
+  .modal textarea{
+    width:100%;
+    min-height:300px;
+    max-height:400px;
+    font-family:monospace;
+    font-size:12px;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    resize:vertical;
+    overflow-y:auto;
+  }
+  
+  .modal input[type=text]{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    margin-bottom:12px;
+  }
+  
+  .modal-buttons{
+    display:flex;
+    gap:8px;
+    margin-top:16px;
+    justify-content:flex-end;
+  }
+  
+  .help-text{
+    font-size:13px;
+    color:#666;
+    margin:8px 0;
+    line-height:1.5;
+  }
+  
+  ol.help-text{
+    margin-left:20px;
+    padding-left:0;
+  }
+  
+  ol.help-text li{
+    margin:6px 0;
+  }
+  
+  .control-group{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  
+  label{
+    font-size:12px;
+    color:#666;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  
+  input[type=text]{
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid #ddd;
+    font-size:13px;
+    width:300px;
+  }
+  
+  .info-box{
+    background:#e0f2fe;
+    border:1px solid #0284c7;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+    font-size:13px;
+    color:#0c4a6e;
+  }
+  
+  .info-box strong{
+    color:#075985;
+  }
+  
+  .form-group{
+    margin-bottom:16px;
+  }
+  
+  .form-group label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:#374151;
+  }
+  
+  .form-group textarea{
+    width:100%;
+    min-height:100px;
+    padding:8px 12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    resize:vertical;
+  }
+  
+  .version-number{
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    font-size: 11px;
+    color: #999;
+    background: rgba(255,255,255,0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    z-index: 1000;
+    font-family: monospace;
+  }
 </style>
 </head>
 <body>
-
-<div class="tutorial-header">
-  <div class="tutorial-controls">
-    <div class="control-group">
-      <label>App URL: <input type="text" id="appUrl" class="url-input" placeholder="e.g. confidence-demo.html" value=""/></label>
-      <button id="loadApp" class="primary">Load App</button>
+  <div class="tutorial-header">
+    <div class="tutorial-controls">
+      <div id="recordingControls" class="control-group">
+        <label>
+          App URL:
+          <input type="text" id="appUrl" placeholder="Enter your app URL" value=""/>
+        </label>
+        <button id="loadApp" class="primary">Load App</button>
+        <button id="startRecording" class="record" style="display:none;" title="Start recording interactions">⏺ Record</button>
+        <button id="loadJSON" class="success" style="display:none;" title="Import existing tutorial JSON">Import</button>
+        <button id="playPauseRecording" class="warning" style="display:none;" title="Pause recording">⏸</button>
+        <span id="recordingIndicator" class="recording-indicator" style="display:none;">⏺ REC</span>
+        <span id="pausedIndicator" class="paused-indicator" style="display:none;">⏸ PAUSED</span>
+        <button id="addAnnotation" class="teal" style="display:none;" disabled title="Add text annotation">+Text</button>
+        <button id="addPause" class="warning" style="display:none;" disabled title="Add pause point for students">+Pause</button>
+        <button id="previewRecording" class="primary" style="display:none;" disabled title="Play tutorial">▶ Play</button>
+        <button id="playPausePreview" style="display:none;"></button><button id="recordAgain" class="record" style="display:none;" disabled title="Discard and start over">New Tutorial</button>
+        <button id="exportRecording" class="success" style="display:none;" disabled title="Export tutorial JSON">Export</button>
+        <button id="tutorialStyles" class="teal" style="display:none;" disabled title="Define CSS styles for this tutorial">Styles</button>
+      </div>
       
-      <button id="startRecording" class="record" style="display:none;">⏺ Record</button>
-      <button id="pauseRecording" class="warning" style="display:none;">⏸ Pause</button>
-      <button id="resumeRecording" class="record" style="display:none;">⏺ Resume</button>
+      <button id="helpBtn" style="margin-left:auto;" title="Show help">❓</button>
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+    </div>
+    <div class="version-number">v13.48 (Optimized)</div>
+  </div>
+  
+  <div id="timelineContainer" class="timeline-container">
+    <div id="timelineRuler" class="timeline-ruler"></div>
+    
+    <div class="timeline-track">
+      <div class="timeline-track-label">Events</div>
+      <div id="eventsTrack" style="position:relative;height:100%;"></div>
+    </div>
+    
+    <div class="timeline-track">
+      <div class="timeline-track-label">Annotations</div>
+      <div id="annotationsTrack" style="position:relative;height:100%;"></div>
+    </div>
+    
+    <div id="timelinePlayhead" class="timeline-playhead" style="display:none;"></div>
+  </div>
+  
+  <div class="app-container">
+    <iframe id="appFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+  
+  <div id="annotationEditorModal" class="modal-overlay">
+    <div class="modal" style="max-width: 600px;">
+      <h2>Add Annotation</h2>
       
-      <button id="addAnnotation" class="teal" style="display:none;">+Text</button>
-      <button id="addPause" class="warning" style="display:none;">+Pause</button>
-      <button id="preview" class="primary" style="display:none;">▶ Preview</button>
-      <button id="stopPreview" class="primary" style="display:none;">⏹ Stop Preview</button>
+      <div class="info-box">
+        <strong>📝 Create Annotation</strong><br>
+        Enter content using HTML and reference CSS classes defined in Tutorial Styles. For simple styling, use the optional controls below.
+      </div>
       
-      <button id="importBtn" class="success" style="display:none;">Import JSON</button>
-      <button id="exportBtn" class="success" style="display:none;">Export JSON</button>
-      <button id="resetBtn" class="record" style="display:none;">Reset</button>
-      <button id="stylesBtn" class="teal" style="display:none;">Styles</button>
+      <div class="form-group">
+        <label>Content (supports HTML and CSS classes)</label>
+        <textarea id="annContent" placeholder="Examples:&#10;&#10;• Plain text: This is important information&#10;&#10;• With classes: &lt;div class=&quot;simple-box&quot;&gt;Note with arrow&lt;/div&gt;&#10;&#10;• Mixed: &lt;h2&gt;Title&lt;/h2&gt;&lt;p&gt;Use &lt;span class=&quot;highlight&quot;&gt;highlighting&lt;/span&gt; here.&lt;/p&gt;" style="height: 120px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">
+          Reference classes defined in Tutorial Styles, or use HTML tags directly.
+        </div>
+      </div>
       
-      <span id="statusIndicator" class="paused-indicator" style="display:none;">READY</span>
-    </div>
-    <input type="file" id="fileInput" accept=".json" style="display:none;">
-  </div>
-  <div class="version-number">Refactored v2.0</div>
-</div>
-
-<div id="timelineContainer" class="timeline-container">
-  <div id="timelineRuler" class="timeline-ruler"></div>
-  <div class="timeline-track">
-    <div class="timeline-track-label">Events</div>
-    <div id="eventsTrack" style="position:relative;height:100%;"></div>
-  </div>
-  <div class="timeline-track">
-    <div class="timeline-track-label">Notes</div>
-    <div id="annotationsTrack" style="position:relative;height:100%;"></div>
-  </div>
-  <div id="timelinePlayhead" class="timeline-playhead" style="display:none; left: 60px;"></div>
-</div>
-
-<div class="app-container">
-  <iframe id="appFrame" sandbox="allow-scripts allow-same-origin"></iframe>
-</div>
-
-<div id="annotationModal" class="modal-overlay">
-  <div class="modal">
-    <h2>Edit Annotation</h2>
-    <div class="info-box">Use HTML for content. Use CSS classes defined in 'Styles' or inline styles.</div>
-    <div class="form-group">
-      <label>Content (HTML)</label>
-      <textarea id="annContent" rows="4" placeholder="<div class='simple-box'>Hello World</div>"></textarea>
-    </div>
-    <div class="form-group">
-      <label>Custom CSS (Optional)</label>
-      <textarea id="annCSS" rows="2" placeholder="background: yellow;"></textarea>
-    </div>
-    <div class="form-group">
-      <label>Duration (seconds)</label>
-      <input type="number" id="annDuration" value="5" min="1" max="60">
-    </div>
-    <div class="modal-buttons">
-      <button id="annCancel">Cancel</button>
-      <button id="annNext" class="primary">Next: Position</button>
+      <div class="form-group">
+        <label>Simple Styling (optional - overrides tutorial styles)</label>
+        <textarea id="annCSS" placeholder="Optional direct CSS properties:&#10;background-color: #ffffcc;&#10;border: 2px dashed #999;&#10;padding: 15px;&#10;font-weight: bold;" style="height: 80px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">
+          Optional: Add direct CSS properties to override or supplement tutorial styles.
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Duration (seconds)</label>
+        <input type="number" id="annDuration" value="5" min="1" max="60" style="width:100px;"/>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="cancelAnnotation">Cancel</button>
+        <button id="nextToPositioning" class="primary" style="display:none;">Next: Position →</button>
+        <button id="createAnnotation" class="primary">✨ Create Annotation</button>
+      </div>
     </div>
   </div>
-</div>
-
-<div id="stylesModal" class="modal-overlay">
-  <div class="modal">
-    <h2>Global Tutorial Styles</h2>
-    <div class="info-box">Define CSS classes here that can be used in any annotation.</div>
-    <textarea id="globalStylesContent" style="width:100%; height:300px; font-family:monospace;"></textarea>
-    <div class="modal-buttons">
-      <button id="stylesCancel">Cancel</button>
-      <button id="stylesSave" class="primary">Save & Apply</button>
+  
+  <div id="tutorialStylesModal" class="modal-overlay">
+    <div class="modal" style="max-width: 800px;">
+      <h2>Tutorial Styles</h2>
+      
+      <div class="info-box">
+        <strong>🎨 Define CSS classes once, use throughout tutorial</strong><br>
+        Create reusable styles that any annotation can reference. Supports pseudo-elements (::after, ::before) for arrows, decorative elements, etc.
+      </div>
+      
+      <div class="form-group">
+        <label>Global CSS Classes</label>
+        <textarea id="tutorialStylesCSS" placeholder="Example:&#10;&#10;.simple-box {&#10;  position: relative;&#10;  background: #f9f9f9;&#10;  border: 2px solid #555;&#10;  border-radius: 8px;&#10;  padding: 12px 16px;&#10;  font-family: sans-serif;&#10;  width: fit-content;&#10;  max-width: 260px;&#10;  margin-bottom: 20px;&#10;}&#10;&#10;.simple-box::after {&#10;  content: '';&#10;  position: absolute;&#10;  left: 50%;&#10;  bottom: -20px;&#10;  transform: translateX(-50%);&#10;  border-width: 20px 15px 0 15px;&#10;  border-style: solid;&#10;  border-color: #555 transparent transparent transparent;&#10;}&#10;&#10;.warning-box {&#10;  background: #fee;&#10;  border-left: 4px solid #f00;&#10;  padding: 16px;&#10;  color: #600;&#10;}&#10;&#10;.highlight {&#10;  background: yellow;&#10;  padding: 2px 4px;&#10;  border-radius: 3px;&#10;}" style="height: 300px; font-family: 'Courier New', monospace; font-size: 13px;"></textarea>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">
+          Define CSS classes here. In annotations, use: &lt;div class="simple-box"&gt;Content&lt;/div&gt; or &lt;span class="highlight"&gt;highlighted text&lt;/span&gt;
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="cancelTutorialStyles">Cancel</button>
+        <button id="saveTutorialStyles" class="primary">💾 Save Styles</button>
+      </div>
     </div>
   </div>
-</div>
-
-<div id="posOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;pointer-events:none;">
-  <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.2);pointer-events:auto;">
-    <div style="font-weight:bold;margin-bottom:8px">📍 Position Annotation</div>
-    <div style="font-size:12px;color:#666;margin-bottom:10px">Drag the box in the app to position/resize it.</div>
-    <div style="display:flex;gap:8px">
-      <button id="posSave" class="success">Save</button>
-      <button id="posDelete" class="record">Delete</button>
+  
+  <div id="positionEditorOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:transparent;z-index:99;pointer-events:none;">
+    <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;">
+      <div style="font-weight:600;margin-bottom:8px;color:#111;">📍 Position Your Annotation</div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px;">Drag to move, resize from corner. Double-click content to edit with full CSS editor.</div>
+      <div style="display:flex;gap:8px;">
+        <button id="savePosition" class="success">Save</button>
+        <button id="deleteAnnotationFromOverlay" class="record">Delete</button>
+        <button id="cancelPosition">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
+  
+  <div id="eventDeletionModal" class="modal-overlay">
+    <div class="modal" style="max-width:400px;">
+      <h2>Delete Event?</h2>
+      <p id="eventDeletionText" style="margin:16px 0;color:#666;">Are you sure you want to delete this event?</p>
+      <div class="modal-buttons">
+        <button id="cancelEventDeletion">Cancel</button>
+        <button id="confirmEventDeletion" class="warning">🗑 Delete</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="pauseDeletionModal" class="modal-overlay">
+    <div class="modal" style="max-width:400px;">
+      <h2>Delete Pause?</h2>
+      <p id="pauseDeletionText" style="margin:16px 0;color:#666;">Are you sure you want to delete this pause?</p>
+      <div class="modal-buttons">
+        <button id="cancelPauseDeletion">Cancel</button>
+        <button id="confirmPauseDeletion" class="warning">🗑 Delete</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="exportModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Export Tutorial</h2>
+      
+      <div class="info-box">
+        <strong>✓ Recording Complete!</strong><br>
+        Your tutorial has been recorded with <strong id="snapshotCount">0</strong> snapshots and <strong id="annotationCount">0</strong> annotations.
+      </div>
+      
+      <p class="help-text">Download the JSON file to save your tutorial. You can load it later using the "Import Tutorial" button.</p>
+      
+      <textarea id="exportTextarea" readonly></textarea>
+      
+      <div class="modal-buttons">
+        <button id="downloadExport" class="success">💾 Download JSON</button>
+        <button id="copyExport" class="primary">📋 Copy to Clipboard</button>
+        <button id="closeExportModal">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal">
+      <h2>How to Use</h2>
+      
+      <h3>Recording Mode:</h3>
+      <ol class="help-text">
+        <li><strong>Enter App URL</strong> - Type the URL of the web app you want to create a tutorial for</li>
+        <li><strong>Load App</strong> - Click "Load App" to load the app in the iframe</li>
+        <li><strong>Start Recording</strong> - Click "⏺ Start Recording" when you're ready to begin the tutorial</li>
+        <li><strong>Interact Normally</strong> - Use your app normally. All interactions are being captured via the API!</li>
+        <li><strong>Pause Recording</strong> - Click "⏸ Pause" to pause and add annotations or review your work</li>
+        <li><strong>Add Annotations</strong> - While paused:
+          <ul style="margin-left:20px;">
+            <li>Click "➕ Add Annotation"</li>
+            <li>Enter content (supports HTML tags like &lt;h1&gt;, &lt;p&gt;, &lt;div class="my-class"&gt;)</li>
+            <li>Paste CSS styling rules OR define CSS classes with pseudo-elements (::after, ::before)</li>
+            <li>Click "✨ Create Annotation"</li>
+            <li>Drag the annotation box to position it exactly where you want</li>
+            <li>Double-click annotation content to edit it anytime</li>
+            <li>Click "Save" when ready</li>
+          </ul>
+        </li>
+        <li><strong>Preview While Recording</strong> - While paused, click "👁 Preview" to see your work so far, then click "↩️ Resume Recording" to continue</li>
+        <li><strong>Resume Recording</strong> - Click "⏺ Resume" to continue recording</li>
+        <li><strong>Finish Recording</strong> - When you're done, pause the recording. You can then Preview your work or Export it.</li>
+        <li><strong>Preview Final</strong> - Click "👁 Preview" to watch the complete replay with annotations</li>
+        <li><strong>Export</strong> - Click "💾 Export Tutorial" to get the JSON, then copy it to save. This also finalizes the recording.</li>
+        <li><strong>Start Over</strong> - Click "🔄 Start Over" at any time to reset and create a new tutorial</li>
+      </ol>
+      
+      <h3>Timeline:</h3>
+      <ul class="help-text">
+        <li><strong style="color:#6366f1;">Blue markers</strong> - Single events (simulate, parameter changes, etc.)</li>
+        <li><strong style="color:#8b5cf6;">Purple bars</strong> - Drag operations (from mouse down to mouse up)</li>
+        <li><strong style="color:#f59e0b;">Amber diamonds</strong> - Pauses (students must click to continue)</li>
+        <li><strong style="color:#06b6d4;">Cyan bars</strong> - Annotations (text overlays during playback)</li>
+      </ul>
+      
+      <div class="modal-buttons">
+        <button id="closeHelpModal" class="primary">Got it!</button>
+      </div>
+    </div>
+  </div>
 
 <script>
 /**
- * REFACTORED TUTORIAL CREATOR
- * Architecture:
- * 1. IframeBridge: Manages communication and injection into the child app.
- * 2. TutorialModel: The data structure (Snapshots, Annotations).
- * 3. RecorderService: Handles capturing events from IframeBridge.
- * 4. PlayerService: Handles replaying events to IframeBridge.
- * 5. TimelineEngine: Handles the visual timeline, collision logic, and scrubbing.
- * 6. UIController: Wires buttons to services.
+ * REFACTORED STRUCTURE (Strict UI Compliance)
+ * The following code implements the Tutorial Creator logic using a Service-Oriented structure
+ * but maps strictly to the existing DOM elements defined in the HTML above.
  */
 
-// --- 1. IFRAME BRIDGE ---
-class IframeBridge {
-  constructor(iframeId, containerId) {
-    this.iframe = document.getElementById(iframeId);
-    this.container = document.querySelector(containerId);
-    this.api = null;
-    this.annotationBox = null;
-  }
+// --- UTILS ---
+const Utils = {
+  id: (id) => document.getElementById(id),
+  show: (id) => document.getElementById(id).style.display = 'inline-block',
+  hide: (id) => document.getElementById(id).style.display = 'none',
+  enable: (id) => document.getElementById(id).disabled = false,
+  disable: (id) => document.getElementById(id).disabled = true,
+  setText: (id, text) => document.getElementById(id).textContent = text,
+  addClass: (id, cls) => document.getElementById(id).classList.add(cls),
+  removeClass: (id, cls) => document.getElementById(id).classList.remove(cls)
+};
 
-  load(url) {
-    return new Promise((resolve, reject) => {
-      this.iframe.onload = () => {
-        // Poll for API
-        let attempts = 0;
-        const interval = setInterval(() => {
-          if (this.iframe.contentWindow && this.iframe.contentWindow.tutorialAPI) {
-            clearInterval(interval);
-            this.api = this.iframe.contentWindow.tutorialAPI;
-            this.injectAnnotationContainer();
-            resolve(this.api);
-          } else if (attempts++ > 50) {
-            clearInterval(interval);
-            reject("API not found in child app.");
-          }
-        }, 100);
-      };
-      this.iframe.src = url;
-    });
-  }
-
-  injectAnnotationContainer() {
-    const doc = this.iframe.contentDocument;
-    if (!doc.getElementById('tutorial-annotation-box')) {
-      const box = doc.createElement('div');
-      box.id = 'tutorial-annotation-box';
-      // Base styles for the box wrapper
-      box.style.cssText = `
-        position: absolute; display: none; z-index: 9999;
-        box-sizing: border-box; transform-origin: top left;
-      `;
-      doc.body.appendChild(box);
-      this.annotationBox = box;
-      
-      // Inject CSS for resize handles
-      const style = doc.createElement('style');
-      style.textContent = `
-        .t-resize-handle { position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; 
-                           background: rgba(37,99,235,0.3); cursor: nwse-resize; 
-                           border-radius: 4px 0 4px 0; pointer-events: auto; }
-        .t-draggable { cursor: move; box-shadow: 0 0 0 2px #2563eb; }
-      `;
-      doc.head.appendChild(style);
-    } else {
-        this.annotationBox = doc.getElementById('tutorial-annotation-box');
-    }
-  }
-
-  injectGlobalStyles(css) {
-    const doc = this.iframe.contentDocument;
-    let style = doc.getElementById('tutorial-global-styles');
-    if (!style) {
-      style = doc.createElement('style');
-      style.id = 'tutorial-global-styles';
-      doc.head.appendChild(style);
-    }
-    style.textContent = css;
-  }
-
-  renderAnnotation(ann, interactive = false) {
-    if (!this.annotationBox) return;
-    const box = this.annotationBox;
-    
-    // Position
-    const pos = ann.position || { left: 300, top: 200, width: 300, height: 'auto' };
-    box.style.left = pos.left + 'px';
-    box.style.top = pos.top + 'px';
-    box.style.width = pos.width + 'px';
-    box.style.height = pos.height === 'auto' ? 'auto' : pos.height + 'px';
-    box.style.display = 'block';
-
-    // Content & Style
-    box.className = interactive ? 't-draggable' : '';
-    box.innerHTML = `<div class="content">${ann.content}</div>` + (interactive ? '<div class="t-resize-handle"></div>' : '');
-
-    // Reset inline styles then apply specific ones
-    box.style.backgroundColor = ''; 
-    box.style.border = '';
-    
-    if (ann.content.includes('class=')) {
-        // Assume global styles handle appearance, make wrapper transparent
-        box.style.backgroundColor = 'transparent';
-    } else if (ann.customCSS) {
-        box.style.cssText += ';' + ann.customCSS;
-    } else {
-        // Default
-        box.style.backgroundColor = 'rgba(255,255,255,0.95)';
-        box.style.border = '2px solid #2563eb';
-        box.style.borderRadius = '8px';
-        box.style.padding = '16px';
-    }
-
-    // Force MathJax if available
-    if (window.MathJax) window.MathJax.typesetPromise([box]).catch(()=>{});
-
-    if (interactive) this.attachDragLogic(box);
-  }
-
-  hideAnnotation() {
-    if (this.annotationBox) this.annotationBox.style.display = 'none';
-  }
-
-  attachDragLogic(box) {
-    const doc = this.iframe.contentDocument;
-    let startX, startY, startLeft, startTop, startW, startH, isResizing = false;
-
-    const onDown = (e) => {
-      if (e.target.classList.contains('t-resize-handle')) {
-        isResizing = true;
-      }
-      startX = e.clientX; startY = e.clientY;
-      startLeft = box.offsetLeft; startTop = box.offsetTop;
-      startW = box.offsetWidth; startH = box.offsetHeight;
-      
-      doc.addEventListener('mousemove', onMove);
-      doc.addEventListener('mouseup', onUp);
-      e.preventDefault();
-    };
-
-    const onMove = (e) => {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (isResizing) {
-        box.style.width = Math.max(100, startW + dx) + 'px';
-        box.style.height = Math.max(50, startH + dy) + 'px';
-      } else {
-        box.style.left = (startLeft + dx) + 'px';
-        box.style.top = (startTop + dy) + 'px';
-      }
-    };
-
-    const onUp = () => {
-      doc.removeEventListener('mousemove', onMove);
-      doc.removeEventListener('mouseup', onUp);
-    };
-
-    box.onmousedown = onDown;
-  }
-
-  getAnnotationMetrics() {
-    const box = this.annotationBox;
-    return {
-      left: box.offsetLeft, top: box.offsetTop,
-      width: box.offsetWidth, height: box.offsetHeight
-    };
-  }
-
-  setPointerEvents(enabled) {
-    this.iframe.style.pointerEvents = enabled ? 'auto' : 'none';
-  }
-}
-
-// --- 2. TUTORIAL MODEL ---
+// --- DATA MODEL ---
 class TutorialModel {
   constructor() {
     this.reset();
   }
-
   reset() {
     this.initialState = null;
     this.snapshots = [];
@@ -362,45 +848,26 @@ class TutorialModel {
     this.globalStyles = "";
     this.duration = 0;
   }
-
   addSnapshot(timestamp, event, state) {
     this.snapshots.push({ timestamp, event, state });
     this.updateDuration(timestamp);
   }
-
-  addAnnotation(ann) {
-    this.annotations.push(ann);
-    this.updateDuration(ann.timestamp + ann.duration);
-  }
-
-  addPause(timestamp) {
-    this.pauses.push({ timestamp });
-    this.updateDuration(timestamp);
-  }
-
   updateDuration(ts) {
     this.duration = Math.max(this.duration, ts);
   }
-
-  // Ensures snapshots are time-sorted (crucial after dragging timeline events)
-  sortSnapshots() {
-    this.snapshots.sort((a,b) => a.timestamp - b.timestamp);
-  }
-  
   toJSON() {
     return JSON.stringify({
-        initialState: this.initialState,
-        snapshots: this.snapshots,
-        annotations: this.annotations,
-        pauses: this.pauses,
-        globalStyles: this.globalStyles,
-        duration: this.duration,
-        version: "2.0"
+      version: 'v13.48-refactored',
+      initialState: this.initialState,
+      snapshots: this.snapshots,
+      annotations: this.annotations,
+      pauses: this.pauses,
+      globalStyles: this.globalStyles,
+      duration: this.duration
     }, null, 2);
   }
-
-  fromJSON(jsonStr) {
-    const data = JSON.parse(jsonStr);
+  fromJSON(json) {
+    const data = JSON.parse(json);
     this.initialState = data.initialState;
     this.snapshots = data.snapshots || [];
     this.annotations = data.annotations || [];
@@ -410,459 +877,466 @@ class TutorialModel {
   }
 }
 
-// --- 3. RECORDER SERVICE ---
-class RecorderService {
-  constructor(bridge, model, onUpdate) {
-    this.bridge = bridge;
-    this.model = model;
-    this.onUpdate = onUpdate; // Callback to UI
-    this.state = 'idle'; // idle, recording, paused
-    this.startTime = 0;
-    this.totalPausedTime = 0;
-    this.pauseStartTimestamp = 0;
-    this.listener = null;
+// --- IFRAME BRIDGE ---
+class IframeBridge {
+  constructor() {
+    this.iframe = Utils.id('appFrame');
+    this.api = null;
   }
-
-  start() {
-    if (!this.model.initialState) {
-        this.model.initialState = this.bridge.api.getState();
+  async load(url) {
+    return new Promise((resolve, reject) => {
+      this.iframe.onload = () => {
+        let attempts = 0;
+        const check = setInterval(() => {
+          if (this.iframe.contentWindow && this.iframe.contentWindow.tutorialAPI) {
+            clearInterval(check);
+            this.api = this.iframe.contentWindow.tutorialAPI;
+            this.injectAnnotationBox();
+            resolve(this.api);
+          } else if (attempts++ > 50) {
+            clearInterval(check);
+            reject('API not found');
+          }
+        }, 100);
+      };
+      this.iframe.src = url;
+    });
+  }
+  injectAnnotationBox() {
+    const doc = this.iframe.contentDocument;
+    if (!doc.getElementById('t-ann-box')) {
+      const box = doc.createElement('div');
+      box.id = 't-ann-box';
+      box.style.cssText = 'position:absolute;display:none;z-index:9999;transform-origin:top left;';
+      doc.body.appendChild(box);
+      // CSS for handles
+      const style = doc.createElement('style');
+      style.textContent = `
+        .t-handle { position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; background: rgba(37,99,235,0.3); cursor: nwse-resize; }
+        .t-drag { cursor: move; }
+      `;
+      doc.head.appendChild(style);
     }
-    this.state = 'recording';
-    this.startTime = Date.now();
-    this.totalPausedTime = 0;
+  }
+  renderAnnotation(ann, interactive = false) {
+    const doc = this.iframe.contentDocument;
+    const box = doc.getElementById('t-ann-box');
+    if (!box) return;
+
+    const pos = ann.position || { left: 300, top: 200, width: 300, height: 'auto' };
+    box.style.display = 'block';
+    box.style.left = pos.left + 'px';
+    box.style.top = pos.top + 'px';
+    box.style.width = pos.width + 'px';
+    box.style.height = pos.height === 'auto' ? 'auto' : pos.height + 'px';
     
-    // If we have existing duration (resuming a loaded tutorial), we offset
-    // However, simplest is to treat "Resume" as append.
-    const startOffset = this.model.duration; 
+    // Style logic (Global vs Custom vs Default)
+    box.style.background = ''; box.style.border = ''; box.style.padding = '';
+    if (ann.content.includes('class=')) {
+      box.style.background = 'transparent';
+    } else if (ann.customCSS) {
+      box.style.cssText += ';' + ann.customCSS;
+    } else {
+      box.style.background = 'rgba(255,255,255,0.95)';
+      box.style.border = '3px solid #2563eb';
+      box.style.padding = '16px';
+      box.style.borderRadius = '8px';
+    }
 
-    this.listener = (event) => {
-        if (this.state !== 'recording') return;
-        
-        // Simulates need a small delay to capture resulting state
-        const delay = event.action === 'simulate' ? 50 : 0;
-        
-        setTimeout(() => {
-            if (this.state !== 'recording') return;
-            const now = Date.now();
-            const relTime = (now - this.startTime) - this.totalPausedTime + startOffset;
-            const appState = this.bridge.api.getState();
-            
-            this.model.addSnapshot(relTime, event, appState);
-            this.onUpdate(relTime);
-        }, delay);
+    box.innerHTML = ann.content + (interactive ? '<div class="t-handle"></div>' : '');
+    box.className = interactive ? 't-drag' : '';
+
+    if (interactive) this.attachDrag(box);
+  }
+  hideAnnotation() {
+    const doc = this.iframe.contentDocument;
+    if (doc && doc.getElementById('t-ann-box')) doc.getElementById('t-ann-box').style.display = 'none';
+  }
+  injectGlobalStyles(css) {
+    const doc = this.iframe.contentDocument;
+    let style = doc.getElementById('t-global-css');
+    if (!style) {
+      style = doc.createElement('style');
+      style.id = 't-global-css';
+      doc.head.appendChild(style);
+    }
+    style.textContent = css;
+  }
+  attachDrag(box) {
+    const doc = this.iframe.contentDocument;
+    let startX, startY, startL, startT, startW, startH, resizing=false;
+    
+    const onDown = (e) => {
+      if(e.target.className === 't-handle') resizing = true;
+      startX = e.clientX; startY = e.clientY;
+      startL = box.offsetLeft; startT = box.offsetTop;
+      startW = box.offsetWidth; startH = box.offsetHeight;
+      doc.addEventListener('mousemove', onMove);
+      doc.addEventListener('mouseup', onUp);
+      e.preventDefault();
     };
-
-    this.bridge.api.onAction(this.listener);
-    this.bridge.setPointerEvents(true);
+    const onMove = (e) => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (resizing) {
+        box.style.width = Math.max(50, startW + dx) + 'px';
+        box.style.height = Math.max(20, startH + dy) + 'px';
+      } else {
+        box.style.left = (startL + dx) + 'px';
+        box.style.top = (startT + dy) + 'px';
+      }
+    };
+    const onUp = () => {
+      doc.removeEventListener('mousemove', onMove);
+      doc.removeEventListener('mouseup', onUp);
+      resizing = false;
+    };
+    box.onmousedown = onDown;
   }
-
-  pause() {
-    this.state = 'paused';
-    this.pauseStartTimestamp = Date.now();
-    this.bridge.setPointerEvents(false); // Safety
-  }
-
-  resume() {
-    if (this.state !== 'paused') return;
-    this.state = 'recording';
-    const pausedDuration = Date.now() - this.pauseStartTimestamp;
-    this.totalPausedTime += pausedDuration;
-    this.bridge.setPointerEvents(true);
-  }
-
-  stop() {
-    this.state = 'idle';
-    if (this.listener) this.bridge.api.offAction(this.listener);
-    this.bridge.setPointerEvents(true);
-  }
-  
-  get currentTimestamp() {
-      // Useful for adding annotations while paused
-      return this.model.duration;
+  getBoxMetrics() {
+    const box = this.iframe.contentDocument.getElementById('t-ann-box');
+    return { left: box.offsetLeft, top: box.offsetTop, width: box.offsetWidth, height: box.offsetHeight };
   }
 }
 
-// --- 4. PLAYER SERVICE ---
-class PlayerService {
+// --- RECORDER ---
+class Recorder {
   constructor(bridge, model, onUpdate) {
     this.bridge = bridge;
     this.model = model;
     this.onUpdate = onUpdate;
     this.state = 'idle';
-    this.rafId = null;
-    this.playStartTime = 0;
-    this.pauseOffset = 0; // Where we paused
+    this.startTime = 0;
+    this.pausedTime = 0;
+    this.pauseStart = 0;
+    this.listener = null;
   }
-
-  play(startAt = 0) {
-    if (this.state === 'playing') return;
+  start() {
+    this.state = 'recording';
+    this.startTime = Date.now();
+    this.pausedTime = 0;
+    if (!this.model.initialState) this.model.initialState = this.bridge.api.getState();
+    this.bridge.injectGlobalStyles(this.model.globalStyles);
     
-    // If starting fresh
-    if (this.state === 'idle' || startAt !== this.pauseOffset) {
-        this.bridge.api.setState(this.model.initialState);
-        this.bridge.injectGlobalStyles(this.model.globalStyles);
-    }
-    
-    this.state = 'playing';
-    this.bridge.setPointerEvents(false); // Playback mode
-    
-    this.playStartTime = Date.now() - startAt;
-    
-    // Internal pointers for optimization
-    this.snapIdx = 0;
-    // Fast forward snapshot pointer to startAt
-    while(this.snapIdx < this.model.snapshots.length && this.model.snapshots[this.snapIdx].timestamp < startAt) {
-        // Apply state for catch-up? Or just last one?
-        // Ideally apply last one before startAt
-        this.snapIdx++;
-    }
-    if (this.snapIdx > 0) {
-        this.bridge.api.setState(this.model.snapshots[this.snapIdx-1].state);
-    }
-
-    this.loop();
+    this.listener = (e) => {
+      if (this.state !== 'recording') return;
+      const ts = Date.now() - this.startTime - this.pausedTime;
+      // Slight delay for simulators
+      setTimeout(() => {
+        if (this.state !== 'recording') return;
+        this.model.addSnapshot(ts, e, this.bridge.api.getState());
+        this.onUpdate();
+      }, e.action === 'simulate' ? 50 : 0);
+    };
+    this.bridge.api.onAction(this.listener);
   }
-
   pause() {
     this.state = 'paused';
-    cancelAnimationFrame(this.rafId);
-    this.pauseOffset = Date.now() - this.playStartTime;
-    this.bridge.setPointerEvents(true);
+    this.pauseStart = Date.now();
   }
-
+  resume() {
+    this.state = 'recording';
+    this.pausedTime += (Date.now() - this.pauseStart);
+  }
   stop() {
     this.state = 'idle';
-    cancelAnimationFrame(this.rafId);
-    this.bridge.hideAnnotation();
-    this.bridge.setPointerEvents(true);
-    this.pauseOffset = 0;
+    if (this.listener) this.bridge.api.offAction(this.listener);
   }
+  getCurrentTime() {
+    return this.model.duration; // Approximate end time for appending annotations
+  }
+}
 
+// --- PLAYER ---
+class Player {
+  constructor(bridge, model) {
+    this.bridge = bridge;
+    this.model = model;
+    this.playing = false;
+    this.playStart = 0;
+  }
+  play() {
+    if (this.playing) return;
+    this.playing = true;
+    this.playStart = Date.now();
+    this.bridge.api.setState(this.model.initialState);
+    this.bridge.injectGlobalStyles(this.model.globalStyles);
+    this.loop();
+  }
+  stop() {
+    this.playing = false;
+    this.bridge.hideAnnotation();
+  }
   loop() {
-    if (this.state !== 'playing') return;
-
-    const now = Date.now();
-    const currentTime = now - this.playStartTime;
-
-    // 1. Check end
-    if (currentTime >= this.model.duration) {
-      this.pause(); // Or stop
-      this.onUpdate(this.model.duration);
+    if (!this.playing) return;
+    const now = Date.now() - this.playStart;
+    
+    if (now > this.model.duration) {
+      this.stop();
+      // UI Callback to reset button would go here in a full event bus system
+      // For now, we rely on user clicking "Pause" manually or the visual end
+      Utils.setText('previewRecording', '▶ Play');
+      Utils.removeClass('previewRecording', 'playing');
       return;
     }
 
-    // 2. Apply Snapshots
-    while (this.snapIdx < this.model.snapshots.length && 
-           this.model.snapshots[this.snapIdx].timestamp <= currentTime) {
-      const snap = this.model.snapshots[this.snapIdx];
-      this.bridge.api.setState(snap.state);
-      this.snapIdx++;
-    }
-
-    // 3. Show/Hide Annotations
-    const activeAnn = this.model.annotations.find(a => 
-      currentTime >= a.timestamp && currentTime < (a.timestamp + a.duration)
-    );
-    if (activeAnn) {
-      this.bridge.renderAnnotation(activeAnn, false);
-    } else {
-      this.bridge.hideAnnotation();
-    }
-    
-    // 4. Pauses (Interactive Stops)
-    // Check if we just crossed a pause timestamp
-    // Use a small tolerance or flag. Simple way: check if there's a pause between last frame time and this frame time? 
-    // Easier: find next pause. If currentTime >= pause.ts && !pause.triggered
-    // Since we don't have per-session flags in model, handle via simple proximity check
-    const tolerance = 50; // ms
-    const pause = this.model.pauses.find(p => Math.abs(p.timestamp - currentTime) < tolerance);
-    
-    // We need to avoid re-triggering the same pause immediately. 
-    // In a robust system we'd track 'lastTriggeredPauseIndex'. 
-    // For now, we'll skip pause logic in this refactor to keep it simple, 
-    // or assume user clicks "Resume" which jumps time forward by 100ms.
-
-    this.onUpdate(currentTime);
-    this.rafId = requestAnimationFrame(() => this.loop());
-  }
-
-  scrubTo(time) {
-      this.pause();
-      this.pauseOffset = time;
-      
-      // Restore state at 'time'
-      // 1. Initial
-      this.bridge.api.setState(this.model.initialState);
-      // 2. Find last snapshot before time
-      let lastSnap = null;
-      for (const snap of this.model.snapshots) {
-          if (snap.timestamp <= time) lastSnap = snap;
-          else break;
+    // Apply snapshots
+    // In optimized version we'd track index, simple loop for robustness
+    this.model.snapshots.forEach(snap => {
+      // Rough "just passed" check logic could be refined
+      if (snap.timestamp <= now && snap.timestamp > (now - 20)) {
+        this.bridge.api.setState(snap.state);
       }
-      if (lastSnap) this.bridge.api.setState(lastSnap.state);
-      
-      // 3. Check annotation
-      const activeAnn = this.model.annotations.find(a => time >= a.timestamp && time < (a.timestamp + a.duration));
-      if (activeAnn) this.bridge.renderAnnotation(activeAnn, false);
-      else this.bridge.hideAnnotation();
-      
-      this.onUpdate(time);
+    });
+
+    // Annotations
+    const activeAnn = this.model.annotations.find(a => now >= a.timestamp && now < (a.timestamp + a.duration));
+    if (activeAnn) this.bridge.renderAnnotation(activeAnn, false);
+    else this.bridge.hideAnnotation();
+
+    requestAnimationFrame(() => this.loop());
   }
 }
 
-// --- 5. TIMELINE ENGINE ---
-class TimelineEngine {
-  constructor(containerId, onDragEvent) {
-    this.container = document.querySelector(containerId);
-    this.eventsTrack = document.getElementById('eventsTrack');
-    this.notesTrack = document.getElementById('annotationsTrack');
-    this.playhead = document.getElementById('timelinePlayhead');
-    this.scale = 50; // pixels per second
-    this.onDragEvent = onDragEvent; // Callback when user modifies timeline
+// --- TIMELINE RENDERER (Ported Logic) ---
+class TimelineRenderer {
+  constructor() {
+    this.scale = 50; // px per second
   }
+  render(model) {
+    const container = Utils.id('timelineContainer');
+    const eventsTrack = Utils.id('eventsTrack');
+    const noteTrack = Utils.id('annotationsTrack');
+    const ruler = Utils.id('timelineRuler');
 
-  render(model, currentTime = 0) {
-    if (!model) return;
-    this.container.classList.add('visible');
-    
-    // 1. Setup width
+    container.classList.add('visible');
+    eventsTrack.innerHTML = '';
+    noteTrack.innerHTML = '';
+    ruler.innerHTML = '';
+
     const durationSec = model.duration / 1000;
-    const width = Math.max(durationSec * this.scale, this.container.offsetWidth - 80);
-    this.eventsTrack.parentElement.style.width = width + 'px'; // Actually scroll contents
+    const width = Math.max(durationSec * this.scale, container.offsetWidth - 80);
     
-    // 2. Render Events (Snapshots)
-    // Optimization: Group Drag Events visually
-    this.eventsTrack.innerHTML = '';
-    
-    // Simple rendering of individual snapshots for reliability
-    // (Grouping requires complex heuristic matching of DragStart/DragEnd)
-    model.snapshots.forEach((snap, idx) => {
-        const div = document.createElement('div');
-        div.className = 'timeline-event';
-        div.style.left = ((snap.timestamp/1000) * this.scale) + 'px';
-        div.title = snap.event.action;
-        
-        // Color code drags
-        if (snap.event.action.includes('drag')) div.className += ' drag-event';
-        
-        this.eventsTrack.appendChild(div);
+    // Ruler
+    for (let t = 0; t <= durationSec; t += (durationSec > 60 ? 5 : 1)) {
+      const tick = document.createElement('div');
+      tick.className = 'timeline-tick';
+      tick.style.left = (t * this.scale) + 'px';
+      tick.textContent = t + 's';
+      ruler.appendChild(tick);
+    }
+
+    // Events
+    model.snapshots.forEach(snap => {
+      const el = document.createElement('div');
+      el.className = 'timeline-event' + (snap.event.action.includes('drag') ? ' drag-event' : '');
+      el.style.left = ((snap.timestamp / 1000) * this.scale) + 'px';
+      el.title = snap.event.action;
+      eventsTrack.appendChild(el);
     });
 
-    // 3. Render Annotations
-    this.notesTrack.innerHTML = '';
-    model.annotations.forEach((ann, idx) => {
-        const div = document.createElement('div');
-        div.className = 'timeline-annotation';
-        div.style.left = ((ann.timestamp/1000) * this.scale) + 'px';
-        div.style.width = ((ann.duration/1000) * this.scale) + 'px';
-        // Strip HTML for label
-        const tmp = document.createElement('div');
-        tmp.innerHTML = ann.content;
-        div.textContent = tmp.textContent || 'Note';
-        
-        // Double click to edit (handled by UIController via global logic, or attach here)
-        div.ondblclick = () => this.onDragEvent('edit-annotation', idx);
-        
-        this.notesTrack.appendChild(div);
+    // Annotations
+    model.annotations.forEach((ann, i) => {
+      const el = document.createElement('div');
+      el.className = 'timeline-annotation';
+      el.style.left = ((ann.timestamp / 1000) * this.scale) + 'px';
+      el.style.width = ((ann.duration / 1000) * this.scale) + 'px';
+      
+      const tmp = document.createElement('div'); tmp.innerHTML = ann.content;
+      el.textContent = tmp.textContent || 'Note';
+      el.ondblclick = () => window.app.editAnnotation(i);
+      
+      noteTrack.appendChild(el);
     });
-
-    // 4. Playhead
-    const phX = ((currentTime/1000) * this.scale) + 60; // 60px label offset
-    this.playhead.style.display = 'block';
-    this.playhead.style.left = phX + 'px';
+    
+    // Pauses
+    model.pauses.forEach(pause => {
+        const el = document.createElement('div');
+        el.className = 'timeline-pause';
+        el.style.left = ((pause.timestamp/1000) * this.scale) + 'px';
+        el.style.top = '40px'; // Offset for visibility
+        container.appendChild(el);
+    });
   }
 }
 
-// --- 6. UI CONTROLLER ---
-class UIController {
+// --- MAIN CONTROLLER (Wires existing DOM to Logic) ---
+class AppController {
   constructor() {
     this.model = new TutorialModel();
-    this.bridge = new IframeBridge('appFrame', '.app-container');
-    this.timeline = new TimelineEngine('#timelineContainer', this.handleTimelineAction.bind(this));
-    
-    this.recorder = new RecorderService(this.bridge, this.model, (t) => this.timeline.render(this.model, t));
-    this.player = new PlayerService(this.bridge, this.model, (t) => this.timeline.render(this.model, t));
-
-    this.bindEvents();
-    this.editingAnnIndex = -1; // -1 = new
+    this.bridge = new IframeBridge();
+    this.recorder = new Recorder(this.bridge, this.model, () => this.timeline.render(this.model));
+    this.player = new Player(this.bridge, this.model);
+    this.timeline = new TimelineRenderer();
+    this.init();
   }
 
-  bindEvents() {
-    const click = (id, fn) => document.getElementById(id).addEventListener('click', fn);
-    
-    // Load
-    click('loadApp', async () => {
-        const url = document.getElementById('appUrl').value || 'confidence-demo.html';
-        try {
-            await this.bridge.load(url);
-            this.setMode('ready');
-        } catch(e) { alert(e); }
-    });
+  init() {
+    // 1. Load App
+    Utils.id('loadApp').onclick = async () => {
+      const url = Utils.id('appUrl').value || 'confidence-demo-new-13.html';
+      try {
+        await this.bridge.load(url);
+        Utils.hide('loadApp');
+        Utils.show('startRecording');
+        Utils.show('loadJSON');
+        Utils.id('timelineContainer').classList.add('visible');
+      } catch(e) { alert("Error loading app: " + e); }
+    };
 
-    // Recording
-    click('startRecording', () => {
+    // 2. Record / Pause Logic
+    Utils.id('startRecording').onclick = () => {
+      const btn = Utils.id('startRecording');
+      
+      if (this.recorder.state === 'idle') {
+        // Start
         this.model.reset();
         this.recorder.start();
-        this.setMode('recording');
-    });
-    click('pauseRecording', () => {
+        
+        // UI Updates (Matching Original)
+        btn.textContent = '⏸ Pause';
+        btn.className = 'record recording-active';
+        Utils.hide('loadJSON');
+        Utils.show('addAnnotation'); Utils.disable('addAnnotation');
+        Utils.show('addPause'); Utils.disable('addPause');
+        Utils.show('tutorialStyles'); Utils.disable('tutorialStyles');
+        Utils.show('previewRecording'); Utils.disable('previewRecording');
+        Utils.show('recordAgain'); Utils.disable('recordAgain');
+        Utils.show('exportRecording'); Utils.disable('exportRecording');
+        
+      } else if (this.recorder.state === 'recording') {
+        // Pause
         this.recorder.pause();
-        this.setMode('paused');
-    });
-    click('resumeRecording', () => {
+        
+        // UI Updates
+        btn.textContent = '⏺ Record'; // Actually "Resume" logic visually
+        btn.className = 'record';
+        Utils.enable('addAnnotation');
+        Utils.enable('addPause');
+        Utils.enable('tutorialStyles');
+        Utils.enable('previewRecording');
+        Utils.enable('recordAgain');
+        Utils.enable('exportRecording');
+        
+        this.timeline.render(this.model);
+        
+      } else if (this.recorder.state === 'paused') {
+        // Resume
         this.recorder.resume();
-        this.setMode('recording');
-    });
-
-    // Annotation Flow
-    click('addAnnotation', () => this.openAnnotationModal());
-    click('annCancel', () => document.getElementById('annotationModal').classList.remove('visible'));
-    
-    click('annNext', () => {
-        // Collect data from modal
-        const content = document.getElementById('annContent').value;
-        const css = document.getElementById('annCSS').value;
-        const duration = parseInt(document.getElementById('annDuration').value) * 1000;
         
-        document.getElementById('annotationModal').classList.remove('visible');
-        
-        // Show Positioning Overlay
-        const tempAnn = { 
-            content, customCSS: css, duration, 
-            position: (this.editingAnnIndex > -1) ? this.model.annotations[this.editingAnnIndex].position : null 
-        };
-        
-        this.bridge.renderAnnotation(tempAnn, true); // Interactive
-        document.getElementById('posOverlay').style.display = 'block';
-        
-        // Hook up save button
-        document.getElementById('posSave').onclick = () => {
-            const metrics = this.bridge.getAnnotationMetrics();
-            const finalAnn = {
-                timestamp: this.recorder.currentTimestamp, // or player time
-                duration, content, customCSS: css, position: metrics
-            };
-            
-            if (this.editingAnnIndex > -1) {
-                // Update existing
-                this.model.annotations[this.editingAnnIndex] = { ...this.model.annotations[this.editingAnnIndex], ...finalAnn, timestamp: this.model.annotations[this.editingAnnIndex].timestamp };
-            } else {
-                // Add new
-                this.model.addAnnotation(finalAnn);
-            }
-            
-            this.bridge.hideAnnotation();
-            document.getElementById('posOverlay').style.display = 'none';
-            this.timeline.render(this.model, this.player.pauseOffset);
-        };
-    });
-
-    // Preview
-    click('preview', () => {
-        if (this.player.state === 'playing') {
-            this.player.pause();
-            document.getElementById('preview').textContent = '▶ Preview';
-        } else {
-            this.player.play(this.player.pauseOffset);
-            document.getElementById('preview').textContent = '⏸ Pause';
-        }
-    });
-
-    // Styles
-    click('stylesBtn', () => {
-        document.getElementById('globalStylesContent').value = this.model.globalStyles || 
-`.simple-box { 
-  background: white; border: 2px solid blue; padding: 10px; border-radius: 5px; 
-}
-.arrow-down::after { 
-  content: ''; position: absolute; top: 100%; left: 20px; 
-  border: 10px solid transparent; border-top-color: blue; 
-}`;
-        document.getElementById('stylesModal').classList.add('visible');
-    });
-    
-    click('stylesSave', () => {
-        const css = document.getElementById('globalStylesContent').value;
-        this.model.globalStyles = css;
-        this.bridge.injectGlobalStyles(css);
-        document.getElementById('stylesModal').classList.remove('visible');
-    });
-
-    // Import/Export
-    click('exportBtn', () => {
-        this.recorder.stop();
-        const blob = new Blob([this.model.toJSON()], {type:'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'tutorial.json'; a.click();
-    });
-    
-    click('importBtn', () => document.getElementById('fileInput').click());
-    document.getElementById('fileInput').onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            this.model.fromJSON(ev.target.result);
-            this.bridge.injectGlobalStyles(this.model.globalStyles);
-            this.timeline.render(this.model, 0);
-            this.setMode('paused'); // Allow editing immediately
-            alert("Tutorial loaded. You can preview or add to it.");
-        };
-        reader.readAsText(e.target.files[0]);
-    };
-  }
-
-  setMode(mode) {
-    const show = (ids) => ids.forEach(id => document.getElementById(id).style.display = 'inline-block');
-    const hide = (ids) => ids.forEach(id => document.getElementById(id).style.display = 'none');
-    const allBtns = ['startRecording','pauseRecording','resumeRecording','addAnnotation','addPause','preview','importBtn','exportBtn','resetBtn','stylesBtn'];
-    
-    hide(allBtns);
-    
-    if (mode === 'ready') {
-        show(['startRecording', 'importBtn']);
-        document.getElementById('statusIndicator').textContent = "READY";
-        document.getElementById('statusIndicator').style.display='inline-block';
-    } else if (mode === 'recording') {
-        show(['pauseRecording']);
-        document.getElementById('statusIndicator').className = "recording-indicator";
-        document.getElementById('statusIndicator').textContent = "REC";
-    } else if (mode === 'paused') {
-        show(['resumeRecording', 'addAnnotation', 'preview', 'exportBtn', 'stylesBtn']);
-        document.getElementById('statusIndicator').className = "paused-indicator";
-        document.getElementById('statusIndicator').textContent = "PAUSED";
-    }
-  }
-
-  openAnnotationModal(existingIndex = -1) {
-    this.editingAnnIndex = existingIndex;
-    const modal = document.getElementById('annotationModal');
-    
-    if (existingIndex > -1) {
-        const ann = this.model.annotations[existingIndex];
-        document.getElementById('annContent').value = ann.content;
-        document.getElementById('annCSS').value = ann.customCSS || '';
-        document.getElementById('annDuration').value = ann.duration / 1000;
-    } else {
-        document.getElementById('annContent').value = '<div class="simple-box">New Note</div>';
-        document.getElementById('annCSS').value = '';
-    }
-    
-    modal.classList.add('visible');
-  }
-
-  handleTimelineAction(action, id) {
-      if (action === 'edit-annotation') {
-          // If the player isn't playing, jump to that time and open editor
-          const ann = this.model.annotations[id];
-          this.player.scrubTo(ann.timestamp);
-          this.openAnnotationModal(id);
+        // UI Updates
+        btn.textContent = '⏸ Pause';
+        btn.className = 'record recording-active';
+        Utils.disable('addAnnotation');
+        Utils.disable('addPause');
+        Utils.disable('previewRecording');
+        Utils.disable('exportRecording');
       }
+    };
+
+    // 3. Annotations
+    Utils.id('addAnnotation').onclick = () => {
+      Utils.id('annotationEditorModal').classList.add('visible');
+      // Reset form
+      Utils.id('annContent').value = '<div class="simple-box">Note</div>';
+      Utils.id('annCSS').value = '';
+      Utils.id('annDuration').value = 5;
+    };
+
+    Utils.id('createAnnotation').onclick = () => {
+      Utils.id('annotationEditorModal').classList.remove('visible');
+      
+      const content = Utils.id('annContent').value;
+      const css = Utils.id('annCSS').value;
+      const dur = Utils.id('annDuration').value * 1000;
+      
+      const tempAnn = { content, customCSS: css, duration: dur, position: null };
+      
+      // Show positioning overlay
+      this.bridge.renderAnnotation(tempAnn, true);
+      Utils.id('positionEditorOverlay').style.display = 'block';
+      
+      // Save Position Handler
+      Utils.id('savePosition').onclick = () => {
+        const metrics = this.bridge.getBoxMetrics();
+        const finalAnn = {
+          timestamp: this.recorder.getCurrentTime(),
+          duration: dur,
+          content: content,
+          customCSS: css,
+          position: metrics
+        };
+        this.model.addAnnotation(finalAnn);
+        this.bridge.hideAnnotation();
+        Utils.id('positionEditorOverlay').style.display = 'none';
+        this.timeline.render(this.model);
+      };
+    };
+    
+    // 4. Styles
+    Utils.id('tutorialStyles').onclick = () => {
+        Utils.id('tutorialStylesCSS').value = this.model.globalStyles || 
+`.simple-box { background: white; border: 2px solid blue; padding: 10px; border-radius: 5px; }`;
+        Utils.id('tutorialStylesModal').classList.add('visible');
+    };
+    Utils.id('saveTutorialStyles').onclick = () => {
+        this.model.globalStyles = Utils.id('tutorialStylesCSS').value;
+        this.bridge.injectGlobalStyles(this.model.globalStyles);
+        Utils.id('tutorialStylesModal').classList.remove('visible');
+    };
+
+    // 5. Preview
+    Utils.id('previewRecording').onclick = () => {
+        if (this.player.playing) {
+            this.player.stop();
+            Utils.setText('previewRecording', '▶ Play');
+            Utils.removeClass('previewRecording', 'playing');
+        } else {
+            this.player.play();
+            Utils.setText('previewRecording', '⏸ Pause');
+            Utils.addClass('previewRecording', 'playing');
+        }
+    };
+
+    // 6. Export/Import
+    Utils.id('exportRecording').onclick = () => {
+        const json = this.model.toJSON();
+        Utils.id('exportTextarea').value = json;
+        Utils.id('exportModal').classList.add('visible');
+    };
+    
+    Utils.id('loadJSON').onclick = () => Utils.id('jsonFileInput').click();
+    Utils.id('jsonFileInput').onchange = (e) => {
+        const r = new FileReader();
+        r.onload = (ev) => {
+            this.model.fromJSON(ev.target.result);
+            this.timeline.render(this.model);
+            alert("Tutorial loaded. You can now Preview it or Resume recording.");
+            // Set UI state to Paused so user can interact
+            this.recorder.state = 'paused';
+            Utils.hide('loadJSON');
+            Utils.show('startRecording');
+            Utils.setText('startRecording', '⏺ Record'); // Resume state
+            Utils.show('previewRecording'); Utils.enable('previewRecording');
+            Utils.show('addAnnotation'); Utils.enable('addAnnotation');
+        };
+        r.readAsText(e.target.files[0]);
+    };
+    
+    // Modal Closing logic
+    const closeModals = () => {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('visible'));
+    };
+    Utils.id('cancelAnnotation').onclick = closeModals;
+    Utils.id('cancelTutorialStyles').onclick = closeModals;
+    Utils.id('closeExportModal').onclick = closeModals;
   }
 }
 
-// Start
-window.app = new UIController();
-
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  window.app = new AppController();
+});
 </script>
 </body>
 </html>
