@@ -33,19 +33,19 @@ This app displays:
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui;
-      margin: 24px;
+      margin: 16px 24px 6px 24px;
       color: #333;
     }
 
     #plot {
       max-width: 900px;
-      height: 480px;
+      height: 430px;
       margin-left: auto;
       margin-right: auto;
     }
 
     #controls {
-      margin-top: 4px;
+      margin-top: -4px;           /* small pull upward, but not overlapping */
       display: flex;
       flex-wrap: wrap;
       gap: 14px;
@@ -233,11 +233,12 @@ This app displays:
     barmode: "overlay",
 
     xaxis: {
-      title: "",       // no axis label to save vertical space
+      title: "",
       range: [xMin, xMax],
       zeroline: false,
 
-      ticklabelposition: "inside",        // labels close to axis, above toolbar
+      // labels just under the axis, but inside the plot area
+      ticklabelposition: "outside",
       tickfont: { size: 13, color: "#000" },
       ticks: "",
       ticklen: 0,
@@ -261,7 +262,8 @@ This app displays:
       }
     ],
 
-    margin: { t: 5, r: 20, l: 60, b: 10 },
+    // a bit of bottom margin so labels don't touch controls
+    margin: { t: 5, r: 20, l: 60, b: 18 },
 
     legend: {
       x: 0.67,
