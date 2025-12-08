@@ -1,13 +1,33 @@
-<!DOCTYPE html>
 <!--
-To set a specific standard error (SE), add se=VALUE to the URL.
-Example: sampling_t_normal.html?se=3.25
-To set initial df: &df=30
+normal-t-demo.html
+------------------
+
+USING SE AND DF PARAMETERS
+--------------------------
+You can control the standard error (SE) and the starting
+degrees of freedom (df) via URL parameters.
+
+Examples:
+
+  normal-t-demo.html?se=2.5
+  normal-t-demo.html?df=12
+  normal-t-demo.html?se=2.5&df=12
+
+Defaults:
+  SE defaults to 1 if omitted or invalid.
+  df defaults to 15 if omitted or invalid.
+
+This app displays:
+  • A simulated sampling distribution of b₁
+  • A normal model using SE
+  • A t model using SE and df (adjustable via slider)
 -->
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sampling Distribution with Normal and t Overlays</title>
+  <title>Normal vs t Demo</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
   <style>
@@ -82,21 +102,24 @@ To set initial df: &df=30
 </div>
 
 <script>
-// ---------- Get SE and df from URL ----------
-const params = new URLSearchParams(window.location.search);
+  // -------------------------------------------------------------
+  // Get SE and df from URL parameters (?se=... & ?df=...)
+  // -------------------------------------------------------------
+  const params = new URLSearchParams(window.location.search);
 
-// SE parameter (?se=...)
-const seParam = parseFloat(params.get("se"));
-const SE = (Number.isFinite(seParam) && seParam > 0) ? seParam : 1;
+  // SE parameter
+  const seParam = parseFloat(params.get("se"));
+  const SE = (Number.isFinite(seParam) && seParam > 0) ? seParam : 1;
 
-// df parameter (?df=...)
-const dfParam = parseInt(params.get("df"), 10);
-// default df = 15 if not specified or invalid
-let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
-  ? dfParam
-  : 15;
+  // df parameter
+  const dfParam = parseInt(params.get("df"), 10);
+  let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
+    ? dfParam
+    : 15;
 
-  // ---------- Utilities ----------
+  // -------------------------------------------------------------
+  // Utilities for generating random normals, gamma, t, normal pdf
+  // -------------------------------------------------------------
   function rnorm(n, mean = 0, sd = 1) {
     const arr = [];
     for (let i = 0; i < n; i++) {
@@ -112,9 +135,14 @@ let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
   function logGamma(z) {
     const g = 7;
     const p = [
-      0.99999999999980993, 676.5203681218851, -1259.1392167224028,
-      771.32342877765313, -176.61502916214059, 12.507343278686905,
-      -0.13857109526572012, 9.9843695780195716e-6,
+      0.99999999999980993,
+      676.5203681218851,
+      -1259.1392167224028,
+      771.32342877765313,
+      -176.61502916214059,
+      12.507343278686905,
+      -0.13857109526572012,
+      9.9843695780195716e-6,
       1.5056327351493116e-7
     ];
     if (z < 0.5) {
@@ -124,36 +152,40 @@ let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
     let x = p[0];
     for (let i = 1; i < p.length; i++) x += p[i] / (z + i);
     const t = z + g + 0.5;
-    return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+    return 0.5 * Math.log(2 * Math.PI)
+           + (z + 0.5) * Math.log(t)
+           - t
+           + Math.log(x);
   }
 
-  function gamma(z) { return Math.exp(logGamma(z)); }
+  const gamma = z => Math.exp(logGamma(z));
 
-  function dnorm(x, m = 0, s = 1) {
-    const z = (x - m) / s;
-    return Math.exp(-0.5 * z * z) / (s * Math.sqrt(2 * Math.PI));
-  }
+  const dnorm = (x, m = 0, s = 1) =>
+    Math.exp(-0.5 * ((x - m) / s) ** 2) / (s * Math.sqrt(2 * Math.PI));
 
   function dt(x, df) {
-    const v = df;
-    const c = gamma((v + 1) / 2) /
-              (Math.sqrt(v * Math.PI) * gamma(v / 2));
-    return c * Math.pow(1 + (x * x) / v, -(v + 1) / 2);
+    const c = gamma((df + 1) / 2) /
+              (Math.sqrt(df * Math.PI) * gamma(df / 2));
+    return c * Math.pow(1 + (x * x) / df, -(df + 1) / 2);
   }
 
-  // ---------- Data ----------
+  // -------------------------------------------------------------
+  // Generate sampling distribution of b1 (normal with sd = SE)
+  // -------------------------------------------------------------
   const sample = rnorm(2000, 0, SE);
 
-  const xMin  = -4 * SE;
-  const xMax  =  4 * SE;
-  const step  = (xMax - xMin) / 160;
+  const xMin = -4 * SE;
+  const xMax =  4 * SE;
+  const step = (xMax - xMin) / 160;
   const xGrid = [];
   for (let x = xMin; x <= xMax; x += step) xGrid.push(x);
 
-  function makeNormal() { return xGrid.map(x => dnorm(x, 0, SE)); }
-  function makeT(df)   { return xGrid.map(x => dt(x / SE, df) / SE); }
+  const makeNormal = () => xGrid.map(x => dnorm(x, 0, SE));
+  const makeT      = df => xGrid.map(x => dt(x / SE, df) / SE);
 
-  // ---------- Histogram ----------
+  // -------------------------------------------------------------
+  // Histogram trace
+  // -------------------------------------------------------------
   const histTrace = {
     x: sample,
     type: "histogram",
@@ -168,51 +200,79 @@ let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
     xbins: { start: xMin, end: xMax, size: (xMax - xMin) / 22 }
   };
 
-  // ---------- Curves ----------
-  let tY        = makeT(currentDf);
+  // -------------------------------------------------------------
+  // Model curves
+  // -------------------------------------------------------------
+  let tY = makeT(currentDf);
   const normalY = makeNormal();
 
   const normalTrace = {
-    x: xGrid, y: normalY,
-    type: "scatter", mode: "lines",
+    x: xGrid,
+    y: normalY,
+    type: "scatter",
+    mode: "lines",
     name: "Normal model",
     line: { color: "green", width: 3, dash: "dash" },
     visible: true
   };
 
   const tTrace = {
-    x: xGrid, y: tY,
-    type: "scatter", mode: "lines",
+    x: xGrid,
+    y: tY,
+    type: "scatter",
+    mode: "lines",
     name: "t model",
     line: { color: "blue", width: 3 },
     visible: true
   };
 
-  // ---------- Layout ----------
+  // -------------------------------------------------------------
+  // Layout with inset title & no x-axis label
+  // -------------------------------------------------------------
   const layout = {
     barmode: "overlay",
+
     xaxis: {
-      title: { text: "b\u2081", font: { size: 20 } },
+      title: "",       // no axis label to save vertical space
       range: [xMin, xMax],
       zeroline: false,
-      ticklabelposition: "inside",   /* moves numbers up */
-      tickfont: { size: 13 },
-	  ticks: "",       // ← removes tick marks entirely
-	  ticklen: 0,      // redundant but safe
-      title_standoff: 4
+
+      ticklabelposition: "inside",        // labels close to axis, above toolbar
+      tickfont: { size: 13, color: "#000" },
+      ticks: "",
+      ticklen: 0,
+      automargin: false
     },
-    yaxis: { title: "Density" },
-    margin: { t: 5, r: 20, l: 60, b: 28 },
+
+    yaxis: {
+      title: "Density"
+    },
+
+    annotations: [
+      {
+        text: "<b>Distribution of b\u2081</b>",
+        x: 0.02,
+        y: 0.88,                 // aligned with legend top
+        xref: "paper",
+        yref: "paper",
+        showarrow: false,
+        font: { size: 18, color: "#222" },
+        align: "left"
+      }
+    ],
+
+    margin: { t: 5, r: 20, l: 60, b: 10 },
 
     legend: {
-      x: 0.67,                       /* moved 30px left */
-      y: 0.85,
+      x: 0.67,
+      y: 0.88,
       xanchor: "left",
       yanchor: "top",
       bgcolor: "rgba(255,255,255,0.85)",
       bordercolor: "rgba(0,0,0,0.15)",
       borderwidth: 1
     },
+
     showlegend: true
   };
 
@@ -220,28 +280,31 @@ let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
     responsive: true
   });
 
-  // ---------- Controls ----------
-  document.getElementById("showNormal").addEventListener("change", e =>
-    Plotly.restyle("plot", { visible: e.target.checked }, [1])
-  );
+  // -------------------------------------------------------------
+  // Controls
+  // -------------------------------------------------------------
+  document.getElementById("showNormal").addEventListener("change", e => {
+    Plotly.restyle("plot", { visible: e.target.checked }, [1]);
+  });
 
-  document.getElementById("showT").addEventListener("change", e =>
-    Plotly.restyle("plot", { visible: e.target.checked }, [2])
-  );
+  document.getElementById("showT").addEventListener("change", e => {
+    Plotly.restyle("plot", { visible: e.target.checked }, [2]);
+  });
 
   const dfSlider = document.getElementById("dfSlider");
   const dfLabel  = document.getElementById("dfLabel");
-  
-  // initialize slider and label from currentDf (may come from URL)
+
+  // initialize slider from URL df
   dfSlider.value = currentDf;
   dfLabel.textContent = currentDf;
-   
+
   dfSlider.addEventListener("input", e => {
-    currentDf = parseInt(e.target.value);
+    currentDf = parseInt(e.target.value, 10);
     dfLabel.textContent = currentDf;
     tY = makeT(currentDf);
     Plotly.restyle("plot", { y: [tY] }, [2]);
   });
+
 </script>
 
 </body>
