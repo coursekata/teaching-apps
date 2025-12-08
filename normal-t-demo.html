@@ -2,6 +2,7 @@
 <!--
 To set a specific standard error (SE), add se=VALUE to the URL.
 Example: sampling_t_normal.html?se=3.25
+To set initial df: &df=30
 -->
 <html lang="en">
 <head>
@@ -81,10 +82,19 @@ Example: sampling_t_normal.html?se=3.25
 </div>
 
 <script>
-  // ---------- SE from URL ----------
-  const params  = new URLSearchParams(window.location.search);
-  const seParam = parseFloat(params.get("se"));
-  const SE      = (Number.isFinite(seParam) && seParam > 0) ? seParam : 1;
+// ---------- Get SE and df from URL ----------
+const params = new URLSearchParams(window.location.search);
+
+// SE parameter (?se=...)
+const seParam = parseFloat(params.get("se"));
+const SE = (Number.isFinite(seParam) && seParam > 0) ? seParam : 1;
+
+// df parameter (?df=...)
+const dfParam = parseInt(params.get("df"), 10);
+// default df = 15 if not specified or invalid
+let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
+  ? dfParam
+  : 15;
 
   // ---------- Utilities ----------
   function rnorm(n, mean = 0, sd = 1) {
@@ -159,7 +169,6 @@ Example: sampling_t_normal.html?se=3.25
   };
 
   // ---------- Curves ----------
-  let currentDf = 15;
   let tY        = makeT(currentDf);
   const normalY = makeNormal();
 
@@ -222,7 +231,11 @@ Example: sampling_t_normal.html?se=3.25
 
   const dfSlider = document.getElementById("dfSlider");
   const dfLabel  = document.getElementById("dfLabel");
-
+  
+  // initialize slider and label from currentDf (may come from URL)
+  dfSlider.value = currentDf;
+  dfLabel.textContent = currentDf;
+   
   dfSlider.addEventListener("input", e => {
     currentDf = parseInt(e.target.value);
     dfLabel.textContent = currentDf;
