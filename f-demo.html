@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // -------------------------------------------------------------
   // Generate sampling distribution of F
   // -------------------------------------------------------------
-  const sample = rfSample(2000, currentDf1, currentDf2);
+  let sample = rfSample(2000, currentDf1, currentDf2);
 
   // F distribution is right-skewed, starts at 0
   const xMin = 0;
@@ -335,14 +335,18 @@ document.addEventListener("DOMContentLoaded", function() {
   df1Slider.addEventListener("input", e => {
     currentDf1 = parseInt(e.target.value, 10);
     df1Label.textContent = currentDf1;
+    sample = rfSample(2000, currentDf1, currentDf2);
     fY = makeF(currentDf1, currentDf2);
+    Plotly.restyle("plot", { x: [sample] }, [0]);
     Plotly.restyle("plot", { y: [fY] }, [1]);
   });
 
   df2Slider.addEventListener("input", e => {
     currentDf2 = parseInt(e.target.value, 10);
     df2Label.textContent = currentDf2;
+    sample = rfSample(2000, currentDf1, currentDf2);
     fY = makeF(currentDf1, currentDf2);
+    Plotly.restyle("plot", { x: [sample] }, [0]);
     Plotly.restyle("plot", { y: [fY] }, [1]);
   });
 
