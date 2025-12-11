@@ -1,0 +1,353 @@
+<!--
+f-demo.html
+-----------
+
+USING DF PARAMETERS
+-------------------
+You can control the starting degrees of freedom via URL parameters.
+
+Examples:
+
+  f-demo.html?df1=3&df2=20
+  f-demo.html?df1=5
+  f-demo.html?df2=30
+
+Defaults:
+  df1 (numerator) defaults to 4 if omitted or invalid.
+  df2 (denominator) defaults to 20 if omitted or invalid.
+
+This app displays:
+  • A simulated sampling distribution of F values
+  • An F model using df1 and df2 (adjustable via sliders)
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>F Distribution Demo</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui;
+      margin: 16px 24px;
+      color: #333;
+    }
+
+    /* Outer container controls total height: plot + controls */
+    #outer {
+      max-width: 700px;
+      height: 360px;                  /* adjust this if you want taller/shorter */
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between; /* plot at top, controls at bottom */
+    }
+
+    #plot {
+      width: 100%;
+      flex: 1 1 auto;                 /* plot takes remaining vertical space */
+    }
+
+    #controls {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      padding-top: 4px;
+    }
+
+    .dfLabel {
+      font-weight: 600;
+      margin-left: 4px;
+      display: inline-block;
+      min-width: 24px;
+    }
+
+    .checkbox label {
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .slider-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 15px;
+    }
+
+    .slider-wrapper input[type="range"] {
+      width: 120px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="outer">
+  <div id="plot"></div>
+
+  <div id="controls">
+    <label class="checkbox">
+      <input type="checkbox" id="showF" checked>
+      F model
+    </label>
+
+    <div class="slider-wrapper">
+      <span>df<sub>1</sub>:</span>
+      <input type="range" id="df1Slider" min="1" max="30" step="1" value="4">
+      <span id="df1Label" class="dfLabel">4</span>
+    </div>
+
+    <div class="slider-wrapper">
+      <span>df<sub>2</sub>:</span>
+      <input type="range" id="df2Slider" min="2" max="60" step="1" value="20">
+      <span id="df2Label" class="dfLabel">20</span>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // -------------------------------------------------------------
+  // Get df1 and df2 from URL parameters (?df1=... & ?df2=...)
+  // -------------------------------------------------------------
+  const params = new URLSearchParams(window.location.search);
+
+  // df1 (numerator) parameter
+  const df1Param = parseInt(params.get("df1"), 10);
+  let currentDf1 = (Number.isInteger(df1Param) && df1Param >= 1 && df1Param <= 100)
+    ? df1Param
+    : 4;
+
+  // df2 (denominator) parameter
+  const df2Param = parseInt(params.get("df2"), 10);
+  let currentDf2 = (Number.isInteger(df2Param) && df2Param >= 2 && df2Param <= 200)
+    ? df2Param
+    : 20;
+
+  // -------------------------------------------------------------
+  // Utilities: rnorm, gamma, chi-squared, F pdf
+  // -------------------------------------------------------------
+  function rnorm(n, mean = 0, sd = 1) {
+    const arr = [];
+    for (let i = 0; i < n; i++) {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      arr.push(mean + sd * z);
+    }
+    return arr;
+  }
+
+  function logGamma(z) {
+    const g = 7;
+    const p = [
+      0.99999999999980993,
+      676.5203681218851,
+      -1259.1392167224028,
+      771.32342877765313,
+      -176.61502916214059,
+      12.507343278686905,
+      -0.13857109526572012,
+      9.9843695780195716e-6,
+      1.5056327351493116e-7
+    ];
+    if (z < 0.5) {
+      return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+    }
+    z -= 1;
+    let x = p[0];
+    for (let i = 1; i < p.length; i++) x += p[i] / (z + i);
+    const t = z + g + 0.5;
+    return 0.5 * Math.log(2 * Math.PI)
+           + (z + 0.5) * Math.log(t)
+           - t
+           + Math.log(x);
+  }
+
+  const gamma = z => Math.exp(logGamma(z));
+
+  // Log of beta function for numerical stability
+  function logBeta(a, b) {
+    return logGamma(a) + logGamma(b) - logGamma(a + b);
+  }
+
+  // F distribution PDF
+  function df(x, d1, d2) {
+    if (x <= 0) return 0;
+    const logCoef = (d1 / 2) * Math.log(d1) + (d2 / 2) * Math.log(d2) - logBeta(d1 / 2, d2 / 2);
+    const logNum = ((d1 / 2) - 1) * Math.log(x);
+    const logDen = ((d1 + d2) / 2) * Math.log(d2 + d1 * x);
+    return Math.exp(logCoef + logNum - logDen);
+  }
+
+  // Generate chi-squared random variable with k degrees of freedom
+  function rchisq(k) {
+    let sum = 0;
+    for (let i = 0; i < k; i++) {
+      const z = rnorm(1)[0];
+      sum += z * z;
+    }
+    return sum;
+  }
+
+  // Generate F random variable
+  function rf(df1, df2) {
+    const chi1 = rchisq(df1);
+    const chi2 = rchisq(df2);
+    return (chi1 / df1) / (chi2 / df2);
+  }
+
+  // Generate n F random variables
+  function rfSample(n, df1, df2) {
+    const arr = [];
+    for (let i = 0; i < n; i++) {
+      arr.push(rf(df1, df2));
+    }
+    return arr;
+  }
+
+  // -------------------------------------------------------------
+  // Generate sampling distribution of F
+  // -------------------------------------------------------------
+  const sample = rfSample(2000, currentDf1, currentDf2);
+
+  // F distribution is right-skewed, starts at 0
+  const xMin = 0;
+  const xMax = 6;
+  const step = (xMax - xMin) / 160;
+  const xGrid = [];
+  for (let x = xMin; x <= xMax; x += step) xGrid.push(x);
+
+  const makeF = (d1, d2) => xGrid.map(x => df(x, d1, d2));
+
+  // -------------------------------------------------------------
+  // Histogram trace
+  // -------------------------------------------------------------
+  const histTrace = {
+    x: sample,
+    type: "histogram",
+    histnorm: "probability density",
+    name: "Simulated Sampling Distribution",
+    marker: {
+      color: "rgba(207,224,255,0.7)",
+      line: { color: "#355e9a", width: 1.6 }
+    },
+    opacity: 1,
+    autobinx: false,
+    xbins: { start: xMin, end: xMax, size: (xMax - xMin) / 22 }
+  };
+
+  // -------------------------------------------------------------
+  // Model curve
+  // -------------------------------------------------------------
+  let fY = makeF(currentDf1, currentDf2);
+
+  const fTrace = {
+    x: xGrid,
+    y: fY,
+    type: "scatter",
+    mode: "lines",
+    name: "F model",
+    line: { color: "blue", width: 3 },
+    visible: true
+  };
+
+  // -------------------------------------------------------------
+  // Layout with inset title & no x-axis label
+  // -------------------------------------------------------------
+  const layout = {
+    barmode: "overlay",
+
+    xaxis: {
+      title: "",
+      range: [xMin, xMax],
+      zeroline: false,
+      tickmode: "linear",
+      tick0: 0,
+      dtick: 0.5,
+      ticklabelposition: "outside",
+      tickfont: { size: 13, color: "#000" },
+      ticks: "",
+      ticklen: 0,
+      automargin: false
+    },
+
+    yaxis: {
+      title: "Density"
+    },
+
+    annotations: [
+      {
+        text: "<b>Distribution of F</b>",
+        x: 0.5,
+        y: 0.88,
+        xref: "paper",
+        yref: "paper",
+        xanchor: "center",
+        showarrow: false,
+        font: { size: 18, color: "#222" },
+        align: "right"
+      }
+    ],
+
+    margin: { t: 5, r: 20, l: 60, b: 18 },
+
+    legend: {
+      x: 0.50,
+      y: 0.75,
+      xanchor: "left",
+      yanchor: "top",
+      bgcolor: "rgba(255,255,255,0.85)",
+      bordercolor: "rgba(0,0,0,0.15)",
+      borderwidth: 1
+    },
+
+    showlegend: true
+  };
+
+  Plotly.newPlot("plot", [histTrace, fTrace], layout, {
+    responsive: true
+  });
+
+  // -------------------------------------------------------------
+  // Controls
+  // -------------------------------------------------------------
+  document.getElementById("showF").addEventListener("change", e => {
+    Plotly.restyle("plot", { visible: e.target.checked }, [1]);
+  });
+
+  const df1Slider = document.getElementById("df1Slider");
+  const df1Label  = document.getElementById("df1Label");
+  const df2Slider = document.getElementById("df2Slider");
+  const df2Label  = document.getElementById("df2Label");
+
+  // initialize sliders from URL df values
+  df1Slider.value = currentDf1;
+  df1Label.textContent = currentDf1;
+  df2Slider.value = currentDf2;
+  df2Label.textContent = currentDf2;
+
+  df1Slider.addEventListener("input", e => {
+    currentDf1 = parseInt(e.target.value, 10);
+    df1Label.textContent = currentDf1;
+    fY = makeF(currentDf1, currentDf2);
+    Plotly.restyle("plot", { y: [fY] }, [1]);
+  });
+
+  df2Slider.addEventListener("input", e => {
+    currentDf2 = parseInt(e.target.value, 10);
+    df2Label.textContent = currentDf2;
+    fY = makeF(currentDf1, currentDf2);
+    Plotly.restyle("plot", { y: [fY] }, [1]);
+  });
+
+});
+</script>
+
+</body>
+</html>
