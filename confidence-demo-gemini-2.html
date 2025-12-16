@@ -3323,7 +3323,10 @@
   
   // Beta was already initialized earlier in URL parameter section
   
-  binsRange.value = 30;
+  // Only set default bins if not specified via URL
+  if(urlBins === null) {
+    binsRange.value = 30;
+  }
 
   (function initDomainAndSliders(){
     const beta = getBeta();
