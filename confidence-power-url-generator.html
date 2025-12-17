@@ -306,7 +306,7 @@
   <div class="section">
     <div class="section-title">Custom Labels</div>
     <div class="info-box">
-      Override default parameter labels. Leave blank to use LaTeX defaults: \beta, b, \bar{b}
+      Override default parameter labels. Leave blank to use LaTeX defaults: \beta, b
     </div>
     <div class="control-group">
       <div class="control">
@@ -316,10 +316,6 @@
       <div class="control">
         <label>Sample Statistic Label</label>
         <input type="text" id="label_stat" value="" placeholder="b (default)">
-      </div>
-      <div class="control">
-        <label>Sampling Mean Label</label>
-        <input type="text" id="label_mean" value="" placeholder="\bar{b} (default)">
       </div>
     </div>
   </div>
@@ -519,7 +515,7 @@
 <script>
 function generateURL() {
   // Get base URL
-  const baseURL = document.getElementById('baseURL').value.trim() || 'https://coursekata.github.io/teaching-apps/confidence-demo-7.html';
+  const baseURL = document.getElementById('baseURL').value.trim() || 'https://coursekata.github.io/teaching-apps/confidence-demo-gemini-2.html';
   
   // Get values with proper handling for empty strings
   const params = new URLSearchParams();
@@ -545,9 +541,8 @@ function generateURL() {
   // Custom Labels - combine into single comma-separated parameter
   const labelParam = document.getElementById('label_param').value.trim();
   const labelStat = document.getElementById('label_stat').value.trim();
-  const labelMean = document.getElementById('label_mean').value.trim();
   
-  if(labelParam || labelStat || labelMean) {
+  if(labelParam || labelStat) {
     const processLabel = (label, defaultVal) => {
       if(!label) return '$' + defaultVal + '$';
       if(!label.startsWith('$')) label = '$' + label;
@@ -557,8 +552,7 @@ function generateURL() {
     
     const labels = [
       processLabel(labelParam, '\\beta'),
-      processLabel(labelStat, 'b'),
-      processLabel(labelMean, '\\bar{b}')
+      processLabel(labelStat, 'b')
     ];
     
     params.append('labels', labels.join(','));
