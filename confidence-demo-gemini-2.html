@@ -573,6 +573,7 @@
   // Alpha cutoff arrow markers (shown when curve is off but histogram alpha shading is on)
   const alphaCutoffArrowL = histWrap.append('line').attr('stroke','#1e3a8a').attr('stroke-width',2).attr('marker-end','url(#arrowDownBlue)').style('display','none');
   const alphaCutoffArrowR = histWrap.append('line').attr('stroke','#1e3a8a').attr('stroke-width',2).attr('marker-end','url(#arrowDownBlue)').style('display','none');
+  const meanLineBg = histWrap.append('line').attr('class','mean-line-bg').attr('stroke','#fff').attr('stroke-width',3);
   const meanLine = histWrap.append('line').attr('class','mean-line');
   const meanLabel = histWrap.append('g').attr('class','mean-label');
   meanLabel.append('rect')
@@ -584,6 +585,7 @@
   const secondWrap = plotWrap.append('g').attr('class','second-wrap');
   const histG2 = secondWrap.append('g').attr('class','hist-2');
   const histShadeG2 = secondWrap.append('g').attr('class','hist-shade-wrap-2');
+  const meanLine2Bg = secondWrap.append('line').attr('class','mean-line-bg').attr('stroke','#fff').attr('stroke-width',3).style('display','none');
   const meanLine2 = secondWrap.append('line').attr('class','mean-line-orange').style('display','none');
   const meanLabel2 = secondWrap.append('g').attr('class','mean-label-orange');
   meanLabel2.append('rect')
@@ -620,6 +622,7 @@
   const thirdWrap = plotWrap.append('g').attr('class','third-wrap');
   const histG3 = thirdWrap.append('g').attr('class','hist-3');
   const histShadeG3 = thirdWrap.append('g').attr('class','hist-shade-wrap-3');
+  const meanLine3Bg = thirdWrap.append('line').attr('class','mean-line-bg').attr('stroke','#fff').attr('stroke-width',3).style('display','none');
   const meanLine3 = thirdWrap.append('line').attr('class','mean-line').style('stroke','#f97316').style('display','none');
   const meanLabel3 = thirdWrap.append('g').attr('class','mean-label-orange');
   meanLabel3.append('rect')
@@ -2077,7 +2080,7 @@
     }
     
     const showMeanLines = showSampleMean && ((histogramMode === 'on') || (curveMode !== 'off'));
-    const meanLineEnd = plotH * 0.2;
+    const meanLineEnd = plotH;
     
     // Position mean line within histWrap
     // histWrap is already translated by pxShift, so we just need local coordinates
@@ -2085,36 +2088,19 @@
     // When not locked: position at x(sampleMean) to show actual sample mean
     const meanLineX = isLockedToBeta ? x(beta) : x(sampleMean);
     
+    meanLineBg.attr('x1', meanLineX).attr('x2', meanLineX).attr('y1',0).attr('y2',meanLineEnd)
+      .style('stroke', getMainColor())
+      .style('display', showMeanLines ? null : 'none')
+      .raise();
     meanLine.attr('x1', meanLineX).attr('x2', meanLineX).attr('y1',0).attr('y2',meanLineEnd)
-      .style('display', showMeanLines ? null : 'none');
+      .style('display', showMeanLines ? null : 'none')
+      .raise();
     
     meanLabel.attr('transform', 'translate(' + meanLineX + ',' + (meanLineEnd + 18) + ')')
-      .style('display', 'none'); // Hide SVG label, use HTML overlay instead
+      .style('display', 'none'); // Hide SVG label
     
     const meanLineLabelDiv = document.getElementById('meanLineLabel');
-    if(showMeanLines && meanLineLabelDiv){
-      const labelHtml = '<div style="text-align:center;color:#ef4444;font-weight:700;font-size:20px;white-space:nowrap;background:#fff;opacity:0.75;border-radius:3px;padding:2px 4px;" class="latex-label">' + 
-        renderLatex(labelSamplingMeanLatex) + '</div>';
-      meanLineLabelDiv.innerHTML = labelHtml;
-      meanLineLabelDiv.style.display = 'block';
-      
-      setTimeout(() => {
-        const bb = meanLineLabelDiv.getBoundingClientRect();
-        const chartRect = chartWrap.getBoundingClientRect();
-        const svgRect = svg.node().getBoundingClientRect();
-        
-        // Calculate position: need to account for SVG position + margin + plot translation + shift + mean line position
-        const pxShift = shiftUnits * (x(1) - x(0));
-        const absoluteX = svgRect.left - chartRect.left + margin.left + meanLineX + pxShift;
-        const absoluteY = svgRect.top - chartRect.top + margin.top + axisInsetTop + meanLineEnd + 18;
-        
-        meanLineLabelDiv.style.left = (absoluteX - bb.width/2) + 'px';
-        meanLineLabelDiv.style.top = (absoluteY - bb.height/2) + 'px';
-        
-        // Hide old foreignObject
-        meanLabelFO.attr('x', -1000).attr('y', -1000);
-      }, 0);
-    } else if(meanLineLabelDiv) {
+    if(meanLineLabelDiv) {
       meanLineLabelDiv.style.display = 'none';
     }
 
@@ -2144,38 +2130,22 @@
       // Position mean line within secondWrap (which is translated by pxShift2)
       const meanLineX2 = isLockedToBeta ? x(beta) : x(sampleMean2);
       
+      meanLine2Bg.attr('x1', meanLineX2).attr('x2', meanLineX2).attr('y1',0).attr('y2',meanLineEnd)
+        .style('stroke', getSecondaryColor())
+        .style('display', showMeanLines2 ? null : 'none')
+        .raise();
       meanLine2.attr('x1', meanLineX2).attr('x2', meanLineX2).attr('y1',0).attr('y2',meanLineEnd)
-        .style('display', showMeanLines2 ? null : 'none');
+        .style('display', showMeanLines2 ? null : 'none')
+        .raise();
       meanLabel2.attr('transform', 'translate(' + meanLineX2 + ',' + (meanLineEnd + 18) + ')')
-        .style('display', 'none'); // Hide SVG label, use HTML overlay instead
+        .style('display', 'none'); // Hide SVG label
       
       const meanLineLabel2Div = document.getElementById('meanLineLabel2');
-      if(showMeanLines2 && meanLineLabel2Div){
-        const labelHtml2 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;background:#fff;opacity:0.75;border-radius:3px;padding:2px 4px;" class="latex-label">' + 
-          renderLatex(labelSamplingMeanLatex + '\'') + '</div>';
-        meanLineLabel2Div.innerHTML = labelHtml2;
-        meanLineLabel2Div.style.display = 'block';
-        
-        setTimeout(() => {
-          const bb2 = meanLineLabel2Div.getBoundingClientRect();
-          const chartRect = chartWrap.getBoundingClientRect();
-          const svgRect = svg.node().getBoundingClientRect();
-          
-          // Calculate position: need to account for SVG position + margin + plot translation + shift + mean line position
-          const pxShift2 = shiftUnits2 * (x(1) - x(0));
-          const absoluteX = svgRect.left - chartRect.left + margin.left + meanLineX2 + pxShift2;
-          const absoluteY = svgRect.top - chartRect.top + margin.top + axisInsetTop + meanLineEnd + 18;
-          
-          meanLineLabel2Div.style.left = (absoluteX - bb2.width/2) + 'px';
-          meanLineLabel2Div.style.top = (absoluteY - bb2.height/2) + 'px';
-          
-          // Hide old foreignObject
-          meanLabelFO2.attr('x', -1000).attr('y', -1000);
-        }, 0);
-      } else if(meanLineLabel2Div) {
+      if(meanLineLabel2Div) {
         meanLineLabel2Div.style.display = 'none';
       }
     } else {
+      meanLine2Bg.style('display', 'none');
       meanLine2.style('display', 'none');
       meanLabel2.style('display', 'none');
       const meanLineLabel2Div = document.getElementById('meanLineLabel2');
@@ -2207,38 +2177,22 @@
       // Position mean line within thirdWrap (which is translated by pxShift3)
       const meanLineX3 = isLockedToBeta ? x(beta) : x(sampleMean3);
       
+      meanLine3Bg.attr('x1', meanLineX3).attr('x2', meanLineX3).attr('y1',0).attr('y2',meanLineEnd)
+        .style('stroke', getSecondaryColor())
+        .style('display', showMeanLines3 ? null : 'none')
+        .raise();
       meanLine3.attr('x1', meanLineX3).attr('x2', meanLineX3).attr('y1',0).attr('y2',meanLineEnd)
-        .style('display', showMeanLines3 ? null : 'none');
+        .style('display', showMeanLines3 ? null : 'none')
+        .raise();
       meanLabel3.attr('transform', 'translate(' + meanLineX3 + ',' + (meanLineEnd + 18) + ')')
-        .style('display', 'none'); // Hide SVG label, use HTML overlay instead
+        .style('display', 'none'); // Hide SVG label
       
       const meanLineLabel3Div = document.getElementById('meanLineLabel3');
-      if(showMeanLines3 && meanLineLabel3Div){
-        const labelHtml3 = '<div style="text-align:center;color:#f97316;font-weight:700;font-size:20px;white-space:nowrap;background:#fff;opacity:0.75;border-radius:3px;padding:2px 4px;" class="latex-label">' + 
-          renderLatex(labelSamplingMeanLatex + '\'\'') + '</div>';
-        meanLineLabel3Div.innerHTML = labelHtml3;
-        meanLineLabel3Div.style.display = 'block';
-        
-        setTimeout(() => {
-          const bb3 = meanLineLabel3Div.getBoundingClientRect();
-          const chartRect = chartWrap.getBoundingClientRect();
-          const svgRect = svg.node().getBoundingClientRect();
-          
-          // Calculate position: need to account for SVG position + margin + plot translation + shift + mean line position
-          const pxShift3 = shiftUnits3 * (x(1) - x(0));
-          const absoluteX = svgRect.left - chartRect.left + margin.left + meanLineX3 + pxShift3;
-          const absoluteY = svgRect.top - chartRect.top + margin.top + axisInsetTop + meanLineEnd + 18;
-          
-          meanLineLabel3Div.style.left = (absoluteX - bb3.width/2) + 'px';
-          meanLineLabel3Div.style.top = (absoluteY - bb3.height/2) + 'px';
-          
-          // Hide old foreignObject
-          meanLabelFO3.attr('x', -1000).attr('y', -1000);
-        }, 0);
-      } else if(meanLineLabel3Div) {
+      if(meanLineLabel3Div) {
         meanLineLabel3Div.style.display = 'none';
       }
     } else {
+      meanLine3Bg.style('display', 'none');
       meanLine3.style('display', 'none');
       meanLabel3.style('display', 'none');
       const meanLineLabel3Div = document.getElementById('meanLineLabel3');
