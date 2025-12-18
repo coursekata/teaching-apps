@@ -1954,7 +1954,8 @@
     
     // Determine inequality based on whether b > beta or b < beta
     const inequality = bValue > betaVal ? '>' : '<';
-    const pLabel = 'P(' + renderLatex(labelSampleStatLatex) + ' ' + inequality + ' ' + renderLatex(labelSampleStatLatex) + ') ' + pValueText;
+    const bValueFormatted = Number.isInteger(bValue) ? bValue.toString() : bValue.toFixed(2).replace(/\.?0+$/, '');
+    const pLabel = 'P(' + renderLatex(labelSampleStatLatex) + ' ' + inequality + ' ' + bValueFormatted + ') ' + pValueText;
     
     if(pValueLabelDiv) {
       pValueLabelDiv.innerHTML = '<div style="color:#1d4ed8;font-weight:700;font-size:18px;line-height:1.1;margin-top:-2px;" class="latex-label">' + pLabel + '</div>';
