@@ -335,39 +335,49 @@
                     ctx.stroke();
                     ctx.setLineDash([]);
                     
-                    // Draw error indicators at x = -2, 0, and 2
-                    ctx.strokeStyle = '#ff9800';
-                    ctx.lineWidth = 1.5;
-                    ctx.setLineDash([3, 3]);
-                    for (let xVal of [-2, 0, 2]) {
+                    // Draw error indicator only if difference > 0.1
+                    const diff = Math.abs(userGuess - actualCorrelation);
+                    if (diff > 0.1) {
+                        // Choose x position based on sign of actual correlation
+                        const xVal = actualCorrelation >= 0 ? 2.5 : -2.5;
                         const yGuess = userGuess * xVal;
                         const yActual = actualCorrelation * xVal;
                         const xPos = (xVal + 3.5) * (chartWidth / 7);
                         const yPosGuess = (-yGuess + 3.5) * (chartHeight / 7);
                         const yPosActual = (-yActual + 3.5) * (chartHeight / 7);
                         
+                        // Draw arrow line
+                        ctx.strokeStyle = '#ff6f00';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([]);
                         ctx.beginPath();
                         ctx.moveTo(xPos, yPosGuess);
                         ctx.lineTo(xPos, yPosActual);
                         ctx.stroke();
                         
                         // Draw arrow head
-                        const arrowSize = 6;
+                        const arrowSize = 8;
                         const direction = yPosActual > yPosGuess ? 1 : -1;
-                        ctx.setLineDash([]);
                         ctx.beginPath();
                         ctx.moveTo(xPos, yPosActual);
                         ctx.lineTo(xPos - arrowSize/2, yPosActual - direction * arrowSize);
-                        ctx.moveTo(xPos, yPosActual);
                         ctx.lineTo(xPos + arrowSize/2, yPosActual - direction * arrowSize);
-                        ctx.stroke();
-                        ctx.setLineDash([3, 3]);
+                        ctx.closePath();
+                        ctx.fillStyle = '#ff6f00';
+                        ctx.fill();
+                        
+                        // Add text label
+                        ctx.fillStyle = '#ff6f00';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.textAlign = 'center';
+                        const labelText = (userGuess > actualCorrelation) ? 'Too High' : 'Too Low';
+                        const labelY = (yPosGuess + yPosActual) / 2;
+                        ctx.fillText(labelText, xPos + (actualCorrelation >= 0 ? 35 : -35), labelY);
                     }
-                    ctx.setLineDash([]);
                 }
                 
                 // Draw actual regression line (solid red)
-                ctx.strokeStyle = '#ff4444';
+                ctx.strokeStyle = '#d32f2f';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 const x1 = -3.5;
