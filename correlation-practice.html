@@ -362,6 +362,9 @@
             document.getElementById('actualR').textContent = '--';
             
             drawPlot(false);
+            
+            // Return focus to input field for next guess
+            document.getElementById('guessInput').focus();
         }
         
         function submitGuess() {
@@ -402,15 +405,32 @@
             
             // Redraw with regression line
             drawPlot(true);
+            
+            // Shift focus to New Dataset button after submission
+            document.getElementById('newDataBtn').focus();
         }
         
         // Initialize with first dataset
         generateNewData();
         
-        // Allow Enter key to submit
+        // Allow Enter key to submit or generate new data depending on state
         document.getElementById('guessInput').addEventListener('keypress', function(event) {
             if (event.key === 'Enter' && !submitted) {
                 submitGuess();
+            }
+        });
+        
+        // Allow Enter key on New Dataset button to generate new data
+        document.getElementById('newDataBtn').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                generateNewData();
+            }
+        });
+        
+        // Also allow Enter anywhere after submission to generate new data
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && submitted) {
+                generateNewData();
             }
         });
     </script>
