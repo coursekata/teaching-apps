@@ -87,29 +87,52 @@
         
         .result {
             margin: 0;
-            padding: 12px;
-            background-color: #e7f3ff;
-            border-radius: 4px;
-            display: block;
-            min-width: 200px;
-            max-width: 250px;
+            padding: 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            min-width: 240px;
+            max-width: 240px;
+            height: 350px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid #90caf9;
         }
         
 
         .result h3 {
             margin-top: 0;
-            margin-bottom: 10px;
-            color: #333;
-            font-size: 16px;
+            margin-bottom: 15px;
+            color: #1565c0;
+            font-size: 20px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #64b5f6;
         }
         
         .stats {
-            font-size: 14px;
-            margin: 5px 0;
+            font-size: 16px;
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .stats strong {
+            font-size: 18px;
+            color: #1565c0;
+        }
+        
+        .stats div {
+            margin: 8px 0;
         }
         
         .difference {
             font-weight: bold;
+            font-size: 15px;
+            margin-top: 10px !important;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: rgba(255,255,255,0.5);
         }
         
         .difference.close {
@@ -141,18 +164,18 @@
             
             <div id="result" class="result">
                 <h3>Results</h3>
-                <div class="stats">
+                <div class="stats" style="flex: 1;">
                     <div>Your guess: <strong id="userGuess">--</strong></div>
                     <div>Actual r: <strong id="actualR">--</strong></div>
                     <div class="difference" id="difference">Submit a guess to see results</div>
                 </div>
-                <hr style="margin: 10px 0; border: none; border-top: 1px solid #ccc;">
-                <div class="stats" style="font-size: 13px;">
-                    <div><strong>Cumulative Stats:</strong></div>
+                <hr style="margin: 12px 0; border: none; border-top: 2px solid #64b5f6;">
+                <div class="stats" style="font-size: 15px; background-color: rgba(255,255,255,0.4); padding: 12px; border-radius: 6px; margin-top: auto;">
+                    <div style="font-weight: bold; color: #1565c0; margin-bottom: 8px; font-size: 16px;">📊 Cumulative Stats</div>
                     <div>Trials: <strong id="trials">0</strong></div>
                     <div>Avg accuracy: <strong id="avgAccuracy">--</strong></div>
-                    <div>Best: <strong id="bestAccuracy">--</strong></div>
-                    <div>Worst: <strong id="worstAccuracy">--</strong></div>
+                    <div>Best: <strong id="bestAccuracy" style="color: #2e7d32;">--</strong></div>
+                    <div>Worst: <strong id="worstAccuracy" style="color: #c62828;">--</strong></div>
                 </div>
             </div>
         </div>
