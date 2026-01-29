@@ -33,7 +33,7 @@
         }
         
         #plotCanvas {
-            border: 1px solid #ddd;
+            border: 2px solid #90caf9;
             background-color: white;
             flex-shrink: 0;
         }
@@ -184,6 +184,7 @@
     <script>
         let data = [];
         let actualCorrelation = 0;
+        let userGuess = null;
         let submitted = false;
         const canvas = document.getElementById('plotCanvas');
         const ctx = canvas.getContext('2d');
@@ -316,13 +317,63 @@
                 const slope = numerator / denominator;
                 const intercept = meanY - slope * meanX;
                 
+                // Draw user's guess line (dashed blue)
+                if (userGuess !== null) {
+                    // For standardized data, the regression line passes through origin
+                    // and has slope = r (correlation coefficient)
+                    ctx.strokeStyle = '#2196F3';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([8, 4]);
+                    ctx.beginPath();
+                    const x1_guess = -3.5;
+                    const y1_guess = userGuess * x1_guess;
+                    const x2_guess = 3.5;
+                    const y2_guess = userGuess * x2_guess;
+                    
+                    ctx.moveTo((x1_guess + 3.5) * (chartWidth / 7), (-y1_guess + 3.5) * (chartHeight / 7));
+                    ctx.lineTo((x2_guess + 3.5) * (chartWidth / 7), (-y2_guess + 3.5) * (chartHeight / 7));
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Draw error indicators at x = -2, 0, and 2
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([3, 3]);
+                    for (let xVal of [-2, 0, 2]) {
+                        const yGuess = userGuess * xVal;
+                        const yActual = actualCorrelation * xVal;
+                        const xPos = (xVal + 3.5) * (chartWidth / 7);
+                        const yPosGuess = (-yGuess + 3.5) * (chartHeight / 7);
+                        const yPosActual = (-yActual + 3.5) * (chartHeight / 7);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(xPos, yPosGuess);
+                        ctx.lineTo(xPos, yPosActual);
+                        ctx.stroke();
+                        
+                        // Draw arrow head
+                        const arrowSize = 6;
+                        const direction = yPosActual > yPosGuess ? 1 : -1;
+                        ctx.setLineDash([]);
+                        ctx.beginPath();
+                        ctx.moveTo(xPos, yPosActual);
+                        ctx.lineTo(xPos - arrowSize/2, yPosActual - direction * arrowSize);
+                        ctx.moveTo(xPos, yPosActual);
+                        ctx.lineTo(xPos + arrowSize/2, yPosActual - direction * arrowSize);
+                        ctx.stroke();
+                        ctx.setLineDash([3, 3]);
+                    }
+                    ctx.setLineDash([]);
+                }
+                
+                // Draw actual regression line (solid red)
                 ctx.strokeStyle = '#ff4444';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 const x1 = -3.5;
-                const y1 = slope * x1 + intercept;
+                const y1 = actualCorrelation * x1;
                 const x2 = 3.5;
-                const y2 = slope * x2 + intercept;
+                const y2 = actualCorrelation * x2;
                 
                 ctx.moveTo((x1 + 3.5) * (chartWidth / 7), (-y1 + 3.5) * (chartHeight / 7));
                 ctx.lineTo((x2 + 3.5) * (chartWidth / 7), (-y2 + 3.5) * (chartHeight / 7));
@@ -353,6 +404,7 @@
             actualCorrelation = calculateCorrelation(data);
             
             submitted = false;
+            userGuess = null;
             document.getElementById('guessInput').value = '';
             document.getElementById('submitBtn').disabled = false;
             document.getElementById('guessInput').disabled = false;
@@ -376,6 +428,9 @@
             }
             
             submitted = true;
+            
+            // Store user's guess
+            userGuess = guess;
             
             // Disable input and button
             document.getElementById('submitBtn').disabled = true;
