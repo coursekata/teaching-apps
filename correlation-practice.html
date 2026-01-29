@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Correlation Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        #plotCanvas {
+            border: 1px solid #ddd;
+            display: block;
+            margin: 20px auto;
+            background-color: white;
+        }
+        
+        .input-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        input[type="number"] {
+            width: 100px;
+            padding: 8px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #newDataBtn {
+            background-color: #2196F3;
+            margin-left: 0;
+        }
+        
+        #newDataBtn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .result {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e7f3ff;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .stats {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        
+        .difference {
+            font-weight: bold;
+        }
+        
+        .difference.close {
+            color: #4CAF50;
+        }
+        
+        .difference.medium {
+            color: #ff9800;
+        }
+        
+        .difference.far {
+            color: #f44336;
+        }
+        
+        .instructions {
+            background-color: #fff9e6;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Correlation Practice</h1>
+        
+        <div class="instructions">
+            <strong>Instructions:</strong> Look at the scatterplot of standardized variables below. 
+            Try to estimate the Pearson correlation coefficient (r) by looking at the pattern of the points.
+            Enter your guess (between -1 and 1) and click Submit to see how close you were!
+        </div>
+        
+        <canvas id="plotCanvas" width="700" height="500"></canvas>
+        
+        <div class="input-section">
+            <label for="guessInput">Your guess for r:</label>
+            <input type="number" id="guessInput" min="-1" max="1" step="0.01" placeholder="e.g., 0.75">
+            <button id="submitBtn" onclick="submitGuess()">Submit Guess</button>
+            <button id="newDataBtn" onclick="generateNewData()">New Dataset</button>
+        </div>
+        
+        <div id="result" class="result">
+            <h3>Results</h3>
+            <div class="stats">
+                <div>Your guess: <strong id="userGuess"></strong></div>
+                <div>Actual r: <strong id="actualR"></strong></div>
+                <div class="difference" id="difference"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let actualCorrelation = 0;
+        let submitted = false;
+        const canvas = document.getElementById('plotCanvas');
+        const ctx = canvas.getContext('2d');
+        const n = 60; // number of data points
+        
+        // Chart dimensions
+        const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+        const chartWidth = canvas.width - margin.left - margin.right;
+        const chartHeight = canvas.height - margin.top - margin.bottom;
+        
+        function generateCorrelatedData(n, targetR) {
+            const data = [];
+            
+            // Generate random data with desired correlation
+            for (let i = 0; i < n; i++) {
+                const x = randomNormal(0, 1);
+                const noise = randomNormal(0, 1);
+                const y = targetR * x + Math.sqrt(1 - targetR * targetR) * noise;
+                data.push({ x, y });
+            }
+            
+            return data;
+        }
+        
+        function randomNormal(mean, stdDev) {
+            // Box-Muller transform for normal distribution
+            let u1 = Math.random();
+            let u2 = Math.random();
+            let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+            return z0 * stdDev + mean;
+        }
+        
+        function calculateCorrelation(data) {
+            const n = data.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+            
+            for (let i = 0; i < n; i++) {
+                sumX += data[i].x;
+                sumY += data[i].y;
+                sumXY += data[i].x * data[i].y;
+                sumX2 += data[i].x * data[i].x;
+                sumY2 += data[i].y * data[i].y;
+            }
+            
+            const numerator = n * sumXY - sumX * sumY;
+            const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+            
+            return numerator / denominator;
+        }
+        
+        function drawPlot(showLine = false) {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Set up coordinate system
+            ctx.save();
+            ctx.translate(margin.left, margin.top);
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, chartHeight / 2);
+            ctx.lineTo(chartWidth, chartHeight / 2);
+            ctx.moveTo(chartWidth / 2, 0);
+            ctx.lineTo(chartWidth / 2, chartHeight);
+            ctx.stroke();
+            
+            // Draw grid lines
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = -3; i <= 3; i++) {
+                if (i !== 0) {
+                    const x = (i + 3.5) * (chartWidth / 7);
+                    const y = (i + 3.5) * (chartHeight / 7);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, chartHeight);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(chartWidth, y);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw axis labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            for (let i = -3; i <= 3; i++) {
+                const x = (i + 3.5) * (chartWidth / 7);
+                const y = (i + 3.5) * (chartHeight / 7);
+                
+                ctx.fillText(i.toString(), x, chartHeight + 5);
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText((-i).toString(), -5, y);
+                ctx.textAlign = 'center';
+            }
+            
+            // X-axis label
+            ctx.fillText('Standardized X', chartWidth / 2, chartHeight + 35);
+            
+            // Y-axis label
+            ctx.save();
+            ctx.translate(-35, chartHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Standardized Y', 0, 0);
+            ctx.restore();
+            
+            // Draw regression line if submitted
+            if (showLine) {
+                const meanX = data.reduce((sum, p) => sum + p.x, 0) / data.length;
+                const meanY = data.reduce((sum, p) => sum + p.y, 0) / data.length;
+                
+                let numerator = 0, denominator = 0;
+                for (let i = 0; i < data.length; i++) {
+                    numerator += (data[i].x - meanX) * (data[i].y - meanY);
+                    denominator += (data[i].x - meanX) * (data[i].x - meanX);
+                }
+                const slope = numerator / denominator;
+                const intercept = meanY - slope * meanX;
+                
+                ctx.strokeStyle = '#ff4444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const x1 = -3.5;
+                const y1 = slope * x1 + intercept;
+                const x2 = 3.5;
+                const y2 = slope * x2 + intercept;
+                
+                ctx.moveTo((x1 + 3.5) * (chartWidth / 7), (-y1 + 3.5) * (chartHeight / 7));
+                ctx.lineTo((x2 + 3.5) * (chartWidth / 7), (-y2 + 3.5) * (chartHeight / 7));
+                ctx.stroke();
+            }
+            
+            // Draw data points
+            ctx.fillStyle = '#2196F3';
+            for (let i = 0; i < data.length; i++) {
+                const x = (data[i].x + 3.5) * (chartWidth / 7);
+                const y = (-data[i].y + 3.5) * (chartHeight / 7);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#1976D2';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+        
+        function generateNewData() {
+            // Generate a random target correlation between -0.9 and 0.9
+            const targetR = (Math.random() * 1.6 - 0.8);
+            data = generateCorrelatedData(n, targetR);
+            actualCorrelation = calculateCorrelation(data);
+            
+            submitted = false;
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('guessInput').value = '';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('guessInput').disabled = false;
+            
+            drawPlot(false);
+        }
+        
+        function submitGuess() {
+            const guess = parseFloat(document.getElementById('guessInput').value);
+            
+            if (isNaN(guess) || guess < -1 || guess > 1) {
+                alert('Please enter a valid number between -1 and 1');
+                return;
+            }
+            
+            submitted = true;
+            
+            // Disable input and button
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('guessInput').disabled = true;
+            
+            // Calculate difference
+            const diff = Math.abs(guess - actualCorrelation);
+            
+            // Display results
+            document.getElementById('userGuess').textContent = guess.toFixed(3);
+            document.getElementById('actualR').textContent = actualCorrelation.toFixed(3);
+            
+            const diffElement = document.getElementById('difference');
+            diffElement.textContent = `Difference: ${diff.toFixed(3)}`;
+            
+            // Color code based on accuracy
+            diffElement.classList.remove('close', 'medium', 'far');
+            if (diff < 0.1) {
+                diffElement.classList.add('close');
+                diffElement.textContent += ' - Excellent!';
+            } else if (diff < 0.2) {
+                diffElement.classList.add('medium');
+                diffElement.textContent += ' - Good!';
+            } else {
+                diffElement.classList.add('far');
+                diffElement.textContent += ' - Keep practicing!';
+            }
+            
+            document.getElementById('result').classList.add('show');
+            
+            // Redraw with regression line
+            drawPlot(true);
+        }
+        
+        // Initialize with first dataset
+        generateNewData();
+        
+        // Allow Enter key to submit
+        document.getElementById('guessInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !submitted) {
+                submitGuess();
+            }
+        });
+    </script>
+</body>
+</html>
