@@ -90,15 +90,12 @@
             padding: 12px;
             background-color: #e7f3ff;
             border-radius: 4px;
-            display: none;
+            display: block;
             min-width: 200px;
             max-width: 250px;
         }
         
-        .result.show {
-            display: block;
-        }
-        
+
         .result h3 {
             margin-top: 0;
             margin-bottom: 10px;
@@ -145,9 +142,17 @@
             <div id="result" class="result">
                 <h3>Results</h3>
                 <div class="stats">
-                    <div>Your guess: <strong id="userGuess"></strong></div>
-                    <div>Actual r: <strong id="actualR"></strong></div>
-                    <div class="difference" id="difference"></div>
+                    <div>Your guess: <strong id="userGuess">--</strong></div>
+                    <div>Actual r: <strong id="actualR">--</strong></div>
+                    <div class="difference" id="difference">Submit a guess to see results</div>
+                </div>
+                <hr style="margin: 10px 0; border: none; border-top: 1px solid #ccc;">
+                <div class="stats" style="font-size: 13px;">
+                    <div><strong>Cumulative Stats:</strong></div>
+                    <div>Trials: <strong id="trials">0</strong></div>
+                    <div>Avg accuracy: <strong id="avgAccuracy">--</strong></div>
+                    <div>Best: <strong id="bestAccuracy">--</strong></div>
+                    <div>Worst: <strong id="worstAccuracy">--</strong></div>
                 </div>
             </div>
         </div>
@@ -160,6 +165,10 @@
         const canvas = document.getElementById('plotCanvas');
         const ctx = canvas.getContext('2d');
         const n = 60; // number of data points
+        
+        // Cumulative statistics
+        let trials = 0;
+        let accuracies = [];
         
         // Chart dimensions
         const margin = { top: 40, right: 40, bottom: 60, left: 60 };
@@ -321,10 +330,15 @@
             actualCorrelation = calculateCorrelation(data);
             
             submitted = false;
-            document.getElementById('result').classList.remove('show');
             document.getElementById('guessInput').value = '';
             document.getElementById('submitBtn').disabled = false;
             document.getElementById('guessInput').disabled = false;
+            
+            // Reset current trial display but keep cumulative stats
+            document.getElementById('userGuess').textContent = '--';
+            document.getElementById('actualR').textContent = '--';
+            document.getElementById('difference').textContent = 'Submit a guess to see results';
+            document.getElementById('difference').classList.remove('close', 'medium', 'far');
             
             drawPlot(false);
         }
@@ -343,8 +357,13 @@
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('guessInput').disabled = true;
             
-            // Calculate difference
+            // Calculate difference and accuracy
             const diff = Math.abs(guess - actualCorrelation);
+            const accuracy = 100 * (1 - diff); // Convert to percentage accuracy
+            
+            // Update cumulative stats
+            trials++;
+            accuracies.push(accuracy);
             
             // Display results
             document.getElementById('userGuess').textContent = guess.toFixed(3);
@@ -366,7 +385,15 @@
                 diffElement.textContent += ' - Keep practicing!';
             }
             
-            document.getElementById('result').classList.add('show');
+            // Update cumulative statistics display
+            const avgAccuracy = accuracies.reduce((a, b) => a + b, 0) / accuracies.length;
+            const bestAccuracy = Math.max(...accuracies);
+            const worstAccuracy = Math.min(...accuracies);
+            
+            document.getElementById('trials').textContent = trials;
+            document.getElementById('avgAccuracy').textContent = avgAccuracy.toFixed(1) + '%';
+            document.getElementById('bestAccuracy').textContent = bestAccuracy.toFixed(1) + '%';
+            document.getElementById('worstAccuracy').textContent = worstAccuracy.toFixed(1) + '%';
             
             // Redraw with regression line
             drawPlot(true);
