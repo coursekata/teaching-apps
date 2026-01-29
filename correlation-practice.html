@@ -117,27 +117,11 @@
         .difference.far {
             color: #f44336;
         }
-        
-        .instructions {
-            background-color: #fff9e6;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            border-left: 4px solid #ffc107;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Correlation Practice</h1>
-        
-        <div class="instructions">
-            <strong>Instructions:</strong> Look at the scatterplot of standardized variables below. 
-            Try to estimate the Pearson correlation coefficient (r) by looking at the pattern of the points.
-            Enter your guess (between -1 and 1) and click Submit to see how close you were!
-        </div>
-        
-        <canvas id="plotCanvas" width="700" height="500"></canvas>
         
         <div class="input-section">
             <label for="guessInput">Your guess for r:</label>
@@ -154,6 +138,8 @@
                 <div class="difference" id="difference"></div>
             </div>
         </div>
+        
+        <canvas id="plotCanvas" width="490" height="350"></canvas>
     </div>
 
     <script>
