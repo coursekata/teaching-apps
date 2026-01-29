@@ -87,7 +87,7 @@
         
         .result {
             margin: 0;
-            padding: 16px;
+            padding: 14px;
             background: linear-gradient(135deg, #f0f7ff 0%, #e3f2fd 100%);
             border-radius: 8px;
             display: flex;
@@ -98,32 +98,33 @@
             box-sizing: border-box;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             border: 2px solid #90caf9;
+            overflow: hidden;
         }
         
 
         .result h3 {
             margin-top: 0;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             color: #1565c0;
-            font-size: 20px;
+            font-size: 18px;
             text-align: center;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             border-bottom: 2px solid #64b5f6;
         }
         
         .stats {
-            font-size: 16px;
-            margin: 4px 0;
-            line-height: 1.4;
+            font-size: 15px;
+            margin: 2px 0;
+            line-height: 1.3;
         }
         
         .stats strong {
-            font-size: 18px;
+            font-size: 16px;
             color: #1565c0;
         }
         
         .stats div {
-            margin: 6px 0;
+            margin: 4px 0;
         }
         
         .difference {
@@ -167,11 +168,10 @@
                 <div class="stats">
                     <div>Your guess: <strong id="userGuess">--</strong></div>
                     <div>Actual r: <strong id="actualR">--</strong></div>
-                    <div class="difference" id="difference" style="display: none;"></div>
                 </div>
                 <hr style="margin: 10px 0; border: none; border-top: 2px solid #64b5f6;">
-                <div class="stats" style="font-size: 15px; background-color: rgba(255,255,255,0.5); padding: 10px; border-radius: 6px;">
-                    <div style="font-weight: bold; color: #1565c0; margin-bottom: 6px; font-size: 16px;">📊 Cumulative Stats</div>
+                <div class="stats" style="font-size: 14px; background-color: rgba(255,255,255,0.5); padding: 8px; border-radius: 6px;">
+                    <div style="font-weight: bold; color: #1565c0; margin-bottom: 4px; font-size: 15px;">📊 Cumulative Stats</div>
                     <div>Trials: <strong id="trials">0</strong></div>
                     <div>Avg accuracy: <strong id="avgAccuracy">--</strong></div>
                     <div>Best: <strong id="bestAccuracy" style="color: #2e7d32;">--</strong></div>
@@ -360,8 +360,6 @@
             // Reset current trial display but keep cumulative stats
             document.getElementById('userGuess').textContent = '--';
             document.getElementById('actualR').textContent = '--';
-            document.getElementById('difference').style.display = 'none';
-            document.getElementById('difference').classList.remove('close', 'medium', 'far');
             
             drawPlot(false);
         }
@@ -391,23 +389,6 @@
             // Display results
             document.getElementById('userGuess').textContent = guess.toFixed(3);
             document.getElementById('actualR').textContent = actualCorrelation.toFixed(3);
-            
-            const diffElement = document.getElementById('difference');
-            diffElement.style.display = 'block';
-            diffElement.textContent = `Difference: ${diff.toFixed(3)}`;
-            
-            // Color code based on accuracy
-            diffElement.classList.remove('close', 'medium', 'far');
-            if (diff < 0.1) {
-                diffElement.classList.add('close');
-                diffElement.textContent += ' - Excellent!';
-            } else if (diff < 0.2) {
-                diffElement.classList.add('medium');
-                diffElement.textContent += ' - Good!';
-            } else {
-                diffElement.classList.add('far');
-                diffElement.textContent += ' - Keep practicing!';
-            }
             
             // Update cumulative statistics display
             const avgAccuracy = accuracies.reduce((a, b) => a + b, 0) / accuracies.length;
