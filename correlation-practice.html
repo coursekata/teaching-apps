@@ -338,8 +338,9 @@
                     // Draw error indicator only if difference > 0.1
                     const diff = Math.abs(userGuess - actualCorrelation);
                     if (diff > 0.1) {
-                        // Choose x position based on sign of actual correlation
-                        const xVal = actualCorrelation >= 0 ? 2.5 : -2.5;
+                        // Choose x position based on sign of user's guess (not actual)
+                        // This ensures arrow appears near the guessed line
+                        const xVal = userGuess >= 0 ? 2.5 : -2.5;
                         const yGuess = userGuess * xVal;
                         const yActual = actualCorrelation * xVal;
                         const xPos = (xVal + 3.5) * (chartWidth / 7);
@@ -375,10 +376,11 @@
                         ctx.fillStyle = '#ff6f00';
                         ctx.fill();
                         
-                        // Add text label with background, positioned up and to the right
+                        // Add text label with background
+                        // Position to the right for positive guesses, left for negative guesses
                         // Logic: compare absolute values to determine if overestimating or underestimating strength
                         const labelText = (Math.abs(userGuess) > Math.abs(actualCorrelation)) ? 'Too High' : 'Too Low';
-                        const textX = arrowX + 50;
+                        const textX = arrowX + (userGuess >= 0 ? 50 : -50);
                         const textY = arrowBaseY - 20;
                         
                         // Draw background rectangle for text
