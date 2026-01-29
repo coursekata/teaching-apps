@@ -346,37 +346,40 @@
                         const yPosGuess = (-yGuess + 3.5) * (chartHeight / 7);
                         const yPosActual = (-yActual + 3.5) * (chartHeight / 7);
                         
-                        // Position arrow and text in general area, not exactly between lines
-                        const arrowX = xPos;
-                        const arrowYStart = yPosGuess;
-                        const arrowYEnd = yPosActual;
-                        const midY = (yPosGuess + yPosActual) / 2;
+                        // Determine if arrow points up or down
+                        const pointingDown = yPosActual > yPosGuess; // actual is below guess
                         
-                        // Draw arrow line with offset for better visibility
+                        // Position arrow above or below the guess line
+                        const arrowLength = 40;
+                        const arrowX = xPos;
+                        const arrowBaseY = yPosGuess + (pointingDown ? -25 : 25);
+                        const arrowTipY = arrowBaseY + (pointingDown ? arrowLength : -arrowLength);
+                        
+                        // Draw arrow line
                         ctx.strokeStyle = '#ff6f00';
                         ctx.lineWidth = 4;
                         ctx.setLineDash([]);
                         ctx.beginPath();
-                        ctx.moveTo(arrowX, arrowYStart);
-                        ctx.lineTo(arrowX, arrowYEnd);
+                        ctx.moveTo(arrowX, arrowBaseY);
+                        ctx.lineTo(arrowX, arrowTipY);
                         ctx.stroke();
                         
                         // Draw arrow head (filled triangle)
-                        const arrowSize = 10;
-                        const direction = arrowYEnd > arrowYStart ? 1 : -1;
+                        const arrowSize = 12;
+                        const direction = pointingDown ? 1 : -1;
                         ctx.beginPath();
-                        ctx.moveTo(arrowX, arrowYEnd);
-                        ctx.lineTo(arrowX - arrowSize/2, arrowYEnd - direction * arrowSize);
-                        ctx.lineTo(arrowX + arrowSize/2, arrowYEnd - direction * arrowSize);
+                        ctx.moveTo(arrowX, arrowTipY);
+                        ctx.lineTo(arrowX - arrowSize/2, arrowTipY - direction * arrowSize);
+                        ctx.lineTo(arrowX + arrowSize/2, arrowTipY - direction * arrowSize);
                         ctx.closePath();
                         ctx.fillStyle = '#ff6f00';
                         ctx.fill();
                         
-                        // Add text label with background for better readability
+                        // Add text label with background, positioned up and to the right
                         // Logic: compare absolute values to determine if overestimating or underestimating strength
                         const labelText = (Math.abs(userGuess) > Math.abs(actualCorrelation)) ? 'Too High' : 'Too Low';
-                        const textX = arrowX + (actualCorrelation >= 0 ? 45 : -45);
-                        const textY = midY;
+                        const textX = arrowX + 50;
+                        const textY = arrowBaseY - 20;
                         
                         // Draw background rectangle for text
                         ctx.font = 'bold 15px Arial';
@@ -384,7 +387,7 @@
                         ctx.textBaseline = 'middle';
                         const textMetrics = ctx.measureText(labelText);
                         const padding = 4;
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                         ctx.fillRect(
                             textX - textMetrics.width/2 - padding,
                             textY - 10,
