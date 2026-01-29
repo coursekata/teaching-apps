@@ -248,14 +248,16 @@
             ctx.translate(margin.left, margin.top);
             
             // Draw axes
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#b0b0b0';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
             ctx.beginPath();
             ctx.moveTo(0, chartHeight / 2);
             ctx.lineTo(chartWidth, chartHeight / 2);
             ctx.moveTo(chartWidth / 2, 0);
             ctx.lineTo(chartWidth / 2, chartHeight);
             ctx.stroke();
+            ctx.setLineDash([]);
             
             // Draw grid lines
             ctx.strokeStyle = '#e0e0e0';
