@@ -1,5 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--
+    CORRELATION PRACTICE - Interactive Scatterplot Guessing Tool
+    
+    USAGE:
+    1. Open this file in a web browser
+    2. View the scatterplot and estimate the correlation coefficient
+    3. Enter your guess (between -1 and 1) and click Submit or press Enter
+    4. The actual correlation will be shown with visual feedback
+    5. Click Next or press Enter to generate a new plot
+    
+    URL PARAMETERS:
+    - Add ?trials=N to the URL to practice with a fixed number of trials
+      Example: correlation-practice.html?trials=10
+      This will run exactly 10 trials and then display completion message
+    
+    KEYBOARD SHORTCUTS:
+    - Enter: Submit your guess (when input field is active)
+    - Enter: Generate next plot (after submitting a guess)
+    
+    FEATURES:
+    - Cumulative statistics tracking (trials, average accuracy, best/worst)
+    - Visual slope lines showing your guess (blue dashed) vs actual (red solid)
+    - Error indicators when guess is off by more than 0.1
+    - Download button generates R code for all trials (actual and guess vectors)
+    - Copy to clipboard button for easy pasting into Jupyter/R
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -548,8 +574,6 @@
         
         // Initialize with first dataset and setup
         function downloadData() {
-            console.log('Download clicked. guessHistory:', guessHistory, 'actualHistory:', actualHistory);
-            
             if (guessHistory.length === 0) {
                 alert('No data yet! Make at least one guess first.');
                 return;
@@ -560,15 +584,9 @@
             const guessVector = 'guess <- c(' + guessHistory.map(v => v.toFixed(3)).join(', ') + ')';
             const rCode = actualVector + '\n' + guessVector;
             
-            console.log('Generated R code:', rCode);
-            console.log('Container element:', document.getElementById('rCodeContainer'));
-            console.log('Code element:', document.getElementById('rCode'));
-            
             // Display the code
             document.getElementById('rCode').textContent = rCode;
             document.getElementById('rCodeContainer').style.display = 'block';
-            
-            console.log('Container display style:', document.getElementById('rCodeContainer').style.display);
             
             // Scroll to the code
             document.getElementById('rCodeContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
