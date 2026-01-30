@@ -159,7 +159,8 @@
             <span id="trialCounter" style="font-weight: bold; display: inline-block; min-width: 100px;"></span>
             <input type="number" id="guessInput" min="-1" max="1" step="0.01" placeholder="e.g., 0.75" style="margin: 0 10px;">
             <button id="submitBtn" onclick="submitGuess()" style="margin-right: 10px;">Submit Guess</button>
-            <button id="nextBtn" onclick="generateNewData()">Next</button>
+            <button id="nextBtn" onclick="generateNewData()" style="background-color: #2196F3; margin-right: 10px;">Next</button>
+            <button onclick="downloadData()" title="Download R code">⭳ Download</button>
         </div>
         <div id="completionMessage" style="text-align: center; color: #1565c0; font-size: 16px; font-weight: bold; margin: 15px 0; display: none;">
             Trials completed. Refresh the page to start over.
@@ -184,6 +185,14 @@
                 </div>
             </div>
         </div>
+        
+        <div id="rCodeContainer" style="display: none; margin-top: 20px; padding: 15px; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong>R Code (copy and paste into Jupyter):</strong>
+                <button onclick="copyRCode()" style="padding: 5px 10px; font-size: 12px;">Copy to Clipboard</button>
+            </div>
+            <pre id="rCode" style="background-color: white; padding: 10px; border: 1px solid #ccc; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px;"></pre>
+        </div>
     </div>
 
     <script>
@@ -203,6 +212,8 @@
         // Cumulative statistics
         let trials = 0;
         let accuracies = [];
+        let guessHistory = [];
+        let actualHistory = [];
         
         // Chart dimensions
         const margin = { top: 40, right: 40, bottom: 60, left: 60 };
@@ -505,6 +516,8 @@
             // Update cumulative stats
             trials++;
             accuracies.push(accuracy);
+            guessHistory.push(guess);
+            actualHistory.push(actualCorrelation);
             
             // Display results
             document.getElementById('userGuess').textContent = guess.toFixed(3);
