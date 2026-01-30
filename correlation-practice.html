@@ -17,9 +17,16 @@
     - ↻ Refresh: Start over and reset all statistics
     
     URL PARAMETERS:
-    - Add ?trials=N to the URL to practice with a fixed number of trials
+    - ?trials=N : Practice with a fixed number of trials
       Example: correlation-practice.html?trials=10
       This will run exactly 10 trials and then display completion message
+    
+    - ?n=N : Set the number of data points in each scatterplot (default is 60)
+      Example: correlation-practice.html?n=100
+      This will generate scatterplots with 100 data points instead of 60
+    
+    - You can combine parameters:
+      Example: correlation-practice.html?trials=10&n=100
     
     KEYBOARD SHORTCUTS:
     - Enter: Submit your guess (when input field is active)
@@ -235,11 +242,11 @@
         let submitted = false;
         const canvas = document.getElementById('plotCanvas');
         const ctx = canvas.getContext('2d');
-        const n = 60; // number of data points
         
         // Parse URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const maxTrials = urlParams.has('trials') ? parseInt(urlParams.get('trials')) : null;
+        const n = urlParams.has('n') ? parseInt(urlParams.get('n')) : 60; // number of data points
         let currentTrial = 0;
         
         // Cumulative statistics
