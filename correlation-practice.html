@@ -189,7 +189,7 @@
         
         <div class="input-section">
             <span id="trialCounter" style="font-weight: bold; display: inline-block; min-width: 100px; font-size: 18px;"></span>
-            <input type="number" id="guessInput" min="-1" max="1" step="0.01" placeholder="e.g., 0.75" style="margin: 0 10px;">
+            <input type="number" id="guessInput" min="-1" max="1" step="0.01" style="margin: 0 10px;">
             <button id="submitBtn" onclick="submitGuess()" style="margin-right: 10px; background-color: #4CAF50; border: 2px solid #4CAF50; font-size: 13px; padding: 6px 12px;">Submit Guess</button>
             <button id="nextBtn" onclick="generateNewData()" style="background-color: #2196F3; margin-right: 10px; border: 2px solid #2196F3; font-size: 13px; padding: 6px 12px;">Next</button>
             <button onclick="downloadData()" title="Download R code" style="background-color: white; color: #f44336; border: 2px solid #f44336; margin-right: 10px; font-size: 13px; padding: 6px 12px;">Copy Data</button>
@@ -487,6 +487,46 @@
                 ctx.stroke();
             }
             
+            // Draw legend if lines are visible
+            if (showLine) {
+                const legendX = 10;
+                const legendY = 10;
+                const lineLength = 30;
+                const lineSpacing = 20;
+                
+                // Background for legend
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.fillRect(legendX - 5, legendY - 5, 180, 50);
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(legendX - 5, legendY - 5, 180, 50);
+                
+                // Your guess (blue dashed)
+                ctx.strokeStyle = '#2196F3';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 4]);
+                ctx.beginPath();
+                ctx.moveTo(legendX, legendY + 5);
+                ctx.lineTo(legendX + lineLength, legendY + 5);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#000';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Your guess (dashed)', legendX + lineLength + 8, legendY + 5);
+                
+                // Actual correlation (red solid)
+                ctx.strokeStyle = '#d32f2f';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(legendX, legendY + 5 + lineSpacing);
+                ctx.lineTo(legendX + lineLength, legendY + 5 + lineSpacing);
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.fillText('True correlation (solid)', legendX + lineLength + 8, legendY + 5 + lineSpacing);
+            }
+            
             ctx.restore();
         }
         
@@ -553,8 +593,8 @@
             actualHistory.push(actualCorrelation);
             
             // Display results
-            document.getElementById('userGuess').textContent = guess.toFixed(3);
-            document.getElementById('actualR').textContent = actualCorrelation.toFixed(3);
+            document.getElementById('userGuess').textContent = guess.toFixed(2);
+            document.getElementById('actualR').textContent = actualCorrelation.toFixed(2);
             
             // Update cumulative statistics display
             const avgAccuracy = accuracies.reduce((a, b) => a + b, 0) / accuracies.length;
@@ -587,8 +627,8 @@
             }
             
             // Format as R vectors
-            const actualVector = 'actual <- c(' + actualHistory.map(v => v.toFixed(3)).join(', ') + ')';
-            const guessVector = 'guess <- c(' + guessHistory.map(v => v.toFixed(3)).join(', ') + ')';
+            const actualVector = 'actual <- c(' + actualHistory.map(v => v.toFixed(2)).join(', ') + ')';
+            const guessVector = 'guess <- c(' + guessHistory.map(v => v.toFixed(2)).join(', ') + ')';
             const rCode = actualVector + '\n' + guessVector;
             
             // Display the code
