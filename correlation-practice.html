@@ -157,11 +157,9 @@
             <span id="trialCounter" style="font-weight: bold; margin-right: 10px;"></span>
             <input type="number" id="guessInput" min="-1" max="1" step="0.01" placeholder="e.g., 0.75">
             <button id="submitBtn" onclick="submitGuess()">Submit Guess</button>
-            <button id="newDataBtn" onclick="generateNewData()" style="display: none;">New Dataset</button>
-            <div id="reviewButtons" style="display: none; margin-left: 10px;">
-                <button onclick="reviewPrevious()">◀</button>
-                <button onclick="reviewNext()">▶</button>
-            </div>
+            <button id="prevBtn" onclick="reviewPrevious()" style="background-color: #4CAF50;">◀</button>
+            <button id="nextReviewBtn" onclick="reviewNext()" style="background-color: #4CAF50;">▶</button>
+            <button id="nextBtn" onclick="generateNewData()">Next</button>
         </div>
         <div id="completionMessage" style="text-align: center; color: #666; font-size: 13px; margin-top: 5px; display: none;">
             Use the arrows to review your work, or refresh the page to start over.
@@ -461,7 +459,6 @@
             
             // Exit review mode when generating new data
             reviewMode = false;
-            document.getElementById('reviewButtons').style.display = 'none';
             
             // Generate a random target correlation between -0.9 and 0.9
             const targetR = (Math.random() * 1.6 - 0.8);
@@ -482,6 +479,8 @@
             currentTrial++;
             if (maxTrials) {
                 document.getElementById('trialCounter').textContent = `Trial: ${currentTrial} / ${maxTrials}`;
+            } else {
+                document.getElementById('trialCounter').textContent = `Trial: ${currentTrial}`;
             }
             
             drawPlot(false);
@@ -543,18 +542,22 @@
             
             // Check if all trials are complete
             if (maxTrials && currentTrial >= maxTrials) {
-                document.getElementById('newDataBtn').disabled = true;
+                document.getElementById('nextBtn').disabled = true;
                 document.getElementById('completionMessage').style.display = 'block';
-                document.getElementById('reviewButtons').style.display = 'inline-block';
                 reviewIndex = trialHistory.length - 1; // Start review at last trial
             } else {
-                // Shift focus to New Dataset button after submission
-                document.getElementById('newDataBtn').focus();
+                // Shift focus to Next button after submission
+                document.getElementById('nextBtn').focus();
             }
         }
         
-        // Review mode functions
+        // Review navigation functions
         function reviewPrevious() {
+            if (trialHistory.length === 0) return;
+            
+            // Enter review mode
+            reviewMode = true;
+            
             if (reviewIndex > 0) {
                 reviewIndex--;
             } else {
@@ -565,6 +568,11 @@
         }
         
         function reviewNext() {
+            if (trialHistory.length === 0) return;
+            
+            // Enter review mode
+            reviewMode = true;
+            
             if (reviewIndex < trialHistory.length - 1) {
                 reviewIndex++;
             } else {
@@ -593,14 +601,6 @@
         }
         
         // Initialize with first dataset and setup
-        // Always show New Dataset button
-        document.getElementById('newDataBtn').style.display = 'inline-block';
-        
-        // Update button text based on whether trials is set
-        if (maxTrials) {
-            document.getElementById('newDataBtn').textContent = 'Next';
-        }
-        
         generateNewData();
         
         // Allow Enter key to submit or generate new data depending on state
