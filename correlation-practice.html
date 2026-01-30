@@ -154,10 +154,10 @@
         <h1>Correlation Practice</h1>
         
         <div class="input-section">
-            <label for="guessInput">Your guess for r:</label>
+            <span id="trialCounter" style="font-weight: bold; margin-right: 10px;"></span>
             <input type="number" id="guessInput" min="-1" max="1" step="0.01" placeholder="e.g., 0.75">
             <button id="submitBtn" onclick="submitGuess()">Submit Guess</button>
-            <button id="newDataBtn" onclick="generateNewData()">New Dataset</button>
+            <button id="newDataBtn" onclick="generateNewData()" style="display: none;">New Dataset</button>
         </div>
         
         <div class="display-area">
@@ -189,6 +189,11 @@
         const canvas = document.getElementById('plotCanvas');
         const ctx = canvas.getContext('2d');
         const n = 60; // number of data points
+        
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const maxTrials = urlParams.has('trials') ? parseInt(urlParams.get('trials')) : null;
+        let currentTrial = 0;
         
         // Cumulative statistics
         let trials = 0;
@@ -452,6 +457,12 @@
             document.getElementById('userGuess').textContent = '--';
             document.getElementById('actualR').textContent = '--';
             
+            // Update trial counter
+            currentTrial++;
+            if (maxTrials) {
+                document.getElementById('trialCounter').textContent = `Trial: ${currentTrial} / ${maxTrials}`;
+            }
+            
             drawPlot(false);
             
             // Return focus to input field for next guess
@@ -500,11 +511,25 @@
             // Redraw with regression line
             drawPlot(true);
             
-            // Shift focus to New Dataset button after submission
-            document.getElementById('newDataBtn').focus();
+            // Auto-generate new data if trials is set and not yet complete
+            if (maxTrials && currentTrial < maxTrials) {
+                setTimeout(() => {
+                    generateNewData();
+                }, 1500); // Wait 1.5 seconds before showing next trial
+            } else {
+                // Shift focus to New Dataset button after submission
+                document.getElementById('newDataBtn').focus();
+            }
         }
         
-        // Initialize with first dataset
+        // Initialize with first dataset and setup
+        if (maxTrials) {
+            // Hide New Dataset button when trials is set
+            document.getElementById('newDataBtn').style.display = 'none';
+        } else {
+            // Show New Dataset button when trials is not set
+            document.getElementById('newDataBtn').style.display = 'inline-block';
+        }
         generateNewData();
         
         // Allow Enter key to submit or generate new data depending on state
