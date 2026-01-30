@@ -548,6 +548,8 @@
         
         // Initialize with first dataset and setup
         function downloadData() {
+            console.log('Download clicked. guessHistory:', guessHistory, 'actualHistory:', actualHistory);
+            
             if (guessHistory.length === 0) {
                 alert('No data yet! Make at least one guess first.');
                 return;
@@ -558,9 +560,15 @@
             const guessVector = 'guess <- c(' + guessHistory.map(v => v.toFixed(3)).join(', ') + ')';
             const rCode = actualVector + '\n' + guessVector;
             
+            console.log('Generated R code:', rCode);
+            console.log('Container element:', document.getElementById('rCodeContainer'));
+            console.log('Code element:', document.getElementById('rCode'));
+            
             // Display the code
             document.getElementById('rCode').textContent = rCode;
             document.getElementById('rCodeContainer').style.display = 'block';
+            
+            console.log('Container display style:', document.getElementById('rCodeContainer').style.display);
             
             // Scroll to the code
             document.getElementById('rCodeContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
