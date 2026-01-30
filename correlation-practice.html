@@ -222,7 +222,7 @@
         <div id="rCodeContainer" style="display: none; margin-top: 20px; padding: 15px; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <strong>R Code (copy and paste into Jupyter):</strong>
-                <button onclick="copyRCode()" style="padding: 5px 10px; font-size: 12px;">Copy to Clipboard</button>
+                <button onclick="copyRCode(this)" style="padding: 5px 10px; font-size: 12px;">Copy to Clipboard</button>
             </div>
             <pre id="rCode" style="background-color: white; padding: 10px; border: 1px solid #ccc; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px;"></pre>
         </div>
@@ -488,7 +488,7 @@
             }
             
             // Draw legend across the top (always visible)
-            const legendY = 10;
+            const legendY = -20;  // Position in top margin area
             const lineLength = 30;
             const firstItemX = chartWidth / 2 - 140;
             const secondItemX = chartWidth / 2 + 20;
@@ -630,10 +630,9 @@
             document.getElementById('rCodeContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         
-        function copyRCode() {
+        function copyRCode(btn) {
             const codeText = document.getElementById('rCode').textContent;
             navigator.clipboard.writeText(codeText).then(() => {
-                const btn = window.event ? window.event.target : arguments.callee.caller.arguments[0].target;
                 const originalText = btn.textContent;
                 btn.textContent = '✓ Copied!';
                 btn.style.backgroundColor = '#4CAF50';
@@ -644,7 +643,7 @@
                     btn.style.color = '';
                 }, 2000);
             }).catch(err => {
-                alert('Failed to copy to clipboard');
+                alert('Failed to copy to clipboard: ' + err.message);
             });
         }
         
