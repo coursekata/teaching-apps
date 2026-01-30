@@ -49,7 +49,7 @@
         }
         
         input[type="number"] {
-            width: 100px;
+            width: 50px;
             padding: 8px;
             font-size: 16px;
             border: 2px solid #ddd;
@@ -159,12 +159,12 @@
             <button id="submitBtn" onclick="submitGuess()">Submit Guess</button>
             <button id="newDataBtn" onclick="generateNewData()" style="display: none;">New Dataset</button>
             <div id="reviewButtons" style="display: none; margin-left: 10px;">
-                <button onclick="reviewPrevious()">◀ Previous</button>
-                <button onclick="reviewNext()">Next ▶</button>
+                <button onclick="reviewPrevious()">◀</button>
+                <button onclick="reviewNext()">▶</button>
             </div>
         </div>
         <div id="completionMessage" style="text-align: center; color: #666; font-size: 13px; margin-top: 5px; display: none;">
-            All trials complete. <span style="font-style: italic;">Refresh the page to start over</span>
+            Use the arrows to review your work, or refresh the page to start over.
         </div>
         
         <div class="display-area">
