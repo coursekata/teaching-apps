@@ -487,45 +487,36 @@
                 ctx.stroke();
             }
             
-            // Draw legend if lines are visible
-            if (showLine) {
-                const legendX = 10;
-                const legendY = 10;
-                const lineLength = 30;
-                const lineSpacing = 20;
-                
-                // Background for legend
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.fillRect(legendX - 5, legendY - 5, 180, 50);
-                ctx.strokeStyle = '#ccc';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(legendX - 5, legendY - 5, 180, 50);
-                
-                // Your guess (blue dashed)
-                ctx.strokeStyle = '#2196F3';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([8, 4]);
-                ctx.beginPath();
-                ctx.moveTo(legendX, legendY + 5);
-                ctx.lineTo(legendX + lineLength, legendY + 5);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.fillStyle = '#000';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('Your guess (dashed)', legendX + lineLength + 8, legendY + 5);
-                
-                // Actual correlation (red solid)
-                ctx.strokeStyle = '#d32f2f';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.moveTo(legendX, legendY + 5 + lineSpacing);
-                ctx.lineTo(legendX + lineLength, legendY + 5 + lineSpacing);
-                ctx.stroke();
-                ctx.fillStyle = '#000';
-                ctx.fillText('True correlation (solid)', legendX + lineLength + 8, legendY + 5 + lineSpacing);
-            }
+            // Draw legend across the top (always visible)
+            const legendY = 10;
+            const lineLength = 30;
+            const firstItemX = chartWidth / 2 - 140;
+            const secondItemX = chartWidth / 2 + 20;
+            
+            // Your guess (blue dashed)
+            ctx.strokeStyle = '#2196F3';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 4]);
+            ctx.beginPath();
+            ctx.moveTo(firstItemX, legendY);
+            ctx.lineTo(firstItemX + lineLength, legendY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Your guess (dashed)', firstItemX + lineLength + 5, legendY);
+            
+            // True correlation (red solid)
+            ctx.strokeStyle = '#d32f2f';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(secondItemX, legendY);
+            ctx.lineTo(secondItemX + lineLength, legendY);
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.fillText('True correlation (solid)', secondItemX + lineLength + 5, legendY);
             
             ctx.restore();
         }
