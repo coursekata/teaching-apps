@@ -547,6 +547,43 @@
         }
         
         // Initialize with first dataset and setup
+        function downloadData() {
+            if (guessHistory.length === 0) {
+                alert('No data yet! Make at least one guess first.');
+                return;
+            }
+            
+            // Format as R vectors
+            const actualVector = 'actual <- c(' + actualHistory.map(v => v.toFixed(3)).join(', ') + ')';
+            const guessVector = 'guess <- c(' + guessHistory.map(v => v.toFixed(3)).join(', ') + ')';
+            const rCode = actualVector + '\n' + guessVector;
+            
+            // Display the code
+            document.getElementById('rCode').textContent = rCode;
+            document.getElementById('rCodeContainer').style.display = 'block';
+            
+            // Scroll to the code
+            document.getElementById('rCodeContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function copyRCode() {
+            const codeText = document.getElementById('rCode').textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.backgroundColor = '#4CAF50';
+                btn.style.color = 'white';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = '';
+                    btn.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy to clipboard');
+            });
+        }
+        
         generateNewData();
         
         // Allow Enter key to submit or generate new data depending on state
