@@ -511,25 +511,19 @@
             // Redraw with regression line
             drawPlot(true);
             
-            // Auto-generate new data if trials is set and not yet complete
-            if (maxTrials && currentTrial < maxTrials) {
-                setTimeout(() => {
-                    generateNewData();
-                }, 1500); // Wait 1.5 seconds before showing next trial
-            } else {
-                // Shift focus to New Dataset button after submission
-                document.getElementById('newDataBtn').focus();
-            }
+            // Shift focus to New Dataset button after submission
+            document.getElementById('newDataBtn').focus();
         }
         
         // Initialize with first dataset and setup
+        // Always show New Dataset button
+        document.getElementById('newDataBtn').style.display = 'inline-block';
+        
+        // Update button text based on whether trials is set
         if (maxTrials) {
-            // Hide New Dataset button when trials is set
-            document.getElementById('newDataBtn').style.display = 'none';
-        } else {
-            // Show New Dataset button when trials is not set
-            document.getElementById('newDataBtn').style.display = 'inline-block';
+            document.getElementById('newDataBtn').textContent = 'Next';
         }
+        
         generateNewData();
         
         // Allow Enter key to submit or generate new data depending on state
