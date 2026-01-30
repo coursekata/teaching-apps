@@ -602,7 +602,7 @@
         function copyRCode() {
             const codeText = document.getElementById('rCode').textContent;
             navigator.clipboard.writeText(codeText).then(() => {
-                const btn = event.target;
+                const btn = window.event ? window.event.target : arguments.callee.caller.arguments[0].target;
                 const originalText = btn.textContent;
                 btn.textContent = '✓ Copied!';
                 btn.style.backgroundColor = '#4CAF50';
