@@ -557,15 +557,21 @@
         function reviewPrevious() {
             if (reviewIndex > 0) {
                 reviewIndex--;
-                loadReviewTrial(reviewIndex);
+            } else {
+                // Wrap to last trial
+                reviewIndex = trialHistory.length - 1;
             }
+            loadReviewTrial(reviewIndex);
         }
         
         function reviewNext() {
             if (reviewIndex < trialHistory.length - 1) {
                 reviewIndex++;
-                loadReviewTrial(reviewIndex);
+            } else {
+                // Wrap to first trial
+                reviewIndex = 0;
             }
+            loadReviewTrial(reviewIndex);
         }
         
         function loadReviewTrial(index) {
