@@ -157,12 +157,10 @@
             <span id="trialCounter" style="font-weight: bold; margin-right: 10px; display: inline-block; min-width: 150px;"></span>
             <input type="number" id="guessInput" min="-1" max="1" step="0.01" placeholder="e.g., 0.75">
             <button id="submitBtn" onclick="submitGuess()">Submit Guess</button>
-            <button id="prevBtn" onclick="reviewPrevious()" style="background-color: #4CAF50;">◀</button>
-            <button id="nextReviewBtn" onclick="reviewNext()" style="background-color: #4CAF50;">▶</button>
             <button id="nextBtn" onclick="generateNewData()">Next</button>
         </div>
         <div id="completionMessage" style="text-align: center; color: #666; font-size: 13px; margin-top: 5px; display: none;">
-            Use the arrows to review your work, or refresh the page to start over.
+            Trials completed. Refresh the page to start over.
         </div>
         
         <div class="display-area">
@@ -199,11 +197,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const maxTrials = urlParams.has('trials') ? parseInt(urlParams.get('trials')) : null;
         let currentTrial = 0;
-        
-        // Trial history for review mode
-        let trialHistory = [];
-        let reviewMode = false;
-        let reviewIndex = 0;
         
         // Cumulative statistics
         let trials = 0;
@@ -457,9 +450,6 @@
                 return; // Don't generate new data if trials are complete
             }
             
-            // Exit review mode when generating new data
-            reviewMode = false;
-            
             // Generate a random target correlation between -0.9 and 0.9
             const targetR = (Math.random() * 1.6 - 0.8);
             data = generateCorrelatedData(n, targetR);
@@ -528,15 +518,6 @@
             document.getElementById('bestAccuracy').textContent = bestAccuracy.toFixed(1) + '%';
             document.getElementById('worstAccuracy').textContent = worstAccuracy.toFixed(1) + '%';
             
-            // Save trial to history
-            trialHistory.push({
-                trialNumber: currentTrial,
-                data: JSON.parse(JSON.stringify(data)),
-                userGuess: guess,
-                actualCorrelation: actualCorrelation,
-                accuracy: accuracy
-            });
-            
             // Redraw with regression line
             drawPlot(true);
             
@@ -544,64 +525,10 @@
             if (maxTrials && currentTrial >= maxTrials) {
                 document.getElementById('nextBtn').disabled = true;
                 document.getElementById('completionMessage').style.display = 'block';
-                reviewIndex = trialHistory.length - 1; // Start review at last trial
             } else {
                 // Shift focus to Next button after submission
                 document.getElementById('nextBtn').focus();
             }
-        }
-        
-        // Review navigation functions
-        function reviewPrevious() {
-            if (trialHistory.length === 0) return;
-            
-            // Enter review mode
-            reviewMode = true;
-            
-            if (reviewIndex > 0) {
-                reviewIndex--;
-            } else {
-                // Wrap to last trial
-                reviewIndex = trialHistory.length - 1;
-            }
-            loadReviewTrial(reviewIndex);
-        }
-        
-        function reviewNext() {
-            if (trialHistory.length === 0) return;
-            
-            // Enter review mode
-            reviewMode = true;
-            
-            if (reviewIndex < trialHistory.length - 1) {
-                reviewIndex++;
-            } else {
-                // Wrap to first trial
-                reviewIndex = 0;
-            }
-            loadReviewTrial(reviewIndex);
-        }
-        
-        function loadReviewTrial(index) {
-            reviewMode = true;
-            const trial = trialHistory[index];
-            
-            // Load trial data
-            data = trial.data;
-            userGuess = trial.userGuess;
-            actualCorrelation = trial.actualCorrelation;
-            
-            // Update display
-            if (maxTrials) {
-                document.getElementById('trialCounter').textContent = `Reviewing Trial: ${trial.trialNumber} / ${maxTrials}`;
-            } else {
-                document.getElementById('trialCounter').textContent = `Reviewing Trial: ${trial.trialNumber}`;
-            }
-            document.getElementById('userGuess').textContent = trial.userGuess.toFixed(3);
-            document.getElementById('actualR').textContent = trial.actualCorrelation.toFixed(3);
-            
-            // Redraw with both lines
-            drawPlot(true);
         }
         
         // Initialize with first dataset and setup
