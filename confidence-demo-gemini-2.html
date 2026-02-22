@@ -527,6 +527,8 @@
   const btnMarkBound2 = document.getElementById('btnMarkBound2');
   const secondDistBtn = document.getElementById('secondDistBtn');
   const thirdDistBtn = document.getElementById('thirdDistBtn');
+  if(secondDistBtn) secondDistBtn.querySelector('span').innerHTML = renderLatex(labelParamLatex + "'");
+  if(thirdDistBtn) thirdDistBtn.querySelector('span').innerHTML = renderLatex(labelParamLatex + "''");
   const powerSeg = document.getElementById('powerSeg');
   const vertLinesBtn = document.getElementById('vertLinesBtn');
   const histogramBtn = document.getElementById('histogramBtn');
