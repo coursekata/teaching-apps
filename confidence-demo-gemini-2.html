@@ -528,8 +528,8 @@
   const btnMarkBound2 = document.getElementById('btnMarkBound2');
   const secondDistBtn = document.getElementById('secondDistBtn');
   const thirdDistBtn = document.getElementById('thirdDistBtn');
-  if(secondDistBtn) secondDistBtn.querySelector('span').innerHTML = renderLatex(labelParamLatex + "'");
-  if(thirdDistBtn) thirdDistBtn.querySelector('span').innerHTML = renderLatex(labelParamLatex + "''");
+  if(secondDistBtn) secondDistBtn.querySelector('span').innerHTML = renderLatex('{' + labelParamLatex + "}'" );
+  if(thirdDistBtn) thirdDistBtn.querySelector('span').innerHTML = renderLatex('{' + labelParamLatex + "}''");
   const seLabel = document.getElementById('seLabel');
   if(seLabel) seLabel.innerHTML = renderLatex('SE_{' + labelSampleStatLatex + '}');
   const powerSeg = document.getElementById('powerSeg');
