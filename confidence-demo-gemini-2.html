@@ -289,6 +289,7 @@
     <!-- Hover-only mark buttons -->
     <button id="btnMarkBound" class="overlay-btn hidden">Mark Bound</button>
     <button id="btnMarkBound2" class="overlay-btn orange hidden">Mark Bound</button>
+    <button id="btnMarkBound3" class="overlay-btn orange hidden">Mark Bound</button>
     
     <!-- Legend -->
     <div id="legend" class="legend">
@@ -526,6 +527,7 @@
   const dfInput  = document.getElementById('dfInput');
   const btnMarkBound = document.getElementById('btnMarkBound');
   const btnMarkBound2 = document.getElementById('btnMarkBound2');
+  const btnMarkBound3 = document.getElementById('btnMarkBound3');
   const secondDistBtn = document.getElementById('secondDistBtn');
   const thirdDistBtn = document.getElementById('thirdDistBtn');
   if(secondDistBtn) secondDistBtn.querySelector('span').innerHTML = renderLatex('{' + labelParamLatex + "}'" );
@@ -2274,6 +2276,9 @@
     if (!btnMarkBound2.classList.contains('hidden')) {
       showMarkButton2();
     }
+    if (!btnMarkBound3.classList.contains('hidden')) {
+      showMarkButton3();
+    }
     
     blueMarks.forEach(mark => {
       const btn = document.getElementById('clearBtn' + mark.id);
@@ -2346,6 +2351,7 @@
       
       hideMarkButton();
       hideMarkButton2();
+      hideMarkButton3();
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
       blueMarkJustPlaced = false;
       
@@ -2474,6 +2480,7 @@
       
       hideMarkButton();
       hideMarkButton2();
+      hideMarkButton3();
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
       blueMarkJustPlaced = false;
       dragTarget = 'main';
@@ -2510,6 +2517,7 @@
     .on('start', function(){
       hideMarkButton();
       hideMarkButton2();
+      hideMarkButton3();
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
       blueMarkJustPlaced = false;
       dragTarget = 'second';
@@ -2535,6 +2543,7 @@
     .on('start', function(){
       hideMarkButton();
       hideMarkButton2();
+      hideMarkButton3();
       d3.selectAll('.clear-mark-btn').classed('hidden', true);
       blueMarkJustPlaced = false;
       dragTarget = 'third';
@@ -2596,6 +2605,17 @@
     btnMarkBound2.classList.remove('hidden');
   }
   function hideMarkButton2(){ btnMarkBound2.classList.add('hidden'); }
+
+  function showMarkButton3(){
+    btnMarkBound3.textContent = 'Mark Bound';
+    const beta3 = getBeta() + shiftUnits3;
+    const beta3X = x(beta3);
+    const topScreenY = margin.top + axisInsetTop - 28;
+    btnMarkBound3.style.left = (margin.left + beta3X) + 'px';
+    btnMarkBound3.style.top  = topScreenY + 'px';
+    btnMarkBound3.classList.remove('hidden');
+  }
+  function hideMarkButton3(){ btnMarkBound3.classList.add('hidden'); }
   
   function showClearButton(markId, markValue){
     const existingBtn = document.getElementById('clearBtn' + markId);
@@ -2658,6 +2678,16 @@
       if (!(to && to.id === 'btnMarkBound2')) hideMarkButton2();
     });
 
+  betaPrimePrimeMarkerG
+    .style('pointer-events', 'all')
+    .on('mouseenter', function(){
+      showMarkButton3();
+    })
+    .on('mouseleave', function(e){
+      const to = e.relatedTarget;
+      if (!(to && to.id === 'btnMarkBound3')) hideMarkButton3();
+    });
+
   btnMarkBound.addEventListener('mouseenter', showMarkButton);
   btnMarkBound.addEventListener('mouseleave', hideMarkButton);
   btnMarkBound.addEventListener('click', function(){
@@ -2673,6 +2703,14 @@
     const beta2 = getBeta() + shiftUnits2;
     addMark(beta2);
     hideMarkButton2();
+  });
+
+  btnMarkBound3.addEventListener('mouseenter', showMarkButton3);
+  btnMarkBound3.addEventListener('mouseleave', hideMarkButton3);
+  btnMarkBound3.addEventListener('click', function(){
+    const beta3 = getBeta() + shiftUnits3;
+    addMark(beta3);
+    hideMarkButton3();
   });
 
   // Controls
