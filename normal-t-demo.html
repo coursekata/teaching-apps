@@ -2,20 +2,24 @@
 normal-t-demo.html
 ------------------
 
-USING SE AND DF PARAMETERS
---------------------------
-You can control the standard error (SE) and the starting
-degrees of freedom (df) via URL parameters.
+USING URL PARAMETERS
+--------------------
+You can control the standard error (SE), degrees of freedom (df),
+and visibility of the normal and t distributions via URL parameters.
 
 Examples:
 
   normal-t-demo.html?se=2.5
   normal-t-demo.html?df=12
   normal-t-demo.html?se=2.5&df=12
+  normal-t-demo.html?normal=true&t=false
+  normal-t-demo.html?se=2.5&df=10&normal=false&t=true
 
 Defaults:
   SE defaults to 1 if omitted or invalid.
   df defaults to 15 if omitted or invalid.
+  normal defaults to true (checked) if omitted.
+  t defaults to false (unchecked) if omitted.
 
 This app displays:
   • A simulated sampling distribution of b₁
@@ -110,7 +114,7 @@ This app displays:
 
 <script>
   // -------------------------------------------------------------
-  // Get SE and df from URL parameters (?se=... & ?df=...)
+  // Get SE, df, normal, and t from URL parameters
   // -------------------------------------------------------------
   const params = new URLSearchParams(window.location.search);
 
@@ -123,6 +127,13 @@ This app displays:
   let currentDf = (Number.isInteger(dfParam) && dfParam >= 2 && dfParam <= 200)
     ? dfParam
     : 15;
+
+  // normal and t visibility parameters
+  const normalParam = params.get("normal");
+  const tParam = params.get("t");
+  
+  const showNormalInitial = normalParam === null ? true : (normalParam === "true" || normalParam === "1");
+  const showTInitial = tParam === null ? false : (tParam === "true" || tParam === "1");
 
   // -------------------------------------------------------------
   // Utilities: rnorm, gamma, t, normal pdf
@@ -220,7 +231,7 @@ This app displays:
     mode: "lines",
     name: "Normal model",
     line: { color: "red", width: 3, dash: "dash" },
-    visible: true
+    visible: showNormalInitial
   };
 
   const tTrace = {
@@ -230,7 +241,7 @@ This app displays:
     mode: "lines",
     name: "t model",
     line: { color: "blue", width: 3 },
-    visible: false
+    visible: showTInitial
   };
 
   // -------------------------------------------------------------
@@ -289,11 +300,18 @@ This app displays:
   // -------------------------------------------------------------
   // Controls
   // -------------------------------------------------------------
-  document.getElementById("showNormal").addEventListener("change", e => {
+  const showNormalCheckbox = document.getElementById("showNormal");
+  const showTCheckbox = document.getElementById("showT");
+  
+  // Set initial checkbox states from URL parameters
+  showNormalCheckbox.checked = showNormalInitial;
+  showTCheckbox.checked = showTInitial;
+  
+  showNormalCheckbox.addEventListener("change", e => {
     Plotly.restyle("plot", { visible: e.target.checked }, [1]);
   });
 
-  document.getElementById("showT").addEventListener("change", e => {
+  showTCheckbox.addEventListener("change", e => {
     Plotly.restyle("plot", { visible: e.target.checked }, [2]);
   });
 
