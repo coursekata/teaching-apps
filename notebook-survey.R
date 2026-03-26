@@ -9,13 +9,13 @@
 library(IRdisplay)
 
 # ── 1. Configuration ─────────────────────────────────────────
-APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbxkVOeFVJY-t0UBdoVbz7IB_IDWzoNc8BSuk8PcpH85Z3tEzL4Uz0Dlio7KvhIF9GKVdA/exec"
+APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbzXRH4HLLbXJr8sIy3zKBbtyLF9NxS6b6qePfUOpg65rKi0_KVppBWirifI5TisxAX0Eg/exec"
 
 questions <- list(
-  list(id = "name",        label = "What is your name?"),
-  list(id = "institution", label = "Your institution?"),
-  list(id = "email",       label = "What is your email?"),
-  list(id = "comments",    label = "Something else?")
+  list(id = "name",        label = "Name"),
+  list(id = "institution", label = "Institution"),
+  list(id = "email",       label = "Email"),
+  list(id = "comments",    label = "Comments")
 )
 
 # ── 2. HTML Builder ───────────────────────────────────────────
@@ -30,6 +30,7 @@ questions <- list(
       q$id, q$label, q$id, q$id)
   }), collapse = "\n")
 
+
   ids_js <- sprintf('["%s"]',
     paste(sapply(questions, `[[`, "id"), collapse = '","'))
 
@@ -37,45 +38,75 @@ questions <- list(
 <style>
   .survey-wrap {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    max-width: 480px;
-    padding: 24px;
+    max-width: 600px;
+    padding: 16px;
     border: 1px solid #e0e0e0;
-    border-radius: 10px;
+    border-radius: 6px;
     background: #ffffff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   }
-  .survey-wrap h3 { margin: 0 0 18px 0; font-size: 17px; color: #202124; }
-  .field { margin-bottom: 16px; }
+  .survey-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    margin-bottom: 12px;
+  }
   .field label {
-    display: block; font-size: 13px; font-weight: 600;
-    color: #3c4043; margin-bottom: 5px;
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 3px;
+    font-weight: normal;
   }
   .field input {
-    width: 100%%; padding: 9px 11px; box-sizing: border-box;
-    border: 1px solid #dadce0; border-radius: 6px;
-    font-size: 14px; color: #202124; outline: none;
-    transition: border-color 0.15s;
+    width: 100%%;
+    padding: 7px 9px;
+    box-sizing: border-box;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #202124;
+    outline: none;
+    background: #fafafa;
+    transition: border-color 0.15s, background 0.15s;
   }
   .field input:focus {
-    border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66,133,244,0.15);
+    border-color: #888;
+    background: #fff;
   }
   .survey-btn {
-    background: #4285f4; color: #fff; border: none;
-    padding: 10px 26px; border-radius: 6px;
-    font-size: 14px; font-weight: 500; cursor: pointer;
-    margin-top: 4px; transition: background 0.15s;
+    background: none;
+    color: #444;
+    border: 1px solid #aaa;
+    padding: 7px 20px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
   }
-  .survey-btn:hover:not(:disabled) { background: #3367d6; }
-  .survey-btn:disabled { background: #9aa0a6; cursor: default; }
-  #survey-status { margin-top: 13px; font-size: 13px; min-height: 18px; }
+  .survey-btn:hover:not(:disabled) {
+    border-color: #444;
+    color: #111;
+  }
+  .survey-btn:disabled {
+    color: #aaa;
+    border-color: #ddd;
+    cursor: default;
+  }
+  #survey-status {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 12px;
+    color: #666;
+    vertical-align: middle;
+  }
 </style>
 
 <div class="survey-wrap">
-  <h3>&#128203; Quick Survey</h3>
-  %s
+  <div class="survey-grid">
+    %s
+  </div>
   <button class="survey-btn" onclick="submitSurvey()">Submit</button>
-  <div id="survey-status"></div>
+  <span id="survey-status"></span>
 </div>
 
 <script>
@@ -88,26 +119,23 @@ async function submitSurvey() {
   for (const id of ids) {
     const val = document.getElementById(id).value.trim();
     if (!val) {
-      status.style.color = "#f29900";
-      status.textContent = "Please fill in all fields before submitting.";
+      status.style.color = "#b45000";
+      status.textContent = "Please fill in all fields.";
       return;
     }
     params.append(id, val);
   }
 
   params.append("timestamp", new Date().toISOString());
-
-  // Send field order so Apps Script writes columns in the right sequence
   params.append("_fields", ids.join(","));
 
-  // Show success immediately — do not wait for Apps Script cold start
-  status.style.color = "#1e8e3e";
-  status.textContent = "\u2713 Thank you! Your response has been recorded.";
   btn.disabled = true;
   ids.forEach(id => document.getElementById(id).disabled = true);
 
-  // Fire and forget — request completes in the background
   fetch("%s", { method: "POST", mode: "no-cors", body: params }).catch(() => {});
+
+  status.style.color = "#1e8e3e";
+  status.textContent = "\u2713 Recorded. Thank you.";
 }
 </script>
   ', fields_html, ids_js, endpoint)
