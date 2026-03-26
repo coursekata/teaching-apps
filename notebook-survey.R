@@ -24,16 +24,18 @@ questions <- list(
   ids_js <- sprintf('["%s"]',
     paste(sapply(questions, `[[`, "id"), collapse = '","'))
 
-  input_style <- "flex:1; min-width:0; height:28px; padding:0 7px; border:0.5px solid #cccccc; border-radius:4px; font-size:12px; background:#ffffff; color:#202124; box-sizing:border-box;"
-  label_style <- "font-size:12px; color:#666666; white-space:nowrap; flex-shrink:0;"
-  field_style <- "display:flex; align-items:center; gap:6px; min-width:0;"
+  input  <- "flex:1; min-width:0; height:28px; padding:0 7px; border:0.5px solid #cccccc; border-radius:4px; font-size:12px; background:#ffffff; color:#202124; box-sizing:border-box;"
+  label  <- "font-size:12px; color:#666666; white-space:nowrap; flex-shrink:0;"
+  labelR <- "font-size:12px; color:#666666; white-space:nowrap; flex-shrink:0; width:68px;"
+  field  <- "display:flex; align-items:center; gap:6px; min-width:0;"
+  btn    <- "height:28px !important; width:80px !important; margin-left:6px !important; padding:0 !important; box-sizing:border-box !important; border:2px solid #00cadb !important; border-radius:4px !important; background:transparent !important; color:#00cadb !important; font-size:12px !important; font-family:inherit !important; cursor:pointer !important; appearance:none !important; -webkit-appearance:none !important; flex-shrink:0 !important;"
 
   sprintf('
-<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif; width:100%%; box-sizing:border-box; padding:12px 18px 14px; background:#ffffff; border:0.5px solid #e0e0e0; border-radius:6px;">
+<div style="max-width:760px; margin:0 auto; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif; width:100%%; box-sizing:border-box; padding:12px 18px 14px; background:#ffffff; border:0.5px solid #e0e0e0; border-radius:6px;">
 
   <div style="font-size:12px; color:#888888; margin-bottom:10px; font-style:italic;">Please sign in...</div>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr 80px; gap:8px 12px; width:100%%; box-sizing:border-box;">
+  <div style="display:grid; grid-template-columns:0.8fr 1.2fr; gap:8px 12px; width:100%%; box-sizing:border-box;">
 
     <div style="%s">
       <label style="%s">Name</label>
@@ -43,18 +45,15 @@ questions <- list(
     <div style="%s">
       <label style="%s">Institution</label>
       <input id="institution" type="text" autocomplete="off" style="%s" />
+      <button id="survey-btn" onclick="submitSurvey()" style="%s">Submit</button>
     </div>
-
-    <button id="survey-btn"
-      onclick="submitSurvey()"
-      style="height:28px !important; width:80px !important; padding:0 !important; box-sizing:border-box !important; border:2px solid #00cadb !important; border-radius:4px !important; background:transparent !important; color:#00cadb !important; font-size:12px !important; font-family:inherit !important; cursor:pointer !important; appearance:none !important; -webkit-appearance:none !important; display:flex !important; align-items:center !important; justify-content:center !important;">Submit</button>
 
     <div style="%s">
       <label style="%s">Email</label>
       <input id="email" type="text" autocomplete="off" style="%s" />
     </div>
 
-    <div style="%s; grid-column:2 / 4;">
+    <div style="%s">
       <label style="%s">Comments</label>
       <input id="comments" type="text" autocomplete="off" style="%s" />
       <span id="survey-status" style="font-size:11px; white-space:nowrap; margin-left:8px; flex-shrink:0;"></span>
@@ -95,10 +94,10 @@ async function submitSurvey() {
 }
 </script>
   ',
-  field_style, label_style, input_style,
-  field_style, label_style, input_style,
-  field_style, label_style, input_style,
-  field_style, label_style, input_style,
+  field, label,  input,
+  field, labelR, input, btn,
+  field, label,  input,
+  field, labelR, input,
   ids_js, endpoint)
 }
 
