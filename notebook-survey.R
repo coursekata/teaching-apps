@@ -9,7 +9,7 @@
 library(IRdisplay)
 
 # ── 1. Configuration ─────────────────────────────────────────
-APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbzSxfObhNXG_WSgTBGDz13MDMnbYZVV2SxjZ4CMX-KFAWLR763m_ccZRCdDRE7uic-vig/exec"
+APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbz4YzPKkr4Q-YODk8GciYwoS84LKuBefQDQeTHBtxucfjsx2_hAreFrF-ZQA48PLchCRQ/exec"
 
 questions <- list(
   list(id = "name",        label = "Name"),
