@@ -9,7 +9,7 @@
 library(IRdisplay)
 
 # ── 1. Configuration ─────────────────────────────────────────
-APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbzSxfObhNXG_WSgTBGDz13MDMnbYZVV2SxjZ4CMX-KFAWLR763m_ccZRCdDRE7uic-vig/exec"
+APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbzXRH4HLLbXJr8sIy3zKBbtyLF9NxS6b6qePfUOpg65rKi0_KVppBWirifI5TisxAX0Eg/exec"
 
 questions <- list(
   list(id = "name",        label = "Name"),
@@ -39,23 +39,23 @@ questions <- list(
 
     <div style="%s">
       <label style="%s">Name</label>
-      <input id="name" type="text" autocomplete="off" style="%s" />
+      <input id="name" type="text" autocomplete="off" tabindex="1" style="%s" />
     </div>
 
     <div style="%s">
       <label style="%s">Institution</label>
-      <input id="institution" type="text" autocomplete="off" style="%s" />
-      <button id="survey-btn" onclick="submitSurvey()" style="%s">Submit</button>
+      <input id="institution" type="text" autocomplete="off" tabindex="2" style="%s" />
+      <button id="survey-btn" onclick="submitSurvey()" tabindex="5" style="%s">Submit</button>
     </div>
 
     <div style="%s">
       <label style="%s">Email</label>
-      <input id="email" type="text" autocomplete="off" style="%s" />
+      <input id="email" type="text" autocomplete="off" tabindex="3" style="%s" />
     </div>
 
     <div style="%s">
       <label style="%s">Comments</label>
-      <input id="comments" type="text" autocomplete="off" style="%s" />
+      <input id="comments" type="text" autocomplete="off" tabindex="4" style="%s" />
     </div>
 
   </div>
