@@ -56,10 +56,12 @@ questions <- list(
     <div style="%s">
       <label style="%s">Comments</label>
       <input id="comments" type="text" autocomplete="off" style="%s" />
-      <span id="survey-status" style="font-size:11px; white-space:nowrap; margin-left:8px; flex-shrink:0;"></span>
     </div>
 
   </div>
+
+  <div id="survey-status" style="font-size:11px; margin-top:8px; min-height:16px;"></div>
+
 </div>
 
 <script>
