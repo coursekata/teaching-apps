@@ -9,13 +9,13 @@
 library(IRdisplay)
 
 # ── 1. Configuration ─────────────────────────────────────────
-APPS_SCRIPT_URL <- "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"
+APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbzXRH4HLLbXJr8sIy3zKBbtyLF9NxS6b6qePfUOpg65rKi0_KVppBWirifI5TisxAX0Eg/exec"
 
 questions <- list(
   list(id = "name",     label = "What is your name?"),
-  list(id = "company",  label = "What company are you from?"),
-  list(id = "use_case", label = "What problem are you trying to solve?"),
-  list(id = "rating",   label = "Rate this demo 1–5:")
+  list(id = "institution",  label = "Your institution?"),
+  list(id = "email", label = "What is your email?"),
+  list(id = "comments",   label = "Something else?")
 )
 
 # ── 2. HTML Builder ───────────────────────────────────────────
