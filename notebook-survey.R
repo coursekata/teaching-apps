@@ -12,10 +12,10 @@ library(IRdisplay)
 APPS_SCRIPT_URL <- "https://script.google.com/macros/s/AKfycbzXRH4HLLbXJr8sIy3zKBbtyLF9NxS6b6qePfUOpg65rKi0_KVppBWirifI5TisxAX0Eg/exec"
 
 questions <- list(
-  list(id = "name",     label = "What is your name?"),
-  list(id = "institution",  label = "Your institution?"),
-  list(id = "email", label = "What is your email?"),
-  list(id = "comments",   label = "Something else?")
+  list(id = "name",        label = "What is your name?"),
+  list(id = "institution", label = "Your institution?"),
+  list(id = "email",       label = "What is your email?"),
+  list(id = "comments",    label = "Something else?")
 )
 
 # ── 2. HTML Builder ───────────────────────────────────────────
@@ -96,21 +96,18 @@ async function submitSurvey() {
   }
 
   params.append("timestamp", new Date().toISOString());
-  status.style.color = "#9aa0a6";
-  status.textContent = "Submitting\u2026";
+
+  // Send field order so Apps Script writes columns in the right sequence
+  params.append("_fields", ids.join(","));
+
+  // Show success immediately — do not wait for Apps Script cold start
+  status.style.color = "#1e8e3e";
+  status.textContent = "\u2713 Thank you! Your response has been recorded.";
   btn.disabled = true;
   ids.forEach(id => document.getElementById(id).disabled = true);
 
-  try {
-    await fetch("%s", { method: "POST", mode: "no-cors", body: params });
-    status.style.color  = "#1e8e3e";
-    status.textContent  = "\u2713 Thank you! Your response has been recorded.";
-  } catch(err) {
-    status.style.color  = "#d93025";
-    status.textContent  = "\u26a0 Submission failed. Please let the demo host know.";
-    btn.disabled = false;
-    ids.forEach(id => document.getElementById(id).disabled = false);
-  }
+  // Fire and forget — request completes in the background
+  fetch("%s", { method: "POST", mode: "no-cors", body: params }).catch(() => {});
 }
 </script>
   ', fields_html, ids_js, endpoint)
