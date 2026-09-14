@@ -1,0 +1,486 @@
+<!--
+logistic-function-demo.html
+----------------------------
+
+This version has NO external dependencies (no CDN, no network calls at
+all) — everything is plain SVG + vanilla JS. This matters because some
+Jupyter front-ends render cell HTML output inside a sandboxed iframe
+that blocks cross-origin script loading, which breaks approaches that
+rely on a CDN-hosted charting library.
+
+USING URL PARAMETERS
+---------------------
+You can control the "true"/best-fitting parameters (used to generate
+the data and draw the solid curve) and the initial alternative-model
+sliders (b0, b1 — dashed curve) via URL parameters.
+
+Examples:
+
+  logistic-function-demo.html?trueB0=-1&trueB1=0.6
+  logistic-function-demo.html?b0=0&b1=0.3
+  logistic-function-demo.html?n=200
+  logistic-function-demo.html?trueB0=-1&trueB1=0.6&b0=0&b1=0.3&n=150
+
+Defaults:
+  trueB0 defaults to -0.5 if omitted or invalid.
+  trueB1 defaults to 0.7 if omitted or invalid.
+  b0 (alternative, slider start) defaults to 0.
+  b1 (alternative, slider start) defaults to 0.3.
+  n (number of simulated data points) defaults to 160.
+
+This app displays:
+  • A simulated binary outcome y (jittered so points near 0 and 1
+    can be distinguished)
+  • The best-fitting logistic curve (solid line), fixed
+  • An alternative logistic curve (dashed line), controlled by two
+    sliders (b0, b1) so students can see how changing the parameters
+    away from the best fit changes the curve
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Logistic Function Demo</title>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui;
+      margin: 16px 24px;
+      color: #333;
+    }
+
+    #outer {
+      max-width: 920px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 24px;
+    }
+
+    #leftPanel {
+      flex: 0 0 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 40px;
+    }
+
+    #rightPanel {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    #altBlock {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 20px;
+    }
+
+    #altTitle {
+      font-weight: 700;
+      color: #1a5fd6;
+      font-size: 24px;
+    }
+
+    .alt-swatch-row {
+      display: flex;
+    }
+
+    .alt-line {
+      color: #1a5fd6;
+    }
+
+    .swatch {
+      width: 30px;
+      height: 0;
+      border-top: 4px solid #000;
+      display: inline-block;
+      flex: none;
+    }
+
+    .swatch.dashed {
+      border-top-style: dashed;
+      border-top-color: #1a5fd6;
+    }
+
+    #plot {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .slider-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 15px;
+    }
+
+    .slider-wrapper .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .slider-wrapper input[type="range"] {
+      width: 100%;
+      accent-color: #1a5fd6;
+    }
+
+    .slider-wrapper .val {
+      font-weight: 600;
+    }
+
+    #resetBtn {
+      font-size: 14px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border: 1px solid #999;
+      border-radius: 4px;
+      background: #f7f7f7;
+      align-self: flex-start;
+    }
+
+    #resetBtn:hover {
+      background: #ececec;
+    }
+
+    .axis-label {
+      font-size: 17px;
+      fill: #333;
+    }
+
+    .tick-label {
+      font-size: 13px;
+      fill: #444;
+    }
+
+    .annotation-title {
+      font-size: 16px;
+      font-weight: 700;
+      fill: inherit;
+    }
+
+    .annotation-line {
+      font-size: 15px;
+      fill: inherit;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="outer">
+  <div id="leftPanel">
+    <div id="altBlock">
+      <div id="altTitle">Alternative Model</div>
+      <div class="alt-swatch-row"><span class="swatch dashed"></span></div>
+      <div class="alt-line">b0 = <span id="altB0Text">0.00</span></div>
+      <div class="alt-line">b1 = <span id="altB1Text">0.30</span></div>
+    </div>
+
+    <div id="controls">
+      <div class="slider-wrapper">
+        <div class="row">
+          <span>b0</span>
+          <span class="val" id="b0Label">0.00</span>
+        </div>
+        <input type="range" id="b0Slider" min="-5" max="5" step="0.1" value="0">
+      </div>
+
+      <div class="slider-wrapper">
+        <div class="row">
+          <span>b1</span>
+          <span class="val" id="b1Label">0.30</span>
+        </div>
+        <input type="range" id="b1Slider" min="-2" max="2" step="0.02" value="0.3">
+      </div>
+
+      <button id="resetBtn">Match best fit</button>
+    </div>
+  </div>
+
+  <div id="rightPanel">
+    <svg id="plot" viewBox="0 0 730 445" xmlns="http://www.w3.org/2000/svg">
+      <g id="gridlines"></g>
+      <g id="axes"></g>
+      <g id="points"></g>
+      <path id="bestCurve" fill="none" stroke="#000" stroke-width="3"></path>
+      <path id="altCurve" fill="none" stroke="#1a5fd6" stroke-width="3" stroke-dasharray="9,7"></path>
+      <text id="dataLabel"></text>
+      <text id="bestAnnotation"></text>
+      <line id="bestSwatch" stroke="#111" stroke-width="4"></line>
+    </svg>
+  </div>
+</div>
+
+<script>
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  function el(tag, attrs) {
+    const e = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // -------------------------------------------------------------
+  // Read URL parameters
+  // -------------------------------------------------------------
+  const params = new URLSearchParams(window.location.search);
+
+  function getNum(name, fallback) {
+    const v = parseFloat(params.get(name));
+    return Number.isFinite(v) ? v : fallback;
+  }
+
+  const trueB0 = getNum("trueB0", -0.5);   // "best-fitting" intercept (fixed)
+  const trueB1 = getNum("trueB1", 0.7);    // "best-fitting" slope (fixed)
+
+  let altB0 = getNum("b0", 0);             // alternative model, slider-controlled
+  let altB1 = getNum("b1", 0.3);
+
+  const nParam = parseInt(params.get("n"), 10);
+  const N = (Number.isInteger(nParam) && nParam > 0) ? nParam : 160;
+
+  // -------------------------------------------------------------
+  // Math utilities
+  // -------------------------------------------------------------
+  const logistic = (x, b0, b1) => 1 / (1 + Math.exp(-(b0 + b1 * x)));
+  const runif = (a, b) => a + Math.random() * (b - a);
+  const rbern = p => (Math.random() < p ? 1 : 0);
+  const fmt = v => v.toFixed(2);
+
+  // -------------------------------------------------------------
+  // Simulate data from the "true" / best-fitting model
+  // -------------------------------------------------------------
+  const dataXMin = -10, dataXMax = 10;
+
+  const xs = [];
+  const ysJittered = [];
+
+  for (let i = 0; i < N; i++) {
+    const x = runif(dataXMin, dataXMax);
+    const p = logistic(x, trueB0, trueB1);
+    const y = rbern(p);
+    const jitter = runif(-0.045, 0.045);
+    xs.push(x);
+    ysJittered.push(y + jitter);
+  }
+
+  // -------------------------------------------------------------
+  // Curve grid (slightly wider than the data range)
+  // -------------------------------------------------------------
+  const gridMin = dataXMin - 2, gridMax = dataXMax + 2;
+  const steps = 120;
+  const xGrid = [];
+  for (let i = 0; i <= steps; i++) {
+    xGrid.push(gridMin + (i / steps) * (gridMax - gridMin));
+  }
+
+  const yAxisMin = -0.15, yAxisMax = 1.15;
+
+  // -------------------------------------------------------------
+  // Pixel geometry / scales
+  // -------------------------------------------------------------
+  const margin = { top: 20, right: 20, bottom: 45, left: 55 };
+  const plotWidth = 655;
+  const plotHeight = 380;
+
+  const xScale = x => margin.left + ((x - gridMin) / (gridMax - gridMin)) * plotWidth;
+  const yScale = y => margin.top + (1 - (y - yAxisMin) / (yAxisMax - yAxisMin)) * plotHeight;
+
+  function pathFor(xArr, fn) {
+    return xArr
+      .map((x, i) => `${i === 0 ? "M" : "L"} ${xScale(x).toFixed(2)},${yScale(fn(x)).toFixed(2)}`)
+      .join(" ");
+  }
+
+  // -------------------------------------------------------------
+  // Draw static chrome: gridlines + axes + ticks
+  // -------------------------------------------------------------
+  const gridlinesG = document.getElementById("gridlines");
+  const axesG = document.getElementById("axes");
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1];
+  yTicks.forEach(t => {
+    gridlinesG.appendChild(el("line", {
+      x1: margin.left, x2: margin.left + plotWidth,
+      y1: yScale(t), y2: yScale(t),
+      stroke: "#e5e5e5", "stroke-width": 1
+    }));
+    const label = el("text", {
+      x: margin.left - 8, y: yScale(t) + 4,
+      "text-anchor": "end", class: "tick-label"
+    });
+    label.textContent = t;
+    axesG.appendChild(label);
+  });
+
+  const xTicks = [];
+  for (let t = Math.ceil(dataXMin / 5) * 5; t <= dataXMax; t += 5) xTicks.push(t);
+  xTicks.forEach(t => {
+    gridlinesG.appendChild(el("line", {
+      x1: xScale(t), x2: xScale(t),
+      y1: margin.top, y2: margin.top + plotHeight,
+      stroke: "#e5e5e5", "stroke-width": 1
+    }));
+    const label = el("text", {
+      x: xScale(t), y: margin.top + plotHeight + 18,
+      "text-anchor": "middle", class: "tick-label"
+    });
+    label.textContent = t;
+    axesG.appendChild(label);
+  });
+
+  // Axis border
+  axesG.appendChild(el("rect", {
+    x: margin.left, y: margin.top, width: plotWidth, height: plotHeight,
+    fill: "none", stroke: "#999", "stroke-width": 1
+  }));
+
+  // Axis titles
+  const xTitle = el("text", {
+    x: margin.left + plotWidth / 2, y: margin.top + plotHeight + 38,
+    "text-anchor": "middle", class: "axis-label"
+  });
+  xTitle.textContent = "x";
+  axesG.appendChild(xTitle);
+
+  const yTitle = el("text", {
+    x: -(margin.top + plotHeight / 2), y: 16,
+    "text-anchor": "middle", class: "axis-label",
+    transform: "rotate(-90)"
+  });
+  yTitle.textContent = "P(y = 1)";
+  axesG.appendChild(yTitle);
+
+  // -------------------------------------------------------------
+  // Data points
+  // -------------------------------------------------------------
+  const pointsG = document.getElementById("points");
+  xs.forEach((x, i) => {
+    pointsG.appendChild(el("circle", {
+      cx: xScale(x), cy: yScale(ysJittered[i]), r: 4.5,
+      fill: "rgba(90,90,90,0.35)", stroke: "rgba(60,60,60,0.5)", "stroke-width": 0.5
+    }));
+  });
+
+  // -------------------------------------------------------------
+  // Curves
+  // -------------------------------------------------------------
+  const bestCurve = document.getElementById("bestCurve");
+  const altCurve = document.getElementById("altCurve");
+
+  bestCurve.setAttribute("d", pathFor(xGrid, x => logistic(x, trueB0, trueB1)));
+  altCurve.setAttribute("d", pathFor(xGrid, x => logistic(x, altB0, altB1)));
+
+  // -------------------------------------------------------------
+  // Annotations
+  // -------------------------------------------------------------
+  const bestAnnotation = document.getElementById("bestAnnotation");
+  const dataLabel = document.getElementById("dataLabel");
+
+  const bestAnnoX = margin.left + plotWidth * 0.78 - 12;
+  const bestAnnoY = margin.top + plotHeight * 0.55;
+
+  const bestTitle = el("tspan", { x: bestAnnoX, y: bestAnnoY, class: "annotation-title" });
+  bestTitle.textContent = "Best-Fitting Model";
+  const bestB0 = el("tspan", { x: bestAnnoX, dy: 34, class: "annotation-line" });
+  bestB0.textContent = `b0 = ${fmt(trueB0)}`;
+  const bestB1 = el("tspan", { x: bestAnnoX, dy: 20, class: "annotation-line" });
+  bestB1.textContent = `b1 = ${fmt(trueB1)}`;
+  bestAnnotation.setAttribute("fill", "#111");
+  bestAnnotation.appendChild(bestTitle);
+  bestAnnotation.appendChild(bestB0);
+  bestAnnotation.appendChild(bestB1);
+
+  const bestSwatch = document.getElementById("bestSwatch");
+  bestSwatch.setAttribute("x1", bestAnnoX);
+  bestSwatch.setAttribute("x2", bestAnnoX + 30);
+  bestSwatch.setAttribute("y1", bestAnnoY + 14);
+  bestSwatch.setAttribute("y2", bestAnnoY + 14);
+
+  // Static "Simulated data (y)" label in the top-left corner of the graph
+  const dataLabelX = margin.left + 12;
+  const dataLabelY = margin.top + 18;
+  dataLabel.setAttribute("fill", "#555");
+  const dot = el("tspan", { x: dataLabelX, y: dataLabelY, class: "annotation-line" });
+  dot.textContent = "\u25CF Simulated data (y)";
+  dataLabel.appendChild(dot);
+
+  // -------------------------------------------------------------
+  // Curve stacking order: when the alternative model exactly
+  // matches the best-fitting one, draw the solid black line on
+  // top (so it isn't hidden under the dashed line); as soon as the
+  // sliders move away from a match, draw the blue dashed line on
+  // top instead.
+  // -------------------------------------------------------------
+  const svgPlot = document.getElementById("plot");
+
+  function paramsMatch() {
+    const round = v => Math.round(v * 1000);
+    return round(altB0) === round(trueB0) && round(altB1) === round(trueB1);
+  }
+
+  function updateCurveOrder() {
+    // Both curves (and the annotations) are siblings inside the svg.
+    // Inserting a curve right before bestAnnotation places it above
+    // whichever curve is not moved, while keeping both curves below
+    // the annotation text.
+    const topCurve = paramsMatch() ? bestCurve : altCurve;
+    svgPlot.insertBefore(topCurve, bestAnnotation);
+  }
+
+  updateCurveOrder();
+
+  // -------------------------------------------------------------
+  // Controls
+  // -------------------------------------------------------------
+  const b0Slider = document.getElementById("b0Slider");
+  const b1Slider = document.getElementById("b1Slider");
+  const b0Label = document.getElementById("b0Label");
+  const b1Label = document.getElementById("b1Label");
+  const altB0Text = document.getElementById("altB0Text");
+  const altB1Text = document.getElementById("altB1Text");
+  const resetBtn = document.getElementById("resetBtn");
+
+  b0Slider.value = altB0;
+  b1Slider.value = altB1;
+  b0Label.textContent = fmt(altB0);
+  b1Label.textContent = fmt(altB1);
+  altB0Text.textContent = fmt(altB0);
+  altB1Text.textContent = fmt(altB1);
+
+  function updateAlt() {
+    altB0 = parseFloat(b0Slider.value);
+    altB1 = parseFloat(b1Slider.value);
+    b0Label.textContent = fmt(altB0);
+    b1Label.textContent = fmt(altB1);
+    altB0Text.textContent = fmt(altB0);
+    altB1Text.textContent = fmt(altB1);
+
+    altCurve.setAttribute("d", pathFor(xGrid, x => logistic(x, altB0, altB1)));
+    updateCurveOrder();
+  }
+
+  b0Slider.addEventListener("input", updateAlt);
+  b1Slider.addEventListener("input", updateAlt);
+
+  resetBtn.addEventListener("click", () => {
+    b0Slider.value = trueB0;
+    b1Slider.value = Math.max(parseFloat(b1Slider.min), Math.min(parseFloat(b1Slider.max), trueB1));
+    updateAlt();
+  });
+</script>
+
+</body>
+</html>
