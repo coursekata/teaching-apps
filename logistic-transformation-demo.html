@@ -2,24 +2,31 @@
 <html lang="en"><head><meta charset="utf-8"><title>Logistic Transformation Demo</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui;margin:16px 24px;color:#333}
-#outer{max-width:920px;height:445px;margin:auto;display:flex;gap:18px;align-items:stretch}
-#left{flex:0 0 220px;height:445px;display:flex;flex-direction:column;justify-content:flex-start;gap:18px;padding-top:20px}
-#right{flex:1;min-width:0;position:relative;height:445px} #plot{width:100%;height:auto;display:block}
-.title{font-size:19px;font-weight:700;margin-bottom:8px;color:#1677d2}
-#scale{display:flex;flex-direction:column;gap:6px}
+#outer{max-width:920px;height:405px;margin:auto;display:flex;gap:18px;align-items:stretch}
+#left{flex:0 0 220px;height:405px;display:flex;flex-direction:column;justify-content:flex-start;gap:18px;padding-top:20px}
+#right{flex:1;min-width:0;position:relative;height:405px} #plot{width:100%;height:auto;display:block}
+.title{font-size:21px;font-weight:700;margin-bottom:9px;color:#1677d2;text-decoration:underline;text-underline-offset:3px}
+#scale{display:flex;flex-direction:column;gap:5px}
 button{font:inherit;font-size:15px;border:1px solid #bbb;border-radius:6px;background:#fff;padding:7px 9px;cursor:pointer}
-button.active{background:#333;color:#fff;border-color:#333}
+.radio{display:flex;align-items:center;gap:7px;font-size:16px;cursor:pointer}
+.radio input{appearance:none;width:16px;height:16px;border:1.5px solid #999;border-radius:50%;margin:0;display:grid;place-content:center}
+.radio input::before{content:"";width:9px;height:9px;border-radius:50%;transform:scale(0);background:#1677d2}
+.radio input:checked{border-color:#1677d2}
+.radio input:checked::before{transform:scale(1)}
+.radio input:checked + span{color:#1677d2;font-weight:600}
 .slider{margin-top:11px}.row{display:flex;justify-content:space-between;font-size:17px;margin-bottom:4px}
 input[type=range]{width:100%}.val{font-weight:600;font-variant-numeric:tabular-nums}
 #reset{width:100%;margin-top:12px}
-#eq{position:absolute;left:78px;top:30px;z-index:3;font-size:18px;line-height:1.35;min-height:0;background:rgba(255,255,255,.88);padding:5px 8px;border-radius:4px;pointer-events:none} #eq b{font-size:21px} #eq small{font-size:16px}
+#eq{position:absolute;left:78px;top:30px;z-index:3;font-size:18px;line-height:1.35;min-height:0;background:#eef6ff;color:#0b4f8a;border:1.5px solid #0b4f8a;padding:6px 9px;border-radius:2px;pointer-events:none} #eq b{font-size:21px;color:#0b4f8a} #eq small{font-size:16px;color:#0b4f8a}
 .grid{stroke:#e5e5e5;stroke-width:1}.axis{stroke:#444;stroke-width:1.3}
 .tick{fill:#555;font-size:13px}.label{fill:#333;font-size:16px}.curve{fill:none;stroke:#111;stroke-width:3.2}
-@media(max-width:700px){body{margin:12px}#outer{height:auto;flex-direction:column}#left{height:auto;flex:none}#scale{flex-direction:row;flex-wrap:wrap}#scale button{flex:1}}
+@media(max-width:700px){body{margin:12px}#outer{height:auto;flex-direction:column}#left{height:auto;flex:none}#scale{flex-direction:row;flex-wrap:wrap}}
 </style></head><body>
 <div id="outer"><div id="left">
 <div><div class="title">Model scale</div><div id="scale">
-<button data-m="p" class="active">Probability</button><button data-m="o">Odds</button><button data-m="l">Log Odds</button>
+<label class="radio"><input type="radio" name="modelscale" data-m="p" checked><span>Probability</span></label>
+<label class="radio"><input type="radio" name="modelscale" data-m="o"><span>Odds</span></label>
+<label class="radio"><input type="radio" name="modelscale" data-m="l"><span>Log Odds</span></label>
 </div></div>
 <div>
 <div class="slider"><div class="row"><span>b0</span><span id="v0" class="val"></span></div><input id="b0" type="range" min="-5" max="5" step=".1"></div>
@@ -27,7 +34,7 @@ input[type=range]{width:100%}.val{font-weight:600;font-variant-numeric:tabular-n
 <button id="reset">Reset parameters</button>
 </div>
 </div>
-<div id="right"><div id="eq"></div><svg id="plot" viewBox="0 0 730 445" xmlns="http://www.w3.org/2000/svg">
+<div id="right"><div id="eq"></div><svg id="plot" viewBox="0 0 730 420" xmlns="http://www.w3.org/2000/svg">
 <defs><clipPath id="clip"><rect x="62" y="20" width="645" height="370"/></clipPath></defs>
 <g id="grid"></g><g id="axes"></g><g clip-path="url(#clip)"><path id="curve" class="curve"/></g>
 <text id="xl" class="label" text-anchor="middle"></text><text id="yl" class="label" text-anchor="middle"></text>
@@ -52,14 +59,14 @@ function axes(){let s=spec(),g=q("grid"),a=q("axes");g.replaceChildren();a.repla
 s.t.forEach(t=>{let y=ys(t,s);g.append(E("line",{x1:M.l,x2:M.l+W,y1:y,y2:y,class:"grid"}));let z=E("text",{x:M.l-10,y:y+4,"text-anchor":"end",class:"tick"});z.textContent=(Math.abs(t)>=1000?t.toExponential(0):(Math.abs(t)<1&&t!==0?t.toFixed(1):Number(t.toFixed(2))));a.append(z)});
 [-10,-5,0,5,10].forEach(t=>{let x=xs(t);g.append(E("line",{x1:x,x2:x,y1:M.t,y2:M.t+H,class:"grid"}));let z=E("text",{x:x,y:M.t+H+24,"text-anchor":"middle",class:"tick"});z.textContent=t;a.append(z)});
 a.append(E("line",{x1:M.l,x2:M.l,y1:M.t,y2:M.t+H,class:"axis"}));a.append(E("line",{x1:M.l,x2:M.l+W,y1:M.t+H,y2:M.t+H,class:"axis"}));
-q("xl").setAttribute("x",M.l+W/2);q("xl").setAttribute("y",437);q("xl").textContent="X";
+q("xl").setAttribute("x",M.l+W/2);q("xl").setAttribute("y",414);q("xl").textContent="X";
 q("yl").setAttribute("x",17);q("yl").setAttribute("y",M.t+H/2);q("yl").setAttribute("transform",`rotate(-90 17 ${M.t+H/2})`);q("yl").textContent=s.lab}
 function curve(){let s=spec(),d=[],on=false;for(let i=0;i<=600;i++){let x=xmin+i/600*(xmax-xmin),y=s.f(b0+b1*x),ok=Number.isFinite(y)&&y>=s.a&&y<=s.z;if(ok){d.push(`${on?"L":"M"} ${xs(x).toFixed(2)},${ys(y,s).toFixed(2)}`);on=true}else on=false}q("curve").setAttribute("d",d.join(" "))}
 const f=x=>(Math.abs(x)<1e-9?0:x).toFixed(2);
 function eq(){let sl=b1>=0?`+ ${f(b1)}X`:`− ${f(-b1)}X`,eta=`${f(b0)} ${sl}`;
 q("eq").innerHTML=m==="p"?`<b>p̂ = 1 / (1 + e<sup>−(${eta})</sup>)</b>`:m==="o"?`<b>odds = e<sup>${eta}</sup></b><br><small>odds = p̂ / (1 − p̂)</small>`:`<b>log odds = ${eta}</b><br><small>log odds = log(p̂ / (1 − p̂))</small>`}
-function draw(){q("v0").textContent=f(b0);q("v1").textContent=f(b1);document.querySelectorAll("#scale button").forEach(x=>x.classList.toggle("active",x.dataset.m===m));axes();curve();eq()}
-document.querySelectorAll("#scale button").forEach(x=>x.onclick=()=>{m=x.dataset.m;draw()});
+function draw(){q("v0").textContent=f(b0);q("v1").textContent=f(b1);document.querySelectorAll("#scale input").forEach(x=>x.checked=(x.dataset.m===m));axes();curve();eq()}
+document.querySelectorAll("#scale input").forEach(x=>x.onchange=()=>{if(x.checked){m=x.dataset.m;draw()}});
 q("b0").oninput=e=>{b0=+e.target.value;draw()};q("b1").oninput=e=>{b1=+e.target.value;draw()};
 q("reset").onclick=()=>{b0=i0;b1=i1;q("b0").value=b0;q("b1").value=b1;draw()};draw()})();
 </script></body></html>
