@@ -3,7 +3,7 @@
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui;margin:16px 24px;color:#333}
 #outer{max-width:920px;height:445px;margin:auto;display:flex;gap:18px;align-items:stretch}
-#left{flex:0 0 220px;height:445px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+#left{flex:0 0 220px;height:445px;display:flex;flex-direction:column;justify-content:flex-start;gap:18px;padding-top:20px}
 #right{flex:1;min-width:0;position:relative;height:445px} #plot{width:100%;height:auto;display:block}
 .title{font-size:19px;font-weight:700;margin-bottom:8px;color:#1677d2}
 #scale{display:flex;flex-direction:column;gap:6px}
@@ -12,7 +12,7 @@ button.active{background:#333;color:#fff;border-color:#333}
 .slider{margin-top:11px}.row{display:flex;justify-content:space-between;font-size:17px;margin-bottom:4px}
 input[type=range]{width:100%}.val{font-weight:600;font-variant-numeric:tabular-nums}
 #reset{width:100%;margin-top:12px}
-#eq{position:absolute;left:78px;top:32px;z-index:3;font-size:15px;line-height:1.35;min-height:0;background:rgba(255,255,255,.88);padding:4px 7px;border-radius:4px;pointer-events:none}
+#eq{position:absolute;left:78px;top:30px;z-index:3;font-size:18px;line-height:1.35;min-height:0;background:rgba(255,255,255,.88);padding:5px 8px;border-radius:4px;pointer-events:none} #eq b{font-size:21px} #eq small{font-size:16px}
 .grid{stroke:#e5e5e5;stroke-width:1}.axis{stroke:#444;stroke-width:1.3}
 .tick{fill:#555;font-size:13px}.label{fill:#333;font-size:16px}.curve{fill:none;stroke:#111;stroke-width:3.2}
 @media(max-width:700px){body{margin:12px}#outer{height:auto;flex-direction:column}#left{height:auto;flex:none}#scale{flex-direction:row;flex-wrap:wrap}#scale button{flex:1}}
@@ -42,26 +42,10 @@ const S={p:{lab:"Predicted Probability",f:e=>1/(1+Math.exp(-e))},
 o:{lab:"Predicted Odds",f:e=>Math.exp(e)},
 l:{lab:"Predicted Log Odds",f:e=>e}};
 
-function niceCeil(x){
-  if(x<=0) return 1;
-  const p=Math.pow(10,Math.floor(Math.log10(x))), q=x/p;
-  const n=q<=1?1:q<=2?2:q<=5?5:10;
-  return n*p;
-}
 function spec(){
   if(m==="p") return {...S.p,a:0,z:1,t:[0,.2,.4,.6,.8,1]};
-  const y1=S[m].f(b0+b1*xmin), y2=S[m].f(b0+b1*xmax);
-  if(m==="o"){
-    const ymax=Math.max(y1,y2);
-    const top=niceCeil(ymax*1.20);
-    const step=top/5;
-    return {...S.o,a:0,z:top,t:[0,1,2,3,4,5].map(i=>i*step)};
-  }
-  let lo=Math.min(y1,y2), hi=Math.max(y1,y2), span=Math.max(hi-lo,2);
-  lo-=span*.08; hi+=span*.08;
-  const bound=niceCeil(Math.max(Math.abs(lo),Math.abs(hi)));
-  const step=bound/3;
-  return {...S.l,a:-bound,z:bound,t:[-3,-2,-1,0,1,2,3].map(i=>i*step)};
+  if(m==="o") return {...S.o,a:0,z:20,t:[0,4,8,12,16,20]};
+  return {...S.l,a:-10,z:10,t:[-10,-5,0,5,10]};
 }
 const E=(tag,a={})=>{let e=document.createElementNS(NS,tag);for(let k in a)e.setAttribute(k,a[k]);return e},ys=(y,s)=>M.t+(1-(y-s.a)/(s.z-s.a))*H;
 function axes(){let s=spec(),g=q("grid"),a=q("axes");g.replaceChildren();a.replaceChildren();
