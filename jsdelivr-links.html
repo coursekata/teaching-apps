@@ -54,7 +54,7 @@
 <body>
 <main>
   <h1>Playground Link Maker</h1>
-  <p class="lede">Paste a link to a Jupyter notebook on GitHub. You'll get CourseKata Playground links that load the notebook through jsDelivr, so they work even at schools that block GitHub.</p>
+  <p class="lede">Paste a link to a Jupyter notebook on GitHub. You'll get CourseKata Playground links. The first two load the notebook through jsDelivr, so they work even at schools that block GitHub; the third loads it straight from GitHub.</p>
 
   <label for="src">GitHub notebook link</label>
   <input id="src" type="url" autocomplete="off" spellcheck="false"
@@ -81,6 +81,16 @@
       <div class="row">
         <button data-copy="pinnedUrl" id="pinnedCopy" disabled>Copy link</button>
         <a class="btn secondary" id="pinnedOpen" target="_blank" rel="noopener" hidden>Open in Playground</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Playground link: straight from GitHub</h2>
+      <p>Loads the notebook directly from GitHub, so edits show up right away. Use it only where GitHub isn't blocked.</p>
+      <div class="url" id="githubUrl"></div>
+      <div class="row">
+        <button data-copy="githubUrl">Copy link</button>
+        <a class="btn secondary" id="githubOpen" target="_blank" rel="noopener">Open in Playground</a>
       </div>
     </div>
 
@@ -152,6 +162,7 @@ function parseGitHub(input) {
 
 const isSha = ref => /^[0-9a-f]{40}$/i.test(ref);
 const cdn = (p, ref) => `https://cdn.jsdelivr.net/gh/${p.owner}/${p.repo}@${ref}/${encodePath(p.path)}`;
+const gh = p => `https://github.com/${p.owner}/${p.repo}/blob/${p.ref}/${encodePath(p.path)}`;
 // Encode the file link as a query value, but leave the readable characters (: / @) as they are.
 const play = fileUrl => `${PLAYGROUND}/lab/index.html?from=` +
   encodeURIComponent(fileUrl).replace(/%3A/g, ':').replace(/%2F/g, '/').replace(/%40/g, '@');
@@ -192,6 +203,10 @@ async function update() {
   $('latestUrl').textContent = play(latestFile);
   $('latestOpen').href = play(latestFile);
   $('rawLatest').textContent = latestFile;
+
+  // Direct-from-GitHub link (the Playground turns a github.com link into the raw file itself).
+  $('githubUrl').textContent = play(gh(p));
+  $('githubOpen').href = play(gh(p));
 
   // Pinned link starts as pending.
   $('pinnedUrl').textContent = 'Looking up the current version…';
